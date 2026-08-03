@@ -6,6 +6,7 @@ import { SignupScreen3Password } from '../components/signup/SignupScreen3Passwor
 import { SignupScreen4Email } from '../components/signup/SignupScreen4Email'
 import { SignupScreen5Success } from '../components/signup/SignupScreen5Success'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../config/routes'
+import { useAuthStore } from '../../../lib/authStore'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -20,6 +21,10 @@ export function RegisterPage() {
   }
 
   const handleOtpVerified = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'New Registered User', phone: phoneNumber || '9876543210', email },
+      accessToken: 'demo-krozenda-signup-token-' + Date.now(),
+    })
     setCurrentStep(3)
   }
 
@@ -30,14 +35,26 @@ export function RegisterPage() {
 
   const handleEmailSubmitted = (mail) => {
     if (mail) setEmail(mail)
+    useAuthStore.getState().setSession({
+      user: { name: 'Registered Retailer', phone: phoneNumber || '9876543210', email: mail },
+      accessToken: 'demo-krozenda-signup-token-' + Date.now(),
+    })
     setCurrentStep(5)
   }
 
   const handleSkipEmail = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'Registered Retailer', phone: phoneNumber || '9876543210' },
+      accessToken: 'demo-krozenda-signup-token-' + Date.now(),
+    })
     setCurrentStep(5)
   }
 
   const handleCompleteRegistration = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'Registered Retailer', phone: phoneNumber || '9876543210', email },
+      accessToken: 'demo-krozenda-signup-token-' + Date.now(),
+    })
     navigate(USER_ROUTES.DASHBOARD)
   }
 
@@ -80,5 +97,3 @@ export function RegisterPage() {
     </div>
   )
 }
-
-export default RegisterPage

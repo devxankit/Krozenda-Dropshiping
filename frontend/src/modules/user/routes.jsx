@@ -5,6 +5,7 @@ import { SearchProductsScreen } from './components/ecommerce/SearchProductsScree
 import { ProductListingScreen } from './components/ecommerce/ProductListingScreen'
 import { ProductDetailScreen } from './components/ecommerce/ProductDetailScreen'
 import { CartPageScreen } from './components/ecommerce/CartPageScreen'
+import { CategoryListScreen } from './components/ecommerce/CategoryListScreen'
 
 import { SelectAddressScreen } from './components/checkout/SelectAddressScreen'
 import { DeliveryOptionsScreen } from './components/checkout/DeliveryOptionsScreen'
@@ -32,6 +33,7 @@ import { ReturnReplacementScreen } from './components/support/ReturnReplacementS
 import { InvoicePreviewScreen } from './components/orders/InvoicePreviewScreen'
 
 import { UserAppShowcase } from './pages/UserAppShowcase'
+import { USER_ROUTES } from '../../config/routes'
 
 export default function UserRoutes() {
   const navigate = useNavigate()
@@ -39,16 +41,33 @@ export default function UserRoutes() {
   return (
     <Routes>
       <Route index element={<Navigate to="dashboard" replace />} />
+
+      {/* Main Home & Catalog */}
       <Route
         path="dashboard"
-        element={<HomeScreen onNavigateTab={(tab) => tab === 'categories' && navigate('../listing')} />}
+        element={
+          <HomeScreen
+            onNavigateTab={(tab) => {
+              if (tab === 'categories') navigate(USER_ROUTES.ROOT + '/categories')
+              if (tab === 'orders') navigate(USER_ROUTES.ROOT + '/orders')
+              if (tab === 'wishlist') navigate(USER_ROUTES.ROOT + '/wishlist')
+              if (tab === 'profile') navigate(USER_ROUTES.ROOT + '/profile')
+            }}
+          />
+        }
       />
+      <Route
+        path="categories"
+        element={<CategoryListScreen />}
+      />
+
+      {/* Search & Listing */}
       <Route
         path="search"
         element={
           <SearchProductsScreen
             onBack={() => navigate(-1)}
-            onSelectSearch={() => navigate('../search/results')}
+            onSelectSearch={() => navigate(USER_ROUTES.ROOT + '/search/results')}
           />
         }
       />
@@ -56,9 +75,9 @@ export default function UserRoutes() {
         path="search/results"
         element={
           <SearchFiltersScreen
-            onBack={() => navigate('../search')}
-            onOpenFilters={() => navigate('../filters')}
-            onSelectProduct={() => navigate('../product')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/search')}
+            onOpenFilters={() => navigate(USER_ROUTES.ROOT + '/filters')}
+            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
           />
         }
       />
@@ -66,8 +85,8 @@ export default function UserRoutes() {
         path="filters"
         element={
           <ProductFiltersScreen
-            onBack={() => navigate('../search/results')}
-            onApplyFilters={() => navigate('../search/results')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/search/results')}
+            onApplyFilters={() => navigate(USER_ROUTES.ROOT + '/search/results')}
           />
         }
       />
@@ -75,18 +94,20 @@ export default function UserRoutes() {
         path="listing"
         element={
           <ProductListingScreen
-            onBack={() => navigate('../dashboard')}
-            onSelectProduct={() => navigate('../product')}
+            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
+            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
           />
         }
       />
+
+      {/* Product Details & Cart */}
       <Route
         path="product"
         element={
           <ProductDetailScreen
-            onBack={() => navigate('../listing')}
-            onAddToCart={() => navigate('../cart')}
-            onBuyNow={() => navigate('../cart')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/listing')}
+            onAddToCart={() => navigate(USER_ROUTES.ROOT + '/cart')}
+            onBuyNow={() => navigate(USER_ROUTES.ROOT + '/cart')}
           />
         }
       />
@@ -94,19 +115,19 @@ export default function UserRoutes() {
         path="cart"
         element={
           <CartPageScreen
-            onBack={() => navigate('../product')}
-            onCheckout={() => navigate('../checkout/address')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/product')}
+            onCheckout={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
           />
         }
       />
 
-      {/* Checkout Flow Routes */}
+      {/* Seamless Checkout Flow */}
       <Route
         path="checkout/address"
         element={
           <SelectAddressScreen
-            onBack={() => navigate('../cart')}
-            onSelectAddress={() => navigate('../delivery')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/cart')}
+            onSelectAddress={() => navigate(USER_ROUTES.ROOT + '/checkout/delivery')}
           />
         }
       />
@@ -114,9 +135,9 @@ export default function UserRoutes() {
         path="checkout/delivery"
         element={
           <DeliveryOptionsScreen
-            onBack={() => navigate('../address')}
-            onChangeAddress={() => navigate('../address')}
-            onNext={() => navigate('../summary')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
+            onChangeAddress={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
+            onNext={() => navigate(USER_ROUTES.ROOT + '/checkout/summary')}
           />
         }
       />
@@ -124,9 +145,9 @@ export default function UserRoutes() {
         path="checkout/summary"
         element={
           <OrderSummaryScreen
-            onBack={() => navigate('../delivery')}
-            onEditCart={() => navigate('../cart')}
-            onProceedToPayment={() => navigate('../payment')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/delivery')}
+            onEditCart={() => navigate(USER_ROUTES.ROOT + '/cart')}
+            onProceedToPayment={() => navigate(USER_ROUTES.ROOT + '/checkout/payment')}
           />
         }
       />
@@ -134,8 +155,8 @@ export default function UserRoutes() {
         path="checkout/payment"
         element={
           <PaymentScreen
-            onBack={() => navigate('../summary')}
-            onPaymentSuccess={() => navigate('../success')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/summary')}
+            onPaymentSuccess={() => navigate(USER_ROUTES.ROOT + '/checkout/success')}
           />
         }
       />
@@ -143,18 +164,18 @@ export default function UserRoutes() {
         path="checkout/success"
         element={
           <OrderPlacedScreen
-            onViewOrderDetails={() => navigate('../../orders/details')}
-            onContinueShopping={() => navigate('../../dashboard')}
+            onViewOrderDetails={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onContinueShopping={() => navigate(USER_ROUTES.DASHBOARD)}
           />
         }
       />
 
-      {/* Orders & Tracking Routes */}
+      {/* Orders & Tracking Flow */}
       <Route
         path="orders"
         element={
           <OrderListScreen
-            onSelectOrder={() => navigate('details')}
+            onSelectOrder={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
           />
         }
       />
@@ -162,9 +183,9 @@ export default function UserRoutes() {
         path="orders/details"
         element={
           <OrderDetailsScreen
-            onBack={() => navigate('../orders')}
-            onDownloadInvoice={() => navigate('../invoice')}
-            onTrackShipment={() => navigate('../track')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
+            onDownloadInvoice={() => navigate(USER_ROUTES.ROOT + '/orders/invoice')}
+            onTrackShipment={() => navigate(USER_ROUTES.ROOT + '/orders/track')}
           />
         }
       />
@@ -172,8 +193,8 @@ export default function UserRoutes() {
         path="orders/track"
         element={
           <TrackShipmentScreen
-            onBack={() => navigate('../details')}
-            onViewDetails={() => navigate('../details')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onViewDetails={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
           />
         }
       />
@@ -181,8 +202,8 @@ export default function UserRoutes() {
         path="orders/invoice"
         element={
           <InvoiceDownloadScreen
-            onBack={() => navigate('../details')}
-            onDownload={() => navigate('../invoice/preview')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onDownload={() => navigate(USER_ROUTES.ROOT + '/orders/invoice/preview')}
           />
         }
       />
@@ -190,8 +211,8 @@ export default function UserRoutes() {
         path="orders/invoice/preview"
         element={
           <InvoicePreviewScreen
-            onBack={() => navigate('../invoice')}
-            onDownload={() => navigate('../details')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/invoice')}
+            onDownload={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
           />
         }
       />
@@ -199,18 +220,18 @@ export default function UserRoutes() {
         path="orders/review"
         element={
           <RateReviewScreen
-            onBack={() => navigate('../details')}
-            onSubmitReview={() => navigate('../orders')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onSubmitReview={() => navigate(USER_ROUTES.ROOT + '/orders')}
           />
         }
       />
 
-      {/* Support & Returns Routes */}
+      {/* Support & Returns */}
       <Route
         path="support"
         element={
           <HelpSupportScreen
-            onBack={() => navigate('../profile')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
           />
         }
       />
@@ -218,13 +239,13 @@ export default function UserRoutes() {
         path="returns"
         element={
           <ReturnReplacementScreen
-            onBack={() => navigate('../orders')}
-            onContinue={() => navigate('../orders')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
+            onContinue={() => navigate(USER_ROUTES.ROOT + '/orders')}
           />
         }
       />
 
-      {/* Profile & Account Routes */}
+      {/* Profile & Account Settings */}
       <Route
         path="profile"
         element={
@@ -235,8 +256,8 @@ export default function UserRoutes() {
         path="profile/addresses"
         element={
           <MyAddressesScreen
-            onBack={() => navigate('../profile')}
-            onAddNew={() => navigate('../profile/addresses')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
+            onAddNew={() => navigate(USER_ROUTES.ROOT + '/profile/addresses')}
           />
         }
       />
@@ -244,7 +265,7 @@ export default function UserRoutes() {
         path="wishlist"
         element={
           <WishlistScreen
-            onBack={() => navigate('../dashboard')}
+            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
           />
         }
       />
@@ -252,7 +273,7 @@ export default function UserRoutes() {
         path="coupons"
         element={
           <CouponsOffersScreen
-            onBack={() => navigate('../profile')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
           />
         }
       />
@@ -260,7 +281,7 @@ export default function UserRoutes() {
         path="notifications"
         element={
           <NotificationCenterScreen
-            onBack={() => navigate('../dashboard')}
+            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
           />
         }
       />
@@ -268,7 +289,7 @@ export default function UserRoutes() {
         path="settings"
         element={
           <SettingsScreen
-            onBack={() => navigate('../profile')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
           />
         }
       />

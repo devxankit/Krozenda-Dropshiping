@@ -1,101 +1,101 @@
 import React, { useState } from 'react'
-import { HiArrowLeft, HiMagnifyingGlass, HiXMark, HiMicrophone } from 'react-icons/hi2'
+import { HiArrowLeft, HiMagnifyingGlass, HiXMark, HiMicrophone, HiClock, HiSparkles } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
-import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 
 export function SearchProductsScreen({ onBack = () => {}, onSelectSearch = () => {} }) {
   const [query, setQuery] = useState('Smartphone')
   const [recentSearches, setRecentSearches] = useState(['Smartphone', 'Headphones', 'Watch', 'Shoes'])
-
-  const popularSearches = ['Smartphones', 'Wireless Earbuds', "Men's Shoes", 'Watches', 'Home Appliances']
+  const popularSearches = ['Smartphones', 'Wireless Earbuds', "Men's Shoes", 'Watches', 'Home Appliances', 'Power Banks']
 
   const clearRecent = () => setRecentSearches([])
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      <div className="hidden md:block">
-        <WebHeader />
-      </div>
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
+      <div className="hidden md:block"><WebHeader /></div>
 
-      <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        <div className="md:hidden">
-          
-        </div>
-
-        <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center space-x-3 shadow-xs">
-          <button onClick={onBack} className="p-1 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
-            <HiArrowLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1 flex items-center bg-slate-100 border border-slate-200 rounded-xl px-3 py-2">
-            <HiMagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products..."
-              className="w-full px-2 bg-transparent text-xs font-bold text-slate-900 focus:outline-none"
-            />
-            {query && (
-              <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slate-600">
-                <HiXMark className="w-4 h-4" />
-              </button>
-            )}
-            <HiMicrophone className="w-4 h-4 text-slate-400 ml-1" />
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+        {/* Main Search Header Bar */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center space-x-4">
+            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+              <HiArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 relative max-w-3xl">
+              <HiMagnifyingGlass className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search 100,000+ products, brands, and suppliers..."
+                className="w-full pl-12 pr-12 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+              />
+              {query && (
+                <button onClick={() => setQuery('')} className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600">
+                  <HiXMark className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => onSelectSearch(query)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-colors"
+            >
+              Search
+            </button>
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
-          {recentSearches.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Recent Searches
-                </span>
-                <button onClick={clearRecent} className="text-[10px] font-bold text-blue-600 hover:underline">
+        {/* 2 Column Split Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Recent Searches */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-black text-slate-900 flex items-center space-x-2">
+                <HiClock className="w-4 h-4 text-slate-500" />
+                <span>Recent Searches</span>
+              </h3>
+              {recentSearches.length > 0 && (
+                <button onClick={clearRecent} className="text-xs font-bold text-blue-600 hover:underline">
                   Clear All
                 </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recentSearches.map((term, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => onSelectSearch(term)}
-                    className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-medium hover:bg-slate-100 transition-colors"
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
+              )}
             </div>
-          )}
 
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Popular Searches
-            </span>
-            <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 shadow-xs">
-              {popularSearches.map((term, idx) => (
-                <div
+            <div className="flex flex-wrap gap-2.5">
+              {recentSearches.map((term, idx) => (
+                <button
                   key={idx}
                   onClick={() => onSelectSearch(term)}
-                  className="p-3.5 flex items-center justify-between text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-xs font-bold rounded-2xl border border-slate-200/80 transition-colors"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <HiMagnifyingGlass className="w-4 h-4 text-slate-400" />
-                    <span>{term}</span>
-                  </div>
-                  <span className="text-slate-400 text-xs">↗</span>
-                </div>
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Popular Searches */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-black text-slate-900 flex items-center space-x-2">
+                <HiSparkles className="w-4 h-4 text-amber-500" />
+                <span>Trending Wholesale Categories</span>
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5">
+              {popularSearches.map((term, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onSelectSearch(term)}
+                  className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-2xl border border-amber-200 transition-colors"
+                >
+                  🔥 {term}
+                </button>
               ))}
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar activeTab="home" />
-      </div>
+      </main>
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import React from 'react'
-import { HiArrowLeft, HiArrowDownTray, HiPhone } from 'react-icons/hi2'
-import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { HiArrowLeft, HiArrowDownTray, HiPhone, HiTruck, HiShieldCheck, HiMapPin, HiCreditCard } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
 export function OrderDetailsScreen({
@@ -8,165 +7,143 @@ export function OrderDetailsScreen({
     id: 'KRO1234567890',
     date: 'Placed on 12 May 2024 at 10:30 AM',
     status: 'Delivered',
-    statusColor: 'bg-emerald-100 text-emerald-700',
-    totalAmount: 49298,
+    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    totalAmount: 49347,
   },
   onBack = () => {},
   onDownloadInvoice = () => {},
   onTrackShipment = () => {},
 }) {
   const items = [
-    {
-      id: 1,
-      name: 'Samsung Galaxy S23 5G',
-      subtitle: '(128GB, Phantom Black)',
-      qty: 1,
-      price: 49999,
-      image: '/images/samsung_s23.png',
-    },
-    {
-      id: 2,
-      name: 'boAt Airdopes 141',
-      subtitle: 'Wireless Earbuds',
-      qty: 1,
-      price: 1299,
-      image: '/images/boat_airdopes.png',
-    },
-    {
-      id: 3,
-      name: 'Portronics Power Bank',
-      subtitle: '10000mAh',
-      qty: 1,
-      price: 1199,
-      image: '/images/iphone_14.png',
-    },
+    { id: 1, name: 'Samsung Galaxy S23 5G', subtitle: '(128GB, Phantom Black)', qty: 1, price: 49999, image: '/images/samsung_s23.png' },
+    { id: 2, name: 'boAt Airdopes 141', subtitle: 'Wireless Earbuds', qty: 1, price: 1299, image: '/images/boat_airdopes.png' },
+    { id: 3, name: 'Portronics Power Bank', subtitle: '10000mAh', qty: 1, price: 1199, image: '/images/iphone_14.png' },
   ]
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      {/* DESKTOP WEB HEADER */}
-      <div className="hidden md:block">
-        <WebHeader />
-      </div>
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
+      <div className="hidden md:block"><WebHeader /></div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        
-        <div className="md:hidden">
-          
-        </div>
-
-        {/* Top Header */}
-        <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onBack}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
-            >
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+          <div className="flex items-center space-x-4">
+            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold text-slate-900">Order Details</h2>
+            <div>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-xl md:text-2xl font-black text-slate-900 font-mono">Order #{order.id}</h1>
+                <span className={`px-3 py-1 rounded-full border text-xs font-black uppercase tracking-wider ${order.statusColor}`}>
+                  {order.status}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">{order.date}</p>
+            </div>
           </div>
-          <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
-            <HiPhone className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={onTrackShipment}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center space-x-1.5"
+            >
+              <HiTruck className="w-4 h-4" />
+              <span>Track Package</span>
+            </button>
+
+            <button
+              onClick={onDownloadInvoice}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl transition-colors flex items-center space-x-1.5 border border-slate-200"
+            >
+              <HiArrowDownTray className="w-4 h-4" />
+              <span>GST Tax Invoice</span>
+            </button>
+          </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 space-y-4">
-          {/* Order Header Card */}
-          <div
-            onClick={onTrackShipment}
-            className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-2 cursor-pointer hover:border-blue-300 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 font-medium">Order ID</span>
-                <h3 className="text-sm font-black text-slate-900">{order.id}</h3>
-              </div>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${order.statusColor}`}>
-                {order.status}
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-medium">{order.date}</p>
-          </div>
-
-          {/* Order Summary Total Banner */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-900">Order Summary</span>
-            <span className="text-sm font-black text-slate-900">
-              ₹{order.totalAmount.toLocaleString('en-IN')}
-            </span>
-          </div>
-
-          {/* Order Items Section */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Order Items
-            </h3>
-
-            <div className="divide-y divide-slate-100">
-              {items.map((item) => (
-                <div key={item.id} className="py-2.5 flex items-center justify-between">
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl p-1 shrink-0 flex items-center justify-center border border-slate-100">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+        {/* 2 Column Split Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Order Items & Delivery Tracking */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+              <h3 className="text-base font-black text-slate-900 border-b border-slate-100 pb-3">
+                Purchased Items ({items.length})
+              </h3>
+              <div className="divide-y divide-slate-100">
+                {items.map((item) => (
+                  <div key={item.id} className="py-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center space-x-4 min-w-0">
+                      <div className="w-16 h-16 bg-slate-50 rounded-2xl p-1 shrink-0 border border-slate-100 flex items-center justify-center">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-slate-900 truncate">{item.name}</h4>
+                        <p className="text-xs text-slate-500 font-medium truncate">{item.subtitle}</p>
+                        <span className="text-xs text-slate-400 font-semibold block mt-0.5">Quantity: {item.qty}</span>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-medium truncate">{item.subtitle}</p>
-                      <span className="text-[10px] text-slate-500 font-semibold">Qty: {item.qty}</span>
-                    </div>
+                    <span className="text-sm font-black text-slate-900 shrink-0">
+                      ₹{item.price.toLocaleString('en-IN')}
+                    </span>
                   </div>
-                  <span className="text-xs font-black text-slate-900 ml-2">
-                    ₹{item.price.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div className="text-center pt-2">
-              <button className="text-xs font-bold text-blue-600 hover:underline">
-                View All Items
+            {/* Delivery Courier Status Banner */}
+            <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-3xl p-6 shadow-md flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-xs text-blue-300 font-extrabold uppercase tracking-widest block">Shiprocket Courier Partner</span>
+                <h4 className="text-lg font-black">Delhivery Air Express (#DEL9847291)</h4>
+                <p className="text-xs text-blue-200">Package delivered on 15 May 2024 at 02:45 PM</p>
+              </div>
+              <button
+                onClick={onTrackShipment}
+                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl transition-all shadow-md shrink-0"
+              >
+                Track Live
               </button>
             </div>
           </div>
 
-          {/* Pricing Details Breakdown */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-2.5 text-xs">
-            <div className="flex justify-between text-slate-600">
-              <span>Order Amount</span>
-              <span className="font-semibold text-slate-900">₹52,497</span>
-            </div>
-            <div className="flex justify-between text-emerald-600 font-semibold">
-              <span>Discount</span>
-              <span>- ₹3,000</span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>Shipping</span>
-              <span className="font-bold text-emerald-600 uppercase">FREE</span>
-            </div>
-            <div className="border-t border-slate-100 pt-2.5 flex justify-between items-baseline font-bold">
-              <span className="text-xs text-slate-900">Total Amount</span>
-              <span className="text-sm font-black text-slate-900">₹49,298</span>
+          {/* Right Column: Address & Payment Summary */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-md space-y-5 sticky top-24">
+              <h3 className="text-base font-black text-slate-900 border-b border-slate-100 pb-3">
+                Shipping & Payment Details
+              </h3>
+
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-1 text-xs">
+                  <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider flex items-center space-x-1">
+                    <HiMapPin className="w-3.5 h-3.5" />
+                    <span>Shipping Address</span>
+                  </span>
+                  <p className="font-bold text-slate-900 text-sm">Rahul Sharma</p>
+                  <p className="text-slate-600 leading-relaxed">123, Sunrise Apartments, SG Highway, Ahmedabad, Gujarat - 380051</p>
+                  <p className="font-semibold text-slate-800 pt-1">+91 98765 43210</p>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
+                  <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider flex items-center space-x-1">
+                    <HiCreditCard className="w-3.5 h-3.5" />
+                    <span>Payment Method</span>
+                  </span>
+                  <p className="font-bold text-slate-900">UPI (Google Pay)</p>
+                  <div className="border-t border-slate-200/60 pt-2 space-y-1.5 text-slate-600">
+                    <div className="flex justify-between"><span>Items Total</span><span className="font-bold text-slate-900">₹52,497</span></div>
+                    <div className="flex justify-between text-emerald-600"><span>Discount</span><span className="font-bold">- ₹3,199</span></div>
+                    <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-200">
+                      <span>Total Paid</span>
+                      <span className="text-blue-700">₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Download Invoice Button */}
-          <button
-            onClick={onDownloadInvoice}
-            className="w-full bg-white hover:bg-slate-50 text-blue-600 font-bold py-3.5 px-4 rounded-xl border border-blue-600 shadow-xs transition-colors text-xs flex items-center justify-center space-x-2"
-          >
-            <HiArrowDownTray className="w-4 h-4" />
-            <span>Download Invoice</span>
-          </button>
         </div>
-      </div>
-
-      {/* MOBILE BOTTOM NAVBAR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar activeTab="orders" />
-      </div>
+      </main>
     </div>
   )
 }

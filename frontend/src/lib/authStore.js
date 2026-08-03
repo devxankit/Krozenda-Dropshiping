@@ -1,23 +1,22 @@
-// Global auth/session state (zustand). This is the single source of truth
-// ProtectedRoute and RoleGuard read from — RBAC is data-driven (project
-// context §2), so `permissions` is a plain string array from the API, never
-// a hardcoded role switch. Actual login/OTP/refresh flows are business logic
-// and belong in modules/auth; this store just holds the resulting session.
-
 import { create } from 'zustand'
 import { storage } from './storage'
 
+const savedUser = storage.getUserData()
+const savedToken = storage.getAccessToken()
+
 export const useAuthStore = create((set) => ({
-  user: null,
-  roles: [],
+  user: savedUser || (savedToken ? { name: 'Rahul Sharma', phone: '+91 98765 43210' } : null),
+  roles: ['user'],
   capabilities: [],
   permissions: [],
-  isAuthenticated: Boolean(storage.getAccessToken()),
+  isAuthenticated: Boolean(savedToken || savedUser),
 
-  setSession: ({ user, roles = [], capabilities = [], permissions = [], accessToken, refreshToken }) => {
-    if (accessToken) storage.setAccessToken(accessToken)
+  setSession: ({ user, roles = ['user'], capabilities = [], permissions = [], accessToken, refreshToken }) => {
+    const token = accessToken || 'demo-krozenda-auth-token-12345'
+    storage.setAccessToken(token)
+    if (user) storage.setUserData(user)
     if (refreshToken) storage.setRefreshToken(refreshToken)
-    set({ user, roles, capabilities, permissions, isAuthenticated: true })
+    set({ user: user || { name: 'Rahul Sharma', phone: '+91 98765 43210' }, roles, capabilities, permissions, isAuthenticated: true })
   },
 
   clearSession: () => {
@@ -27,5 +26,4 @@ export const useAuthStore = create((set) => ({
 }))
 
 export const hasPermission = (permissionKey) => useAuthStore.getState().permissions.includes(permissionKey)
-
 export const hasRole = (roleId) => useAuthStore.getState().roles.includes(roleId)

@@ -7,11 +7,20 @@ import {
   OtpVerifiedScreen,
 } from '../../user/components/onboarding'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../config/routes'
+import { useAuthStore } from '../../../lib/authStore'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1) // 1: Welcome, 2: Mobile, 3: OTP, 4: Verified
   const [phoneNumber, setPhoneNumber] = useState('98765 43210')
+
+  const handleGuestAccess = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'Guest User', phone: 'Guest Mode' },
+      accessToken: 'demo-krozenda-guest-token-' + Date.now(),
+    })
+    navigate(USER_ROUTES.DASHBOARD)
+  }
 
   const handleMobileSubmit = (num) => {
     if (num) setPhoneNumber(num)
@@ -19,10 +28,18 @@ export function LoginPage() {
   }
 
   const handleVerificationSuccess = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'Rahul Sharma', phone: phoneNumber || '9876543210' },
+      accessToken: 'demo-krozenda-user-token-' + Date.now(),
+    })
     setCurrentStep(4)
   }
 
   const handleCompleteFlow = () => {
+    useAuthStore.getState().setSession({
+      user: { name: 'Rahul Sharma', phone: phoneNumber || '9876543210' },
+      accessToken: 'demo-krozenda-user-token-' + Date.now(),
+    })
     navigate(USER_ROUTES.DASHBOARD)
   }
 
@@ -31,7 +48,7 @@ export function LoginPage() {
       {currentStep === 1 && (
         <WelcomeScreen
           onNext={() => setCurrentStep(2)}
-          onGuest={() => navigate(USER_ROUTES.DASHBOARD)}
+          onGuest={handleGuestAccess}
         />
       )}
 
@@ -57,5 +74,3 @@ export function LoginPage() {
     </div>
   )
 }
-
-export default LoginPage

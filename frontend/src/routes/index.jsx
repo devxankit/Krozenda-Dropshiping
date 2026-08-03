@@ -13,9 +13,8 @@ import {
 import { SELLER_PERMISSIONS } from '../modules/seller/constants'
 import { DROPSHIPPING_PARTNER_PERMISSIONS } from '../modules/dropshipping-partner/constants'
 import { ADMIN_PERMISSIONS } from '../modules/admin/constants'
+import { useAuthStore } from '../lib/authStore'
 
-// One lazy chunk per module — each module.routes.jsx is a self-contained
-// <Routes> tree mounted under its own "/*" prefix.
 const AuthRoutes = lazy(() => import('../modules/auth/routes'))
 const UserRoutes = lazy(() => import('../modules/user/routes'))
 const SellerRoutes = lazy(() => import('../modules/seller/routes'))
@@ -31,6 +30,8 @@ function RouteFallback() {
 }
 
 export function AppRoutes() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
@@ -52,8 +53,8 @@ export function AppRoutes() {
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to={AUTH_ROUTES.LOGIN} replace />} />
-        <Route path="*" element={<Navigate to={AUTH_ROUTES.LOGIN} replace />} />
+        <Route path="/" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
+        <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
       </Routes>
     </Suspense>
   )

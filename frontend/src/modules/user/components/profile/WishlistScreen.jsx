@@ -1,51 +1,16 @@
 import React, { useState } from 'react'
-import { HiArrowLeft, HiHeart, HiOutlineShoppingBag } from 'react-icons/hi2'
+import { HiArrowLeft, HiHeart, HiOutlineShoppingBag, HiTrash } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
-import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { USER_ROUTES } from '../../../../config/routes'
 
-export function WishlistScreen({
-  onBack = () => {},
-}) {
+export function WishlistScreen({ onBack = () => {} }) {
   const navigate = useNavigate()
   const [wishlistItems, setWishlistItems] = useState([
-    {
-      id: 1,
-      name: 'iPhone 14 128GB',
-      subtitle: 'Blue',
-      price: 59999,
-      stock: 'In Stock',
-      stockColor: 'text-emerald-600',
-      image: '/images/iphone_14.png',
-    },
-    {
-      id: 2,
-      name: 'boAt Airdopes 141',
-      subtitle: 'Wireless Earbuds',
-      price: 1299,
-      stock: 'In Stock',
-      stockColor: 'text-emerald-600',
-      image: '/images/boat_airdopes.png',
-    },
-    {
-      id: 3,
-      name: 'Fossil Chronograph',
-      subtitle: "Men's Watch",
-      price: 6495,
-      stock: 'In Stock',
-      stockColor: 'text-emerald-600',
-      image: '/images/samsung_s23.png',
-    },
-    {
-      id: 4,
-      name: 'Nike Air Max Alpha',
-      subtitle: "Men's Shoes",
-      price: 5999,
-      stock: 'Only 2 left',
-      stockColor: 'text-amber-600',
-      image: '/images/boat_airdopes.png',
-    },
+    { id: 1, name: 'iPhone 14 128GB', subtitle: 'Blue', price: 59999, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/iphone_14.png' },
+    { id: 2, name: 'boAt Airdopes 141', subtitle: 'Wireless Earbuds', price: 1299, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/boat_airdopes.png' },
+    { id: 3, name: 'Samsung Galaxy S23 5G', subtitle: 'Phantom Black', price: 49999, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/samsung_s23.png' },
+    { id: 4, name: 'Portronics Power Bank', subtitle: '10000mAh', price: 1199, stock: 'Only 2 left', stockColor: 'text-amber-600', image: '/images/iphone_14.png' },
   ])
 
   const removeFromWishlist = (id) => {
@@ -53,86 +18,94 @@ export function WishlistScreen({
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      {/* DESKTOP WEB HEADER */}
-      <div className="hidden md:block">
-        <WebHeader />
-      </div>
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
+      <div className="hidden md:block"><WebHeader /></div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        
-        <div className="md:hidden">
-          
-        </div>
-
-        {/* Top Header */}
-        <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onBack}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
-            >
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+        {/* Header */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold text-slate-900">
-              Wishlist ({wishlistItems.length})
-            </h2>
-          </div>
-          <button className="text-xs font-bold text-blue-600 hover:underline">
-            Edit
-          </button>
-        </div>
-
-        {/* Wishlist Items List */}
-        <div className="p-4 space-y-3">
-          {wishlistItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-3 min-w-0 flex-1">
-                <div className="w-16 h-16 bg-slate-50 rounded-xl p-1 shrink-0 flex items-center justify-center border border-slate-100 relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between pr-2">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
-                    <button
-                      onClick={() => removeFromWishlist(item.id)}
-                      className="p-1 text-red-500 hover:text-red-600 transition-colors"
-                    >
-                      <HiHeart className="w-4 h-4 fill-current" />
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-medium truncate">{item.subtitle}</p>
-                  <span className="text-xs font-black text-slate-900 mt-0.5 block">
-                    ₹{item.price.toLocaleString('en-IN')}
-                  </span>
-                  <span className={`text-[10px] font-bold ${item.stockColor}`}>
-                    {item.stock}
-                  </span>
-                </div>
-              </div>
-
-              {/* Add to Cart Action */}
-              <button
-                onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
-                className="ml-2 px-3 py-2 bg-white hover:bg-slate-50 text-blue-600 font-bold border border-blue-600 rounded-xl text-xs flex items-center space-x-1 shrink-0 transition-colors"
-              >
-                <HiOutlineShoppingBag className="w-4 h-4" />
-                <span className="hidden sm:inline">Add to Cart</span>
-              </button>
+            <div>
+              <h1 className="text-xl md:text-2xl font-black text-slate-900">My Wishlist ({wishlistItems.length})</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Saved items you love for future wholesale order purchases.</p>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* MOBILE BOTTOM NAVBAR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar activeTab="wishlist" />
-      </div>
+          {wishlistItems.length > 0 && (
+            <button
+              onClick={() => setWishlistItems([])}
+              className="text-xs font-bold text-red-600 hover:underline flex items-center space-x-1"
+            >
+              <HiTrash className="w-4 h-4" />
+              <span>Clear Wishlist</span>
+            </button>
+          )}
+        </div>
+
+        {wishlistItems.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto text-3xl">
+              ❤️
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Your wishlist is currently empty</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Save your favorite wholesale products by tapping the heart icon on product pages.
+            </p>
+            <button
+              onClick={() => navigate(USER_ROUTES.DASHBOARD)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+            >
+              Explore Products
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {wishlistItems.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between space-y-4 relative group"
+              >
+                <button
+                  onClick={() => removeFromWishlist(item.id)}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white border border-slate-200 text-red-500 hover:bg-red-50 flex items-center justify-center shadow-xs transition-colors z-10"
+                >
+                  <HiHeart className="w-4 h-4 fill-red-500" />
+                </button>
+
+                <div className="space-y-3 cursor-pointer" onClick={() => navigate(USER_ROUTES.ROOT + '/product')}>
+                  <div className="w-full h-44 bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 truncate">{item.name}</h4>
+                    <p className="text-xs text-slate-500 font-medium truncate">{item.subtitle}</p>
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-base font-black text-slate-900">₹{item.price.toLocaleString('en-IN')}</span>
+                      <span className={`text-[11px] font-extrabold ${item.stockColor}`}>{item.stock}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-xs transition-colors flex items-center justify-center space-x-2"
+                >
+                  <HiOutlineShoppingBag className="w-4 h-4" />
+                  <span>Move to Cart</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   )
 }

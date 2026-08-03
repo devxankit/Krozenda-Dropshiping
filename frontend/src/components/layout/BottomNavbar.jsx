@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   HiHome,
   HiOutlineHome,
@@ -11,44 +12,29 @@ import {
   HiUser,
   HiOutlineUser,
 } from 'react-icons/hi2'
+import { USER_ROUTES } from '../../config/routes'
 
-export function BottomNavbar({ activeTab = 'home', onChangeTab = () => {} }) {
+export function BottomNavbar({ activeTab = 'home', onChangeTab }) {
+  const navigate = useNavigate()
+
   const tabs = [
-    {
-      id: 'home',
-      label: 'Home',
-      ActiveIcon: HiHome,
-      InactiveIcon: HiOutlineHome,
-    },
-    {
-      id: 'categories',
-      label: 'Categories',
-      ActiveIcon: HiSquares2X2,
-      InactiveIcon: HiOutlineSquares2X2,
-    },
-    {
-      id: 'orders',
-      label: 'Orders',
-      ActiveIcon: HiShoppingBag,
-      InactiveIcon: HiOutlineShoppingBag,
-      badge: null,
-    },
-    {
-      id: 'wishlist',
-      label: 'Wishlist',
-      ActiveIcon: HiHeart,
-      InactiveIcon: HiOutlineHeart,
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      ActiveIcon: HiUser,
-      InactiveIcon: HiOutlineUser,
-    },
+    { id: 'home', label: 'Home', route: USER_ROUTES.DASHBOARD, ActiveIcon: HiHome, InactiveIcon: HiOutlineHome },
+    { id: 'categories', label: 'Categories', route: USER_ROUTES.ROOT + '/categories', ActiveIcon: HiSquares2X2, InactiveIcon: HiOutlineSquares2X2 },
+    { id: 'orders', label: 'Orders', route: USER_ROUTES.ROOT + '/orders', ActiveIcon: HiShoppingBag, InactiveIcon: HiOutlineShoppingBag },
+    { id: 'wishlist', label: 'Wishlist', route: USER_ROUTES.ROOT + '/wishlist', ActiveIcon: HiHeart, InactiveIcon: HiOutlineHeart },
+    { id: 'profile', label: 'Profile', route: USER_ROUTES.ROOT + '/profile', ActiveIcon: HiUser, InactiveIcon: HiOutlineUser },
   ]
 
+  const handleTabClick = (tab) => {
+    if (onChangeTab) {
+      onChangeTab(tab.id)
+    } else {
+      navigate(tab.route)
+    }
+  }
+
   return (
-    <div className="w-full bg-white border-t border-slate-100 px-4 py-2 shadow-lg flex items-center justify-around select-none">
+    <div className="w-full bg-white border-t border-slate-200/80 px-4 py-2 shadow-xl flex items-center justify-around select-none">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         const IconComponent = isActive ? tab.ActiveIcon : tab.InactiveIcon
@@ -56,28 +42,16 @@ export function BottomNavbar({ activeTab = 'home', onChangeTab = () => {} }) {
         return (
           <button
             key={tab.id}
-            onClick={() => onChangeTab(tab.id)}
+            onClick={() => handleTabClick(tab)}
             className={`relative flex flex-col items-center justify-center py-1 px-3 transition-all duration-200 ease-out focus:outline-none ${
-              isActive ? 'text-blue-600 scale-105' : 'text-slate-400 hover:text-slate-600'
+              isActive ? 'text-blue-600 scale-105 font-bold' : 'text-slate-500 hover:text-slate-800 font-semibold'
             }`}
           >
-            {/* Active Indicator bar/dot */}
+            <IconComponent className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5]' : ''}`} />
+            <span className="text-[10px] mt-1 tracking-tight">{tab.label}</span>
             {isActive && (
-              <span className="absolute -top-2 w-8 h-1 bg-blue-600 rounded-full animate-scale-up" />
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute -bottom-1" />
             )}
-
-            <div className="relative">
-              <IconComponent className={`w-6 h-6 transition-transform duration-200 ${isActive ? 'stroke-[2.2px]' : ''}`} />
-              {tab.badge && (
-                <span className="absolute -top-1 -right-2 min-w-[16px] h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
-                  {tab.badge}
-                </span>
-              )}
-            </div>
-
-            <span className={`text-[11px] mt-1 font-medium tracking-tight ${isActive ? 'font-semibold text-blue-600' : 'text-slate-500'}`}>
-              {tab.label}
-            </span>
           </button>
         )
       })}

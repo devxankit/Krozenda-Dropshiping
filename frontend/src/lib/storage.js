@@ -5,6 +5,7 @@
 const KEYS = Object.freeze({
   ACCESS_TOKEN: 'krozenda.accessToken',
   REFRESH_TOKEN: 'krozenda.refreshToken',
+  USER_DATA: 'krozenda.userData',
 })
 
 function get(key) {
@@ -17,10 +18,9 @@ function get(key) {
 
 function set(key, value) {
   try {
-    localStorage.setItem(key, value)
+    localStorage.setItem(key, typeof value === 'object' ? JSON.stringify(value) : value)
   } catch {
-    // Storage unavailable (private browsing, quota) — fail silently, the
-    // caller falls back to in-memory auth state for the session.
+    // Storage unavailable
   }
 }
 
@@ -37,8 +37,19 @@ export const storage = Object.freeze({
   setAccessToken: (token) => set(KEYS.ACCESS_TOKEN, token),
   getRefreshToken: () => get(KEYS.REFRESH_TOKEN),
   setRefreshToken: (token) => set(KEYS.REFRESH_TOKEN, token),
+  getUserData: () => {
+    const raw = get(KEYS.USER_DATA)
+    if (!raw) return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
+  },
+  setUserData: (user) => set(KEYS.USER_DATA, user),
   clearTokens: () => {
     remove(KEYS.ACCESS_TOKEN)
     remove(KEYS.REFRESH_TOKEN)
+    remove(KEYS.USER_DATA)
   },
 })

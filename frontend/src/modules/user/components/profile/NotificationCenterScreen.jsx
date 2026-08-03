@@ -1,62 +1,61 @@
 import React, { useState } from 'react'
 import {
   HiArrowLeft,
-  HiBell,
   HiTruck,
   HiTag,
   HiCheckCircle,
   HiSparkles,
+  HiTrash,
+  HiChevronRight,
 } from 'react-icons/hi2'
-import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function NotificationCenterScreen({
-  onBack = () => {},
-}) {
+export function NotificationCenterScreen({ onBack = () => {} }) {
+  const [activeTab, setActiveTab] = useState('All')
   const [notifications, setNotifications] = useState([
     {
       id: 1,
       type: 'order',
-      title: 'Order Delivered Successfully!',
-      message: 'Your order #KRO1234567890 with Samsung S23 has been delivered.',
+      title: 'Order Delivered',
+      message: 'Your order #KRO1234567890 (Samsung S23 5G) has been delivered successfully.',
       time: '10 mins ago',
       isUnread: true,
-      group: 'Today',
+      actionLabel: 'View Order',
       Icon: HiTruck,
-      iconColor: 'bg-emerald-100 text-emerald-600',
+      iconColor: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
     },
     {
       id: 2,
       type: 'offer',
-      title: 'Flash Sale Live Now! 🔥',
-      message: 'Get up to 60% OFF on B2B bulk orders. Limited time deal.',
+      title: 'Flash Sale Live 🔥',
+      message: 'Get up to 60% OFF on B2B electronics bulk orders. Code: KROZ10.',
       time: '2 hours ago',
       isUnread: true,
-      group: 'Today',
+      actionLabel: 'View Deals',
       Icon: HiTag,
-      iconColor: 'bg-amber-100 text-amber-600',
+      iconColor: 'bg-amber-50 text-amber-600 border border-amber-200',
     },
     {
       id: 3,
       type: 'system',
-      title: 'Wallet Cashback Credited',
-      message: '₹250 cashback credited to your Krozenda Wallet.',
-      time: 'Yesterday, 4:30 PM',
+      title: 'Cashback Credited',
+      message: '₹250 promo cashback credited to your KroZenda Wallet.',
+      time: 'Yesterday',
       isUnread: false,
-      group: 'Yesterday',
+      actionLabel: 'Check Wallet',
       Icon: HiSparkles,
-      iconColor: 'bg-purple-100 text-purple-600',
+      iconColor: 'bg-blue-50 text-blue-600 border border-blue-200',
     },
     {
       id: 4,
       type: 'order',
-      title: 'Shipment Out for Delivery',
-      message: 'Agent Rajesh will deliver your package today between 3-6 PM.',
-      time: '12 May 2024',
+      title: 'Shipment Dispatched',
+      message: 'Package containing boAt Airdopes 141 has been dispatched via Delhivery Air.',
+      time: '2 days ago',
       isUnread: false,
-      group: 'Earlier',
-      Icon: HiCheckCircle,
-      iconColor: 'bg-blue-100 text-blue-600',
+      actionLabel: 'Track Package',
+      Icon: HiTruck,
+      iconColor: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
     },
   ])
 
@@ -64,91 +63,115 @@ export function NotificationCenterScreen({
     setNotifications((prev) => prev.map((item) => ({ ...item, isUnread: false })))
   }
 
+  const deleteNotification = (id) => {
+    setNotifications((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const filteredNotifications = notifications.filter((item) => {
+    if (activeTab === 'Orders') return item.type === 'order'
+    if (activeTab === 'Promotions') return item.type === 'offer'
+    if (activeTab === 'Wallet') return item.type === 'system'
+    return true
+  })
+
+  const unreadCount = notifications.filter((n) => n.isUnread).length
+
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      {/* DESKTOP WEB HEADER */}
-      <div className="hidden md:block">
-        <WebHeader />
-      </div>
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
+      <div className="hidden md:block"><WebHeader /></div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        
-        <div className="md:hidden">
-          
-        </div>
-
-        {/* Top Header */}
-        <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-5">
+        {/* Header */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button
-              onClick={onBack}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
-            >
+            <button onClick={onBack} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
-            <h2 className="text-base font-bold text-slate-900">Notifications</h2>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-lg font-bold text-slate-900">Notifications</h1>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold text-[10px] rounded-full">
+                    {unreadCount} New
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">Order updates, shipping alerts and offers</p>
+            </div>
           </div>
+
           <button
             onClick={markAllRead}
-            className="text-xs font-bold text-blue-600 hover:underline"
+            className="text-xs font-bold text-blue-600 hover:underline flex items-center space-x-1"
           >
-            Mark all read
+            <HiCheckCircle className="w-4 h-4" />
+            <span>Mark all read</span>
           </button>
         </div>
 
-        {/* Filter Pills */}
-        <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex space-x-2 text-xs font-bold">
-          <button className="px-3 py-1 rounded-full bg-blue-600 text-white shadow-xs">All</button>
-          <button className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">Orders</button>
-          <button className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">Offers</button>
-          <button className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">Updates</button>
+        {/* Filter Tabs */}
+        <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none">
+          {['All', 'Orders', 'Promotions', 'Wallet'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === tab
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-200/60'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {/* Notification List */}
-        <div className="p-4 space-y-3">
-          {notifications.map((item) => {
-            const IconComp = item.Icon
-
-            return (
-              <div
-                key={item.id}
-                className={`p-4 rounded-2xl border transition-all ${
-                  item.isUnread
-                    ? 'bg-white border-blue-200 shadow-xs ring-1 ring-blue-500/10'
-                    : 'bg-white/80 border-slate-200/70'
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.iconColor}`}>
-                    <IconComp className="w-5 h-5" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">{item.title}</h4>
-                      {item.isUnread && (
-                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 ml-2" />
-                      )}
+        {/* Notifications Feed */}
+        {filteredNotifications.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
+            <p className="text-xs font-bold text-slate-500">No notifications in this category</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredNotifications.map((item) => {
+              const NotificationIcon = item.Icon
+              return (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start justify-between gap-3 ${
+                    item.isUnread ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200/80'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3 min-w-0 flex-1">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.iconColor}`}>
+                      <NotificationIcon className="w-4 h-4" />
                     </div>
-                    <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                      {item.message}
-                    </p>
-                    <span className="text-[10px] text-slate-400 font-medium mt-1.5 block">
-                      {item.time}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
 
-      {/* MOBILE BOTTOM NAVBAR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar activeTab="profile" />
-      </div>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                        <span className="text-[10px] text-slate-400 font-medium">{item.time}</span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-normal">{item.message}</p>
+                      <button className="text-[11px] font-bold text-blue-600 hover:underline pt-1 inline-flex items-center space-x-0.5">
+                        <span>{item.actionLabel}</span>
+                        <HiChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => deleteNotification(item.id)}
+                    className="p-1 text-slate-400 hover:text-red-600 rounded-lg shrink-0 mt-0.5"
+                  >
+                    <HiTrash className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
     </div>
   )
 }

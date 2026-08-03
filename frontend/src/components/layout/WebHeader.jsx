@@ -42,7 +42,10 @@ export function WebHeader() {
           onSubmit={handleSearchSubmit}
           className="flex-1 max-w-2xl hidden md:flex items-center bg-slate-100/90 border border-slate-300/80 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition-all shadow-inner"
         >
-          <select className="bg-slate-200/70 border-r border-slate-300 text-xs font-bold text-slate-700 px-3 py-2.5 outline-none cursor-pointer hover:bg-slate-300/50">
+          <select
+            onChange={() => navigate(USER_ROUTES.ROOT + '/categories')}
+            className="bg-slate-200/70 border-r border-slate-300 text-xs font-bold text-slate-700 px-3 py-2.5 outline-none cursor-pointer hover:bg-slate-300/50"
+          >
             <option>All Categories</option>
             <option>Electronics</option>
             <option>Fashion</option>
@@ -128,26 +131,26 @@ export function WebHeader() {
         <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-none">
           <div className="flex items-center space-x-6">
             <button
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
+              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
               className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-white font-bold transition-colors"
             >
               <HiBars3 className="w-4 h-4" />
               <span>All Categories</span>
             </button>
             <span
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
+              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
               className="hover:text-amber-400 cursor-pointer transition-colors"
             >
               Mobile & Electronics
             </span>
             <span
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
+              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
               className="hover:text-amber-400 cursor-pointer transition-colors"
             >
               Fashion & Apparel
             </span>
             <span
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
+              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
               className="hover:text-amber-400 cursor-pointer transition-colors"
             >
               Home & Kitchen
