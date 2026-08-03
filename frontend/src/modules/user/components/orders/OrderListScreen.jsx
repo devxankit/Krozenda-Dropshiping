@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { HiMagnifyingGlass, HiAdjustmentsHorizontal, HiChevronRight, HiTruck, HiCheckCircle, HiArrowPath } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 
 export function OrderListScreen({ onSelectOrder = () => {} }) {
   const [activeTab, setActiveTab] = useState('All')
@@ -35,12 +36,12 @@ export function OrderListScreen({ onSelectOrder = () => {} }) {
   )
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
         {/* Header & Tabs */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-black text-slate-900">My Orders History</h1>
@@ -48,28 +49,28 @@ export function OrderListScreen({ onSelectOrder = () => {} }) {
             </div>
 
             {/* Order Search Bar */}
-            <div className="relative w-full sm:w-80">
-              <HiMagnifyingGlass className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <div className="flex items-center bg-slate-100 border border-slate-200 rounded-2xl px-3.5 py-2.5 w-full sm:w-72">
+              <HiMagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search by Order ID or Product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                placeholder="Search order ID or product..."
+                className="w-full px-2 bg-transparent text-xs font-semibold text-slate-900 focus:outline-none"
               />
             </div>
           </div>
 
-          {/* Category Tabs */}
+          {/* Status Tabs */}
           <div className="flex items-center space-x-2 border-t border-slate-100 pt-3 overflow-x-auto scrollbar-none">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap ${
+                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
                   activeTab === tab
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {tab}
@@ -78,47 +79,50 @@ export function OrderListScreen({ onSelectOrder = () => {} }) {
           </div>
         </div>
 
-        {/* Order Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Orders List Grid */}
+        <div className="space-y-4">
           {filteredOrders.map((order) => (
             <div
               key={order.id}
               onClick={() => onSelectOrder(order)}
-              className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md hover:border-blue-200 transition-all cursor-pointer space-y-4 flex flex-col justify-between"
+              className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-xs hover:shadow-md transition-all cursor-pointer group space-y-4 overflow-hidden"
             >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div>
-                    <span className="text-xs font-mono font-black text-slate-900 block">{order.id}</span>
-                    <span className="text-[11px] text-slate-400 font-medium">{order.date}</span>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full border text-xs font-black uppercase tracking-wider ${order.statusColor}`}>
+              <div className="flex flex-row items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block truncate">Order #{order.id}</span>
+                  <span className="text-[11px] text-slate-500 font-semibold block truncate">{order.date}</span>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span className={`text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full border ${order.statusColor}`}>
                     {order.status}
                   </span>
                 </div>
+              </div>
 
-                <div className="flex items-center space-x-3 py-1">
-                  <div className="flex -space-x-2 overflow-hidden">
-                    {order.thumbnails.map((img, i) => (
-                      <div key={i} className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0">
-                        <img src={img} alt="Product" className="w-full h-full object-contain" />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-900 truncate">{order.items.join(', ')}</p>
-                    <span className="text-[11px] text-slate-500 font-medium">{order.itemsCount} Items in Package</span>
-                  </div>
+              {/* Order Thumbnails & Description (Strict Flexbox Truncation Protection) */}
+              <div className="flex items-center space-x-3 py-1 min-w-0 w-full">
+                <div className="flex -space-x-2 overflow-hidden shrink-0">
+                  {order.thumbnails.map((img, i) => (
+                    <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0">
+                      <img src={img} alt="Product" className="w-full h-full object-contain" />
+                    </div>
+                  ))}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{order.items.join(', ')}</p>
+                  <span className="text-[11px] text-slate-500 font-medium">{order.itemsCount} Items in Package</span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div>
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="shrink-0">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Amount</span>
-                  <span className="text-base font-black text-blue-700">₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                  <span className="text-sm sm:text-base font-black text-blue-700">₹{order.totalAmount.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex items-center space-x-1 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
-                  <span>View Order Details</span>
+                <div className="flex items-center space-x-1 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform shrink-0">
+                  <span className="hidden sm:inline">View Order Details</span>
+                  <span className="sm:hidden">Details</span>
                   <HiChevronRight className="w-4 h-4" />
                 </div>
               </div>
@@ -126,6 +130,11 @@ export function OrderListScreen({ onSelectOrder = () => {} }) {
           ))}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <BottomNavbar />
+      </div>
     </div>
   )
 }

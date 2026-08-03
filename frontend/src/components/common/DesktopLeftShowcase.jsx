@@ -1,4 +1,5 @@
 import React from 'react'
+import { HiBolt, HiBuildingOffice2, HiRocketLaunch } from 'react-icons/hi2'
 
 export function DesktopLeftShowcase({
   title = "India's #1 B2B & B2C Dropshipping Marketplace",
@@ -28,8 +29,8 @@ export function DesktopLeftShowcase({
 
       {/* Center Body Content */}
       <div className="relative z-10 space-y-6 my-auto max-w-xl">
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-sm">
-          <span>⚡</span>
+        <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-sm">
+          <HiBolt className="w-4 h-4 text-slate-950" />
           <span>{tag}</span>
         </div>
 
@@ -44,13 +45,19 @@ export function DesktopLeftShowcase({
         {/* Feature Highlights Grid */}
         <div className="grid grid-cols-2 gap-4 pt-2 text-xs font-semibold">
           <div className="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl space-y-1">
-            <span className="text-amber-400 font-black text-sm block">🏭 500+ Factory Suppliers</span>
-            <span className="text-[11px] text-blue-200">Zero upfront inventory investment</span>
+            <span className="text-amber-400 font-black text-sm flex items-center space-x-1.5">
+              <HiBuildingOffice2 className="w-4 h-4 text-amber-400" />
+              <span>500+ Factory Suppliers</span>
+            </span>
+            <span className="text-[11px] text-blue-200 block">Zero upfront inventory investment</span>
           </div>
 
           <div className="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl space-y-1">
-            <span className="text-amber-400 font-black text-sm block">🚀 Express Pan-India</span>
-            <span className="text-[11px] text-blue-200">Shiprocket automated tracking</span>
+            <span className="text-amber-400 font-black text-sm flex items-center space-x-1.5">
+              <HiRocketLaunch className="w-4 h-4 text-amber-400" />
+              <span>Express Pan-India</span>
+            </span>
+            <span className="text-[11px] text-blue-200 block">Shiprocket automated tracking</span>
           </div>
         </div>
 
@@ -58,25 +65,25 @@ export function DesktopLeftShowcase({
         <div className="pt-6 border-t border-white/10 grid grid-cols-3 gap-4 text-center">
           <div>
             <span className="text-2xl font-black text-white block">100K+</span>
-            <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Active Retailers</span>
+            <span className="text-[11px] text-blue-300 font-semibold block mt-0.5">Active Resellers</span>
           </div>
+
           <div>
-            <span className="text-2xl font-black text-amber-400 block">₹50Cr+</span>
-            <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Monthly Sales</span>
+            <span className="text-2xl font-black text-white block">500K+</span>
+            <span className="text-[11px] text-blue-300 font-semibold block mt-0.5">Monthly Orders</span>
           </div>
+
           <div>
-            <span className="text-2xl font-black text-white block">4.9★</span>
-            <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Seller Rating</span>
+            <span className="text-2xl font-black text-white block">26,000+</span>
+            <span className="text-[11px] text-blue-300 font-semibold block mt-0.5">Pincodes Served</span>
           </div>
         </div>
       </div>
 
-      {/* Bottom Footer */}
-      <div className="relative z-10 text-xs text-blue-300/70 font-medium">
-        © 2026 KroZenda E-Commerce Pvt. Ltd. All rights reserved.
+      {/* Footer Text */}
+      <div className="relative z-10 text-[11px] text-blue-300/80 font-medium pt-6">
+        © 2026 KroZenda Technologies Pvt Ltd. All rights reserved.
       </div>
     </div>
   )
 }
-
-export default DesktopLeftShowcase

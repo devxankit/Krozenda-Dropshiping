@@ -1,132 +1,137 @@
 import React, { useState } from 'react'
 import {
   HiArrowLeft,
+  HiChevronRight,
   HiUser,
   HiLockClosed,
-  HiMapPin,
-  HiCreditCard,
   HiBell,
   HiGlobeAlt,
-  HiCurrencyRupee,
   HiMoon,
-  HiQuestionMarkCircle,
-  HiShieldCheck,
   HiDocumentText,
+  HiShieldCheck,
+  HiQuestionMarkCircle,
   HiArrowRightOnRectangle,
-  HiChevronRight,
 } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
 
 export function SettingsScreen({ onBack = () => {} }) {
   const navigate = useNavigate()
+  const [pushNotifications, setPushNotifications] = useState(true)
+  const [emailAlerts, setEmailAlerts] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [selectedLang, setSelectedLang] = useState('English (US)')
 
   const accountItems = [
-    { label: 'Personal Information', Icon: HiUser, route: USER_ROUTES.ROOT + '/profile' },
-    { label: 'Change Password', Icon: HiLockClosed, route: USER_ROUTES.ROOT + '/profile' },
-    { label: 'Manage Addresses', Icon: HiMapPin, route: USER_ROUTES.ROOT + '/profile/addresses' },
-    { label: 'Saved Cards', Icon: HiCreditCard, route: USER_ROUTES.ROOT + '/profile' },
-    { label: 'Notifications', Icon: HiBell, route: USER_ROUTES.ROOT + '/notifications' },
-  ]
-
-  const preferenceItems = [
-    { label: 'Language', Icon: HiGlobeAlt, value: 'English' },
-    { label: 'Currency', Icon: HiCurrencyRupee, value: 'INR (₹)' },
+    { label: 'Edit Profile Information', sub: 'Name, phone number & email address', Icon: HiUser, route: USER_ROUTES.ROOT + '/profile' },
+    { label: 'Change Password & Security', sub: 'Two-factor auth and active sessions', Icon: HiLockClosed, route: USER_ROUTES.ROOT + '/settings' },
   ]
 
   const otherItems = [
-    { label: 'Help & Support', Icon: HiQuestionMarkCircle, route: USER_ROUTES.ROOT + '/support' },
-    { label: 'Privacy Policy', Icon: HiShieldCheck, route: USER_ROUTES.ROOT + '/profile' },
-    { label: 'Terms & Conditions', Icon: HiDocumentText, route: USER_ROUTES.ROOT + '/profile' },
-    { label: 'Logout', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },
+    { label: 'Terms of Service', Icon: HiDocumentText, route: USER_ROUTES.ROOT + '/support' },
+    { label: 'Privacy Policy', Icon: HiShieldCheck, route: USER_ROUTES.ROOT + '/support' },
+    { label: 'Help & Customer Support', Icon: HiQuestionMarkCircle, route: USER_ROUTES.ROOT + '/support' },
+    { label: 'Log Out of Account', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },
   ]
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
         {/* Header Bar */}
-        <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button onClick={onBack} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700">
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-slate-900">Settings</h1>
-              <p className="text-xs text-slate-500 hidden sm:block">Manage your account credentials, preferences and support</p>
+              <h1 className="text-xl md:text-2xl font-black text-slate-900">App Settings</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Manage notifications, language, security, and account preferences.</p>
             </div>
           </div>
         </div>
 
-        {/* Responsive Grid Layout (3 Columns on Desktop, Stacked Cards on Mobile) */}
+        {/* 3-Section Settings Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {/* Section 1: Account */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-700 px-1">Account</h3>
+          {/* Section 1: Account Settings */}
+          <div className="space-y-2.5">
+            <h3 className="text-xs font-bold text-slate-700 px-1">Account & Security</h3>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
-              {accountItems.map(({ label, Icon, route }) => (
+              {accountItems.map(({ label, sub, Icon, route }) => (
                 <div
                   key={label}
                   onClick={() => navigate(route)}
-                  className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 hover:bg-slate-50/80 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-800">{label}</span>
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-slate-900 block truncate">{label}</span>
+                      <span className="text-[10px] text-slate-400 font-medium block truncate">{sub}</span>
+                    </div>
                   </div>
-                  <HiChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  <HiChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
                 </div>
               ))}
             </div>
           </div>
 
           {/* Section 2: Preferences */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <h3 className="text-xs font-bold text-slate-700 px-1">Preferences</h3>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
-              {preferenceItems.map(({ label, Icon, value }) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-800">{label}</span>
-                  </div>
-                  <div className="flex items-center space-x-1 text-xs font-semibold text-slate-500">
-                    <span>{value}</span>
-                    <HiChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                  </div>
-                </div>
-              ))}
-
-              {/* Dark Mode Toggle Item */}
-              <div className="flex items-center justify-between px-4 py-3.5">
+              {/* Push Notifications Toggle */}
+              <div className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-3">
-                  <HiMoon className="w-4 h-4 text-slate-600 shrink-0" />
-                  <span className="text-xs font-semibold text-slate-800">Dark Mode</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <HiBell className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">Push Notifications</span>
                 </div>
-                <button
-                  onClick={() => setDarkMode(!darkMode)}
-                  className={`w-10 h-5 rounded-full p-0.5 transition-colors ${
-                    darkMode ? 'bg-blue-600' : 'bg-slate-300'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                      darkMode ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                <input
+                  type="checkbox"
+                  checked={pushNotifications}
+                  onChange={(e) => setPushNotifications(e.target.checked)}
+                  className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Email Alerts Toggle */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <HiBell className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">Email Order Alerts</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={emailAlerts}
+                  onChange={(e) => setEmailAlerts(e.target.checked)}
+                  className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Language Selector */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <HiGlobeAlt className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">App Language</span>
+                </div>
+                <span className="text-xs font-bold text-blue-600">{selectedLang}</span>
               </div>
             </div>
           </div>
 
-          {/* Section 3: Others */}
-          <div className="space-y-2">
+          {/* Section 3: Legal & Support */}
+          <div className="space-y-2.5">
             <h3 className="text-xs font-bold text-slate-700 px-1">Others</h3>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
               {otherItems.map(({ label, Icon, route, isLogout }) => (
@@ -148,6 +153,11 @@ export function SettingsScreen({ onBack = () => {} }) {
           </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <BottomNavbar />
+      </div>
     </div>
   )
 }

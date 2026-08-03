@@ -18,7 +18,8 @@ export function WebHeader() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault()
-    navigate(USER_ROUTES.ROOT + '/listing')
+    const q = searchTerm.trim() || 'Products'
+    navigate(USER_ROUTES.ROOT + '/search', { state: { query: q } })
   }
 
   return (

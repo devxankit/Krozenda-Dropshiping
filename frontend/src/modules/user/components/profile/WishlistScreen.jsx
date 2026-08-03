@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { HiArrowLeft, HiHeart, HiOutlineShoppingBag, HiTrash } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { USER_ROUTES } from '../../../../config/routes'
 
 export function WishlistScreen({ onBack = () => {} }) {
@@ -21,91 +22,101 @@ export function WishlistScreen({ onBack = () => {} }) {
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
-        {/* Header */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
-              <HiArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900">My Wishlist ({wishlistItems.length})</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Saved items you love for future wholesale order purchases.</p>
-            </div>
-          </div>
-
-          {wishlistItems.length > 0 && (
-            <button
-              onClick={() => setWishlistItems([])}
-              className="text-xs font-bold text-red-600 hover:underline flex items-center space-x-1"
-            >
-              <HiTrash className="w-4 h-4" />
-              <span>Clear Wishlist</span>
-            </button>
-          )}
+      {/* Compact Clean Header Bar */}
+      <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center space-x-3">
+          <button onClick={onBack} className="p-1 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors">
+            <HiArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-base font-bold text-slate-900">My Wishlist ({wishlistItems.length})</h1>
         </div>
 
+        {wishlistItems.length > 0 && (
+          <button
+            onClick={() => setWishlistItems([])}
+            className="text-xs font-bold text-red-600 hover:text-red-700 transition-colors flex items-center space-x-1"
+          >
+            <HiTrash className="w-4 h-4" />
+            <span>Clear</span>
+          </button>
+        )}
+      </div>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
         {wishlistItems.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4">
-            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto text-3xl">
-              ❤️
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto text-2xl">
+              <HiHeart className="w-8 h-8 text-red-500 fill-red-500" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Your wishlist is currently empty</h3>
+            <h3 className="text-base font-bold text-slate-900">Your wishlist is currently empty</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               Save your favorite wholesale products by tapping the heart icon on product pages.
             </p>
             <button
               onClick={() => navigate(USER_ROUTES.DASHBOARD)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all"
             >
               Explore Products
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {wishlistItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between space-y-4 relative group"
+                onClick={() => navigate(USER_ROUTES.ROOT + '/product')}
+                className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-3 relative"
               >
                 <button
-                  onClick={() => removeFromWishlist(item.id)}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white border border-slate-200 text-red-500 hover:bg-red-50 flex items-center justify-center shadow-xs transition-colors z-10"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeFromWishlist(item.id)
+                  }}
+                  className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors"
                 >
                   <HiHeart className="w-4 h-4 fill-red-500" />
                 </button>
 
-                <div className="space-y-3 cursor-pointer" onClick={() => navigate(USER_ROUTES.ROOT + '/product')}>
-                  <div className="w-full h-44 bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
-                    />
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 truncate">{item.name}</h4>
-                    <p className="text-xs text-slate-500 font-medium truncate">{item.subtitle}</p>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-base font-black text-slate-900">₹{item.price.toLocaleString('en-IN')}</span>
-                      <span className={`text-[11px] font-extrabold ${item.stockColor}`}>{item.stock}</span>
-                    </div>
-                  </div>
+                <div className="w-full h-32 sm:h-36 bg-slate-50 rounded-xl p-2 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                  />
                 </div>
 
-                <button
-                  onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-xs transition-colors flex items-center justify-center space-x-2"
-                >
-                  <HiOutlineShoppingBag className="w-4 h-4" />
-                  <span>Move to Cart</span>
-                </button>
+                <div className="space-y-1">
+                  <span className={`text-[10px] font-bold ${item.stockColor} block`}>{item.stock}</span>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors truncate">
+                    {item.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-medium truncate">{item.subtitle}</p>
+
+                  <div className="flex items-center justify-between pt-1.5">
+                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                      ₹{item.price.toLocaleString('en-IN')}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(USER_ROUTES.ROOT + '/cart')
+                      }}
+                      className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
+                    >
+                      <HiOutlineShoppingBag className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <BottomNavbar />
+      </div>
     </div>
   )
 }

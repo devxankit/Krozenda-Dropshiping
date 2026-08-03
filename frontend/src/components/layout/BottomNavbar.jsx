@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   HiHome,
   HiOutlineHome,
@@ -14,8 +14,29 @@ import {
 } from 'react-icons/hi2'
 import { USER_ROUTES } from '../../config/routes'
 
-export function BottomNavbar({ activeTab = 'home', onChangeTab }) {
+export function BottomNavbar({ activeTab, onChangeTab }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentPath = location.pathname
+
+  let currentActiveTab = activeTab
+  if (!currentActiveTab) {
+    if (currentPath.includes('/categories')) currentActiveTab = 'categories'
+    else if (currentPath.includes('/orders')) currentActiveTab = 'orders'
+    else if (currentPath.includes('/wishlist')) currentActiveTab = 'wishlist'
+    else if (
+      currentPath.includes('/profile') ||
+      currentPath.includes('/settings') ||
+      currentPath.includes('/coupons') ||
+      currentPath.includes('/support')
+    ) {
+      currentActiveTab = 'profile'
+    } else if (currentPath.includes('/dashboard')) {
+      currentActiveTab = 'home'
+    } else {
+      currentActiveTab = 'home'
+    }
+  }
 
   const tabs = [
     { id: 'home', label: 'Home', route: USER_ROUTES.DASHBOARD, ActiveIcon: HiHome, InactiveIcon: HiOutlineHome },
@@ -24,6 +45,9 @@ export function BottomNavbar({ activeTab = 'home', onChangeTab }) {
     { id: 'wishlist', label: 'Wishlist', route: USER_ROUTES.ROOT + '/wishlist', ActiveIcon: HiHeart, InactiveIcon: HiOutlineHeart },
     { id: 'profile', label: 'Profile', route: USER_ROUTES.ROOT + '/profile', ActiveIcon: HiUser, InactiveIcon: HiOutlineUser },
   ]
+
+  const activeIndex = tabs.findIndex((t) => t.id === currentActiveTab)
+  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0
 
   const handleTabClick = (tab) => {
     if (onChangeTab) {
@@ -34,27 +58,43 @@ export function BottomNavbar({ activeTab = 'home', onChangeTab }) {
   }
 
   return (
-    <div className="w-full bg-white border-t border-slate-200/80 px-4 py-2 shadow-xl flex items-center justify-around select-none">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id
-        const IconComponent = isActive ? tab.ActiveIcon : tab.InactiveIcon
+    <nav className="w-full bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 shadow-2xl relative select-none">
+      <div className="max-w-md mx-auto relative grid grid-cols-5 items-center">
+        {/* Smooth Sliding Background Pill Indicator */}
+        <div
+          className="absolute top-0.5 bottom-0.5 rounded-2xl bg-blue-600/10 border border-blue-500/20 shadow-2xs transition-all duration-300 ease-out pointer-events-none"
+          style={{
+            left: `${safeActiveIndex * 20}%`,
+            width: '20%',
+          }}
+        />
 
-        return (
-          <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab)}
-            className={`relative flex flex-col items-center justify-center py-1 px-3 transition-all duration-200 ease-out focus:outline-none ${
-              isActive ? 'text-blue-600 scale-105 font-bold' : 'text-slate-500 hover:text-slate-800 font-semibold'
-            }`}
-          >
-            <IconComponent className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5]' : ''}`} />
-            <span className="text-[10px] mt-1 tracking-tight">{tab.label}</span>
-            {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute -bottom-1" />
-            )}
-          </button>
-        )
-      })}
-    </div>
+        {tabs.map((tab) => {
+          const isActive = currentActiveTab === tab.id
+          const IconComponent = isActive ? tab.ActiveIcon : tab.InactiveIcon
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab)}
+              className="relative z-10 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-colors duration-200 focus:outline-none"
+            >
+              <IconComponent
+                className={`w-5 h-5 transition-all duration-300 ${
+                  isActive ? 'scale-110 -translate-y-0.5 text-blue-600' : 'scale-100 text-slate-500 hover:text-slate-800'
+                }`}
+              />
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${
+                  isActive ? 'text-blue-700 font-extrabold' : 'text-slate-500 font-semibold'
+                }`}
+              >
+                {tab.label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </nav>
   )
 }

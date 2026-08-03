@@ -1,7 +1,6 @@
 import React from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { HomeScreen } from './components/onboarding'
-import { SearchProductsScreen } from './components/ecommerce/SearchProductsScreen'
 import { ProductListingScreen } from './components/ecommerce/ProductListingScreen'
 import { ProductDetailScreen } from './components/ecommerce/ProductDetailScreen'
 import { CartPageScreen } from './components/ecommerce/CartPageScreen'
@@ -56,18 +55,32 @@ export default function UserRoutes() {
           />
         }
       />
+
+      {/* Step 1 in Flow: Category Selection Page */}
       <Route
         path="categories"
         element={<CategoryListScreen />}
       />
 
-      {/* Search & Listing */}
+      {/* Step 2 in Flow: Product Listing Page (Category Results) */}
+      <Route
+        path="listing"
+        element={
+          <ProductListingScreen
+            onBack={() => navigate(USER_ROUTES.ROOT + '/categories')}
+            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
+          />
+        }
+      />
+
+      {/* Direct Search Results (No Separate Intermediate Search Page) */}
       <Route
         path="search"
         element={
-          <SearchProductsScreen
-            onBack={() => navigate(-1)}
-            onSelectSearch={() => navigate(USER_ROUTES.ROOT + '/search/results')}
+          <SearchFiltersScreen
+            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
+            onOpenFilters={() => navigate(USER_ROUTES.ROOT + '/filters')}
+            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
           />
         }
       />
@@ -75,32 +88,25 @@ export default function UserRoutes() {
         path="search/results"
         element={
           <SearchFiltersScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/search')}
+            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
             onOpenFilters={() => navigate(USER_ROUTES.ROOT + '/filters')}
             onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
           />
         }
       />
+
+      {/* Dedicated Filter Options Page */}
       <Route
         path="filters"
         element={
           <ProductFiltersScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/search/results')}
-            onApplyFilters={() => navigate(USER_ROUTES.ROOT + '/search/results')}
-          />
-        }
-      />
-      <Route
-        path="listing"
-        element={
-          <ProductListingScreen
-            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
-            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/search')}
+            onApplyFilters={() => navigate(USER_ROUTES.ROOT + '/search')}
           />
         }
       />
 
-      {/* Product Details & Cart */}
+      {/* Step 3 in Flow: Product Details Showcase */}
       <Route
         path="product"
         element={
@@ -111,6 +117,8 @@ export default function UserRoutes() {
           />
         }
       />
+
+      {/* Step 4 in Flow: Cart Page */}
       <Route
         path="cart"
         element={
@@ -121,7 +129,7 @@ export default function UserRoutes() {
         }
       />
 
-      {/* Seamless Checkout Flow */}
+      {/* Step 5-8 in Flow: Checkout Steps */}
       <Route
         path="checkout/address"
         element={
