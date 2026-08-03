@@ -27,7 +27,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-900">
+    <div className="w-full min-h-screen bg-slate-100/70 flex flex-col justify-center items-center">
       {currentStep === 1 && (
         <Screen1Welcome
           onNext={() => setCurrentStep(2)}
