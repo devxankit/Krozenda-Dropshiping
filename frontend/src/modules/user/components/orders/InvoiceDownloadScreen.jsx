@@ -3,7 +3,7 @@ import { HiArrowLeft, HiArrowDownTray } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen24InvoiceDownload({
+export function InvoiceDownloadScreen({
   invoiceNo = 'INV-KRO-1234567890',
   date = '12 May 2024',
   onBack = () => {},
@@ -42,16 +42,9 @@ export function Screen24InvoiceDownload({
 
       {/* Main Content Area */}
       <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        {/* MOBILE STATUS BAR */}
+        
         <div className="md:hidden">
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
         </div>
 
         {/* Top Header */}
@@ -80,7 +73,7 @@ export function Screen24InvoiceDownload({
             {/* Invoice Top Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
-                <img src="/images/logo.png" alt="KroZenda" className="h-9 w-auto object-contain" />
+                <img src="/images/logo.png" alt="KroZenda" className="h-14 w-auto object-contain" />
               </div>
               <div className="text-right">
                 <span className="text-sm font-black text-slate-900 uppercase block tracking-wider">

@@ -3,7 +3,7 @@ import { HiArrowLeft, HiMapPin } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen17DeliveryOptions({ onBack = () => {}, onChangeAddress = () => {}, onNext = () => {} }) {
+export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () => {}, onNext = () => {} }) {
   const [selectedOption, setSelectedOption] = useState('standard')
   const deliveryOptions = [
     { id: 'standard', title: 'Standard Delivery', tag: 'FREE', days: '3-5 Business Days', price: 0 },

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { HiArrowLeft } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen19Payment({ amount = 49298, onBack = () => {}, onPaymentSuccess = () => {} }) {
+export function PaymentScreen({ amount = 49298, onBack = () => {}, onPaymentSuccess = () => {} }) {
   const [selectedMethod, setSelectedMethod] = useState('upi')
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">

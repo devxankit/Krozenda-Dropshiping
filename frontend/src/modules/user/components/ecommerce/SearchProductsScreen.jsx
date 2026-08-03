@@ -3,7 +3,7 @@ import { HiArrowLeft, HiMagnifyingGlass, HiXMark, HiMicrophone } from 'react-ico
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 
-export function Screen12SearchProducts({ onBack = () => {}, onSelectSearch = () => {} }) {
+export function SearchProductsScreen({ onBack = () => {}, onSelectSearch = () => {} }) {
   const [query, setQuery] = useState('Smartphone')
   const [recentSearches, setRecentSearches] = useState(['Smartphone', 'Headphones', 'Watch', 'Shoes'])
 
@@ -19,14 +19,7 @@ export function Screen12SearchProducts({ onBack = () => {}, onSelectSearch = () 
 
       <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
         <div className="md:hidden">
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
         </div>
 
         <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center space-x-3 shadow-xs">

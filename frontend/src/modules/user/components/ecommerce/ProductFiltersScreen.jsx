@@ -3,7 +3,7 @@ import { HiArrowLeft, HiCheck, HiXMark } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen32ProductFilters({
+export function ProductFiltersScreen({
   onBack = () => {},
   onApplyFilters = () => {},
 }) {
@@ -44,16 +44,9 @@ export function Screen32ProductFilters({
 
       {/* Main Content Area */}
       <div className="flex-1 pb-24 md:pb-12 max-w-2xl mx-auto w-full md:px-6 md:py-6">
-        {/* MOBILE STATUS BAR */}
+        
         <div className="md:hidden">
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
         </div>
 
         {/* Top Header */}

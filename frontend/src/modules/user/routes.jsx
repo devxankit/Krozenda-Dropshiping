@@ -1,35 +1,35 @@
 import React from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { Screen5HomeScreen } from './components/onboarding'
-import { Screen12SearchProducts } from './components/ecommerce/Screen12SearchProducts'
-import { Screen13ProductListing } from './components/ecommerce/Screen13ProductListing'
-import { Screen14ProductDetail } from './components/ecommerce/Screen14ProductDetail'
-import { Screen15CartPage } from './components/ecommerce/Screen15CartPage'
+import { HomeScreen } from './components/onboarding'
+import { SearchProductsScreen } from './components/ecommerce/SearchProductsScreen'
+import { ProductListingScreen } from './components/ecommerce/ProductListingScreen'
+import { ProductDetailScreen } from './components/ecommerce/ProductDetailScreen'
+import { CartPageScreen } from './components/ecommerce/CartPageScreen'
 
-import { Screen16SelectAddress } from './components/checkout/Screen16SelectAddress'
-import { Screen17DeliveryOptions } from './components/checkout/Screen17DeliveryOptions'
-import { Screen18OrderSummary } from './components/checkout/Screen18OrderSummary'
-import { Screen19Payment } from './components/checkout/Screen19Payment'
-import { Screen20OrderPlaced } from './components/checkout/Screen20OrderPlaced'
+import { SelectAddressScreen } from './components/checkout/SelectAddressScreen'
+import { DeliveryOptionsScreen } from './components/checkout/DeliveryOptionsScreen'
+import { OrderSummaryScreen } from './components/checkout/OrderSummaryScreen'
+import { PaymentScreen } from './components/checkout/PaymentScreen'
+import { OrderPlacedScreen } from './components/checkout/OrderPlacedScreen'
 
-import { Screen21OrderList } from './components/orders/Screen21OrderList'
-import { Screen22OrderDetails } from './components/orders/Screen22OrderDetails'
-import { Screen23TrackShipment } from './components/orders/Screen23TrackShipment'
-import { Screen24InvoiceDownload } from './components/orders/Screen24InvoiceDownload'
-import { Screen25RateReview } from './components/orders/Screen25RateReview'
+import { OrderListScreen } from './components/orders/OrderListScreen'
+import { OrderDetailsScreen } from './components/orders/OrderDetailsScreen'
+import { TrackShipmentScreen } from './components/orders/TrackShipmentScreen'
+import { InvoiceDownloadScreen } from './components/orders/InvoiceDownloadScreen'
+import { RateReviewScreen } from './components/orders/RateReviewScreen'
 
-import { Screen26ProfileDashboard } from './components/profile/Screen26ProfileDashboard'
-import { Screen27MyAddresses } from './components/profile/Screen27MyAddresses'
-import { Screen28Wishlist } from './components/profile/Screen28Wishlist'
-import { Screen29CouponsOffers } from './components/profile/Screen29CouponsOffers'
-import { Screen30NotificationCenter } from './components/profile/Screen30NotificationCenter'
-import { Screen36Settings } from './components/profile/Screen36Settings'
+import { ProfileDashboardScreen } from './components/profile/ProfileDashboardScreen'
+import { MyAddressesScreen } from './components/profile/MyAddressesScreen'
+import { WishlistScreen } from './components/profile/WishlistScreen'
+import { CouponsOffersScreen } from './components/profile/CouponsOffersScreen'
+import { NotificationCenterScreen } from './components/profile/NotificationCenterScreen'
+import { SettingsScreen } from './components/profile/SettingsScreen'
 
-import { Screen31SearchFilters } from './components/ecommerce/Screen31SearchFilters'
-import { Screen32ProductFilters } from './components/ecommerce/Screen32ProductFilters'
-import { Screen33HelpSupport } from './components/support/Screen33HelpSupport'
-import { Screen34ReturnReplacement } from './components/support/Screen34ReturnReplacement'
-import { Screen35InvoicePreview } from './components/orders/Screen35InvoicePreview'
+import { SearchFiltersScreen } from './components/ecommerce/SearchFiltersScreen'
+import { ProductFiltersScreen } from './components/ecommerce/ProductFiltersScreen'
+import { HelpSupportScreen } from './components/support/HelpSupportScreen'
+import { ReturnReplacementScreen } from './components/support/ReturnReplacementScreen'
+import { InvoicePreviewScreen } from './components/orders/InvoicePreviewScreen'
 
 import { UserAppShowcase } from './pages/UserAppShowcase'
 
@@ -41,12 +41,12 @@ export default function UserRoutes() {
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route
         path="dashboard"
-        element={<Screen5HomeScreen onNavigateTab={(tab) => tab === 'categories' && navigate('../listing')} />}
+        element={<HomeScreen onNavigateTab={(tab) => tab === 'categories' && navigate('../listing')} />}
       />
       <Route
         path="search"
         element={
-          <Screen12SearchProducts
+          <SearchProductsScreen
             onBack={() => navigate(-1)}
             onSelectSearch={() => navigate('../search/results')}
           />
@@ -55,7 +55,7 @@ export default function UserRoutes() {
       <Route
         path="search/results"
         element={
-          <Screen31SearchFilters
+          <SearchFiltersScreen
             onBack={() => navigate('../search')}
             onOpenFilters={() => navigate('../filters')}
             onSelectProduct={() => navigate('../product')}
@@ -65,7 +65,7 @@ export default function UserRoutes() {
       <Route
         path="filters"
         element={
-          <Screen32ProductFilters
+          <ProductFiltersScreen
             onBack={() => navigate('../search/results')}
             onApplyFilters={() => navigate('../search/results')}
           />
@@ -74,7 +74,7 @@ export default function UserRoutes() {
       <Route
         path="listing"
         element={
-          <Screen13ProductListing
+          <ProductListingScreen
             onBack={() => navigate('../dashboard')}
             onSelectProduct={() => navigate('../product')}
           />
@@ -83,7 +83,7 @@ export default function UserRoutes() {
       <Route
         path="product"
         element={
-          <Screen14ProductDetail
+          <ProductDetailScreen
             onBack={() => navigate('../listing')}
             onAddToCart={() => navigate('../cart')}
             onBuyNow={() => navigate('../cart')}
@@ -93,7 +93,7 @@ export default function UserRoutes() {
       <Route
         path="cart"
         element={
-          <Screen15CartPage
+          <CartPageScreen
             onBack={() => navigate('../product')}
             onCheckout={() => navigate('../checkout/address')}
           />
@@ -104,7 +104,7 @@ export default function UserRoutes() {
       <Route
         path="checkout/address"
         element={
-          <Screen16SelectAddress
+          <SelectAddressScreen
             onBack={() => navigate('../cart')}
             onSelectAddress={() => navigate('../delivery')}
           />
@@ -113,7 +113,7 @@ export default function UserRoutes() {
       <Route
         path="checkout/delivery"
         element={
-          <Screen17DeliveryOptions
+          <DeliveryOptionsScreen
             onBack={() => navigate('../address')}
             onChangeAddress={() => navigate('../address')}
             onNext={() => navigate('../summary')}
@@ -123,7 +123,7 @@ export default function UserRoutes() {
       <Route
         path="checkout/summary"
         element={
-          <Screen18OrderSummary
+          <OrderSummaryScreen
             onBack={() => navigate('../delivery')}
             onEditCart={() => navigate('../cart')}
             onProceedToPayment={() => navigate('../payment')}
@@ -133,7 +133,7 @@ export default function UserRoutes() {
       <Route
         path="checkout/payment"
         element={
-          <Screen19Payment
+          <PaymentScreen
             onBack={() => navigate('../summary')}
             onPaymentSuccess={() => navigate('../success')}
           />
@@ -142,7 +142,7 @@ export default function UserRoutes() {
       <Route
         path="checkout/success"
         element={
-          <Screen20OrderPlaced
+          <OrderPlacedScreen
             onViewOrderDetails={() => navigate('../../orders/details')}
             onContinueShopping={() => navigate('../../dashboard')}
           />
@@ -153,7 +153,7 @@ export default function UserRoutes() {
       <Route
         path="orders"
         element={
-          <Screen21OrderList
+          <OrderListScreen
             onSelectOrder={() => navigate('details')}
           />
         }
@@ -161,7 +161,7 @@ export default function UserRoutes() {
       <Route
         path="orders/details"
         element={
-          <Screen22OrderDetails
+          <OrderDetailsScreen
             onBack={() => navigate('../orders')}
             onDownloadInvoice={() => navigate('../invoice')}
             onTrackShipment={() => navigate('../track')}
@@ -171,7 +171,7 @@ export default function UserRoutes() {
       <Route
         path="orders/track"
         element={
-          <Screen23TrackShipment
+          <TrackShipmentScreen
             onBack={() => navigate('../details')}
             onViewDetails={() => navigate('../details')}
           />
@@ -180,7 +180,7 @@ export default function UserRoutes() {
       <Route
         path="orders/invoice"
         element={
-          <Screen24InvoiceDownload
+          <InvoiceDownloadScreen
             onBack={() => navigate('../details')}
             onDownload={() => navigate('../invoice/preview')}
           />
@@ -189,7 +189,7 @@ export default function UserRoutes() {
       <Route
         path="orders/invoice/preview"
         element={
-          <Screen35InvoicePreview
+          <InvoicePreviewScreen
             onBack={() => navigate('../invoice')}
             onDownload={() => navigate('../details')}
           />
@@ -198,7 +198,7 @@ export default function UserRoutes() {
       <Route
         path="orders/review"
         element={
-          <Screen25RateReview
+          <RateReviewScreen
             onBack={() => navigate('../details')}
             onSubmitReview={() => navigate('../orders')}
           />
@@ -209,7 +209,7 @@ export default function UserRoutes() {
       <Route
         path="support"
         element={
-          <Screen33HelpSupport
+          <HelpSupportScreen
             onBack={() => navigate('../profile')}
           />
         }
@@ -217,7 +217,7 @@ export default function UserRoutes() {
       <Route
         path="returns"
         element={
-          <Screen34ReturnReplacement
+          <ReturnReplacementScreen
             onBack={() => navigate('../orders')}
             onContinue={() => navigate('../orders')}
           />
@@ -228,13 +228,13 @@ export default function UserRoutes() {
       <Route
         path="profile"
         element={
-          <Screen26ProfileDashboard />
+          <ProfileDashboardScreen />
         }
       />
       <Route
         path="profile/addresses"
         element={
-          <Screen27MyAddresses
+          <MyAddressesScreen
             onBack={() => navigate('../profile')}
             onAddNew={() => navigate('../profile/addresses')}
           />
@@ -243,7 +243,7 @@ export default function UserRoutes() {
       <Route
         path="wishlist"
         element={
-          <Screen28Wishlist
+          <WishlistScreen
             onBack={() => navigate('../dashboard')}
           />
         }
@@ -251,7 +251,7 @@ export default function UserRoutes() {
       <Route
         path="coupons"
         element={
-          <Screen29CouponsOffers
+          <CouponsOffersScreen
             onBack={() => navigate('../profile')}
           />
         }
@@ -259,7 +259,7 @@ export default function UserRoutes() {
       <Route
         path="notifications"
         element={
-          <Screen30NotificationCenter
+          <NotificationCenterScreen
             onBack={() => navigate('../dashboard')}
           />
         }
@@ -267,7 +267,7 @@ export default function UserRoutes() {
       <Route
         path="settings"
         element={
-          <Screen36Settings
+          <SettingsScreen
             onBack={() => navigate('../profile')}
           />
         }

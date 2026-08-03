@@ -24,14 +24,7 @@ export function SignupScreen5Success({ onComplete = () => {} }) {
 
       {/* RIGHT SIDE: AUTH STEP FLOW */}
       <div className="w-full md:w-[480px] lg:w-[540px] shrink-0 min-h-screen bg-white flex flex-col justify-between shadow-2xl relative">
-        <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5 text-xs">
-            <span>📶</span>
-            <span>📡</span>
-            <span>🔋</span>
-          </div>
-        </div>
+        
 
         <div className="px-6 md:px-10 py-8 flex-1 flex flex-col justify-center items-center text-center space-y-8">
           <div className="relative w-36 h-36 flex items-center justify-center">

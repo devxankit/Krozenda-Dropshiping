@@ -17,7 +17,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
 
-export function Screen5HomeScreen({ onNavigateTab = () => {} }) {
+export function HomeScreen({ onNavigateTab = () => {} }) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('home')
   const [timer, setTimer] = useState({ hours: 2, minutes: 15, seconds: 30 })
@@ -56,15 +56,8 @@ export function Screen5HomeScreen({ onNavigateTab = () => {} }) {
       <div className="flex-1 pb-20 md:pb-12">
         {/* MOBILE TOP HEADER & SEARCH (Visible on mobile only) */}
         <div className="md:hidden">
-          {/* Mobile Status Bar */}
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
+          
 
           {/* Top Header Location & Badges */}
           <div className="px-5 py-3 bg-white flex items-center justify-between shadow-xs">

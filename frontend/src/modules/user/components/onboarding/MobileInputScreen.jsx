@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { HiArrowLeft, HiShieldCheck, HiBolt, HiTag, HiEnvelope } from 'react-icons/hi2'
-import { FaGoogle, FaApple } from 'react-icons/fa'
+import { FaGoogle } from 'react-icons/fa'
 import { BottomWaveGraphic } from '../../../../components/common/BottomWaveGraphic'
 import { DesktopLeftShowcase } from '../../../../components/common/DesktopLeftShowcase'
 
-export function Screen2MobileInput({
+export function MobileInputScreen({
   onBack = () => {},
   onNext = () => {},
   onSwitchToRegister = () => {},
@@ -29,18 +29,8 @@ export function Screen2MobileInput({
 
       {/* RIGHT SIDE: AUTH STEP FLOW */}
       <div className="w-full md:w-[480px] lg:w-[540px] shrink-0 min-h-screen bg-white flex flex-col justify-between shadow-2xl relative">
-        {/* Status Bar */}
-        <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5 text-xs">
-            <span>📶</span>
-            <span>📡</span>
-            <span>🔋</span>
-          </div>
-        </div>
-
         {/* Header Bar with Back Arrow */}
-        <div className="px-6 py-2 flex items-center">
+        <div className="px-6 py-4 flex items-center">
           <button
             onClick={onBack}
             className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
@@ -52,7 +42,7 @@ export function Screen2MobileInput({
         {/* Content Body */}
         <div className="px-6 md:px-10 py-4 flex-1 flex flex-col items-center text-center space-y-5">
           {/* Logo */}
-          <img src="/images/logo.png" alt="Krozenda Logo" className="h-14 md:h-16 w-auto object-contain" />
+          <img src="/images/logo.png" alt="Krozenda Logo" className="h-28 md:h-32 w-auto object-contain" />
 
           {/* Titles */}
           <div>
@@ -103,16 +93,15 @@ export function Screen2MobileInput({
               </span>
             </div>
 
-            {/* Social Buttons */}
-            <div className="grid grid-cols-3 gap-3">
-              <button className="flex items-center justify-center p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors">
+            {/* Social Buttons (Google & Email) */}
+            <div className="grid grid-cols-2 gap-3">
+              <button className="flex items-center justify-center space-x-2 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors">
                 <FaGoogle className="w-4 h-4 text-red-500" />
+                <span className="text-xs font-bold">Google</span>
               </button>
-              <button className="flex items-center justify-center p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors">
-                <FaApple className="w-4 h-4 text-slate-900" />
-              </button>
-              <button className="flex items-center justify-center p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors">
+              <button className="flex items-center justify-center space-x-2 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors">
                 <HiEnvelope className="w-4 h-4 text-slate-700" />
+                <span className="text-xs font-bold">Email</span>
               </button>
             </div>
           </div>

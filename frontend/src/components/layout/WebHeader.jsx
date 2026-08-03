@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
 import {
   HiMagnifyingGlass,
-  HiMicrophone,
-  HiBell,
   HiOutlineShoppingBag,
-  HiHeart,
-  HiSquares2X2,
+  HiOutlineHeart,
+  HiUser,
+  HiBell,
+  HiBars3,
+  HiSparkles,
+  HiChevronDown,
 } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
-import { AUTH_ROUTES, USER_ROUTES } from '../../config/routes'
+import { USER_ROUTES, AUTH_ROUTES } from '../../config/routes'
 
 export function WebHeader() {
   const navigate = useNavigate()
@@ -22,7 +24,7 @@ export function WebHeader() {
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
       {/* Top Bar */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-2 flex items-center justify-between gap-4">
         {/* Logo */}
         <div
           onClick={() => navigate(USER_ROUTES.DASHBOARD)}
@@ -31,7 +33,7 @@ export function WebHeader() {
           <img
             src="/images/logo.png"
             alt="KroZenda Logo"
-            className="h-10 w-auto object-contain"
+            className="h-14 md:h-16 w-auto object-contain py-0.5"
           />
         </div>
 
@@ -58,125 +60,120 @@ export function WebHeader() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-2 py-2 bg-transparent text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={() => navigate(USER_ROUTES.ROOT + '/search')}
-              className="text-slate-400 hover:text-blue-600 p-1 transition-colors"
-            >
-              <HiMicrophone className="w-4 h-4" />
-            </button>
           </div>
 
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 text-xs font-bold transition-colors cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 transition-colors"
           >
             Search
           </button>
         </form>
 
-        {/* Right User Actions */}
-        <div className="flex items-center space-x-4">
-          <div className="hidden lg:flex flex-col text-right">
-            <span className="text-xs font-bold text-slate-900">Hello, Rahul 👋</span>
-            <span className="text-[10px] font-medium text-slate-500">B2C & B2B Buyer</span>
-          </div>
+        {/* Right Actions */}
+        <div className="flex items-center space-x-3 md:space-x-5 text-slate-700 font-semibold text-xs">
+          {/* Notifications */}
+          <button
+            onClick={() => navigate(USER_ROUTES.ROOT + '/notifications')}
+            className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors flex flex-col items-center"
+          >
+            <HiBell className="w-5 h-5 text-slate-700" />
+            <span className="hidden lg:inline text-[10px] font-bold text-slate-600 mt-0.5">Alerts</span>
+            <span className="absolute top-1 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+          </button>
 
           {/* Wishlist */}
           <button
-            onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-            className="relative p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors hidden sm:flex cursor-pointer"
+            onClick={() => navigate(USER_ROUTES.ROOT + '/wishlist')}
+            className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors flex flex-col items-center"
           >
-            <HiHeart className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+            <HiOutlineHeart className="w-5 h-5 text-slate-700" />
+            <span className="hidden lg:inline text-[10px] font-bold text-slate-600 mt-0.5">Wishlist</span>
+            <span className="absolute top-1 right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              4
+            </span>
+          </button>
+
+          {/* Cart */}
+          <button
+            onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
+            className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors flex flex-col items-center"
+          >
+            <HiOutlineShoppingBag className="w-5 h-5 text-slate-700" />
+            <span className="hidden lg:inline text-[10px] font-bold text-slate-600 mt-0.5">Cart</span>
+            <span className="absolute top-1 right-1.5 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
               3
             </span>
           </button>
 
-          {/* Notifications */}
-          <button
-            onClick={() => navigate(USER_ROUTES.ROOT + '/dashboard')}
-            className="relative p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          {/* User Account / Profile */}
+          <div
+            onClick={() => navigate(USER_ROUTES.ROOT + '/profile')}
+            className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors border border-slate-200/80 bg-slate-50"
           >
-            <HiBell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
-              2
-            </span>
-          </button>
-
-          {/* Shopping Cart */}
-          <button
-            onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
-            className="relative flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-xl border border-blue-200 transition-colors font-bold text-xs cursor-pointer"
-          >
-            <div className="relative">
-              <HiOutlineShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-2 -right-2 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
-                2
-              </span>
-            </div>
-            <span className="hidden sm:inline">Cart (₹1,299)</span>
-          </button>
-
-          {/* Profile Dropdown / Auth Switch */}
-          <button
-            onClick={() => navigate(AUTH_ROUTES.LOGIN)}
-            className="flex items-center space-x-1.5 p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
-          >
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
               R
             </div>
-            <span className="text-xs font-semibold hidden md:inline text-slate-800">Account</span>
-          </button>
+            <div className="hidden lg:block text-left pr-1">
+              <span className="text-xs font-bold text-slate-900 block leading-tight">Rahul</span>
+              <span className="text-[10px] text-slate-400 font-semibold">Account & Orders</span>
+            </div>
+            <HiChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
+          </div>
         </div>
       </div>
 
-      {/* Navigation Sub-Bar */}
-      <div className="bg-slate-900 text-white text-xs">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-2 flex items-center justify-between overflow-x-auto no-scrollbar">
-          <div className="flex items-center space-x-6 whitespace-nowrap">
+      {/* Sub Navbar (Categories & Quick Links) */}
+      <div className="bg-slate-900 text-white text-xs font-semibold px-4 lg:px-8 py-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-none">
+          <div className="flex items-center space-x-6">
             <button
               onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="flex items-center space-x-1 font-bold text-amber-400 hover:text-amber-300 cursor-pointer"
+              className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-white font-bold transition-colors"
             >
-              <HiSquares2X2 className="w-4 h-4" />
+              <HiBars3 className="w-4 h-4" />
               <span>All Categories</span>
             </button>
-            <button
+            <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              className="hover:text-amber-400 cursor-pointer transition-colors"
             >
-              Top Brands
-            </button>
-            <button
+              Mobile & Electronics
+            </span>
+            <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              className="hover:text-amber-400 cursor-pointer transition-colors"
             >
-              Exclusive Offers
-            </button>
-            <button
+              Fashion & Apparel
+            </span>
+            <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              className="hover:text-amber-400 cursor-pointer transition-colors"
             >
-              New Arrivals
-            </button>
-            <button
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              Home & Kitchen
+            </span>
+            <span
+              onClick={() => navigate(USER_ROUTES.ROOT + '/coupons')}
+              className="hover:text-amber-400 cursor-pointer transition-colors flex items-center space-x-1 text-amber-400 font-bold"
             >
-              Flash Deals ⚡
-            </button>
-            <button
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-            >
-              B2B Wholesale Hub
-            </button>
+              <HiSparkles className="w-3.5 h-3.5" />
+              <span>Bulk Deals (60% OFF)</span>
+            </span>
           </div>
 
-          <div className="hidden lg:flex items-center space-x-4 text-[11px] text-slate-400">
-            <span>🛡️ 100% Verified Sellers</span>
-            <span>🚚 Pan-India Shipping</span>
+          <div className="flex items-center space-x-4 text-slate-300 text-[11px]">
+            <span
+              onClick={() => navigate(USER_ROUTES.ROOT + '/support')}
+              className="hover:text-white cursor-pointer"
+            >
+              Help Center
+            </span>
+            <span
+              onClick={() => navigate(USER_ROUTES.ROOT + '/settings')}
+              className="hover:text-white cursor-pointer"
+            >
+              Settings
+            </span>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { HiArrowLeft, HiMinus, HiPlus, HiShieldCheck, HiCheck } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen15CartPage({ onBack = () => {}, onCheckout = () => {} }) {
+export function CartPageScreen({ onBack = () => {}, onCheckout = () => {} }) {
   const [items, setItems] = useState([
     { id: 1, name: 'Samsung Galaxy S23 5G', subtitle: '(Phantom Black, 128GB)', price: 49999, quantity: 1, image: '/images/samsung_s23.png' },
     { id: 2, name: 'boAt Airdopes 141', subtitle: 'Wireless Earbuds', price: 1299, quantity: 1, image: '/images/boat_airdopes.png' },
@@ -26,14 +26,7 @@ export function Screen15CartPage({ onBack = () => {}, onCheckout = () => {} }) {
 
       <div className="flex-1 pb-24 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
         <div className="md:hidden">
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
         </div>
 
         <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">

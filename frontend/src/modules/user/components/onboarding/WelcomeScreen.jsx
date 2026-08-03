@@ -4,7 +4,7 @@ import { USER_ROUTES } from '../../../../config/routes'
 import { BottomWaveGraphic } from '../../../../components/common/BottomWaveGraphic'
 import { DesktopLeftShowcase } from '../../../../components/common/DesktopLeftShowcase'
 
-export function Screen1Welcome({ onNext = () => {}, onGuest = () => {} }) {
+export function WelcomeScreen({ onNext = () => {}, onGuest = () => {} }) {
   const navigate = useNavigate()
 
   return (
@@ -18,22 +18,15 @@ export function Screen1Welcome({ onNext = () => {}, onGuest = () => {} }) {
 
       {/* RIGHT SIDE: AUTH STEP FLOW (Exact mobile UI inside full-height right panel) */}
       <div className="w-full md:w-[480px] lg:w-[540px] shrink-0 min-h-screen bg-white flex flex-col justify-between shadow-2xl relative">
-        {/* Status Bar */}
-        <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5 text-xs">
-            <span>📶</span>
-            <span>📡</span>
-            <span>🔋</span>
-          </div>
-        </div>
+        
+        
 
         {/* Content Body */}
         <div className="px-6 md:px-10 pt-10 pb-6 flex-1 flex flex-col justify-center items-center text-center space-y-8">
           {/* Logo & Subtitle */}
           <div className="space-y-3">
             <div className="flex flex-col items-center">
-              <img src="/images/logo.png" alt="Krozenda Logo" className="h-20 md:h-24 w-auto object-contain" />
+              <img src="/images/logo.png" alt="Krozenda Logo" className="h-28 md:h-32 w-auto object-contain" />
               <span className="text-[10px] md:text-xs font-black tracking-widest text-slate-400 uppercase mt-1">
                 B2B • B2C • MARKETPLACE
               </span>

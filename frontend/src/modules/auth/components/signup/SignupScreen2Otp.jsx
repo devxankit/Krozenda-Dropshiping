@@ -44,14 +44,7 @@ export function SignupScreen2Otp({
 
       {/* RIGHT SIDE: AUTH STEP FLOW */}
       <div className="w-full md:w-[480px] lg:w-[540px] shrink-0 min-h-screen bg-white flex flex-col justify-between shadow-2xl relative">
-        <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5 text-xs">
-            <span>📶</span>
-            <span>📡</span>
-            <span>🔋</span>
-          </div>
-        </div>
+        
 
         <div className="px-6 py-2 flex items-center">
           <button
@@ -63,7 +56,7 @@ export function SignupScreen2Otp({
         </div>
 
         <div className="px-6 md:px-10 py-4 flex-1 flex flex-col items-center text-center space-y-6">
-          <img src="/images/logo.png" alt="Krozenda Logo" className="h-16 md:h-18 w-auto object-contain" />
+          <img src="/images/logo.png" alt="Krozenda Logo" className="h-28 md:h-32 w-auto object-contain" />
 
           <div>
             <h2 className="text-xl md:text-2xl font-black text-slate-900">Enter OTP</h2>

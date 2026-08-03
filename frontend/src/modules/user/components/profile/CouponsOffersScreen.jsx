@@ -3,7 +3,7 @@ import { HiArrowLeft, HiTag, HiDocumentDuplicate } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen29CouponsOffers({
+export function CouponsOffersScreen({
   onBack = () => {},
 }) {
   const [copiedCode, setCopiedCode] = useState(null)
@@ -55,16 +55,9 @@ export function Screen29CouponsOffers({
 
       {/* Main Content Area */}
       <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
-        {/* MOBILE STATUS BAR */}
+        
         <div className="md:hidden">
-          <div className="w-full px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-slate-800 bg-white">
-            <span>9:41</span>
-            <div className="flex items-center space-x-1.5 text-xs">
-              <span>📶</span>
-              <span>📡</span>
-              <span>🔋</span>
-            </div>
-          </div>
+          
         </div>
 
         {/* Top Header */}

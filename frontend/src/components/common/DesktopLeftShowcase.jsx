@@ -16,11 +16,11 @@ export function DesktopLeftShowcase({
         <img
           src="/images/logo.png"
           alt="KroZenda Logo"
-          className="h-12 w-auto object-contain bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/20 shadow-md"
+          className="h-14 lg:h-16 w-auto object-contain bg-white/10 p-2 rounded-2xl backdrop-blur-md border border-white/20 shadow-md"
         />
         <div>
-          <span className="text-sm font-black text-white tracking-wider block">KROZENDA</span>
-          <span className="text-[10px] text-blue-300 font-extrabold tracking-widest uppercase">
+          <span className="text-base font-black text-white tracking-wider block">KROZENDA</span>
+          <span className="text-[11px] text-blue-300 font-extrabold tracking-widest uppercase">
             DROP SHIPPING
           </span>
         </div>
@@ -28,7 +28,7 @@ export function DesktopLeftShowcase({
 
       {/* Center Body Content */}
       <div className="relative z-10 space-y-6 my-auto max-w-xl">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-sm">
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-sm">
           <span>⚡</span>
           <span>{tag}</span>
         </div>

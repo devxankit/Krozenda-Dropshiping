@@ -3,7 +3,7 @@ import { HiArrowLeft, HiShieldCheck } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen18OrderSummary({ onBack = () => {}, onEditCart = () => {}, onProceedToPayment = () => {} }) {
+export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, onProceedToPayment = () => {} }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>

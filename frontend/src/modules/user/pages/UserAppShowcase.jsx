@@ -1,44 +1,44 @@
 import React, { useState } from 'react'
 import {
-  Screen1Welcome,
-  Screen2MobileInput,
-  Screen3OtpInput,
-  Screen4OtpVerified,
-  Screen5HomeScreen,
+  WelcomeScreen,
+  MobileInputScreen,
+  OtpInputScreen,
+  OtpVerifiedScreen,
+  HomeScreen,
 } from '../components/onboarding'
 import { SignupScreen1Mobile } from '../../auth/components/signup/SignupScreen1Mobile'
 import { SignupScreen2Otp } from '../../auth/components/signup/SignupScreen2Otp'
 import { SignupScreen3Password } from '../../auth/components/signup/SignupScreen3Password'
 import { SignupScreen4Email } from '../../auth/components/signup/SignupScreen4Email'
 import { SignupScreen5Success } from '../../auth/components/signup/SignupScreen5Success'
-import { Screen12SearchProducts } from '../components/ecommerce/Screen12SearchProducts'
-import { Screen13ProductListing } from '../components/ecommerce/Screen13ProductListing'
-import { Screen14ProductDetail } from '../components/ecommerce/Screen14ProductDetail'
-import { Screen15CartPage } from '../components/ecommerce/Screen15CartPage'
+import { SearchProductsScreen } from '../components/ecommerce/SearchProductsScreen'
+import { ProductListingScreen } from '../components/ecommerce/ProductListingScreen'
+import { ProductDetailScreen } from '../components/ecommerce/ProductDetailScreen'
+import { CartPageScreen } from '../components/ecommerce/CartPageScreen'
 
-import { Screen16SelectAddress } from '../components/checkout/Screen16SelectAddress'
-import { Screen17DeliveryOptions } from '../components/checkout/Screen17DeliveryOptions'
-import { Screen18OrderSummary } from '../components/checkout/Screen18OrderSummary'
-import { Screen19Payment } from '../components/checkout/Screen19Payment'
-import { Screen20OrderPlaced } from '../components/checkout/Screen20OrderPlaced'
+import { SelectAddressScreen } from '../components/checkout/SelectAddressScreen'
+import { DeliveryOptionsScreen } from '../components/checkout/DeliveryOptionsScreen'
+import { OrderSummaryScreen } from '../components/checkout/OrderSummaryScreen'
+import { PaymentScreen } from '../components/checkout/PaymentScreen'
+import { OrderPlacedScreen } from '../components/checkout/OrderPlacedScreen'
 
-import { Screen21OrderList } from '../components/orders/Screen21OrderList'
-import { Screen22OrderDetails } from '../components/orders/Screen22OrderDetails'
-import { Screen23TrackShipment } from '../components/orders/Screen23TrackShipment'
-import { Screen24InvoiceDownload } from '../components/orders/Screen24InvoiceDownload'
-import { Screen25RateReview } from '../components/orders/Screen25RateReview'
+import { OrderListScreen } from '../components/orders/OrderListScreen'
+import { OrderDetailsScreen } from '../components/orders/OrderDetailsScreen'
+import { TrackShipmentScreen } from '../components/orders/TrackShipmentScreen'
+import { InvoiceDownloadScreen } from '../components/orders/InvoiceDownloadScreen'
+import { RateReviewScreen } from '../components/orders/RateReviewScreen'
 
-import { Screen26ProfileDashboard } from '../components/profile/Screen26ProfileDashboard'
-import { Screen27MyAddresses } from '../components/profile/Screen27MyAddresses'
-import { Screen28Wishlist } from '../components/profile/Screen28Wishlist'
-import { Screen29CouponsOffers } from '../components/profile/Screen29CouponsOffers'
-import { Screen30NotificationCenter } from '../components/profile/Screen30NotificationCenter'
+import { ProfileDashboardScreen } from '../components/profile/ProfileDashboardScreen'
+import { MyAddressesScreen } from '../components/profile/MyAddressesScreen'
+import { WishlistScreen } from '../components/profile/WishlistScreen'
+import { CouponsOffersScreen } from '../components/profile/CouponsOffersScreen'
+import { NotificationCenterScreen } from '../components/profile/NotificationCenterScreen'
 
-import { Screen31SearchFilters } from '../components/ecommerce/Screen31SearchFilters'
-import { Screen32ProductFilters } from '../components/ecommerce/Screen32ProductFilters'
-import { Screen33HelpSupport } from '../components/support/Screen33HelpSupport'
-import { Screen34ReturnReplacement } from '../components/support/Screen34ReturnReplacement'
-import { Screen35InvoicePreview } from '../components/orders/Screen35InvoicePreview'
+import { SearchFiltersScreen } from '../components/ecommerce/SearchFiltersScreen'
+import { ProductFiltersScreen } from '../components/ecommerce/ProductFiltersScreen'
+import { HelpSupportScreen } from '../components/support/HelpSupportScreen'
+import { ReturnReplacementScreen } from '../components/support/ReturnReplacementScreen'
+import { InvoicePreviewScreen } from '../components/orders/InvoicePreviewScreen'
 
 export function UserAppShowcase() {
   const [activeFlow, setActiveFlow] = useState('support') // 'support', 'profile', 'orders', 'checkout', 'ecommerce', 'signup', or 'login'
@@ -297,43 +297,43 @@ export function UserAppShowcase() {
                   <div className="w-full h-full rounded-[32px] overflow-hidden bg-white relative">
                     {activeFlow === 'support' ? (
                       <>
-                        {screen.id === 1 && <Screen31SearchFilters />}
-                        {screen.id === 2 && <Screen32ProductFilters />}
-                        {screen.id === 3 && <Screen33HelpSupport />}
-                        {screen.id === 4 && <Screen34ReturnReplacement />}
-                        {screen.id === 5 && <Screen35InvoicePreview />}
+                        {screen.id === 1 && <SearchFiltersScreen />}
+                        {screen.id === 2 && <ProductFiltersScreen />}
+                        {screen.id === 3 && <HelpSupportScreen />}
+                        {screen.id === 4 && <ReturnReplacementScreen />}
+                        {screen.id === 5 && <InvoicePreviewScreen />}
                       </>
                     ) : activeFlow === 'profile' ? (
                       <>
-                        {screen.id === 1 && <Screen26ProfileDashboard />}
-                        {screen.id === 2 && <Screen27MyAddresses />}
-                        {screen.id === 3 && <Screen28Wishlist />}
-                        {screen.id === 4 && <Screen29CouponsOffers />}
-                        {screen.id === 5 && <Screen30NotificationCenter />}
+                        {screen.id === 1 && <ProfileDashboardScreen />}
+                        {screen.id === 2 && <MyAddressesScreen />}
+                        {screen.id === 3 && <WishlistScreen />}
+                        {screen.id === 4 && <CouponsOffersScreen />}
+                        {screen.id === 5 && <NotificationCenterScreen />}
                       </>
                     ) : activeFlow === 'orders' ? (
                       <>
-                        {screen.id === 1 && <Screen21OrderList />}
-                        {screen.id === 2 && <Screen22OrderDetails />}
-                        {screen.id === 3 && <Screen23TrackShipment />}
-                        {screen.id === 4 && <Screen24InvoiceDownload />}
-                        {screen.id === 5 && <Screen25RateReview />}
+                        {screen.id === 1 && <OrderListScreen />}
+                        {screen.id === 2 && <OrderDetailsScreen />}
+                        {screen.id === 3 && <TrackShipmentScreen />}
+                        {screen.id === 4 && <InvoiceDownloadScreen />}
+                        {screen.id === 5 && <RateReviewScreen />}
                       </>
                     ) : activeFlow === 'checkout' ? (
                       <>
-                        {screen.id === 1 && <Screen16SelectAddress />}
-                        {screen.id === 2 && <Screen17DeliveryOptions />}
-                        {screen.id === 3 && <Screen18OrderSummary />}
-                        {screen.id === 4 && <Screen19Payment />}
-                        {screen.id === 5 && <Screen20OrderPlaced />}
+                        {screen.id === 1 && <SelectAddressScreen />}
+                        {screen.id === 2 && <DeliveryOptionsScreen />}
+                        {screen.id === 3 && <OrderSummaryScreen />}
+                        {screen.id === 4 && <PaymentScreen />}
+                        {screen.id === 5 && <OrderPlacedScreen />}
                       </>
                     ) : activeFlow === 'ecommerce' ? (
                       <>
-                        {screen.id === 1 && <Screen5HomeScreen />}
-                        {screen.id === 2 && <Screen12SearchProducts />}
-                        {screen.id === 3 && <Screen13ProductListing />}
-                        {screen.id === 4 && <Screen14ProductDetail />}
-                        {screen.id === 5 && <Screen15CartPage />}
+                        {screen.id === 1 && <HomeScreen />}
+                        {screen.id === 2 && <SearchProductsScreen />}
+                        {screen.id === 3 && <ProductListingScreen />}
+                        {screen.id === 4 && <ProductDetailScreen />}
+                        {screen.id === 5 && <CartPageScreen />}
                       </>
                     ) : activeFlow === 'signup' ? (
                       <>
@@ -345,11 +345,11 @@ export function UserAppShowcase() {
                       </>
                     ) : (
                       <>
-                        {screen.id === 1 && <Screen1Welcome />}
-                        {screen.id === 2 && <Screen2MobileInput />}
-                        {screen.id === 3 && <Screen3OtpInput phoneNumber={phoneNumber} />}
-                        {screen.id === 4 && <Screen4OtpVerified />}
-                        {screen.id === 5 && <Screen5HomeScreen />}
+                        {screen.id === 1 && <WelcomeScreen />}
+                        {screen.id === 2 && <MobileInputScreen />}
+                        {screen.id === 3 && <OtpInputScreen phoneNumber={phoneNumber} />}
+                        {screen.id === 4 && <OtpVerifiedScreen />}
+                        {screen.id === 5 && <HomeScreen />}
                       </>
                     )}
                   </div>
@@ -365,47 +365,47 @@ export function UserAppShowcase() {
             <div className="w-full h-full rounded-[40px] overflow-hidden bg-white relative">
               {activeFlow === 'support' ? (
                 <>
-                  {currentStep === 1 && <Screen31SearchFilters onOpenFilters={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <Screen32ProductFilters onBack={() => setCurrentStep(1)} onApplyFilters={() => setCurrentStep(1)} />}
-                  {currentStep === 3 && <Screen33HelpSupport onBack={() => setCurrentStep(1)} />}
-                  {currentStep === 4 && <Screen34ReturnReplacement onBack={() => setCurrentStep(3)} onContinue={() => setCurrentStep(3)} />}
-                  {currentStep === 5 && <Screen35InvoicePreview onBack={() => setCurrentStep(3)} onDownload={() => setCurrentStep(3)} />}
+                  {currentStep === 1 && <SearchFiltersScreen onOpenFilters={() => setCurrentStep(2)} />}
+                  {currentStep === 2 && <ProductFiltersScreen onBack={() => setCurrentStep(1)} onApplyFilters={() => setCurrentStep(1)} />}
+                  {currentStep === 3 && <HelpSupportScreen onBack={() => setCurrentStep(1)} />}
+                  {currentStep === 4 && <ReturnReplacementScreen onBack={() => setCurrentStep(3)} onContinue={() => setCurrentStep(3)} />}
+                  {currentStep === 5 && <InvoicePreviewScreen onBack={() => setCurrentStep(3)} onDownload={() => setCurrentStep(3)} />}
                 </>
               ) : activeFlow === 'profile' ? (
                 <>
-                  {currentStep === 1 && <Screen26ProfileDashboard onNavigateMenu={(lbl) => {
+                  {currentStep === 1 && <ProfileDashboardScreen onNavigateMenu={(lbl) => {
                     if (lbl === 'My Addresses') setCurrentStep(2)
                     if (lbl === 'Wishlist') setCurrentStep(3)
                     if (lbl === 'Coupons & Offers') setCurrentStep(4)
                   }} />}
-                  {currentStep === 2 && <Screen27MyAddresses onBack={() => setCurrentStep(1)} onAddNew={() => setCurrentStep(2)} />}
-                  {currentStep === 3 && <Screen28Wishlist onBack={() => setCurrentStep(1)} />}
-                  {currentStep === 4 && <Screen29CouponsOffers onBack={() => setCurrentStep(1)} />}
-                  {currentStep === 5 && <Screen30NotificationCenter onBack={() => setCurrentStep(1)} />}
+                  {currentStep === 2 && <MyAddressesScreen onBack={() => setCurrentStep(1)} onAddNew={() => setCurrentStep(2)} />}
+                  {currentStep === 3 && <WishlistScreen onBack={() => setCurrentStep(1)} />}
+                  {currentStep === 4 && <CouponsOffersScreen onBack={() => setCurrentStep(1)} />}
+                  {currentStep === 5 && <NotificationCenterScreen onBack={() => setCurrentStep(1)} />}
                 </>
               ) : activeFlow === 'orders' ? (
                 <>
-                  {currentStep === 1 && <Screen21OrderList onSelectOrder={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <Screen22OrderDetails onBack={() => setCurrentStep(1)} onDownloadInvoice={() => setCurrentStep(4)} onTrackShipment={() => setCurrentStep(3)} />}
-                  {currentStep === 3 && <Screen23TrackShipment onBack={() => setCurrentStep(2)} onViewDetails={() => setCurrentStep(2)} />}
-                  {currentStep === 4 && <Screen24InvoiceDownload onBack={() => setCurrentStep(2)} onDownload={() => setCurrentStep(5)} />}
-                  {currentStep === 5 && <Screen25RateReview onBack={() => setCurrentStep(2)} onSubmitReview={() => setCurrentStep(1)} />}
+                  {currentStep === 1 && <OrderListScreen onSelectOrder={() => setCurrentStep(2)} />}
+                  {currentStep === 2 && <OrderDetailsScreen onBack={() => setCurrentStep(1)} onDownloadInvoice={() => setCurrentStep(4)} onTrackShipment={() => setCurrentStep(3)} />}
+                  {currentStep === 3 && <TrackShipmentScreen onBack={() => setCurrentStep(2)} onViewDetails={() => setCurrentStep(2)} />}
+                  {currentStep === 4 && <InvoiceDownloadScreen onBack={() => setCurrentStep(2)} onDownload={() => setCurrentStep(5)} />}
+                  {currentStep === 5 && <RateReviewScreen onBack={() => setCurrentStep(2)} onSubmitReview={() => setCurrentStep(1)} />}
                 </>
               ) : activeFlow === 'checkout' ? (
                 <>
-                  {currentStep === 1 && <Screen16SelectAddress onNext={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <Screen17DeliveryOptions onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />}
-                  {currentStep === 3 && <Screen18OrderSummary onBack={() => setCurrentStep(2)} onProceedToPayment={() => setCurrentStep(4)} />}
-                  {currentStep === 4 && <Screen19Payment onBack={() => setCurrentStep(3)} onPaymentSuccess={() => setCurrentStep(5)} />}
-                  {currentStep === 5 && <Screen20OrderPlaced />}
+                  {currentStep === 1 && <SelectAddressScreen onNext={() => setCurrentStep(2)} />}
+                  {currentStep === 2 && <DeliveryOptionsScreen onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />}
+                  {currentStep === 3 && <OrderSummaryScreen onBack={() => setCurrentStep(2)} onProceedToPayment={() => setCurrentStep(4)} />}
+                  {currentStep === 4 && <PaymentScreen onBack={() => setCurrentStep(3)} onPaymentSuccess={() => setCurrentStep(5)} />}
+                  {currentStep === 5 && <OrderPlacedScreen />}
                 </>
               ) : activeFlow === 'ecommerce' ? (
                 <>
-                  {currentStep === 1 && <Screen5HomeScreen />}
-                  {currentStep === 2 && <Screen12SearchProducts onSelectSearch={() => setCurrentStep(3)} />}
-                  {currentStep === 3 && <Screen13ProductListing onSelectProduct={() => setCurrentStep(4)} />}
-                  {currentStep === 4 && <Screen14ProductDetail onAddToCart={() => setCurrentStep(5)} onBuyNow={() => setCurrentStep(5)} />}
-                  {currentStep === 5 && <Screen15CartPage />}
+                  {currentStep === 1 && <HomeScreen />}
+                  {currentStep === 2 && <SearchProductsScreen onSelectSearch={() => setCurrentStep(3)} />}
+                  {currentStep === 3 && <ProductListingScreen onSelectProduct={() => setCurrentStep(4)} />}
+                  {currentStep === 4 && <ProductDetailScreen onAddToCart={() => setCurrentStep(5)} onBuyNow={() => setCurrentStep(5)} />}
+                  {currentStep === 5 && <CartPageScreen />}
                 </>
               ) : activeFlow === 'signup' ? (
                 <>
@@ -417,11 +417,11 @@ export function UserAppShowcase() {
                 </>
               ) : (
                 <>
-                  {currentStep === 1 && <Screen1Welcome onNext={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <Screen2MobileInput onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />}
-                  {currentStep === 3 && <Screen3OtpInput phoneNumber={phoneNumber} onBack={() => setCurrentStep(2)} onVerifySuccess={() => setCurrentStep(4)} />}
-                  {currentStep === 4 && <Screen4OtpVerified onNext={() => setCurrentStep(5)} />}
-                  {currentStep === 5 && <Screen5HomeScreen />}
+                  {currentStep === 1 && <WelcomeScreen onNext={() => setCurrentStep(2)} />}
+                  {currentStep === 2 && <MobileInputScreen onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />}
+                  {currentStep === 3 && <OtpInputScreen phoneNumber={phoneNumber} onBack={() => setCurrentStep(2)} onVerifySuccess={() => setCurrentStep(4)} />}
+                  {currentStep === 4 && <OtpVerifiedScreen onNext={() => setCurrentStep(5)} />}
+                  {currentStep === 5 && <HomeScreen />}
                 </>
               )}
             </div>

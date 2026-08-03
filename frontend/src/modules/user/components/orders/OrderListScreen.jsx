@@ -3,7 +3,7 @@ import { HiMagnifyingGlass, HiAdjustmentsHorizontal, HiChevronRight } from 'reac
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen21OrderList({ onSelectOrder = () => {} }) {
+export function OrderListScreen({ onSelectOrder = () => {} }) {
   const [activeTab, setActiveTab] = useState('All')
   const tabs = ['All', 'Processing', 'Shipped', 'Delivered', 'Cancelled']
   const orders = [

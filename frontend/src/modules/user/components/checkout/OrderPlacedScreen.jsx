@@ -3,7 +3,7 @@ import { HiCheck, HiDocumentDuplicate } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function Screen20OrderPlaced({ orderId = 'KRO1234567890', amount = 49298, onViewOrderDetails = () => {}, onContinueShopping = () => {} }) {
+export function OrderPlacedScreen({ orderId = 'KRO1234567890', amount = 49298, onViewOrderDetails = () => {}, onContinueShopping = () => {} }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>

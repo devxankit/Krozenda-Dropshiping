@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Screen1Welcome,
-  Screen2MobileInput,
-  Screen3OtpInput,
-  Screen4OtpVerified,
+  WelcomeScreen,
+  MobileInputScreen,
+  OtpInputScreen,
+  OtpVerifiedScreen,
 } from '../../user/components/onboarding'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../config/routes'
 
@@ -29,14 +29,14 @@ export function LoginPage() {
   return (
     <div className="w-full min-h-screen bg-slate-100/70 flex flex-col justify-center items-center">
       {currentStep === 1 && (
-        <Screen1Welcome
+        <WelcomeScreen
           onNext={() => setCurrentStep(2)}
           onGuest={() => navigate(USER_ROUTES.DASHBOARD)}
         />
       )}
 
       {currentStep === 2 && (
-        <Screen2MobileInput
+        <MobileInputScreen
           onBack={() => setCurrentStep(1)}
           onNext={handleMobileSubmit}
           onSwitchToRegister={() => navigate(AUTH_ROUTES.REGISTER)}
@@ -44,7 +44,7 @@ export function LoginPage() {
       )}
 
       {currentStep === 3 && (
-        <Screen3OtpInput
+        <OtpInputScreen
           phoneNumber={phoneNumber}
           onBack={() => setCurrentStep(2)}
           onVerifySuccess={handleVerificationSuccess}
@@ -52,7 +52,7 @@ export function LoginPage() {
       )}
 
       {currentStep === 4 && (
-        <Screen4OtpVerified onNext={handleCompleteFlow} />
+        <OtpVerifiedScreen onNext={handleCompleteFlow} />
       )}
     </div>
   )
