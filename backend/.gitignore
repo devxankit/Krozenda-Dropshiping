@@ -1,0 +1,18 @@
+node_modules
+dist
+
+# Environment — .env is per-machine/per-deploy, never committed.
+# .env.example is the committed, documented template.
+.env
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
