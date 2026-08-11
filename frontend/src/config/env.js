@@ -4,27 +4,10 @@
 
 const RAW = import.meta.env
 
-// Keys that must be non-empty for the app to boot. Extend this list as a
-// module starts depending on a key (e.g. add VITE_RAZORPAY_KEY_ID once
-// checkout is implemented) — leave keys optional until something reads them.
-const REQUIRED_KEYS = ['VITE_API_BASE_URL', 'VITE_APP_ENV']
-
-function readRequired() {
-  const missing = REQUIRED_KEYS.filter((key) => !RAW[key])
-  if (missing.length > 0) {
-    throw new Error(
-      `[env] Missing required environment variable(s): ${missing.join(', ')}. ` +
-        'Copy .env.example to .env and fill them in.',
-    )
-  }
-}
-
-readRequired()
-
 export const env = Object.freeze({
   appName: RAW.VITE_APP_NAME || 'Krozenda',
-  appEnv: RAW.VITE_APP_ENV,
-  apiBaseUrl: RAW.VITE_API_BASE_URL,
+  appEnv: RAW.VITE_APP_ENV || 'development',
+  apiBaseUrl: RAW.VITE_API_BASE_URL || '/api/v1',
   apiTimeoutMs: Number(RAW.VITE_API_TIMEOUT_MS) || 15000,
   razorpayKeyId: RAW.VITE_RAZORPAY_KEY_ID || '',
   firebase: Object.freeze({
@@ -34,6 +17,6 @@ export const env = Object.freeze({
     appId: RAW.VITE_FIREBASE_APP_ID || '',
     vapidKey: RAW.VITE_FIREBASE_VAPID_KEY || '',
   }),
-  isDev: RAW.VITE_APP_ENV === 'development',
+  isDev: (RAW.VITE_APP_ENV || 'development') === 'development',
   isProd: RAW.VITE_APP_ENV === 'production',
 })
