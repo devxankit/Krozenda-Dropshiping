@@ -5,6 +5,10 @@ import { logger } from '../lib/logger.js'
 mongoose.set('strictQuery', true)
 
 export async function connectDb() {
+  if (mongoose.connection.readyState >= 1) {
+    return
+  }
+
   mongoose.connection.on('error', (error) => {
     logger.error('[db] connection error', error)
   })

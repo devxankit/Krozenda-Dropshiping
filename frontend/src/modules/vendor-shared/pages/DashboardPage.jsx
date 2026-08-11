@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom'
 import { PageShell } from '../../../components/layout'
-import { Skeleton, Badge } from '../../../components/ui'
+import { Skeleton, Badge, Button } from '../../../components/ui'
 import { useVendorDashboardController } from '../controllers/useVendorDashboardController'
 import { VendorStatsGrid } from '../components/VendorStatsGrid'
 import { VENDOR_STATUS_LABELS } from '../constants'
@@ -33,7 +34,16 @@ export function VendorDashboardPage() {
   return (
     <PageShell
       title="Dashboard"
-      actions={<Badge tone="brand">{VENDOR_STATUS_LABELS[summary.status] ?? summary.status}</Badge>}
+      actions={
+        <>
+          <Badge tone="brand">{VENDOR_STATUS_LABELS[summary.status] ?? summary.status}</Badge>
+          <Link to="../kyc-documents">
+            <Button variant="secondary" size="sm">
+              KYC Documents
+            </Button>
+          </Link>
+        </>
+      }
     >
       <VendorStatsGrid summary={summary} />
     </PageShell>

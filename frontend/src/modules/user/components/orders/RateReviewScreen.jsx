@@ -1,10 +1,19 @@
-import React, { useState } from 'react'
-import { HiArrowLeft, HiStar, HiPlus } from 'react-icons/hi2'
+import React, { useEffect, useRef, useState } from 'react'
+import { HiArrowLeft, HiStar, HiPlus, HiXMark } from 'react-icons/hi2'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { Toast } from '../../../../components/ui'
+import { useSubmitReviewController } from '../../controllers/useSubmitReviewController'
+
+const MAX_PHOTOS = 4
+
+function slugify(text) {
+  return text.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+}
 
 export function RateReviewScreen({
   product = {
+    id: 'samsung-galaxy-s23-5g',
     name: 'Samsung Galaxy S23 5G',
     subtitle: '(128GB, Phantom Black)',
     price: 49999,
@@ -16,11 +25,44 @@ export function RateReviewScreen({
 }) {
   const [rating, setRating] = useState(5)
   const [reviewText, setReviewText] = useState('Amazing phone! Super fast delivery and genuine product. Highly recommended.')
+  const [photos, setPhotos] = useState([]) // [{ file, previewUrl }]
+  const fileInputRef = useRef(null)
+  const { submitReview, isSubmitting, isError, error } = useSubmitReviewController()
 
   const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
 
-  const handleSubmit = () => {
-    onSubmitReview({ rating, reviewText })
+  // Object URLs are only a local preview of the picked file — the actual
+  // upload happens on submit via reviewService (multipart POST). Revoke
+  // them on unmount/replace so we don't leak memory.
+  useEffect(() => {
+    return () => {
+      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+    }
+  }, [photos])
+
+  const handlePickPhotos = (event) => {
+    const files = Array.from(event.target.files ?? []).slice(0, MAX_PHOTOS - photos.length)
+    const next = files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
+    setPhotos((prev) => [...prev, ...next])
+    event.target.value = ''
+  }
+
+  const handleRemovePhoto = (index) => {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const handleSubmit = async () => {
+    const review = await submitReview({
+      productId: product.id ?? slugify(product.name),
+      productName: product.name,
+      rating,
+      reviewText,
+      photoFiles: photos.map((photo) => photo.file),
+    })
+    onSubmitReview(review)
   }
 
   return (
@@ -121,30 +163,57 @@ export function RateReviewScreen({
           {/* Add Photos Section */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-2.5">
             <label className="block text-xs font-bold text-slate-900">
-              Add Photos <span className="text-slate-400 font-normal">(Optional)</span>
+              Add Photos <span className="text-slate-400 font-normal">({photos.length}/{MAX_PHOTOS})</span>
             </label>
 
             <div className="flex items-center space-x-3">
-              <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-0.5 relative">
-                <img src={product.image} alt="Uploaded 1" className="w-full h-full object-contain" />
-              </div>
+              {photos.map((photo, index) => (
+                <div
+                  key={photo.previewUrl}
+                  className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-0.5 relative"
+                >
+                  <img src={photo.previewUrl} alt={`Selected photo ${index + 1}`} className="w-full h-full object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(index)}
+                    aria-label="Remove photo"
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900/80 text-white flex items-center justify-center"
+                  >
+                    <HiXMark className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
 
-              <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-0.5 relative">
-                <img src="/images/boat_airdopes.png" alt="Uploaded 2" className="w-full h-full object-contain" />
-              </div>
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-colors"
+                >
+                  <HiPlus className="w-6 h-6" />
+                </button>
+              )}
 
-              <button className="w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-colors">
-                <HiPlus className="w-6 h-6" />
-              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePickPhotos}
+              />
             </div>
           </div>
+
+          {isError && <Toast tone="danger" message={error?.message ?? 'Could not submit your review. Please try again.'} />}
 
           {/* Submit Review Button */}
           <button
             onClick={handleSubmit}
-            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all text-xs tracking-wide"
+            disabled={isSubmitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all text-xs tracking-wide"
           >
-            Submit Review
+            {isSubmitting ? 'Submitting...' : 'Submit Review'}
           </button>
         </div>
       </div>

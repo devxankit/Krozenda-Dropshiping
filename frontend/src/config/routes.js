@@ -21,11 +21,13 @@ export const USER_ROUTES = Object.freeze({
 export const SELLER_ROUTES = Object.freeze({
   ROOT: '/seller',
   DASHBOARD: '/seller/dashboard',
+  KYC_DOCUMENTS: '/seller/kyc-documents',
 })
 
 export const DROPSHIPPING_PARTNER_ROUTES = Object.freeze({
   ROOT: '/partner',
   DASHBOARD: '/partner/dashboard',
+  KYC_DOCUMENTS: '/partner/kyc-documents',
 })
 
 export const ADMIN_ROUTES = Object.freeze({

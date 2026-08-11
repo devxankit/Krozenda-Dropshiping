@@ -1,6 +1,9 @@
 node_modules
 dist
 
+# User-uploaded files — shared server disk, per-machine, never committed.
+uploads/
+
 # Environment — .env is per-machine/per-deploy, never committed.
 # .env.example is the committed, documented template.
 .env
