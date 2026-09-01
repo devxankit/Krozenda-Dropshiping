@@ -37,6 +37,7 @@ import { useNavigate } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { USER_ROUTES } from '../../../../config/routes'
+import { CategorySection } from '../ecommerce/CategorySection'
 
 export function HomeScreen({ onNavigateTab = () => {} }) {
   const navigate = useNavigate()
@@ -262,7 +263,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
           {/* Main Top Hero Banner Section (Responsive Carousel + Side Banner Card on Desktop) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Banner Slider (2 Columns on Desktop, Full Width on Mobile) */}
-            <div className="lg:col-span-2 w-full relative overflow-hidden rounded-2xl md:rounded-3xl shadow-md group cursor-pointer aspect-[16/7] lg:aspect-auto lg:h-full min-h-[210px] sm:min-h-[260px] lg:min-h-[280px]">
+            <div className="lg:col-span-2 w-full relative overflow-hidden rounded-2xl md:rounded-3xl shadow-xl group cursor-pointer aspect-[16/7] lg:aspect-auto lg:h-full min-h-[220px] sm:min-h-[280px] lg:min-h-[300px]">
               <div
                 onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
                 className="w-full h-full relative overflow-hidden bg-slate-950"
@@ -277,8 +278,19 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                     <img
                       src={banner.image}
                       alt={banner.alt}
-                      className="w-full h-full object-cover rounded-2xl md:rounded-3xl"
+                      className="w-full h-full object-cover rounded-2xl md:rounded-3xl transform group-hover:scale-105 transition-transform duration-700"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20 pointer-events-none" />
+                    
+                    {/* Floating Callout Badge */}
+                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-blue-600/90 text-white font-black text-[11px] uppercase tracking-wider shadow-lg backdrop-blur-md border border-blue-400/40">
+                        ⚡ Hot Wholesale Tier
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-slate-900/80 text-amber-300 font-bold text-[11px] backdrop-blur-md border border-amber-400/30">
+                        Dispatch in 24 Hours • White-Label
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -290,9 +302,9 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                   e.stopPropagation()
                   setCurrentBannerIndex((prev) => (prev - 1 + heroBanners.length) % heroBanners.length)
                 }}
-                className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-black/50 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl border border-white/20"
               >
-                <HiChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <HiChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
               {/* Right Chevron Control */}
@@ -302,13 +314,13 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                   e.stopPropagation()
                   setCurrentBannerIndex((prev) => (prev + 1) % heroBanners.length)
                 }}
-                className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-black/50 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl border border-white/20"
               >
-                <HiChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                <HiChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
               {/* Carousel Dot Indicators */}
-              <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+              <div className="absolute bottom-3 right-4 sm:bottom-4 sm:right-6 z-20 flex items-center space-x-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
                 {heroBanners.map((_, idx) => (
                   <button
                     key={idx}
@@ -318,7 +330,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                       setCurrentBannerIndex(idx)
                     }}
                     className={`transition-all duration-300 rounded-full ${
-                      idx === currentBannerIndex ? 'w-4 sm:w-5 h-1 sm:h-1.5 bg-white' : 'w-1 sm:w-1.5 h-1 sm:h-1.5 bg-white/50 hover:bg-white/90'
+                      idx === currentBannerIndex ? 'w-5 sm:w-6 h-1.5 sm:h-2 bg-amber-400' : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white'
                     }`}
                   />
                 ))}
@@ -328,116 +340,57 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
             {/* Right: Desktop Only B2B Side Banner Image */}
             <div
               onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="hidden lg:block w-full h-full relative rounded-3xl overflow-hidden shadow-md cursor-pointer hover:shadow-lg transition-all group border border-slate-200/80 bg-slate-900"
+              className="hidden lg:block w-full h-full relative rounded-3xl overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group border border-slate-200/80 bg-slate-900"
             >
               <img
                 src="/images/banner_b2b_factory.png"
                 alt="Factory Bulk Tiers B2B Supplier"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-3xl"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 rounded-3xl"
               />
-            </div>
-          </div>
-
-          {/* Quick Action Badges (Simple & Unified Professional Neutral Style) */}
-          <div className="grid grid-cols-4 gap-3 sm:gap-5 text-center">
-            <div
-              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="flex flex-col items-center cursor-pointer group bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <HiSquares2X2 className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-slate-900 mt-2 truncate w-full">Categories</span>
-            </div>
-
-            <div
-              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="flex flex-col items-center cursor-pointer group bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <HiCheckBadge className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-slate-900 mt-2 truncate w-full">Brands</span>
-            </div>
-
-            <div
-              onClick={() => navigate(USER_ROUTES.ROOT + '/coupons')}
-              className="flex flex-col items-center cursor-pointer group bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <HiTag className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-slate-900 mt-2 truncate w-full">Offers</span>
-            </div>
-
-            <div
-              onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
-              className="flex flex-col items-center cursor-pointer group bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <HiSparkles className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-slate-900 mt-2 truncate w-full">New Arrivals</span>
-            </div>
-          </div>
-
-          {/* Top Categories Grid (Upgraded Professional Vector Icons) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                Top Categories
-              </h3>
-              <button
-                onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-                className="text-[11px] sm:text-xs font-bold text-blue-600 hover:underline flex items-center space-x-0.5"
-              >
-                <span>View All Categories</span>
-                <HiChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-3 sm:gap-5 text-center">
-              <div
-                onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-                className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center space-y-2"
-              >
-                <div className="w-full aspect-square bg-slate-50 rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-100/80">
-                  <img src="/images/samsung_s23.png" alt="Mobiles" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
-                </div>
-                <span className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate w-full">Mobiles</span>
-              </div>
-
-              <div
-                onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-                className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200/80 shadow-xs hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center space-y-2"
-              >
-                <div className="w-full aspect-square bg-slate-50 rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-100/80">
-                  <img src="/images/boat_airdopes.png" alt="Electronics" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
-                </div>
-                <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate w-full">Electronics</span>
-              </div>
-
-              <div
-                onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-                className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200/80 shadow-xs hover:border-pink-500 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center space-y-2"
-              >
-                <div className="w-full aspect-square bg-slate-50 rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-100/80">
-                  <img src="/images/iphone_14.png" alt="Fashion" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
-                </div>
-                <span className="text-xs font-bold text-slate-900 group-hover:text-pink-600 transition-colors truncate w-full">Fashion</span>
-              </div>
-
-              <div
-                onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-                className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center space-y-2"
-              >
-                <div className="w-full aspect-square bg-slate-50 rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-100/80">
-                  <img src="/images/boat_airdopes.png" alt="Smart Gadgets" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
-                </div>
-                <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate w-full">Smart Gadgets</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-5 left-5 right-5 text-white">
+                <span className="bg-amber-500 text-slate-950 font-extrabold text-[10px] uppercase px-2.5 py-0.5 rounded-full tracking-wider">B2B Wholesale Hub</span>
+                <h4 className="text-base font-black mt-1 text-white leading-tight">Direct Factory Pricing & Dropshipping</h4>
               </div>
             </div>
           </div>
+
+          {/* Featured Category Quick-Bar (Fitted, Zoomed-In Pastel Image Circles) */}
+          <div className="py-2">
+            <div className="flex items-center justify-between sm:justify-start overflow-x-auto scrollbar-none gap-4 sm:gap-7 text-center px-1">
+              {[
+                { name: 'Mobiles', img: '/images/samsung_s23.png', bg: 'bg-orange-100/80', fit: 'object-contain scale-125 p-1' },
+                { name: 'Laptops', img: '/images/cat_laptops.jpg', bg: 'bg-indigo-100/80', fit: 'object-cover scale-110' },
+                { name: 'Smartwatches', img: '/images/cat_watches.jpg', bg: 'bg-rose-100/80', fit: 'object-cover scale-115' },
+                { name: 'Headphones', img: '/images/boat_airdopes.png', bg: 'bg-amber-100/80', fit: 'object-contain scale-125 p-1' },
+                { name: 'Fashion', img: '/images/cat_fashion.jpg', bg: 'bg-pink-100/80', fit: 'object-cover scale-110' },
+                { name: 'Sneakers', img: '/images/cat_shoes.jpg', bg: 'bg-emerald-100/80', fit: 'object-cover scale-110' },
+                { name: 'Appliances', img: '/images/cat_appliances.jpg', bg: 'bg-sky-100/80', fit: 'object-cover scale-110' },
+                { name: 'Gaming', img: '/images/cat_gaming.jpg', bg: 'bg-teal-100/80', fit: 'object-cover scale-110' },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => navigate(USER_ROUTES.ROOT + '/listing', { state: { category: item.name } })}
+                  className="flex flex-col items-center shrink-0 cursor-pointer group space-y-2 min-w-[70px] sm:min-w-[84px]"
+                >
+                  {/* Soft Pastel Circle - Fitted & Zoomed Image */}
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full ${item.bg} flex items-center justify-center overflow-hidden shadow-xs group-hover:scale-108 transition-all duration-300 relative`}>
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      className={`w-full h-full ${item.fit} transition-transform duration-300 group-hover:scale-125`}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 transition-colors whitespace-nowrap">
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Categories Grid (Desktop & Mobile Clean Category Showcase) */}
+          <CategorySection onSelectCategory={() => navigate(USER_ROUTES.ROOT + '/categories')} />
 
           {/* Section 1: Flash Sale Deals */}
           <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">

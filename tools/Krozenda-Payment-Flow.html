@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Krozenda — Payment &amp; Settlement Flow</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.2pt; line-height: 1.55; color: #16202e; margin: 0;
+  }
+  h1, h2, h3 { color: #0f172a; font-weight: 700; }
+  h2 {
+    font-size: 13pt; margin: 22px 0 8px; padding-bottom: 5px;
+    border-bottom: 1.5px solid #dbe3ee; break-after: avoid; page-break-after: avoid;
+  }
+  h2 .num { color: #1d4ed8; margin-right: 8px; }
+  h3 { font-size: 11pt; margin: 14px 0 5px; break-after: avoid; page-break-after: avoid; }
+  h4 { font-size: 10pt; margin: 12px 0 4px; color: #16305e; break-after: avoid; }
+  p { margin: 0 0 9px; text-align: justify; }
+  ul, ol { margin: 0 0 9px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.2pt; }
+  th, td { border: 1px solid #d5deea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3fb; color: #16305e; font-weight: 700; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  .ph { background: #fff3cd; border-bottom: 1px dashed #b8860b; padding: 0 3px; font-weight: 600; color: #6b4c00; }
+  code, .mono { font-family: "Consolas", "Courier New", monospace; font-size: 9pt; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; color: #16305e; }
+  a { color: #1d4ed8; text-decoration: none; }
+
+  /* ---------- Cover ---------- */
+  .cover { height: 245mm; display: flex; flex-direction: column; page-break-after: always; }
+  .cover-band {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
+    color: #fff; padding: 34px 32px; border-radius: 6px;
+  }
+  .brand { font-size: 26pt; font-weight: 800; letter-spacing: 3px; margin: 0; }
+  .brand-sub { font-size: 9.5pt; letter-spacing: 1.6px; opacity: .9; margin: 6px 0 0; text-transform: uppercase; }
+  .cover-title { font-size: 28pt; font-weight: 800; margin: 40px 0 6px; line-height: 1.14; }
+  .cover-rule { width: 76px; height: 4px; background: #2563eb; margin: 14px 0 18px; }
+  .cover-lede { font-size: 11pt; color: #475569; max-width: 138mm; text-align: left; }
+  .meta { margin-top: auto; }
+  .meta table { font-size: 9.5pt; }
+  .meta th { width: 42mm; }
+  .notice {
+    border-left: 4px solid #f59e0b; background: #fffbeb; padding: 11px 14px;
+    font-size: 9.3pt; color: #7c4a03; margin: 12px 0 14px; border-radius: 0 4px 4px 0;
+  }
+  .notice strong { color: #92400e; }
+  .flag {
+    border-left: 4px solid #ef4444; background: #fef2f2; padding: 11px 14px;
+    font-size: 9.4pt; color: #7f1d1d; margin: 12px 0 14px; border-radius: 0 4px 4px 0;
+  }
+  .flag strong { color: #b91c1c; }
+  .ok {
+    border-left: 4px solid #22c55e; background: #f0fdf4; padding: 11px 14px;
+    font-size: 9.4pt; color: #14532d; margin: 12px 0 14px; border-radius: 0 4px 4px 0;
+  }
+  .ok strong { color: #15803d; }
+  .callout {
+    border-left: 4px solid #1d4ed8; background: #f4f8ff; padding: 10px 14px;
+    margin: 10px 0 14px; font-size: 9.6pt; border-radius: 0 4px 4px 0;
+  }
+
+  /* ---------- TOC ---------- */
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding: 0; counter-reset: toc; column-count: 2; column-gap: 14mm; }
+  .toc li { counter-increment: toc; padding: 5px 0; border-bottom: 1px dotted #cbd5e1; font-size: 9.8pt; break-inside: avoid; }
+  .toc li::before { content: counter(toc) ". "; color: #1d4ed8; font-weight: 700; }
+
+  .fig { margin: 12px 0 16px; break-inside: avoid; page-break-inside: avoid; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .fig-cap { font-size: 8.8pt; color: #64748b; margin-top: 6px; font-style: italic; }
+
+  .lifecycle {
+    font-family: "Consolas", "Courier New", monospace; font-size: 8.6pt; background: #f8fafc;
+    border: 1px solid #d5deea; border-radius: 4px; padding: 10px 12px; line-height: 1.7;
+    white-space: pre-wrap; margin: 8px 0 14px; color: #16305e;
+  }
+  .api {
+    font-family: "Consolas", "Courier New", monospace; font-size: 8.5pt; background: #0f172a;
+    color: #e2e8f0; border-radius: 4px; padding: 11px 13px; line-height: 1.65;
+    white-space: pre-wrap; margin: 8px 0 14px; break-inside: avoid;
+  }
+  .api .k { color: #7dd3fc; }
+  .api .s { color: #86efac; }
+  .api .c { color: #94a3b8; font-style: italic; }
+  .sig { margin-top: 26px; border-top: 1.5px solid #dbe3ee; padding-top: 12px; font-size: 9.3pt; color: #475569; }
+  .avoid { break-inside: avoid; page-break-inside: avoid; }
+  .two { display: flex; gap: 10px; margin: 10px 0 14px; }
+  .two > div { flex: 1; border: 1px solid #d5deea; border-radius: 5px; padding: 11px 13px; }
+  .two h4 { margin-top: 0; }
+  .rail-a { background: #f4f8ff; border-color: #bfdbfe !important; }
+  .rail-b { background: #f8fafc; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="cover-band">
+    <p class="brand">KROZENDA</p>
+    <p class="brand-sub">Multi-Vendor B2B &amp; B2C Marketplace</p>
+  </div>
+
+  <div>
+    <div class="cover-title">Payment &amp;<br>Settlement Flow</div>
+    <div class="cover-rule"></div>
+    <p class="cover-lede">
+      How money moves through Krozenda — from the customer's checkout, through the
+      multi-vendor split, to automated vendor settlement and automated payroll.
+    </p>
+    <p class="cover-lede" style="margin-top:10px">
+      Covers Razorpay Route for marketplace settlement, the RazorpayX Payouts API for
+      automated salary and platform disbursements, refunds, RTO reversal, reconciliation,
+      and the RBI compliance boundary between the two.
+    </p>
+  </div>
+
+  <div class="meta">
+    <table>
+      <tr><th>Document</th><td>Payment &amp; Settlement Flow — technical and commercial explainer</td></tr>
+      <tr><th>Audience</th><td>Client stakeholders, finance team, and the implementation team</td></tr>
+      <tr><th>Platform</th><td>Krozenda — Node.js / Express / MongoDB · React · React Native</td></tr>
+      <tr><th>Payment partner</th><td>Razorpay — Payment Gateway, Route, and RazorpayX Payouts</td></tr>
+      <tr><th>Version</th><td>1.0 (Draft for client review)</td></tr>
+      <tr><th>Date</th><td><span class="ph">[DD Month YYYY]</span></td></tr>
+      <tr><th>Prepared by</th><td>Appzeto</td></tr>
+    </table>
+
+    <div class="notice" style="margin-bottom:0">
+      <strong>Read section 2 first.</strong> Razorpay Route and the Razorpay Payout API are two
+      different systems that move money in two different ways, under two different regulatory
+      regimes. Which one we use for which purpose is the single most important decision in this
+      document, and getting it wrong carries regulatory exposure — not just technical rework.
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section class="toc">
+  <h2 style="margin-top:0"><span class="num">§</span>Contents</h2>
+  <ol>
+    <li>Executive summary</li>
+    <li>The two money rails</li>
+    <li>Why Route is mandatory — the RBI position</li>
+    <li>Flow 1 — Customer checkout and payment capture</li>
+    <li>Flow 2 — Order split and commission snapshot</li>
+    <li>Flow 3 — Vendor onboarding as a linked account</li>
+    <li>Flow 4 — Automated vendor settlement</li>
+    <li>Worked example with real numbers</li>
+    <li>Flow 5 — Refunds and partial refunds</li>
+    <li>Flow 6 — RTO and settlement reversal</li>
+    <li>Automated payroll via RazorpayX Payouts</li>
+    <li>The Payout API in detail</li>
+    <li>Payout automation and scheduling</li>
+    <li>Webhooks and reconciliation</li>
+    <li>Failure handling and edge cases</li>
+    <li>Security and key management</li>
+    <li>Tax treatment — TCS and TDS</li>
+    <li>What the client must provide</li>
+    <li>Open decisions</li>
+    <li>Implementation sequence</li>
+  </ol>
+</section>
+
+<!-- ============ BODY ============ -->
+
+<h2><span class="num">1.</span>Executive summary</h2>
+<p>
+  Krozenda collects money from customers online and distributes it to three kinds of
+  recipient: independent marketplace sellers, dropshipping partners, and Krozenda itself for
+  its own stock and its commission. On top of that, the platform must pay its own staff.
+  This document explains, end to end, how each of those movements works.
+</p>
+<p>The design rests on four decisions:</p>
+<table class="avoid">
+  <thead><tr><th style="width:52mm">Decision</th><th>What it means in practice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Online payment only</strong></td><td>UPI, credit card, debit card, net banking and wallets. No Cash on Delivery. Every order is fully paid before it is processed, so there is no collection risk and no cash reconciliation.</td></tr>
+    <tr><td><strong>Vendor money moves on Razorpay Route</strong></td><td>The customer's payment is split by Razorpay at the moment of capture. Krozenda's commission and each vendor's share are routed separately. Krozenda never pools and re-disburses vendor funds.</td></tr>
+    <tr><td><strong>Vendor payout is automatic, not manual</strong></td><td>Each vendor's share is transferred on hold at order time and released automatically once the order is delivered and the return window closes. No one presses a button per order.</td></tr>
+    <tr><td><strong>Payroll moves on RazorpayX Payouts</strong></td><td>Staff salaries and platform-owned disbursements are paid from Krozenda's own account through the Payout API, on a schedule. This is Krozenda's own money, so this rail is appropriate here.</td></tr>
+  </tbody>
+</table>
+
+<div class="ok">
+  <strong>The short version.</strong> Vendor money never sits in Krozenda's bank account —
+  Razorpay splits it at source and holds the vendor's share until the order is safely
+  delivered. Krozenda's own money — commission earned, own-stock revenue — settles to
+  Krozenda's account normally, and salaries are paid out of it automatically each cycle.
+</div>
+
+<h2><span class="num">2.</span>The two money rails</h2>
+<p>
+  Razorpay sells several products. Two of them move money out to other people, and they are
+  not interchangeable. Understanding the difference is the foundation of everything below.
+</p>
+
+<div class="two">
+  <div class="rail-a">
+    <h4>Rail A — Razorpay Route</h4>
+    <p style="margin-bottom:6px"><strong>Used for: marketplace vendor settlement.</strong></p>
+    <p style="margin-bottom:6px">
+      The customer pays once. Razorpay splits that single payment and routes each share to a
+      separate <em>linked account</em> — one per vendor — before the money ever reaches
+      Krozenda's bank account.
+    </p>
+    <p style="margin-bottom:0">
+      Krozenda is a marketplace facilitator here. The money passing to vendors is
+      <strong>not Krozenda's money</strong> and never becomes Krozenda's money.
+    </p>
+  </div>
+  <div class="rail-b">
+    <h4>Rail B — RazorpayX Payouts</h4>
+    <p style="margin-bottom:6px"><strong>Used for: payroll and platform disbursements.</strong></p>
+    <p style="margin-bottom:6px">
+      Krozenda holds a balance in its own RazorpayX current account and instructs a transfer
+      to a named beneficiary by IMPS, NEFT, RTGS or UPI.
+    </p>
+    <p style="margin-bottom:0">
+      This is Krozenda paying out <strong>its own money</strong> — salaries, reimbursements,
+      incentives — exactly as a business pays any supplier or employee.
+    </p>
+  </div>
+</div>
+
+<h3>2.1 Which rail for which purpose</h3>
+<table>
+  <thead><tr><th style="width:56mm">Money movement</th><th style="width:28mm">Rail</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Marketplace seller's share of a sale</td><td><strong>Route</strong></td><td>Third-party money. Must be split at source.</td></tr>
+    <tr><td>Dropshipping partner's share of a sale</td><td><strong>Route</strong></td><td>Same as above.</td></tr>
+    <tr><td>Krozenda's commission</td><td><strong>Route</strong> (retained)</td><td>Retained in the split; settles to Krozenda's account on the normal gateway cycle.</td></tr>
+    <tr><td>Own Stock sale proceeds</td><td><strong>Route</strong> (retained)</td><td>Krozenda is the seller; the full amount is Krozenda's.</td></tr>
+    <tr><td>Customer refund</td><td><strong>Refunds API</strong></td><td>Reverses the original payment to the original instrument. Not a payout.</td></tr>
+    <tr><td>Staff salary</td><td><strong>Payouts</strong></td><td>Krozenda's own money to its own employees.</td></tr>
+    <tr><td>Employee reimbursement</td><td><strong>Payouts</strong></td><td>Same.</td></tr>
+    <tr><td>Vendor incentive or marketing rebate paid by Krozenda</td><td><strong>Payouts</strong></td><td>Krozenda's own money, paid as a business expense — distinct from the vendor's sale proceeds.</td></tr>
+    <tr><td>Goodwill compensation to a customer outside the refund window</td><td><strong>Payouts</strong></td><td>Cannot be reversed through the gateway once the window has closed.</td></tr>
+  </tbody>
+</table>
+
+<div class="flag">
+  <strong>The line that must not be crossed.</strong> Vendor sale proceeds must never travel on
+  Rail B. Collecting customers' payments into Krozenda's own account and then paying vendors
+  out of it by Payout API is <em>aggregation</em>, and under the RBI Payment Aggregator
+  framework that activity requires a Payment Aggregator licence, which Krozenda does not hold.
+  It would also mean vendor money sitting in Krozenda's account, exposed to Krozenda's
+  creditors. This is a licensing question, not an engineering preference — see section 3.
+</div>
+
+<h2><span class="num">3.</span>Why Route is mandatory — the RBI position</h2>
+<p>
+  Under the RBI's <em>Guidelines on Regulation of Payment Aggregators and Payment Gateways</em>,
+  an entity that collects funds from customers on behalf of merchants and then settles those
+  funds to the merchants is acting as a Payment Aggregator, and must be authorised to do so.
+  Funds so collected must sit in an escrow account with a scheduled commercial bank, not in the
+  entity's own operating account.
+</p>
+<p>Krozenda is not an authorised Payment Aggregator. The compliant path is therefore to use one that is — Razorpay — and to have Razorpay perform the split itself:</p>
+<ul>
+  <li>Razorpay holds the funds in its own regulated escrow.</li>
+  <li>Razorpay performs the split into linked accounts.</li>
+  <li>Razorpay settles each linked account to its own registered bank account on its own cycle.</li>
+  <li>Krozenda instructs the split, but never custodies the vendor's share.</li>
+</ul>
+<p>
+  Each vendor is onboarded as a Route <strong>linked account</strong> with its own KYC held by
+  Razorpay. A vendor that has not completed that onboarding cannot receive money, and the
+  platform must block it from selling until it has — see section 6.
+</p>
+
+<h2><span class="num">4.</span>Flow 1 — Customer checkout and payment capture</h2>
+
+<div class="fig">
+<svg viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+      <path d="M0,0 L8,3.2 L0,6.4 z" fill="#1d4ed8"/>
+    </marker>
+  </defs>
+
+  <rect x="6" y="88" width="118" height="60" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="65" y="112" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Buyer</text>
+  <text x="65" y="130" text-anchor="middle" font-size="11" fill="#475569">App or web</text>
+
+  <rect x="166" y="88" width="140" height="60" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="236" y="107" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Krozenda API</text>
+  <text x="236" y="124" text-anchor="middle" font-size="10.5" fill="#475569">creates payment order</text>
+  <text x="236" y="139" text-anchor="middle" font-size="10.5" fill="#475569">amount + receipt id</text>
+
+  <rect x="348" y="88" width="140" height="60" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="418" y="107" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Razorpay</text>
+  <text x="418" y="124" text-anchor="middle" font-size="10.5" fill="#475569">Checkout + capture</text>
+  <text x="418" y="139" text-anchor="middle" font-size="10.5" fill="#475569">UPI · card · netbanking</text>
+
+  <rect x="530" y="88" width="144" height="60" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.4"/>
+  <text x="602" y="107" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">Payment Verified</text>
+  <text x="602" y="124" text-anchor="middle" font-size="10.5" fill="#166534">signature checked</text>
+  <text x="602" y="139" text-anchor="middle" font-size="10.5" fill="#166534">order confirmed</text>
+
+  <line x1="126" y1="118" x2="162" y2="118" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="308" y1="118" x2="344" y2="118" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="490" y1="118" x2="526" y2="118" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <path d="M418,84 L418,44 L236,44 L236,84" fill="none" stroke="#64748b" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+  <text x="327" y="38" text-anchor="middle" font-size="10.5" fill="#475569">webhook: payment.captured (server-to-server, authoritative)</text>
+
+  <path d="M418,152 L418,192 L236,192 L236,152" fill="none" stroke="#64748b" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+  <text x="327" y="209" text-anchor="middle" font-size="10.5" fill="#475569">client callback: payment_id + order_id + signature (advisory only)</text>
+</svg>
+<p class="fig-cap">Figure 1 — Checkout. The webhook is the source of truth; the browser callback is never trusted on its own.</p>
+</div>
+
+<h3>4.1 Step by step</h3>
+<table>
+  <thead><tr><th style="width:12mm">#</th><th style="width:44mm">Step</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Cart validated</td><td>Server re-prices the cart from the database — never from what the client sent. Stock, MOQ, B2B tier eligibility, coupon validity and PIN-code serviceability are all re-checked at this moment.</td></tr>
+    <tr><td>2</td><td>Payment order created</td><td>Krozenda's server calls Razorpay to create a payment order for the final total, with our internal order reference as the receipt. The amount is fixed server-side, in paise.</td></tr>
+    <tr><td>3</td><td>Checkout opened</td><td>The buyer completes payment on Razorpay's interface. Card numbers, CVV and UPI PINs are entered there and never touch Krozenda's servers.</td></tr>
+    <tr><td>4</td><td>Callback received</td><td>The client returns a payment id, order id and signature. We verify the signature, but treat this only as a hint that payment may have succeeded.</td></tr>
+    <tr><td>5</td><td>Webhook received</td><td>Razorpay calls our server directly with <code>payment.captured</code>. We verify the HMAC signature against our webhook secret. <strong>This is the event that confirms the order.</strong></td></tr>
+    <tr><td>6</td><td>Order confirmed</td><td>The order moves to <em>Payment Verified</em>, sub-orders are created, and vendors are notified. The buyer sees confirmation.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Why the webhook and not the callback.</strong> The browser callback can be lost — the
+  app is killed, the network drops, the user closes the tab mid-redirect. It can also be forged
+  by a determined attacker replaying a response. The server-to-server webhook is neither. We
+  build so that a customer whose app crashed the instant after paying still gets a confirmed
+  order, because the webhook arrives regardless.
+</div>
+
+<h2><span class="num">5.</span>Flow 2 — Order split and commission snapshot</h2>
+<p>
+  A single cart can contain items from several sellers. At confirmation, the parent Order is
+  split into one <strong>Sub-Order per seller</strong>, and each sub-order carries its own
+  financial identity from that moment on.
+</p>
+
+<div class="fig">
+<svg viewBox="0 0 680 235" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+      <path d="M0,0 L8,3.2 L0,6.4 z" fill="#1d4ed8"/>
+    </marker>
+  </defs>
+
+  <rect x="6" y="88" width="150" height="62" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="81" y="110" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Order</text>
+  <text x="81" y="127" text-anchor="middle" font-size="10.5" fill="#475569">one checkout</text>
+  <text x="81" y="142" text-anchor="middle" font-size="10.5" fill="#475569">one payment</text>
+
+  <rect x="212" y="14" width="212" height="58" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.3"/>
+  <text x="318" y="33" text-anchor="middle" font-size="12" font-weight="700" fill="#16305e">Sub-Order · Seller A</text>
+  <text x="318" y="50" text-anchor="middle" font-size="10" fill="#475569">marketplace · own invoice</text>
+  <text x="318" y="64" text-anchor="middle" font-size="10" fill="#475569">commission snapshotted</text>
+
+  <rect x="212" y="90" width="212" height="58" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.3"/>
+  <text x="318" y="109" text-anchor="middle" font-size="12" font-weight="700" fill="#16305e">Sub-Order · Seller B</text>
+  <text x="318" y="126" text-anchor="middle" font-size="10" fill="#475569">dropshipping · own invoice</text>
+  <text x="318" y="140" text-anchor="middle" font-size="10" fill="#475569">commission snapshotted</text>
+
+  <rect x="212" y="166" width="212" height="58" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.3"/>
+  <text x="318" y="185" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">Sub-Order · Own Stock</text>
+  <text x="318" y="202" text-anchor="middle" font-size="10" fill="#166534">Krozenda is the seller</text>
+  <text x="318" y="216" text-anchor="middle" font-size="10" fill="#166534">no external transfer</text>
+
+  <path d="M158,110 L186,110 L186,43 L208,43" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <path d="M158,119 L186,119 L208,119" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <path d="M158,128 L186,128 L186,195 L208,195" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar2)"/>
+
+  <rect x="462" y="14" width="212" height="58" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="568" y="34" text-anchor="middle" font-size="11" fill="#334155">independent status</text>
+  <text x="568" y="51" text-anchor="middle" font-size="11" fill="#334155">independent shipment</text>
+  <rect x="462" y="90" width="212" height="58" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="568" y="110" text-anchor="middle" font-size="11" fill="#334155">independent cancellation</text>
+  <text x="568" y="127" text-anchor="middle" font-size="11" fill="#334155">independent refund</text>
+  <rect x="462" y="166" width="212" height="58" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="568" y="186" text-anchor="middle" font-size="11" fill="#334155">independent settlement</text>
+  <text x="568" y="203" text-anchor="middle" font-size="11" fill="#334155">independent reversal</text>
+
+  <line x1="428" y1="43" x2="458" y2="43" stroke="#94a3b8" stroke-width="1.3" marker-end="url(#ar2)"/>
+  <line x1="428" y1="119" x2="458" y2="119" stroke="#94a3b8" stroke-width="1.3" marker-end="url(#ar2)"/>
+  <line x1="428" y1="195" x2="458" y2="195" stroke="#94a3b8" stroke-width="1.3" marker-end="url(#ar2)"/>
+</svg>
+<p class="fig-cap">Figure 2 — One payment, many sub-orders. Each sub-order is financially self-contained.</p>
+</div>
+
+<h3>5.1 Commission is snapshotted, never recomputed</h3>
+<p>
+  Commission is resolved at the moment the order is placed, using a most-specific-wins lookup,
+  and the resulting figure is written onto the sub-order:
+</p>
+<div class="lifecycle">product-specific → seller-specific → category-specific → company-specific → default rate</div>
+<p>
+  Once written, that number never changes. If the client later raises the default commission
+  from 8% to 10%, orders placed yesterday still settle at 8%. This matters commercially — it is
+  what makes historical settlement reports reproducible and defensible in a vendor dispute — and
+  it is why the commission figure lives on the sub-order record rather than being looked up from
+  live configuration at settlement time.
+</p>
+
+<h2><span class="num">6.</span>Flow 3 — Vendor onboarding as a linked account</h2>
+<p>
+  A vendor cannot receive a single rupee until Razorpay has onboarded and verified it. The
+  sequence is:
+</p>
+<ol>
+  <li><strong>Vendor applies on Krozenda</strong> and uploads its documents — PAN, GST certificate, cancelled cheque, address proof, and category licences such as FSSAI.</li>
+  <li><strong>Krozenda's admin reviews them manually</strong> and approves or rejects with a reason. This is a human check against the documents supplied; it is not an automated verification against a government database.</li>
+  <li><strong>Krozenda creates a Route linked account</strong> for the approved vendor, submitting the vendor's legal name, business type, contact details, and bank account.</li>
+  <li><strong>Razorpay runs its own KYC</strong> on the linked account. This is independent of Krozenda's review and can take several working days. Razorpay may request further documents directly.</li>
+  <li><strong>The storefront activates</strong> only once the linked account reaches an active, transfer-eligible state.</li>
+</ol>
+
+<div class="notice">
+  <strong>Operational consequence to plan for.</strong> Razorpay's KYC on a linked account is not
+  instant and is outside Krozenda's control. A vendor approved by your admin on Monday may not be
+  able to receive money until the following week. The Seller Panel must show this state honestly
+  — "approved by Krozenda, awaiting payment partner verification" — or your support team will
+  field the complaints. The platform must also hard-block order assignment to any vendor whose
+  linked account is not yet transfer-eligible, otherwise the money has nowhere to go at
+  settlement.
+</div>
+
+<div class="flag">
+  <strong>Gap flagged: no penny-drop verification.</strong> Bank account verification by penny
+  drop is outside the agreed scope. Without it, a vendor who mistypes an account number will have
+  a linked account that looks valid but fails at transfer time, or — worse — succeeds into
+  someone else's account. Razorpay's own linked-account KYC mitigates much of this, but not the
+  typo case. We recommend the client either enables penny-drop verification as a scope addition,
+  or accepts a documented manual check of the cancelled cheque against the entered account
+  number during admin review. This needs a decision before go-live.
+</div>
+
+<h2><span class="num">7.</span>Flow 4 — Automated vendor settlement</h2>
+<p>
+  This is the "auto payout" for vendors. It runs without human intervention on a per-sub-order
+  basis, and it works by transferring the vendor's share <em>early but held</em>, then releasing
+  it when the order is safely delivered.
+</p>
+
+<div class="fig">
+<svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="ar3" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+      <path d="M0,0 L8,3.2 L0,6.4 z" fill="#1d4ed8"/>
+    </marker>
+    <marker id="ar3g" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+      <path d="M0,0 L8,3.2 L0,6.4 z" fill="#15803d"/>
+    </marker>
+  </defs>
+
+  <rect x="6" y="120" width="110" height="58" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="61" y="144" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Buyer pays</text>
+  <text x="61" y="162" text-anchor="middle" font-size="11" fill="#475569">₹ total</text>
+
+  <rect x="156" y="110" width="130" height="78" rx="6" fill="#f8fafc" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="221" y="133" text-anchor="middle" font-size="13" font-weight="700" fill="#16305e">Razorpay</text>
+  <text x="221" y="150" text-anchor="middle" font-size="10.5" fill="#475569">regulated escrow</text>
+  <text x="221" y="166" text-anchor="middle" font-size="10.5" fill="#475569">splits at capture</text>
+  <text x="221" y="181" text-anchor="middle" font-size="10" fill="#64748b">Krozenda never custodies</text>
+
+  <rect x="336" y="26" width="164" height="54" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.4"/>
+  <text x="418" y="47" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">Krozenda</text>
+  <text x="418" y="64" text-anchor="middle" font-size="10.5" fill="#166534">commission — retained</text>
+
+  <rect x="336" y="96" width="164" height="54" rx="6" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.4"/>
+  <text x="418" y="117" text-anchor="middle" font-size="12" font-weight="700" fill="#7c4a03">Seller A linked a/c</text>
+  <text x="418" y="134" text-anchor="middle" font-size="10.5" fill="#92400e">transfer — ON HOLD</text>
+
+  <rect x="336" y="166" width="164" height="54" rx="6" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.4"/>
+  <text x="418" y="187" text-anchor="middle" font-size="12" font-weight="700" fill="#7c4a03">Seller B linked a/c</text>
+  <text x="418" y="204" text-anchor="middle" font-size="10.5" fill="#92400e">transfer — ON HOLD</text>
+
+  <rect x="336" y="236" width="164" height="52" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.3"/>
+  <text x="418" y="256" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">Own Stock</text>
+  <text x="418" y="273" text-anchor="middle" font-size="10.5" fill="#475569">no transfer needed</text>
+
+  <rect x="536" y="96" width="138" height="124" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="605" y="126" text-anchor="middle" font-size="12" font-weight="700" fill="#14532d">Released</text>
+  <text x="605" y="146" text-anchor="middle" font-size="10.5" fill="#166534">on Delivered</text>
+  <text x="605" y="162" text-anchor="middle" font-size="10.5" fill="#166534">+ return window</text>
+  <text x="605" y="178" text-anchor="middle" font-size="10.5" fill="#166534">elapsed</text>
+  <text x="605" y="199" text-anchor="middle" font-size="10.5" fill="#166534">→ vendor bank</text>
+
+  <line x1="118" y1="149" x2="152" y2="149" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar3)"/>
+  <path d="M288,140 L312,140 L312,53 L332,53" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar3)"/>
+  <path d="M288,146 L312,146 L312,123 L332,123" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar3)"/>
+  <path d="M288,152 L312,152 L312,193 L332,193" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar3)"/>
+  <path d="M288,158 L312,158 L312,262 L332,262" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar3)"/>
+
+  <path d="M504,123 L520,123 L520,140 L532,140" fill="none" stroke="#15803d" stroke-width="1.5" marker-end="url(#ar3g)"/>
+  <path d="M504,193 L520,193 L520,176 L532,176" fill="none" stroke="#15803d" stroke-width="1.5" marker-end="url(#ar3g)"/>
+</svg>
+<p class="fig-cap">Figure 3 — Route settlement. The vendor's share is ring-fenced at capture and released only when the order is safe.</p>
+</div>
+
+<h3>7.1 Why hold, rather than transfer late</h3>
+<p>
+  There are two ways to run Route: create the transfer immediately but hold it, or wait until
+  delivery and create it then. We recommend <strong>transfer-on-hold at capture</strong>, for
+  three reasons:
+</p>
+<ul>
+  <li><strong>The money is ring-fenced from day one.</strong> The vendor's share is allocated against that specific payment, so a later dispute cannot leave it unfunded.</li>
+  <li><strong>Reversal is clean.</strong> A cancellation or refund reverses a known transfer against a known payment, instead of requiring us to decide whether to create one at all.</li>
+  <li><strong>The vendor can see it.</strong> "₹4,200 allocated, releasing on 14 March" is a far better Seller Panel experience than silence until settlement day, and it materially reduces settlement support tickets.</li>
+</ul>
+
+<h3>7.2 The release gate</h3>
+<p>A held transfer is released automatically when <strong>all</strong> of the following are true:</p>
+<table class="avoid">
+  <thead><tr><th style="width:52mm">Condition</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Status is Delivered</td><td>Confirmed by the logistics partner's delivery webhook, not by the vendor's own claim.</td></tr>
+    <tr><td>Return window elapsed</td><td><span class="ph">[48]</span> hours from delivery, matching the return-request window in the Terms &amp; Conditions.</td></tr>
+    <tr><td>No open claim</td><td>No return, replacement or damage claim is pending on that sub-order.</td></tr>
+    <tr><td>No RTO in flight</td><td>The shipment has not been marked for return to origin.</td></tr>
+    <tr><td>Vendor account in good standing</td><td>Not suspended, and no active fraud investigation or regulatory hold.</td></tr>
+  </tbody>
+</table>
+<p>
+  A scheduled job evaluates eligible sub-orders on the vendor's configured cycle — automatic,
+  weekly or monthly. Where the cycle is <em>automatic</em>, release happens as soon as the gate
+  opens. Where it is weekly or monthly, eligible transfers accumulate and release together on
+  the cycle date, which suits vendors who prefer one consolidated credit and one reconciliation.
+</p>
+
+<h3>7.3 Settlement record</h3>
+<p>Every release writes an immutable settlement record carrying the full arithmetic, so that a vendor query years later can be answered from data rather than from reconstruction:</p>
+<div class="lifecycle">gross sale value
+  − platform commission (snapshotted at order time)
+  − payment gateway charge, where borne by the vendor
+  − shipping charge, where borne by the vendor
+  − penalties, RTO costs, and prior-cycle recoveries
+  − tax deducted at source
+  = net settled  →  transfer id · UTR · status · timestamp</div>
+
+<h2><span class="num">8.</span>Worked example with real numbers</h2>
+<p>
+  A retail customer checks out a cart containing one item from Seller A and one from Seller B.
+  Figures below use a <span class="ph">[10%]</span> commission on A and
+  <span class="ph">[8%]</span> on B, and are illustrative.
+</p>
+<table>
+  <thead><tr><th style="width:64mm">Line</th><th style="width:34mm">Seller A</th><th style="width:34mm">Seller B</th><th>Total</th></tr></thead>
+  <tbody>
+    <tr><td>Item value (incl. GST)</td><td>₹ 6,000</td><td>₹ 4,000</td><td>₹ 10,000</td></tr>
+    <tr><td>Shipping charged to buyer</td><td>₹ 100</td><td>₹ 100</td><td>₹ 200</td></tr>
+    <tr><td><strong>Buyer pays</strong></td><td>—</td><td>—</td><td><strong>₹ 10,200</strong></td></tr>
+    <tr><td>Commission rate (snapshotted)</td><td>10%</td><td>8%</td><td>—</td></tr>
+    <tr><td>Krozenda commission</td><td>₹ 600</td><td>₹ 320</td><td>₹ 920</td></tr>
+    <tr><td>Shipping borne by seller</td><td>₹ 100</td><td>₹ 100</td><td>₹ 200</td></tr>
+    <tr><td>TCS under GST s.52 <span class="ph">[1%]</span></td><td>₹ 60</td><td>₹ 40</td><td>₹ 100</td></tr>
+    <tr><td>TDS under IT s.194-O <span class="ph">[1%]</span></td><td>₹ 60</td><td>₹ 40</td><td>₹ 100</td></tr>
+    <tr><td><strong>Net to seller (held, then released)</strong></td><td><strong>₹ 5,180</strong></td><td><strong>₹ 3,500</strong></td><td><strong>₹ 8,680</strong></td></tr>
+    <tr><td><strong>Retained by Krozenda</strong></td><td>—</td><td>—</td><td><strong>₹ 1,320</strong></td></tr>
+  </tbody>
+</table>
+<p>
+  Of the ₹10,200 collected, ₹8,680 is routed to the two sellers' linked accounts and ₹1,320 is
+  retained by Krozenda — of which ₹920 is commission revenue, ₹200 is recovered shipping, and
+  ₹200 is tax collected and deducted that Krozenda must deposit with the authorities, not keep.
+  Gateway fees are charged by Razorpay against the platform account on its own schedule and are
+  not shown in this split.
+</p>
+<div class="notice">
+  <strong>Confirm before build.</strong> The TCS and TDS rates and — more importantly — whether
+  Krozenda or the seller is the deductor for each business model, depend on the seller-of-record
+  decision still open in section 19. The arithmetic above assumes Krozenda deducts. If that
+  changes, the split changes.
+</div>
+
+<h2><span class="num">9.</span>Flow 5 — Refunds and partial refunds</h2>
+<p>
+  A refund is not a payout. It reverses the original payment back to the instrument the customer
+  paid with — the same card, the same UPI handle — through the gateway's Refunds API. Money
+  never leaves Krozenda's bank account to make a refund happen.
+</p>
+
+<h3>9.1 The two halves of a refund</h3>
+<p>Every refund on a multi-vendor order has two movements that must both succeed:</p>
+<table class="avoid">
+  <thead><tr><th style="width:44mm">Movement</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Refund to buyer</strong></td><td>Returns the sub-order's value to the buyer's original payment instrument.</td></tr>
+    <tr><td><strong>Transfer reversal</strong></td><td>Claws back the corresponding held or released transfer from the vendor's linked account, so the vendor is not paid for a sale that was undone.</td></tr>
+  </tbody>
+</table>
+<p>
+  These must be treated as one atomic business operation. Refunding the buyer without reversing
+  the transfer means Krozenda has funded the refund out of its own money — the single most
+  common and most expensive bug in marketplace settlement. The implementation records both legs
+  against the sub-order and reconciles them nightly; any sub-order with one leg complete and the
+  other not is raised as an exception the next morning.
+</p>
+
+<h3>9.2 Timing determines the mechanism</h3>
+<table>
+  <thead><tr><th style="width:48mm">When</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Before dispatch — buyer cancels</td><td>Transfer is still on hold. It is reversed directly and the buyer is refunded in full including shipping. Cleanest case.</td></tr>
+    <tr><td>After delivery, claim upheld</td><td>If the transfer is still held, reverse and refund. If already released, a reversal is raised against the vendor's linked account; where its balance is insufficient, the amount is recovered from the vendor's next settlement cycle.</td></tr>
+    <tr><td>Partial — one item of several</td><td>Only that sub-order's proportional value is refunded and only its transfer reversed. Sibling sub-orders are untouched.</td></tr>
+    <tr><td>Outside the gateway's refund window</td><td>The original payment can no longer be reversed. Compensation is paid instead by <strong>RazorpayX Payout</strong> to the customer's bank account — one of the few legitimate customer-facing uses of Rail B. Requires finance approval.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>What the buyer experiences.</strong> Refunds are initiated within
+  <span class="ph">[24 to 48]</span> hours of approval, but the credit appears in
+  <span class="ph">[5 to 7]</span> working days because the last leg belongs to the buyer's bank,
+  not to us. Setting that expectation in the app at the moment the refund is approved — with the
+  reference number visible — is the difference between a satisfied customer and a support ticket
+  on day three.
+</div>
+
+<h2><span class="num">10.</span>Flow 6 — RTO and settlement reversal</h2>
+<p>
+  A Return to Origin occurs when a shipment cannot be delivered — a wrong address, a customer
+  unreachable after repeated attempts, or a refused delivery. RTO is not covered by the No-Return
+  policy and has its own money path.
+</p>
+<div class="lifecycle">RTO Initiated → shipment in return transit → RTO Delivered (back to vendor)
+                                    ↓
+      transfer reversed · inventory restored · buyer refunded per allocation rule</div>
+<table class="avoid">
+  <thead><tr><th style="width:56mm">Cause of the RTO</th><th>Money outcome</th></tr></thead>
+  <tbody>
+    <tr><td>Courier failure or vendor error</td><td>Buyer refunded in full including shipping. Vendor's transfer reversed. Return freight borne per the configured platform/vendor rule.</td></tr>
+    <tr><td>Buyer-attributable — bad address, unreachable, refused</td><td>Buyer refunded the product value; forward and return freight actually incurred may be deducted and is disclosed before deduction. Vendor's transfer reversed.</td></tr>
+  </tbody>
+</table>
+<p>
+  In both cases inventory is restored for Own Stock and Marketplace models, and the reversal is
+  written to the settlement ledger against the original transfer id so the vendor's statement
+  reconciles.
+</p>
+
+<h2><span class="num">11.</span>Automated payroll via RazorpayX Payouts</h2>
+<p>
+  Everything to this point has been marketplace money on Rail A. Payroll is different: it is
+  Krozenda paying its own staff out of its own funds, and it belongs on Rail B.
+</p>
+
+<div class="fig">
+<svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="ar4" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+      <path d="M0,0 L8,3.2 L0,6.4 z" fill="#1d4ed8"/>
+    </marker>
+  </defs>
+
+  <rect x="6" y="72" width="130" height="66" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.4"/>
+  <text x="71" y="95" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">RazorpayX</text>
+  <text x="71" y="112" text-anchor="middle" font-size="11" fill="#166534">current account</text>
+  <text x="71" y="128" text-anchor="middle" font-size="10.5" fill="#166534">Krozenda's balance</text>
+
+  <rect x="176" y="72" width="140" height="66" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="246" y="93" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16305e">Payroll job</text>
+  <text x="246" y="110" text-anchor="middle" font-size="10.5" fill="#475569">runs on schedule</text>
+  <text x="246" y="126" text-anchor="middle" font-size="10.5" fill="#475569">reads salary register</text>
+
+  <rect x="356" y="72" width="140" height="66" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="426" y="93" text-anchor="middle" font-size="12.5" font-weight="700" fill="#16305e">Payouts API</text>
+  <text x="426" y="110" text-anchor="middle" font-size="10.5" fill="#475569">one payout per</text>
+  <text x="426" y="126" text-anchor="middle" font-size="10.5" fill="#475569">fund account</text>
+
+  <rect x="536" y="16" width="138" height="52" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="605" y="38" text-anchor="middle" font-size="11.5" font-weight="600" fill="#334155">Employee A</text>
+  <text x="605" y="55" text-anchor="middle" font-size="10.5" fill="#475569">IMPS · instant</text>
+
+  <rect x="536" y="79" width="138" height="52" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="605" y="101" text-anchor="middle" font-size="11.5" font-weight="600" fill="#334155">Employee B</text>
+  <text x="605" y="118" text-anchor="middle" font-size="10.5" fill="#475569">NEFT · batched</text>
+
+  <rect x="536" y="142" width="138" height="52" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="605" y="164" text-anchor="middle" font-size="11.5" font-weight="600" fill="#334155">Contractor</text>
+  <text x="605" y="181" text-anchor="middle" font-size="10.5" fill="#475569">UPI · instant</text>
+
+  <line x1="138" y1="105" x2="172" y2="105" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <line x1="318" y1="105" x2="352" y2="105" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <path d="M498,98 L516,98 L516,42 L532,42" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar4)"/>
+  <path d="M498,105 L532,105" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar4)"/>
+  <path d="M498,112 L516,112 L516,168 L532,168" fill="none" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#ar4)"/>
+</svg>
+<p class="fig-cap">Figure 4 — Automated payroll. Krozenda's own balance, disbursed on a schedule to verified fund accounts.</p>
+</div>
+
+<h3>11.1 What "automated payroll" means here</h3>
+<p>
+  The platform holds a salary register — employee, designation, monthly gross, deductions, net
+  payable, and a verified bank account or UPI handle. On the configured pay date a scheduled job
+  reads the register, generates one payout instruction per employee, submits them, and tracks
+  each to completion. Finance approves the run; the system executes it.
+</p>
+<table class="avoid">
+  <thead><tr><th style="width:48mm">Capability</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr><td>Scheduled run</td><td>Fires on <span class="ph">[the last working day of each month]</span>, or on demand for off-cycle payments.</td></tr>
+    <tr><td>Maker–checker approval</td><td>The run is prepared by one user and released by another. No single person can move payroll money alone.</td></tr>
+    <tr><td>Balance pre-check</td><td>Total run value is compared against available balance before submission; a short balance halts the run rather than paying some staff and not others.</td></tr>
+    <tr><td>Per-employee tracking</td><td>Each payout carries its own status and UTR, visible in the admin panel.</td></tr>
+    <tr><td>Automatic retry</td><td>A payout that fails for a transient reason is retried on the next cycle; one that fails for a bad account is flagged for correction and never retried blindly.</td></tr>
+    <tr><td>Audit trail</td><td>Who prepared, who approved, what was sent, what was returned — retained for statutory audit.</td></tr>
+  </tbody>
+</table>
+
+<div class="notice">
+  <strong>Scope note.</strong> This is <em>salary disbursement</em>, not a full payroll system.
+  Computing gross-to-net — PF, ESI, professional tax, TDS on salary under section 192, leave and
+  attendance, Form 16 — is a separate body of work and is not in the current scope. What is
+  described here takes an approved net-payable figure and moves the money reliably. If the client
+  needs statutory payroll computation, that should be scoped separately or handled in dedicated
+  payroll software that hands us the net figures.
+</div>
+
+<h2><span class="num">12.</span>The Payout API in detail</h2>
+<p>
+  RazorpayX models a payout in three layers. Each layer is created once and reused, which keeps
+  the recurring monthly run cheap and safe.
+</p>
+<table>
+  <thead><tr><th style="width:34mm">Layer</th><th style="width:44mm">Created</th><th>Holds</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Contact</strong></td><td>Once per person or entity</td><td>Name, email, phone, type — employee, vendor, customer. The <em>who</em>.</td></tr>
+    <tr><td><strong>Fund account</strong></td><td>Once per bank account or UPI handle</td><td>Account number and IFSC, or the VPA. Belongs to a contact. The <em>where</em>.</td></tr>
+    <tr><td><strong>Payout</strong></td><td>Once per payment</td><td>Amount, mode, purpose, reference, narration. The <em>what and when</em>.</td></tr>
+  </tbody>
+</table>
+
+<div class="api"><span class="c">// Monthly salary run — one instruction per employee</span>
+<span class="k">POST</span> /v1/payouts
+X-Payout-Idempotency: <span class="s">"payroll-2026-03-emp-00417"</span>   <span class="c">// prevents double payment on retry</span>
+{
+  <span class="k">"account_number"</span>: <span class="s">"[Krozenda RazorpayX account]"</span>,
+  <span class="k">"fund_account_id"</span>: <span class="s">"fa_xxxxxxxxxxxx"</span>,
+  <span class="k">"amount"</span>: <span class="s">4250000</span>,              <span class="c">// paise — ₹42,500.00</span>
+  <span class="k">"currency"</span>: <span class="s">"INR"</span>,
+  <span class="k">"mode"</span>: <span class="s">"IMPS"</span>,                <span class="c">// IMPS | NEFT | RTGS | UPI</span>
+  <span class="k">"purpose"</span>: <span class="s">"salary"</span>,
+  <span class="k">"queue_if_low_balance"</span>: <span class="s">true</span>,   <span class="c">// hold, don't fail, if balance is short</span>
+  <span class="k">"reference_id"</span>: <span class="s">"PAYROLL-2026-03-00417"</span>,
+  <span class="k">"narration"</span>: <span class="s">"Krozenda Salary Mar 2026"</span>
+}</div>
+
+<h3>12.1 Choosing the mode</h3>
+<table class="avoid">
+  <thead><tr><th style="width:26mm">Mode</th><th style="width:32mm">Speed</th><th>Use it for</th></tr></thead>
+  <tbody>
+    <tr><td><strong>IMPS</strong></td><td>Immediate, 24×7</td><td>Salaries and anything time-sensitive. Per-transaction ceiling applies.</td></tr>
+    <tr><td><strong>NEFT</strong></td><td>Batched, banking hours</td><td>Bulk non-urgent transfers where cost matters more than speed.</td></tr>
+    <tr><td><strong>RTGS</strong></td><td>Real-time, banking hours</td><td>High-value single transfers above the RTGS floor.</td></tr>
+    <tr><td><strong>UPI</strong></td><td>Immediate, 24×7</td><td>Small-value payouts to a VPA. Lower ceiling than IMPS.</td></tr>
+  </tbody>
+</table>
+
+<h3>12.2 Payout lifecycle</h3>
+<div class="lifecycle">queued → pending → processing → processed          <span style="color:#15803d">✓ money delivered, UTR issued</span>
+                              ↘ reversed          <span style="color:#b91c1c">✗ bank returned it — funds back in your balance</span>
+                              ↘ failed            <span style="color:#b91c1c">✗ never left — safe to correct and retry</span>
+        ↘ rejected            <span style="color:#b91c1c">✗ validation or approval refused it</span>
+        ↘ cancelled           <span style="color:#64748b">— cancelled while still queued</span></div>
+<p>
+  The distinction between <strong>failed</strong> and <strong>reversed</strong> matters
+  operationally. <em>Failed</em> means the money never left — correct the account details and
+  retry. <em>Reversed</em> means it left, the beneficiary bank rejected it, and it came back;
+  the employee has not been paid, the balance has been restored, and finance must be told. Both
+  must be surfaced distinctly in the admin panel rather than collapsed into "error".
+</p>
+
+<div class="flag">
+  <strong>Idempotency is not optional.</strong> Every payout request must carry a unique
+  idempotency key derived from the payroll period and the employee — never a random value, or
+  the protection is lost. Without it, a network timeout on a request that actually succeeded will,
+  on retry, pay the employee twice. Recovering a duplicate salary payment is a manual,
+  relationship-damaging process. This is the single highest-risk detail in the payout
+  implementation.
+</div>
+
+<h2><span class="num">13.</span>Payout automation and scheduling</h2>
+<p>The automated run executes in this order, and stops at the first failure rather than proceeding partially:</p>
+<ol>
+  <li><strong>Assemble.</strong> Read the salary register for the period; exclude leavers and unapproved rows.</li>
+  <li><strong>Validate.</strong> Confirm every included employee has an active fund account and a non-zero net payable.</li>
+  <li><strong>Total and check balance.</strong> Compare the run value against the available RazorpayX balance.</li>
+  <li><strong>Present for approval.</strong> Finance sees headcount, total value and exceptions, and approves or rejects the whole run.</li>
+  <li><strong>Submit.</strong> One payout per employee, each with its own idempotency key, submitted with controlled concurrency to stay inside rate limits.</li>
+  <li><strong>Track.</strong> Persist every payout id against its register row; update status from webhooks.</li>
+  <li><strong>Reconcile and report.</strong> Once all payouts are terminal, produce the run report: paid, failed, reversed, pending — with UTRs.</li>
+</ol>
+<p>
+  The same machinery serves off-cycle disbursements — a vendor incentive, a customer goodwill
+  payment outside the refund window, an employee reimbursement — differing only in the
+  <code>purpose</code> field and the approval threshold.
+</p>
+
+<h2><span class="num">14.</span>Webhooks and reconciliation</h2>
+<p>
+  Webhooks are how the platform learns what actually happened. Every one is verified by HMAC
+  signature against the webhook secret before it is trusted, and rejected outright if the
+  signature does not match.
+</p>
+<table>
+  <thead><tr><th style="width:52mm">Event</th><th>What the platform does</th></tr></thead>
+  <tbody>
+    <tr><td><code>payment.captured</code></td><td>Confirm the order, create sub-orders, notify vendors.</td></tr>
+    <tr><td><code>payment.failed</code></td><td>Mark the attempt failed; leave the cart intact so the buyer can retry.</td></tr>
+    <tr><td><code>order.paid</code></td><td>Cross-check against our own order total; flag any mismatch.</td></tr>
+    <tr><td><code>refund.processed</code></td><td>Close the refund, notify the buyer, complete the ledger entry.</td></tr>
+    <tr><td><code>refund.failed</code></td><td>Raise an exception for finance — the buyer is still owed money.</td></tr>
+    <tr><td><code>transfer.processed</code></td><td>Mark the vendor's settlement complete and publish it to the Seller Panel.</td></tr>
+    <tr><td><code>transfer.failed</code></td><td>Hold the settlement, alert admin, block further releases to that vendor pending investigation.</td></tr>
+    <tr><td><code>payout.processed</code></td><td>Mark the salary or disbursement paid; record the UTR.</td></tr>
+    <tr><td><code>payout.reversed</code></td><td>Mark unpaid, restore the amount to the run's outstanding total, alert finance.</td></tr>
+    <tr><td><code>payout.failed</code></td><td>Flag for correction; do not retry automatically without a human check.</td></tr>
+  </tbody>
+</table>
+
+<h3>14.1 Three rules the implementation follows</h3>
+<ul>
+  <li><strong>Verify before trusting.</strong> An unsigned or badly-signed webhook is discarded and logged as a security event.</li>
+  <li><strong>Handle idempotently.</strong> Razorpay may deliver the same event more than once. Every handler is safe to run repeatedly — a second <code>payment.captured</code> for an order already confirmed changes nothing.</li>
+  <li><strong>Never assume delivery.</strong> Webhooks can be missed entirely. A nightly reconciliation job independently fetches the day's payments, refunds, transfers and payouts from Razorpay and compares them against our records, correcting drift and reporting anything it cannot reconcile.</li>
+</ul>
+
+<div class="callout">
+  <strong>Why the nightly job earns its keep.</strong> Webhook delivery is reliable but not
+  guaranteed — an outage on our side during a delivery window loses events permanently. Without
+  independent reconciliation, a missed <code>transfer.processed</code> means a vendor is paid but
+  the Seller Panel says otherwise, and the discrepancy is found by the vendor rather than by us.
+  Reconciliation converts an unbounded class of silent errors into a bounded morning report.
+</div>
+
+<h2><span class="num">15.</span>Failure handling and edge cases</h2>
+<table>
+  <thead><tr><th style="width:56mm">Scenario</th><th>Handling</th></tr></thead>
+  <tbody>
+    <tr><td>Buyer debited, order not created</td><td>The nightly reconciliation finds the orphan payment and auto-refunds it. The buyer is notified with the reference.</td></tr>
+    <tr><td>Duplicate payment for one cart</td><td>Detected on the order reference; the second payment is refunded automatically.</td></tr>
+    <tr><td>Vendor's linked account suspended mid-order</td><td>The transfer stays on hold. The order still ships and the buyer is unaffected. Settlement releases once the account is restored, or is reversed if the vendor is terminated.</td></tr>
+    <tr><td>Transfer reversal exceeds the vendor's balance</td><td>The shortfall becomes a recoverable owed to the platform, deducted from the next cycle and carried forward until cleared.</td></tr>
+    <tr><td>Refund requested after gateway window</td><td>Escalates to a manual Payout with finance approval, as described in section 9.2.</td></tr>
+    <tr><td>Payroll run interrupted mid-submission</td><td>Idempotency keys make resubmission safe. The run resumes and pays only those not already paid.</td></tr>
+    <tr><td>RazorpayX balance short on pay date</td><td><code>queue_if_low_balance</code> holds the payouts rather than failing them; they execute automatically once funded. Finance is alerted immediately.</td></tr>
+    <tr><td>Razorpay outage during checkout</td><td>Checkout degrades gracefully with a clear message. No order is created without a verified payment, so nothing is left half-done.</td></tr>
+    <tr><td>Delivery webhook never arrives</td><td>Settlement stays gated. A stale-order report lists sub-orders shipped but not marked delivered beyond a threshold, for manual review — deliberately failing closed rather than paying out on an unconfirmed delivery.</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">16.</span>Security and key management</h2>
+<ul>
+  <li><strong>No card data on our servers.</strong> Card numbers, CVV, UPI PINs and net-banking credentials are captured on Razorpay's PCI-DSS compliant interface. Krozenda stores only the payment reference, amount and status.</li>
+  <li><strong>Amounts are server-authoritative.</strong> Every payable amount is computed on the server from the database. A price or total submitted by the client is never trusted.</li>
+  <li><strong>Signature verification everywhere.</strong> Both the checkout callback and every webhook are HMAC-verified before any state changes.</li>
+  <li><strong>Key segregation.</strong> Payment gateway keys and RazorpayX payout keys are separate credentials with separate blast radii, held in environment configuration, never in source control, and rotated on a schedule. Test and live keys are never present in the same environment.</li>
+  <li><strong>Payout authorisation is privileged.</strong> Initiating or approving a payout is a distinct permission held by a small number of finance roles, separate from general admin, and every action is written to the immutable audit trail.</li>
+  <li><strong>Maker–checker on money out.</strong> No single account can both prepare and release a payout run.</li>
+  <li><strong>Rate limiting and replay protection</strong> on all payment endpoints, with webhook timestamps checked to reject replayed deliveries.</li>
+</ul>
+
+<h2><span class="num">17.</span>Tax treatment — TCS and TDS</h2>
+<p>As a marketplace operator, Krozenda has collection and deduction obligations on vendor sales:</p>
+<table class="avoid">
+  <thead><tr><th style="width:44mm">Obligation</th><th>Treatment</th></tr></thead>
+  <tbody>
+    <tr><td><strong>TCS — GST s.52</strong></td><td>Collected on the net taxable value of vendor supplies, deducted before settlement, deposited and reported in GSTR-8. The vendor claims credit in its own returns.</td></tr>
+    <tr><td><strong>TDS — IT s.194-O</strong></td><td>Deducted on the gross sale value of vendor supplies, deposited, and reflected in the vendor's Form 26AS.</td></tr>
+    <tr><td><strong>Own Stock sales</strong></td><td>No TCS or TDS — Krozenda is the seller, not the facilitator. Ordinary GST output liability applies.</td></tr>
+    <tr><td><strong>Salary payouts</strong></td><td>TDS under s.192 is a payroll computation, outside this scope. Payouts move the approved net figure.</td></tr>
+  </tbody>
+</table>
+<p>Both deductions appear as itemised lines on every settlement statement, and the platform generates period-wise reports for filing.</p>
+
+<h2><span class="num">18.</span>What the client must provide</h2>
+<table>
+  <thead><tr><th style="width:62mm">Item</th><th style="width:26mm">Owner</th><th>Blocking?</th></tr></thead>
+  <tbody>
+    <tr><td>Razorpay account with <strong>Route provisioned</strong></td><td>Client</td><td><strong>Yes</strong> — no vendor settlement can be built or tested without it</td></tr>
+    <tr><td>RazorpayX current account, activated for Payouts</td><td>Client</td><td><strong>Yes</strong> — for payroll</td></tr>
+    <tr><td>Live and test API keys for both products</td><td>Client</td><td>Yes</td></tr>
+    <tr><td>Webhook secrets configured on both</td><td>Client</td><td>Yes</td></tr>
+    <tr><td>Commission structure — rates by product, vendor, category</td><td>Client</td><td>Yes</td></tr>
+    <tr><td>Settlement cycle policy per vendor tier</td><td>Client</td><td>Yes</td></tr>
+    <tr><td>Return window length, feeding the release gate</td><td>Client</td><td>Yes</td></tr>
+    <tr><td>Salary register format and the approval hierarchy</td><td>Client</td><td>For payroll</td></tr>
+    <tr><td>Decision on penny-drop verification (section 6)</td><td>Client</td><td>Before go-live</td></tr>
+    <tr><td>Seller-of-record and TCS/TDS position</td><td>Client</td><td><strong>Yes</strong> — drives invoicing and the split</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">19.</span>Open decisions</h2>
+<table>
+  <thead><tr><th style="width:12mm">#</th><th style="width:52mm">Decision</th><th>Why it must be settled before build</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Is Razorpay Route provisioned?</strong></td><td>Route is not enabled by default and requires approval from Razorpay. Nothing in vendor settlement can be built against it until it exists on the client's account. This is the critical path item.</td></tr>
+    <tr><td>2</td><td><strong>Seller of record per business model</strong></td><td>Determines who invoices the customer, who carries consumer-law liability, and who deducts TCS and TDS. It changes the settlement arithmetic in section 8 and the Terms &amp; Conditions.</td></tr>
+    <tr><td>3</td><td><strong>Transfer on hold, or transfer on delivery?</strong></td><td>We recommend on-hold at capture (section 7.1). The client should confirm, as it affects what vendors see and when.</td></tr>
+    <tr><td>4</td><td><strong>Penny-drop verification in or out?</strong></td><td>Currently out of scope. Without it, bank-detail typos surface as failed transfers rather than being caught at entry.</td></tr>
+    <tr><td>5</td><td><strong>Who bears the gateway fee?</strong></td><td>Platform-absorbed or deducted from the vendor. Materially affects vendor economics and must be stated in the Vendor Agreement.</td></tr>
+    <tr><td>6</td><td><strong>Payroll scope</strong></td><td>Confirm that disbursement-only is intended, and that statutory payroll computation is handled elsewhere (section 11.1).</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">20.</span>Implementation sequence</h2>
+<p>Each stage is independently testable and delivers something demonstrable:</p>
+<table>
+  <thead><tr><th style="width:14mm">Stage</th><th style="width:52mm">Scope</th><th>Depends on</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1</strong></td><td>Payment capture — order creation, checkout, signature verification, webhooks, order confirmation</td><td>Gateway keys</td></tr>
+    <tr><td><strong>2</strong></td><td>Order split, commission resolution and snapshot onto sub-orders</td><td>Commission structure</td></tr>
+    <tr><td><strong>3</strong></td><td>Linked account onboarding, KYC state machine, storefront gating</td><td><strong>Route provisioned</strong></td></tr>
+    <tr><td><strong>4</strong></td><td>Transfers on hold, release gate, settlement scheduler, settlement statements</td><td>Stage 3, return window policy</td></tr>
+    <tr><td><strong>5</strong></td><td>Refunds, partial refunds, transfer reversal, the atomic two-leg guarantee</td><td>Stage 4</td></tr>
+    <tr><td><strong>6</strong></td><td>RTO reversal and inventory restoration</td><td>Stage 5, logistics webhooks</td></tr>
+    <tr><td><strong>7</strong></td><td>Nightly reconciliation and the exception report</td><td>Stages 1–6</td></tr>
+    <tr><td><strong>8</strong></td><td>Payouts — contacts, fund accounts, payroll run, maker–checker, payout webhooks</td><td>RazorpayX account</td></tr>
+    <tr><td><strong>9</strong></td><td>TCS/TDS deduction, statements and filing reports</td><td>Decision 2</td></tr>
+  </tbody>
+</table>
+<p>
+  Stages 1 and 2 can begin immediately. Stage 3 onwards is blocked on Route provisioning, and
+  stage 8 on the RazorpayX account — which is why both appear as blocking items in section 18.
+</p>
+
+<div class="sig">
+  <p style="margin:0">
+    <strong>Summary of the compliance position.</strong> Vendor sale proceeds move on Razorpay
+    Route and are never custodied by Krozenda. Krozenda's own funds — commission, own-stock
+    revenue — settle to Krozenda's account and are disbursed through RazorpayX Payouts for
+    salaries and platform expenses. Keeping these two rails separate is what allows Krozenda to
+    operate a multi-vendor marketplace without holding a Payment Aggregator licence.
+  </p>
+  <p style="margin:8px 0 0">
+    Krozenda Payment &amp; Settlement Flow · Version 1.0 · <span class="ph">[DD Month YYYY]</span> ·
+    Prepared by Appzeto for <span class="ph">[Legal Entity Name Pvt. Ltd.]</span>
+  </p>
+</div>
+
+</body>
+</html>

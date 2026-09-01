@@ -127,34 +127,44 @@ export function WebHeader() {
         </div>
       </div>
 
-      {/* Sub Navbar (Categories & Quick Links) */}
-      <div className="bg-slate-900 text-white text-xs font-semibold px-4 lg:px-8 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-none">
-          <div className="flex items-center space-x-6">
+      {/* Sub Navbar (Categories & Quick Links with Mini Image Icons) */}
+      <div className="bg-slate-900 text-white text-xs font-semibold px-4 lg:px-8 py-1.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-none gap-4">
+          <div className="flex items-center space-x-5">
             <button
               onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-white font-bold transition-colors"
+              className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-white font-bold transition-colors shadow-xs"
             >
               <HiBars3 className="w-4 h-4" />
               <span>All Categories</span>
             </button>
             <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="hover:text-amber-400 cursor-pointer transition-colors"
+              className="hover:text-amber-400 cursor-pointer transition-colors flex items-center space-x-1.5"
             >
-              Mobile & Electronics
+              <img src="/images/samsung_s23.png" alt="Mobiles" className="w-4 h-4 object-contain rounded" />
+              <span>Mobile & Electronics</span>
             </span>
             <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="hover:text-amber-400 cursor-pointer transition-colors"
+              className="hover:text-amber-400 cursor-pointer transition-colors flex items-center space-x-1.5"
             >
-              Fashion & Apparel
+              <img src="/images/cat_fashion.jpg" alt="Fashion" className="w-4 h-4 object-contain rounded" />
+              <span>Fashion & Apparel</span>
             </span>
             <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
-              className="hover:text-amber-400 cursor-pointer transition-colors"
+              className="hover:text-amber-400 cursor-pointer transition-colors flex items-center space-x-1.5"
             >
-              Home & Kitchen
+              <img src="/images/cat_watches.jpg" alt="Smartwatches" className="w-4 h-4 object-contain rounded" />
+              <span>Smartwatches</span>
+            </span>
+            <span
+              onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
+              className="hover:text-amber-400 cursor-pointer transition-colors flex items-center space-x-1.5"
+            >
+              <img src="/images/cat_appliances.jpg" alt="Home" className="w-4 h-4 object-contain rounded" />
+              <span>Home & Kitchen</span>
             </span>
             <span
               onClick={() => navigate(USER_ROUTES.ROOT + '/coupons')}
