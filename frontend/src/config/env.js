@@ -9,6 +9,11 @@ export const env = Object.freeze({
   appEnv: RAW.VITE_APP_ENV || 'development',
   apiBaseUrl: RAW.VITE_API_BASE_URL || '/api/v1',
   apiTimeoutMs: Number(RAW.VITE_API_TIMEOUT_MS) || 15000,
+  // Admin panel screens run against a zod-validated fixtures layer until the
+  // matching endpoints exist (5 of ~19 collections are modelled today). Set
+  // VITE_USE_MOCKS=false to point every admin service at the real API.
+  useMocks: RAW.VITE_USE_MOCKS !== 'false',
+  mockLatencyMs: Number(RAW.VITE_MOCK_LATENCY_MS) || 320,
   razorpayKeyId: RAW.VITE_RAZORPAY_KEY_ID || '',
   firebase: Object.freeze({
     apiKey: RAW.VITE_FIREBASE_API_KEY || '',

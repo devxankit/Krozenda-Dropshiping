@@ -1,15 +1,24 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { vendorSharedRoutes } from '../vendor-shared/routes'
+import { VendorLoginPage } from '../vendor-shared/pages/VendorLoginPage'
+import { RoleGuard } from '../../routes/RoleGuard'
+import { DROPSHIPPING_PARTNER_PERMISSIONS } from './constants'
 
-// Dropshipping-partner shares ~70% of its surface with seller (project
-// context §14.4 item 2) — that shared surface lives in vendor-shared/ and is
-// mounted here rather than duplicated. Add partner-only routes as additional
-// <Route> siblings below vendorSharedRoutes.
 export default function DropshippingPartnerRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="dashboard" replace />} />
-      {vendorSharedRoutes}
+      <Route path="login" element={<VendorLoginPage mode="partner" />} />
+      <Route
+        element={
+          <RoleGuard
+            permissions={[DROPSHIPPING_PARTNER_PERMISSIONS.ACCESS]}
+            redirectTo="/partner/login"
+          />
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        {vendorSharedRoutes}
+      </Route>
     </Routes>
   )
 }

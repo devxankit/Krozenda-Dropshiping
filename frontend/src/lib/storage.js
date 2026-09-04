@@ -6,6 +6,10 @@ const KEYS = Object.freeze({
   ACCESS_TOKEN: 'krozenda.accessToken',
   REFRESH_TOKEN: 'krozenda.refreshToken',
   USER_DATA: 'krozenda.userData',
+  // Roles and permissions have to survive a reload alongside the token.
+  // Without this a refresh inside a permission-gated panel drops the caller
+  // back to sign-in even though their session is still valid.
+  GRANTS: 'krozenda.grants',
 })
 
 function get(key) {
@@ -47,9 +51,20 @@ export const storage = Object.freeze({
     }
   },
   setUserData: (user) => set(KEYS.USER_DATA, user),
+  getGrants: () => {
+    const raw = get(KEYS.GRANTS)
+    if (!raw) return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
+  },
+  setGrants: (grants) => set(KEYS.GRANTS, grants),
   clearTokens: () => {
     remove(KEYS.ACCESS_TOKEN)
     remove(KEYS.REFRESH_TOKEN)
     remove(KEYS.USER_DATA)
+    remove(KEYS.GRANTS)
   },
 })

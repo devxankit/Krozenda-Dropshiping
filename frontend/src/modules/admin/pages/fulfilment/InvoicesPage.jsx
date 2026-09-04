@@ -1,0 +1,33 @@
+import { useNavigate } from 'react-router-dom'
+import { adminPath } from '../../../../config/routes'
+import { ExportMenu, ListScreen } from '../../components/data'
+import { InlineAlert } from '../../components/feedback'
+import { useInvoiceListController } from '../../controllers/useFulfilmentController'
+import { INVOICE_COLUMNS, INVOICE_TABS } from '../../tableColumns/fulfilmentColumns'
+
+export function InvoicesPage() {
+  const navigate = useNavigate()
+  const list = useInvoiceListController()
+
+  return (
+    <ListScreen
+      title="Invoices"
+      description="One GST invoice per sub-order, issued by whoever is the seller of record for that model."
+      actions={<ExportMenu onExport={() => {}} />}
+      banner={
+        <InlineAlert tone="info" title="Seller of record differs by business model">
+          Under dropshipping and own stock the Krozenda entity invoices the buyer. Under
+          marketplace the vendor does, and Krozenda invoices the vendor for commission separately.
+        </InlineAlert>
+      }
+      controller={list}
+      columns={INVOICE_COLUMNS}
+      tabs={INVOICE_TABS}
+      searchPlaceholder="Invoice number, sub-order or buyer…"
+      onRowClick={(row) => navigate(adminPath.invoiceDetail(row.id))}
+      itemLabel="invoices"
+      emptyIcon="invoices"
+      emptyTitle="No invoices in this view"
+    />
+  )
+}

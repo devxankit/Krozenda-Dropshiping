@@ -108,7 +108,7 @@ export function OtpInputScreen({
             </div>
 
             <div className="text-xs">
-              <span className="text-slate-400">Didn't receive OTP? </span>
+              <span className="text-slate-400">Didn&apos;t receive OTP? </span>
               <button
                 onClick={onBack}
                 className="text-blue-700 font-bold hover:underline"

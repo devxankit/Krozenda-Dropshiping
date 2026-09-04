@@ -1,15 +1,23 @@
 import { Route } from 'react-router-dom'
+import { VendorLayout } from './components/shell/VendorLayout'
 import { VendorDashboardPage } from './pages/DashboardPage'
+import { VendorProductsPage } from './pages/ProductsPage'
+import { VendorInventoryPage } from './pages/InventoryPage'
+import { OrdersPage } from './pages/OrdersPage'
+import { ShipmentsPage } from './pages/ShipmentsPage'
+import { SettlementsPage } from './pages/SettlementsPage'
 import { KycDocumentsPage } from './pages/KycDocumentsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
-// seller/routes.jsx and dropshipping-partner/routes.jsx both spread this
-// into their own <Routes> tree — this is the "do not duplicate" surface
-// from project context §14.4 item 2. Add more shared vendor routes here as
-// the two surfaces need them; keep truly seller-only or partner-only routes
-// in that module's own routes.jsx instead.
 export const vendorSharedRoutes = (
-  <>
+  <Route element={<VendorLayout />}>
     <Route path="dashboard" element={<VendorDashboardPage />} />
+    <Route path="products" element={<VendorProductsPage />} />
+    <Route path="inventory" element={<VendorInventoryPage />} />
+    <Route path="orders" element={<OrdersPage />} />
+    <Route path="shipments" element={<ShipmentsPage />} />
+    <Route path="settlements" element={<SettlementsPage />} />
     <Route path="kyc-documents" element={<KycDocumentsPage />} />
-  </>
+    <Route path="settings" element={<SettingsPage />} />
+  </Route>
 )

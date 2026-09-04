@@ -30,9 +30,155 @@ export const DROPSHIPPING_PARTNER_ROUTES = Object.freeze({
   KYC_DOCUMENTS: '/partner/kyc-documents',
 })
 
+// ---------------------------------------------------------------------------
+// Admin panel — 89 routes across 9 navigation groups.
+//
+// Sign-in and the other unauthenticated screens sit under the same /admin
+// prefix but OUTSIDE the auth guard; modules/admin/routes.jsx is where that
+// boundary is drawn, so the panel owns its own login rather than borrowing
+// the buyer app's OTP flow.
+//
+// Detail routes are stored as patterns (`:productId`). Build a concrete URL
+// with `adminPath.*` below — never by concatenating strings at the call site.
+// ---------------------------------------------------------------------------
 export const ADMIN_ROUTES = Object.freeze({
   ROOT: '/admin',
+
+  // ---- authentication (unguarded) ----------------------------------------
+  LOGIN: '/admin/login',
+  TWO_FACTOR: '/admin/two-factor',
+  FORGOT_PASSWORD: '/admin/forgot-password',
+  RESET_PASSWORD: '/admin/reset-password',
+  LOCKED: '/admin/locked',
+
+  // ---- dashboard & analytics ---------------------------------------------
   DASHBOARD: '/admin/dashboard',
+  ANALYTICS_SALES: '/admin/analytics/sales',
+  ANALYTICS_VENDORS: '/admin/analytics/vendors',
+  ANALYTICS_CATALOG: '/admin/analytics/catalog',
+  ANALYTICS_CUSTOMERS: '/admin/analytics/customers',
+
+  // ---- catalog ------------------------------------------------------------
+  PRODUCTS: '/admin/catalog/products',
+  PRODUCT_NEW: '/admin/catalog/products/new',
+  PRODUCT_DETAIL: '/admin/catalog/products/:productId',
+  CATALOG_APPROVALS: '/admin/catalog/approvals',
+  CATALOG_IMPORT: '/admin/catalog/import',
+  CATEGORIES: '/admin/catalog/categories',
+  BRANDS: '/admin/catalog/brands',
+  ATTRIBUTES: '/admin/catalog/attributes',
+  INVENTORY: '/admin/catalog/inventory',
+  SUPPLIER_SYNC: '/admin/catalog/supplier-sync',
+
+  // ---- orders & fulfilment ------------------------------------------------
+  ORDERS: '/admin/orders',
+  ORDER_DETAIL: '/admin/orders/detail/:orderId',
+  SUB_ORDERS: '/admin/orders/sub-orders',
+  SUB_ORDER_DETAIL: '/admin/orders/sub-orders/:subOrderId',
+  SHIPMENTS: '/admin/orders/shipments',
+  RTO: '/admin/orders/rto',
+  RETURNS: '/admin/orders/returns',
+  RETURN_DETAIL: '/admin/orders/returns/:returnId',
+  CANCELLATIONS: '/admin/orders/cancellations',
+  INVOICES: '/admin/orders/invoices',
+  INVOICE_DETAIL: '/admin/orders/invoices/:invoiceId',
+
+  // ---- people & vendors ---------------------------------------------------
+  CUSTOMERS: '/admin/people/customers',
+  CUSTOMER_DETAIL: '/admin/people/customers/:customerId',
+  B2B_BUYERS: '/admin/people/b2b-buyers',
+  SELLERS: '/admin/people/sellers',
+  SELLER_DETAIL: '/admin/people/sellers/:sellerId',
+  PARTNERS: '/admin/people/partners',
+  PARTNER_DETAIL: '/admin/people/partners/:partnerId',
+  COMPANIES: '/admin/people/companies',
+  CHANNEL_PARTNERS: '/admin/people/channel',
+  KYC_QUEUE: '/admin/people/kyc',
+  KYC_REVIEW: '/admin/people/kyc/:applicationId',
+  POLICY_ACCEPTANCES: '/admin/people/policy-acceptances',
+  STAFF: '/admin/people/staff',
+  ROLES: '/admin/people/roles',
+  ROLE_DETAIL: '/admin/people/roles/:roleId',
+
+  // ---- finance & accounting -----------------------------------------------
+  FINANCE_OVERVIEW: '/admin/finance/overview',
+  TRANSACTIONS: '/admin/finance/transactions',
+  REFUNDS: '/admin/finance/refunds',
+  SETTLEMENTS: '/admin/finance/settlements',
+  SETTLEMENT_BATCH: '/admin/finance/settlements/:batchId',
+  VENDOR_LEDGERS: '/admin/finance/vendor-ledger',
+  VENDOR_LEDGER_DETAIL: '/admin/finance/vendor-ledger/:vendorId',
+  COMMISSION_RULES: '/admin/finance/commission-rules',
+  PRICING_RULES: '/admin/finance/pricing-rules',
+  CHART_OF_ACCOUNTS: '/admin/finance/chart-of-accounts',
+  JOURNAL_VOUCHERS: '/admin/finance/journal-vouchers',
+  EXPENSES: '/admin/finance/expenses',
+  PNL: '/admin/finance/pnl',
+  BALANCE_SHEET: '/admin/finance/balance-sheet',
+  TRIAL_BALANCE: '/admin/finance/trial-balance',
+  CASH_FLOW: '/admin/finance/cash-flow',
+  TAX_CENTER: '/admin/finance/tax-center',
+
+  // ---- dropshipping -------------------------------------------------------
+  DROPSHIPPING_OVERVIEW: '/admin/dropshipping',
+  DROPSHIPPING_PARTNERS: '/admin/dropshipping/partners',
+  DROPSHIPPING_PARTNER_DETAIL: '/admin/dropshipping/partners/:partnerId',
+  DROPSHIPPING_PRODUCTS: '/admin/dropshipping/products',
+  DROPSHIPPING_ORDERS: '/admin/dropshipping/orders',
+  DROPSHIPPING_MARGINS: '/admin/dropshipping/margins',
+
+  // ---- marketing & content ------------------------------------------------
+  COUPONS: '/admin/marketing/coupons',
+  OFFERS: '/admin/marketing/offers',
+  BANNERS: '/admin/marketing/banners',
+  CMS_PAGES: '/admin/marketing/cms',
+  CAMPAIGNS: '/admin/marketing/campaigns',
+  TEMPLATES: '/admin/marketing/templates',
+  REVIEWS: '/admin/marketing/reviews',
+
+  // ---- reports ------------------------------------------------------------
+  REPORTS: '/admin/reports',
+  REPORT_RUNNER: '/admin/reports/:reportKey',
+
+  // ---- settings & system --------------------------------------------------
+  SETTINGS_GENERAL: '/admin/settings/general',
+  SETTINGS_BUSINESS_RULES: '/admin/settings/business-rules',
+  SETTINGS_PAYMENTS: '/admin/settings/payments',
+  SETTINGS_LOGISTICS: '/admin/settings/logistics',
+  SETTINGS_NOTIFICATIONS: '/admin/settings/notifications',
+  SETTINGS_TAXES: '/admin/settings/taxes',
+  SETTINGS_POLICIES: '/admin/settings/policies',
+  SETTINGS_SECURITY: '/admin/settings/security',
+  SETTINGS_API_WEBHOOKS: '/admin/settings/api-webhooks',
+  SETTINGS_INTEGRATIONS: '/admin/settings/integrations',
+  AUDIT_LOGS: '/admin/system/audit-logs',
+  BACKUPS: '/admin/system/backups',
+  SUPPORT_TICKETS: '/admin/support/tickets',
+  PROFILE: '/admin/profile',
+
+  // ---- utility ------------------------------------------------------------
+  FORBIDDEN: '/admin/403',
+  SHOWCASE: '/admin/showcase',
+})
+
+// Builders for the routes that carry a parameter. Keeping these beside the
+// patterns means a renamed segment is a one-line change here, not a hunt
+// through 40 screens for a template literal.
+export const adminPath = Object.freeze({
+  productDetail: (productId) => `/admin/catalog/products/${productId}`,
+  orderDetail: (orderId) => `/admin/orders/detail/${orderId}`,
+  subOrderDetail: (subOrderId) => `/admin/orders/sub-orders/${subOrderId}`,
+  returnDetail: (returnId) => `/admin/orders/returns/${returnId}`,
+  invoiceDetail: (invoiceId) => `/admin/orders/invoices/${invoiceId}`,
+  customerDetail: (customerId) => `/admin/people/customers/${customerId}`,
+  sellerDetail: (sellerId) => `/admin/people/sellers/${sellerId}`,
+  partnerDetail: (partnerId) => `/admin/people/partners/${partnerId}`,
+  dropshipPartnerDetail: (partnerId) => `/admin/dropshipping/partners/${partnerId}`,
+  kycReview: (applicationId) => `/admin/people/kyc/${applicationId}`,
+  roleDetail: (roleId) => `/admin/people/roles/${roleId}`,
+  settlementBatch: (batchId) => `/admin/finance/settlements/${batchId}`,
+  vendorLedger: (vendorId) => `/admin/finance/vendor-ledger/${vendorId}`,
+  reportRunner: (reportKey) => `/admin/reports/${reportKey}`,
 })
 
 export const ROUTES = Object.freeze({
