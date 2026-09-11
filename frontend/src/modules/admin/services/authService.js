@@ -2,24 +2,42 @@
 
 import { mutateResource } from './mockTransport'
 import { env } from '../../../config/env'
-import { ADMIN_ROLE_PRESETS } from '../constants'
-import { adminSessionSchema, twoFactorChallengeSchema } from '../schemas/authSchema'
+import { ADMIN_PERMISSIONS, ADMIN_ROLE_PRESETS } from '../constants'
+import { adminSessionSchema } from '../schemas/authSchema'
 
 // While mocks are on, any well-formed credentials pass the password step so
 // the panel is walkable, and the code `000000` is reserved to exercise the
 // rejection state. Both behaviours vanish the moment VITE_USE_MOCKS=false.
 const RESERVED_FAILING_CODE = '000000'
 
-export function requestAdminLogin(body) {
-  return mutateResource({
+// Admin login is real (Models/Admin + protectAdmin on the backend), so it
+// always hits the API even while other admin screens are still mocked.
+// Real OTP delivery isn't wired up yet, so this resolves straight to a
+// session instead of the mocked 2FA challenge below.
+export async function requestAdminLogin(body) {
+  const { token, admin } = await mutateResource({
     path: '/admin/auth/login',
     body,
-    schema: twoFactorChallengeSchema,
-    fixture: () => ({
-      challengeId: `chl_${Date.now()}`,
-      maskedDestination: '+91 ••••• 11276',
-      expiresInSeconds: 300,
-    }),
+    live: true,
+  })
+
+  const isAdmin = admin.role === 'admin'
+
+  return adminSessionSchema.parse({
+    user: {
+      id: admin.id,
+      name: admin.name || 'Admin',
+      email: admin.email,
+      roleLabel: isAdmin ? 'Super Admin' : 'Staff',
+    },
+    roles: [admin.role],
+    // Admin bypasses every permission check backend-side regardless of
+    // permissions[], so it gets the full set here too — staff get exactly
+    // what was assigned to them plus panel access.
+    permissions: isAdmin
+      ? [...ADMIN_ROLE_PRESETS.super_admin]
+      : [...new Set([...(admin.permissions || []), ADMIN_PERMISSIONS.ACCESS])],
+    accessToken: token,
   })
 }
 

@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedRoute } from '../../routes/ProtectedRoute'
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { RoleGuard } from '../../routes/RoleGuard'
+import { useAuthStore } from '../../lib/authStore'
 import { ADMIN_ROUTES } from '../../config/routes'
 import { ADMIN_PERMISSIONS } from './constants'
 import { AdminLayout } from './components/shell'
@@ -42,6 +42,7 @@ import { KycQueuePage } from './pages/people/KycQueuePage'
 import { KycReviewPage } from './pages/people/KycReviewPage'
 import { PolicyAcceptancesPage } from './pages/people/PolicyAcceptancesPage'
 import { StaffPage } from './pages/people/StaffPage'
+import { UserManagementPage } from './pages/people/UserManagementPage'
 import { RoleDetailPage } from './pages/people/RoleDetailPage'
 import {
   TransactionsPage,
@@ -122,6 +123,20 @@ function ChunkFallback() {
   )
 }
 
+// Unlike the shared ProtectedRoute (which has a guest-mode bypass for the
+// buyer/seller/partner apps that don't have real backends yet), the admin
+// panel has real login now, so it enforces the session for real.
+function AdminProtectedRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    return <Navigate to={ADMIN_ROUTES.LOGIN} replace state={{ from: location }} />
+  }
+
+  return <Outlet />
+}
+
 export default function AdminRoutes() {
   return (
     <Routes>
@@ -134,7 +149,7 @@ export default function AdminRoutes() {
       <Route path={rel(ADMIN_ROUTES.LOCKED)} element={<LockedPage />} />
 
       {/* Everything below requires a session AND admin.access. */}
-      <Route element={<ProtectedRoute />}>
+      <Route element={<AdminProtectedRoute />}>
         <Route
           element={
             <RoleGuard permissions={[ADMIN_PERMISSIONS.ACCESS]} redirectTo={ADMIN_ROUTES.LOGIN} />
@@ -235,6 +250,7 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.KYC_REVIEW)} element={<KycReviewPage />} />
             <Route path={rel(ADMIN_ROUTES.POLICY_ACCEPTANCES)} element={<PolicyAcceptancesPage />} />
             <Route path={rel(ADMIN_ROUTES.STAFF)} element={<StaffPage />} />
+            <Route path={rel(ADMIN_ROUTES.USER_MANAGEMENT)} element={<UserManagementPage />} />
             <Route path={rel(ADMIN_ROUTES.ROLES)} element={<StaffPage />} />
             <Route path={rel(ADMIN_ROUTES.ROLE_DETAIL)} element={<RoleDetailPage />} />
 

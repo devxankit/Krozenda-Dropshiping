@@ -47,8 +47,8 @@ export function Drawer({
   if (!isOpen) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-drawer flex" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/40" />
+    <div className="admin-root fixed inset-0 z-drawer flex transition-all" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-md transition-all" />
       <aside
         role="dialog"
         aria-modal="true"

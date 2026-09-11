@@ -15,8 +15,17 @@ const ALIGN = Object.freeze({
 })
 
 const DENSITY = Object.freeze({
-  default: 'h-row px-4',
-  compact: 'h-9 px-3',
+  relaxed: 'h-16 px-5 py-4 text-sm',
+  comfortable: 'h-14 px-3.5 py-3 text-sm',
+  default: 'h-row px-4 text-sm',
+  compact: 'h-9 px-3 text-xs',
+})
+
+const HEADER_DENSITY = Object.freeze({
+  relaxed: 'h-12 px-5 text-xs',
+  comfortable: 'h-11 px-3.5 text-xs font-semibold',
+  default: 'h-10 px-4 text-xs font-semibold',
+  compact: 'h-9 px-3 text-2xs',
 })
 
 function SortIndicator({ state }) {
@@ -47,7 +56,8 @@ export function Table({
   const allKeys = data.map(getRowKey)
   const allSelected = data.length > 0 && allKeys.every((key) => selected.has(key))
   const someSelected = !allSelected && allKeys.some((key) => selected.has(key))
-  const cellClass = DENSITY[density]
+  const cellClass = DENSITY[density] || DENSITY.default
+  const headerClass = HEADER_DENSITY[density] || HEADER_DENSITY.default
 
   function toggleAll() {
     onSelectionChange?.(allSelected ? [] : allKeys)
@@ -75,12 +85,12 @@ export function Table({
   }
 
   return (
-    <div className={`admin-scroll overflow-x-auto rounded-lg border border-border ${className}`}>
+    <div className={`admin-scroll overflow-x-auto overflow-y-hidden rounded-lg border border-border ${className}`}>
       <table className="min-w-full border-collapse text-sm">
         <thead className={stickyHeader ? 'sticky top-0 z-sticky' : undefined}>
           <tr>
             {selectable && (
-              <th className={`w-10 bg-surface-muted ${cellClass} border-b border-border`}>
+              <th className={`w-10 bg-surface-muted ${headerClass} border-b border-border`}>
                 <Checkbox
                   id="table-select-all"
                   checked={allSelected}
@@ -100,7 +110,7 @@ export function Table({
                       : 'descending'
                     : undefined
                 }
-                className={`whitespace-nowrap border-b border-border bg-surface-muted text-2xs font-semibold uppercase tracking-wider text-ink-faint ${cellClass} ${ALIGN[column.align] || ALIGN.left} ${column.headerClassName || ''}`}
+                className={`whitespace-nowrap border-b border-border bg-surface-muted font-semibold uppercase tracking-wider text-ink-muted ${headerClass} ${ALIGN[column.align] || ALIGN.left} ${column.headerClassName || ''}`}
               >
                 {column.sortable ? (
                   <button
@@ -155,9 +165,9 @@ export function Table({
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className={`text-slate-800 ${cellClass} ${ALIGN[column.align] || ALIGN.left} ${column.cellClassName || ''}`}
+                        className={`whitespace-nowrap text-slate-800 ${cellClass} ${ALIGN[column.align] || ALIGN.left} ${column.cellClassName || ''}`}
                       >
-                        {column.render ? column.render(row) : row[column.key]}
+                        {column.render ? column.render(row, index) : row[column.key]}
                       </td>
                     ))}
                   </tr>

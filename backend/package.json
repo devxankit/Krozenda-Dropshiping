@@ -1,42 +1,26 @@
 {
-  "name": "backend",
+  "name": "krozenda-backend",
   "version": "1.0.0",
-  "description": "Krozenda API — Node.js/Express/MongoDB",
-  "main": "src/server.js",
-  "type": "module",
+  "private": true,
+  "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "seed:roles": "node src/scripts/seedRoles.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "compression": "^1.8.1",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.6.1",
-    "helmet": "^8.3.0",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.1",
-    "morgan": "^1.11.0",
-    "multer": "^2.2.0",
-    "zod": "^4.4.3"
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0",
+    "multer": "^2.0.0",
+    "sharp": "^0.33.4",
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "eslint": "^9.39.5",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
-    "globals": "^17.8.0",
-    "nodemon": "^3.1.14",
-    "prettier": "^3.9.6"
+    "nodemon": "^3.1.4"
   }
 }

@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../../../lib/authStore'
 import { ADMIN_ROUTES } from '../../../../config/routes'
 import { useAdminUiStore } from '../../stores/uiStore'
 import { useShellController } from '../../controllers/useShellController'
-import { visibleNavGroups } from '../../lib/nav'
+import { canAccessNavItem, findNavItem, visibleNavGroups } from '../../lib/nav'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopbar } from './AdminTopbar'
 import { CommandPalette } from './CommandPalette'
@@ -14,9 +14,12 @@ import { ToastViewport } from '../feedback'
 
 export function AdminLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const permissions = useAuthStore((state) => state.permissions)
+  const roles = useAuthStore((state) => state.roles)
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
+  const role = roles.includes('admin') ? 'admin' : roles[0] || null
 
   const sidebarCollapsed = useAdminUiStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useAdminUiStore((state) => state.toggleSidebar)
@@ -28,7 +31,12 @@ export function AdminLayout() {
   const setNotificationsOpen = useAdminUiStore((state) => state.setNotificationsOpen)
 
   const { counts, notifications, markAllRead } = useShellController()
-  const groups = useMemo(() => visibleNavGroups(permissions), [permissions])
+  const groups = useMemo(() => visibleNavGroups(permissions, role), [permissions, role])
+
+  // Sidebar hiding is a UX nicety, not security — this is what actually
+  // stops a staff account from opening a module by typing its URL directly.
+  const currentNavItem = findNavItem(location.pathname)
+  const isAuthorizedForRoute = canAccessNavItem(currentNavItem, permissions, role)
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -46,6 +54,12 @@ export function AdminLayout() {
     navigate(ADMIN_ROUTES.LOGIN, { replace: true })
   }
 
+  const firstAccessibleRoute = groups[0]?.items[0]?.to || null
+  const isDashboardOrRoot =
+    location.pathname === ADMIN_ROUTES.DASHBOARD || location.pathname === '/admin' || location.pathname === '/admin/'
+  const unauthorizedRedirect =
+    isDashboardOrRoot && firstAccessibleRoute ? firstAccessibleRoute : ADMIN_ROUTES.FORBIDDEN
+
   return (
     <div className="admin-root flex h-screen overflow-hidden">
       <div className="hidden lg:flex">
@@ -54,6 +68,7 @@ export function AdminLayout() {
           collapsed={sidebarCollapsed}
           counts={counts}
           onToggle={toggleSidebar}
+          onSignOut={handleSignOut}
         />
       </div>
 
@@ -68,7 +83,11 @@ export function AdminLayout() {
         />
 
         <main className="admin-scroll flex-1 overflow-y-auto">
-          <Outlet />
+          {isAuthorizedForRoute ? (
+            <Outlet />
+          ) : (
+            <Navigate to={unauthorizedRedirect} replace />
+          )}
         </main>
       </div>
 

@@ -24,30 +24,33 @@ function delay(ms) {
  * @param {object}   [options.params] Query params for the live call.
  * @param {Function} options.fixture Returns the mocked payload.
  * @param {object}   options.schema  Zod schema applied to BOTH paths.
+ * @param {boolean}  [options.live]  Hit the real API even while VITE_USE_MOCKS
+ *   is on, for the handful of endpoints that are actually implemented.
  */
-export async function fetchResource({ path, params, fixture, schema }) {
-  if (env.useMocks) {
+export async function fetchResource({ path, params, fixture, schema, live = false }) {
+  if (env.useMocks && !live) {
     await delay(env.mockLatencyMs)
     return schema.parse(fixture())
   }
 
+  // The backend always responds { success, message, data }; unwrap `data`.
   const { data } = await api.get(path, { params })
-  return schema.parse(data)
+  return schema ? schema.parse(data.data) : data.data
 }
 
 /**
  * Resolve one write. Mocked writes echo the payload back so optimistic UI and
  * success states are exercised exactly as they will be against the API.
  */
-export async function mutateResource({ method = 'post', path, body, fixture, schema }) {
-  if (env.useMocks) {
+export async function mutateResource({ method = 'post', path, body, fixture, schema, live = false }) {
+  if (env.useMocks && !live) {
     await delay(env.mockLatencyMs)
     const result = fixture ? fixture(body) : body
     return schema ? schema.parse(result) : result
   }
 
   const { data } = await api[method](path, body)
-  return schema ? schema.parse(data) : data
+  return schema ? schema.parse(data.data) : data.data
 }
 
 // Deliberately failing and empty variants, so the error and empty states

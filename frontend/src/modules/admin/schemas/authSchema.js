@@ -6,7 +6,6 @@ export const adminLoginSchema = z.object({
     .min(1, 'Enter your work email')
     .email('That does not look like an email address'),
   password: z.string().min(8, 'Passwords are at least 8 characters'),
-  trustDevice: z.boolean().optional(),
 })
 
 export const adminTwoFactorSchema = z.object({

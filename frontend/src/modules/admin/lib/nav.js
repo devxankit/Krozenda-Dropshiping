@@ -14,12 +14,37 @@ export function isNavItemActive(item, pathname) {
   return false
 }
 
-export function visibleNavGroups(permissions = []) {
+// Admin bypasses every permission check (mirrors the backend's
+// requirePermission behaviour); `adminOnly` items reject staff even if their
+// permissions[] somehow includes the matching key.
+export function visibleNavGroups(permissions = [], role = null) {
   const granted = new Set(permissions)
+  const isAdmin = role === 'admin'
   return NAV_TREE.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || granted.has(item.permission)),
+    items: group.items.filter((item) => {
+      if (item.adminOnly && !isAdmin) return false
+      if (!item.permission) return true
+      return (
+        isAdmin ||
+        granted.has(item.permission) ||
+        Boolean(item.legacyPermission && granted.has(item.legacyPermission))
+      )
+    }),
   })).filter((group) => group.items.length > 0)
+}
+
+// Same authorization rule as visibleNavGroups, for a single path — used to
+// deny direct URL navigation to a module the sidebar already hides.
+export function canAccessNavItem(item, permissions = [], role = null) {
+  if (!item) return true
+  if (item.adminOnly && role !== 'admin') return false
+  if (!item.permission) return true
+  return (
+    role === 'admin' ||
+    permissions.includes(item.permission) ||
+    Boolean(item.legacyPermission && permissions.includes(item.legacyPermission))
+  )
 }
 
 export function flatNavItems() {

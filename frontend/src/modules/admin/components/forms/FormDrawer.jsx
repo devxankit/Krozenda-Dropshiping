@@ -49,7 +49,7 @@ export function FormDrawer({
         </div>
       }
     >
-      <form id={formId} onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      <form id={formId} onSubmit={onSubmit} noValidate className="flex flex-col gap-4 p-5">
         {error && (
           <InlineAlert tone="danger" title="That did not save">
             {error.message}

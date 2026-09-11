@@ -113,7 +113,43 @@ export const useCategoryWriteController = ({ onSaved } = {}) => ({
     success: (node) => `${node.name} updated`,
     onDone: onSaved,
   }),
-  remove: useAdminMutation({ mutationFn: service.deleteCategory, invalidate: CATALOG, success: 'Category removed' }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateCategoryStatus,
+    invalidate: CATALOG,
+    success: (node) => `${node.name} status updated`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteCategory,
+    invalidate: CATALOG,
+    success: 'Category removed',
+    onDone: onSaved,
+  }),
+})
+
+export const useBrandWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createBrand,
+    invalidate: CATALOG,
+    success: (brand) => `${brand.name} created`,
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateBrand,
+    invalidate: CATALOG,
+    success: (brand) => `${brand.name} updated`,
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateBrandStatus,
+    invalidate: CATALOG,
+    success: (brand) => `${brand.name} status updated`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteBrand,
+    invalidate: CATALOG,
+    success: 'Brand removed',
+    onDone: onSaved,
+  }),
 })
 
 export const useAttributeWriteController = ({ onSaved } = {}) => ({

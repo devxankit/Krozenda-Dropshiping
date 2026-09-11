@@ -97,6 +97,7 @@ export const ADMIN_ROUTES = Object.freeze({
   KYC_REVIEW: '/admin/people/kyc/:applicationId',
   POLICY_ACCEPTANCES: '/admin/people/policy-acceptances',
   STAFF: '/admin/people/staff',
+  USER_MANAGEMENT: '/admin/people/user-management',
   ROLES: '/admin/people/roles',
   ROLE_DETAIL: '/admin/people/roles/:roleId',
 

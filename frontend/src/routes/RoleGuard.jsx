@@ -12,13 +12,17 @@ export function RoleGuard({
   children,
 }) {
   const userPermissions = useAuthStore((state) => state.permissions)
+  const roles = useAuthStore((state) => state.roles)
 
   const isAuthorized =
     permissions.length === 0
       ? true
-      : mode === 'any'
-        ? permissions.some((permission) => userPermissions.includes(permission))
-        : permissions.every((permission) => userPermissions.includes(permission))
+      : permissions.includes('admin.access') &&
+        (roles.includes('admin') || roles.includes('staff'))
+        ? true
+        : mode === 'any'
+          ? permissions.some((permission) => userPermissions.includes(permission))
+          : permissions.every((permission) => userPermissions.includes(permission))
 
   if (!isAuthorized) {
     return <Navigate to={redirectTo} replace />

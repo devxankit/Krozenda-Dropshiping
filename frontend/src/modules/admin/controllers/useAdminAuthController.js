@@ -13,18 +13,9 @@ import {
   verifyAdminTwoFactor,
 } from '../services/authService'
 
-// The password step never creates a session — it only opens a two-factor
-// challenge. The session is minted at the 2FA step, which is what makes 2FA
-// non-skippable rather than merely encouraged.
+// Used by the mocked 2FA flow only (useAdminTwoFactorController below); the
+// real login path skips straight to a session, see useAdminLoginController.
 const CHALLENGE_KEY = 'krozenda.admin.challenge'
-
-function rememberChallenge(challenge) {
-  try {
-    sessionStorage.setItem(CHALLENGE_KEY, JSON.stringify(challenge))
-  } catch {
-    // Storage unavailable — the 2FA screen falls back to a generic prompt.
-  }
-}
 
 export function readChallenge() {
   try {
@@ -45,12 +36,16 @@ function clearChallenge() {
 
 export function useAdminLoginController() {
   const navigate = useNavigate()
+  const setSession = useAuthStore((state) => state.setSession)
 
+  // Real OTP delivery isn't wired up yet, so login resolves straight to a
+  // session (see authService.requestAdminLogin) instead of a 2FA challenge —
+  // the two-factor pages/routes stay in place for when that lands.
   const mutation = useMutation({
     mutationFn: requestAdminLogin,
-    onSuccess: (challenge) => {
-      rememberChallenge(challenge)
-      navigate(ADMIN_ROUTES.TWO_FACTOR)
+    onSuccess: (session) => {
+      setSession(session)
+      navigate(ADMIN_ROUTES.DASHBOARD, { replace: true })
     },
   })
 

@@ -8,8 +8,10 @@ export function withRowActions(columns, buildItems) {
     {
       key: '__actions',
       header: '',
-      width: '3rem',
+      width: '3.5rem',
       align: 'right',
+      cellClassName: 'pr-4',
+      headerClassName: 'pr-4',
       render: (row) => <RowActions items={buildItems(row)} />,
     },
   ]

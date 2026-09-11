@@ -1,5 +1,4 @@
-// Layer rule: services/ is the ONLY place that imports the axios instance.
-
+import { api } from '../../../lib/axios'
 import { fetchResource, mutateResource } from './mockTransport'
 import * as fixtures from '../fixtures/catalog'
 const {
@@ -57,20 +56,14 @@ export function fetchApprovalQueue(query = {}) {
   })
 }
 
-export function fetchCategoryTree() {
-  return fetchResource({
-    path: '/admin/catalog/categories',
-    fixture: categoryTreeFixture,
-    schema: categoryTreeSchema,
-  })
+export async function fetchCategoryTree() {
+  const { data } = await api.get('/admin/catalog/categories')
+  return data.data
 }
 
-export function fetchBrands() {
-  return fetchResource({
-    path: '/admin/catalog/brands',
-    fixture: brandListFixture,
-    schema: brandListSchema,
-  })
+export async function fetchBrands() {
+  const { data } = await api.get('/admin/catalog/brands')
+  return data.data
 }
 
 export function fetchAttributes() {
@@ -126,14 +119,59 @@ export const approveQueueItem = ({ id }) =>
 export const rejectQueueItem = ({ id, reason }) =>
   mutateResource({ path: `/admin/catalog/approvals/${id}/reject`, body: { reason }, fixture: (p) => fixtures.rejectQueueItemFixture(id, p), schema: queueDecisionSchema })
 
-export const createCategory = (body) =>
-  mutateResource({ path: '/admin/catalog/categories', body, fixture: fixtures.createCategoryFixture, schema: categoryNodeSchema })
+function toFormData(payload) {
+  if (payload instanceof FormData) return payload
+  const formData = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    formData.append(key, value)
+  })
+  return formData
+}
 
-export const updateCategory = ({ id, ...body }) =>
-  mutateResource({ method: 'put', path: `/admin/catalog/categories/${id}`, body, fixture: (p) => fixtures.updateCategoryFixture(id, p), schema: categoryNodeSchema })
+export async function createCategory(payload) {
+  const body = payload instanceof FormData ? payload : toFormData(payload)
+  const { data } = await api.post('/admin/catalog/categories', body)
+  return data.data
+}
 
-export const deleteCategory = ({ id }) =>
-  mutateResource({ method: 'delete', path: `/admin/catalog/categories/${id}`, fixture: () => fixtures.deleteCategoryFixture(id), schema: deletedSchema })
+export async function updateCategory({ id, ...payload }) {
+  const body = payload instanceof FormData ? payload : toFormData(payload)
+  const { data } = await api.put(`/admin/catalog/categories/${id}`, body)
+  return data.data
+}
+
+export async function updateCategoryStatus({ id, status }) {
+  const { data } = await api.patch(`/admin/catalog/categories/${id}/status`, { status })
+  return data.data
+}
+
+export async function deleteCategory({ id }) {
+  const { data } = await api.delete(`/admin/catalog/categories/${id}`)
+  return data.data
+}
+
+export async function createBrand(payload) {
+  const body = payload instanceof FormData ? payload : toFormData(payload)
+  const { data } = await api.post('/admin/catalog/brands', body)
+  return data.data
+}
+
+export async function updateBrand({ id, ...payload }) {
+  const body = payload instanceof FormData ? payload : toFormData(payload)
+  const { data } = await api.put(`/admin/catalog/brands/${id}`, body)
+  return data.data
+}
+
+export async function updateBrandStatus({ id, status }) {
+  const { data } = await api.patch(`/admin/catalog/brands/${id}/status`, { status })
+  return data.data
+}
+
+export async function deleteBrand({ id }) {
+  const { data } = await api.delete(`/admin/catalog/brands/${id}`)
+  return data.data
+}
 
 export const createAttribute = (body) =>
   mutateResource({ path: '/admin/catalog/attributes', body, fixture: fixtures.createAttributeFixture, schema: attributeSchema })

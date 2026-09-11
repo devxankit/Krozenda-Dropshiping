@@ -14,7 +14,7 @@ export const useAuthStore = create((set) => ({
   roles: savedGrants?.roles ?? DEFAULT_DEMO_ROLES,
   capabilities: savedGrants?.capabilities ?? [],
   permissions: savedGrants?.permissions ?? DEFAULT_DEMO_PERMISSIONS,
-  isAuthenticated: true,
+  isAuthenticated: Boolean(savedToken),
 
   setSession: ({
     user,

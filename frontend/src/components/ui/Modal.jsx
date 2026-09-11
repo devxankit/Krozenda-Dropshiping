@@ -42,7 +42,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-slate-900/50 p-4"
+      className="admin-root fixed inset-0 z-modal flex items-center justify-center bg-slate-900/10 backdrop-blur-md p-3 sm:p-5 font-sans antialiased text-ink transition-all"
       onClick={closeOnOverlayClick ? onClose : undefined}
     >
       <div
@@ -50,9 +50,9 @@ export function Modal({
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         onClick={(event) => event.stopPropagation()}
-        className={`w-full rounded-lg bg-surface shadow-overlay ${SIZE_CLASSES[size]}`}
+        className={`flex max-h-[calc(100vh-2.5rem)] w-full flex-col rounded-xl border border-slate-200/90 bg-surface shadow-2xl ring-1 ring-slate-900/5 overflow-hidden transition-all ${SIZE_CLASSES[size]}`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border bg-surface px-5 py-4">
           <div className="min-w-0">
             {title && <h2 className="text-base font-semibold text-slate-900">{title}</h2>}
             {description && (
@@ -63,14 +63,16 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mr-1 rounded-md p-1 text-ink-subtle transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="-mr-1 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <Icon name="close" />
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="admin-scroll flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-slate-50/70 px-5 py-3">
+            {footer}
+          </div>
         )}
       </div>
     </div>,

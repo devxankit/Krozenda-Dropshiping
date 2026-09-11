@@ -121,10 +121,17 @@ export const categoryTreeSchema = z.object({
       depth: z.number().int().nonnegative(),
       productCount: z.number().int(),
       commissionRate: z.number().nullable(),
-      status: reviewStatus,
-    }),
+      status: z.string(),
+      slug: z.string().optional(),
+      image: z.string().nullable().optional(),
+      parent: z.string().nullable().optional(),
+      parentId: z.string().nullable().optional(),
+      parentName: z.string().nullable().optional(),
+      description: z.string().optional(),
+    }).passthrough(),
   ),
-})
+  stats: z.record(z.string(), z.any()).optional(),
+}).passthrough()
 
 export const brandListSchema = z.object({
   items: z.array(
@@ -133,11 +140,16 @@ export const brandListSchema = z.object({
       name: z.string(),
       owner: z.string(),
       productCount: z.number().int(),
-      status: reviewStatus,
-      submittedAt: z.string(),
-    }),
+      status: z.string(),
+      submittedAt: z.string().optional(),
+      slug: z.string().optional(),
+      logo: z.string().nullable().optional(),
+      website: z.string().optional(),
+      description: z.string().optional(),
+    }).passthrough(),
   ),
-})
+  stats: z.record(z.string(), z.any()).optional(),
+}).passthrough()
 
 export const inventorySchema = z.object({
   items: z.array(
@@ -218,8 +230,16 @@ export const categoryNodeSchema = z.object({
   depth: z.number().int().nonnegative(),
   productCount: z.number().int(),
   commissionRate: z.number().nullable(),
-  status: reviewStatus,
-})
+  status: z.string(),
+}).passthrough()
+
+export const brandNodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  owner: z.string(),
+  productCount: z.number().int(),
+  status: z.string(),
+}).passthrough()
 
 export const attributeSchema = z.object({
   id: z.string(),
@@ -263,8 +283,19 @@ export const productWriteSchema = z.object({
 
 export const categoryWriteSchema = z.object({
   name: z.string().min(2, 'Give the category a name'),
-  depth: z.number().int().min(0).max(2),
-  commissionRate: z.union([z.number(), z.null()]),
+  depth: z.number().int().min(0).max(2).optional(),
+  parent: z.string().nullable().optional(),
+  commissionRate: z.union([z.number(), z.null()]).optional(),
+  description: z.string().optional(),
+  status: z.string().optional(),
+})
+
+export const brandWriteSchema = z.object({
+  name: z.string().min(2, 'Give the brand a name'),
+  owner: z.string().optional(),
+  website: z.string().optional(),
+  description: z.string().optional(),
+  status: z.string().optional(),
 })
 
 export const attributeWriteSchema = z.object({

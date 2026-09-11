@@ -1,4 +1,4 @@
-import { Badge } from '../../../components/ui'
+import { Avatar, Badge, Icon } from '../../../components/ui'
 import { adminPath } from '../../../config/routes'
 import { BUYER_TYPE_LABELS, REVIEW_STATUS_LABELS, REVIEW_STATUS_TONE } from '../constants'
 import { IdCell, MoneyCell, PrimaryCell, StatusPill } from '../components/display'
@@ -324,6 +324,123 @@ export const STAFF_COLUMNS = Object.freeze([
         {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
       </Badge>
     ),
+  },
+])
+
+const GENDER_LABELS = Object.freeze({ male: 'Male', female: 'Female', other: 'Other' })
+
+function formatDate(value) {
+  if (!value) return null
+  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+export const USER_MANAGEMENT_COLUMNS = Object.freeze([
+  {
+    key: 'sn',
+    header: 'SN',
+    width: '3.5rem',
+    render: (row, index) => (
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 tabular">
+        {index + 1}
+      </span>
+    ),
+  },
+  {
+    key: 'staff',
+    header: 'Staff Member',
+    render: (row) => (
+      <div className="flex items-center gap-3.5 py-1">
+        <Avatar
+          name={row.name}
+          src={row.image}
+          size="md"
+          shape="circle"
+          className="h-10 w-10 rounded-full aspect-square ring-2 ring-slate-100 shadow-sm shrink-0 object-cover"
+        />
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-slate-900 truncate hover:text-brand-600 transition-colors">
+              {row.name}
+            </span>
+            {row.role === 'admin' && (
+              <span className="inline-flex items-center rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700 ring-1 ring-purple-200/60">
+                Admin
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-slate-500 truncate">{row.email}</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: 'mobileNumber',
+    header: 'Mobile',
+    width: '9.5rem',
+    cellClassName: 'tabular whitespace-nowrap text-sm text-slate-700',
+    render: (row) =>
+      row.mobileNumber ? (
+        <span className="inline-flex items-center gap-1.5 text-xs text-slate-700">
+          <Icon name="phone" className="h-3 w-3 text-slate-400 shrink-0" />
+          <span className="tabular">{row.mobileNumber}</span>
+        </span>
+      ) : (
+        <span className="text-xs text-slate-400 italic">—</span>
+      ),
+  },
+  {
+    key: 'role',
+    header: 'Role',
+    width: '9.5rem',
+    render: (row) =>
+      row.role === 'admin' ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 ring-1 ring-purple-200/70">
+          <Icon name="roles" className="h-3 w-3 text-purple-500 shrink-0" />
+          Admin
+        </span>
+      ) : row.roleName ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200/70">
+          <Icon name="user" className="h-3 w-3 text-blue-500 shrink-0" />
+          {row.roleName}
+        </span>
+      ) : (
+        <span className="text-xs italic text-slate-400">No role</span>
+      ),
+  },
+  {
+    key: 'isActive',
+    header: 'Status',
+    width: '8rem',
+    render: (row) =>
+      row.isActive ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/70">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          Active
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+          <span className="h-2 w-2 rounded-full bg-slate-400" />
+          Inactive
+        </span>
+      ),
+  },
+  {
+    key: 'createdAt',
+    header: 'Joined',
+    width: '9rem',
+    cellClassName: 'whitespace-nowrap text-sm text-slate-600',
+    render: (row) =>
+      row.createdAt ? (
+        <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+          <Icon name="calendar" className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span className="tabular">{formatDate(row.createdAt)}</span>
+        </span>
+      ) : (
+        <span className="text-xs text-slate-400">—</span>
+      ),
   },
 ])
 

@@ -46,7 +46,7 @@ function NavItem({ item, collapsed, count }) {
   )
 }
 
-export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onToggle }) {
+export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onToggle, onSignOut }) {
   return (
     <aside
       className={`flex h-full shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 ${collapsed ? 'w-rail items-center' : 'w-sidebar'}`}
@@ -69,6 +69,18 @@ export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onTo
             </span>
           </>
         )}
+      </div>
+
+      <div className="shrink-0 border-b border-border p-2.5">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium text-ink-subtle transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-9 justify-center px-0' : 'w-full'}`}
+        >
+          <Icon name={collapsed ? 'chevronsRight' : 'chevronsLeft'} className="h-4 w-4" />
+          {!collapsed && 'Collapse'}
+        </button>
       </div>
 
       <nav className="admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto p-2.5">
@@ -97,12 +109,12 @@ export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onTo
       <div className="shrink-0 border-t border-border p-2.5">
         <button
           type="button"
-          onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium text-ink-subtle transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-9 justify-center px-0' : 'w-full'}`}
+          onClick={onSignOut}
+          aria-label="Log out"
+          className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium text-danger-700 transition-colors hover:bg-danger-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-9 justify-center px-0' : 'w-full'}`}
         >
-          <Icon name={collapsed ? 'chevronsRight' : 'chevronsLeft'} className="h-4 w-4" />
-          {!collapsed && 'Collapse'}
+          <Icon name="logout" className="h-4 w-4" />
+          {!collapsed && 'Logout'}
         </button>
       </div>
     </aside>
