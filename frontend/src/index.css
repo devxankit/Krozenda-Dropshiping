@@ -74,11 +74,15 @@
    once, on the shell.
    ========================================================================== */
 
+/* No background-color here on purpose: this class also gets re-applied on
+   portaled overlays (Modal, Drawer) so they keep admin typography outside the
+   normal DOM tree. An opaque background here would sit behind their
+   translucent/blurred backdrop and paint over it solid, hiding the blur —
+   give the page shell its own `bg-*` utility instead of leaning on this. */
 .admin-root {
   font-family: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   color: #0f172a;
-  background-color: #f8fafc;
 }
 
 /* Slim scrollbars inside admin panes — a 40-row grid next to a full-width

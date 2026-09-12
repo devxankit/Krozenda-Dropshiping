@@ -8,6 +8,7 @@ const app = require('./app');
 const connectDB = require('./Config/db');
 const registerSocketHandlers = require('./Router/socketHandler');
 const ensureAdmin = require('./Router/seedAdmin');
+const seedCatalog = require('./Router/seedCatalog');
 
 const PORT = process.env.PORT || 5000;
 
@@ -24,6 +25,7 @@ registerSocketHandlers(io);
 async function start() {
   await connectDB();
   await ensureAdmin();
+  await seedCatalog();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

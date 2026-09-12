@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 46" width="160" height="46">
+  <defs>
+    <linearGradient id="krozendaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="60%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="34" height="34" rx="10" fill="url(#krozendaGrad)"/>
+  <text x="23" y="29" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="20" fill="#ffffff" text-anchor="middle">K</text>
+  <text x="48" y="23" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="15" fill="#0f172a" letter-spacing="1.2">KROZENDA</text>
+  <text x="49" y="35" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="8.5" fill="#d97706" letter-spacing="2">ESSENTIALS</text>
+</svg>

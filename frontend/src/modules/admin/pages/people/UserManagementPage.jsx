@@ -5,7 +5,6 @@ import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { ChangePasswordDialog } from '../../components/people/ChangePasswordDialog'
 import { ChangeRoleDialog } from '../../components/people/ChangeRoleDialog'
-import { RolesPanel } from '../../components/people/RolesPanel'
 import { StaffDetailDrawer } from '../../components/people/StaffDetailDrawer'
 import { StaffFormDrawer } from '../../components/people/StaffFormDrawer'
 import { USER_MANAGEMENT_COLUMNS } from '../../tableColumns/peopleColumns'
@@ -28,7 +27,6 @@ export function UserManagementPage() {
   const [passwordTarget, setPasswordTarget] = useState(null)
   const [roleTarget, setRoleTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [activeTab, setActiveTab] = useState('staff')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -181,30 +179,6 @@ export function UserManagementPage() {
         }
       />
 
-      <div className="flex items-center gap-1.5 border-b border-slate-200">
-        {[
-          { id: 'staff', label: 'Staff accounts' },
-          { id: 'roles', label: 'Roles' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-              activeTab === tab.id
-                ? 'border-brand-600 text-brand-700'
-                : 'border-transparent text-ink-subtle hover:text-slate-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'roles' ? (
-        <RolesPanel />
-      ) : (
-        <>
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Accounts */}
@@ -416,8 +390,6 @@ export function UserManagementPage() {
           </span>
         </div>
       </div>
-        </>
-      )}
 
       <StaffDetailDrawer
         isOpen={Boolean(detailStaff)}

@@ -1,7 +1,7 @@
 // Layer rule: controllers/ hold orchestration (react-query, derived state)
 // and are the ONLY thing pages/ are allowed to call into.
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchCustomers,
   fetchKycApplication,
@@ -17,8 +17,44 @@ import { useListController } from './useListController'
 export const useCustomerListController = () =>
   useListController({ queryKey: ['admin', 'customers'], queryFn: fetchCustomers })
 
-export const useVendorListController = () =>
-  useListController({ queryKey: ['admin', 'vendors'], queryFn: fetchVendors })
+export function useVendorListController() {
+  const queryClient = useQueryClient()
+  const list = useListController({ queryKey: ['admin', 'vendors'], queryFn: fetchVendors })
+
+  function addVendor(newVendor) {
+    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
+      if (!old) return old
+      const items = [newVendor, ...(old.items || [])]
+      return {
+        ...old,
+        items,
+        totalItems: (old.totalItems ?? old.items?.length ?? 0) + 1,
+      }
+    })
+  }
+
+  function updateVendor(updatedVendor) {
+    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
+      if (!old) return old
+      const items = (old.items || []).map((v) =>
+        v.id === updatedVendor.id ? { ...v, ...updatedVendor } : v,
+      )
+      return { ...old, items }
+    })
+  }
+
+  function toggleVendorStatus(vendorId, status) {
+    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
+      if (!old) return old
+      const items = (old.items || []).map((v) =>
+        v.id === vendorId ? { ...v, status } : v,
+      )
+      return { ...old, items }
+    })
+  }
+
+  return { ...list, addVendor, updateVendor, toggleVendorStatus }
+}
 
 export const useKycQueueController = () =>
   useListController({ queryKey: ['admin', 'kyc'], queryFn: fetchKycQueue })

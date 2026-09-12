@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 44" width="150" height="44">
+  <rect x="4" y="5" width="34" height="34" rx="8" fill="#0B5ED7"/>
+  <path d="M12 14h18v3H12zm0 7h18v3H12zm0 7h11v3H12z" fill="#ffffff"/>
+  <circle cx="27" cy="28.5" r="2.5" fill="#ffffff"/>
+  <text x="46" y="29" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="20" fill="#0B5ED7" letter-spacing="1.5">
+    PHILIPS
+  </text>
+</svg>

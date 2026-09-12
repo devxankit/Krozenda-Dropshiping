@@ -1,55 +1,23 @@
-import { useState } from 'react'
-import { Avatar, Button, Icon, Input, Select, Textarea } from '../../../../components/ui'
+import { useId, useState } from 'react'
+import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
+import { InlineAlert } from '../feedback'
 import { ConfirmDialog } from '../overlay/ConfirmDialog'
 import {
   attributeWriteSchema,
   brandWriteSchema,
   categoryWriteSchema,
   inventoryAdjustSchema,
+  productWriteSchema,
 } from '../../schemas/catalogSchema'
 
-const DEPTH_OPTIONS = [
-  { value: '0', label: 'Top-level root category' },
-  { value: '1', label: 'Sub-category (child)' },
-]
-
-const CATEGORY_STATUS_OPTIONS = [
-  { value: 'live', label: 'Live (Active in storefront)' },
-  { value: 'pending', label: 'Pending review' },
-  { value: 'draft', label: 'Draft (Hidden)' },
-]
-
-const BRAND_STATUS_OPTIONS = [
-  { value: 'live', label: 'Live (Approved & active)' },
-  { value: 'pending', label: 'Pending approval' },
-  { value: 'changes', label: 'Needs changes' },
-  { value: 'rejected', label: 'Rejected' },
-]
-
-const BRAND_OWNER_OPTIONS = [
-  { value: 'In-house', label: 'In-house (Krozenda Flagship)' },
-  { value: 'Vendor partner', label: 'Vendor partner brand' },
-  { value: 'Third-party Verified', label: 'Third-party verified' },
-]
-
-export function CategoryFormDrawer({
-  isOpen,
-  onClose,
-  category,
-  parentCategories = [],
-  defaultParentId = null,
-  writer,
-}) {
+export function CategoryFormDrawer({ isOpen, onClose, category, writer }) {
   const editing = Boolean(category)
   const [imageFile, setImageFile] = useState(null)
   const [form, setForm] = useState(() => ({
     name: category?.name ?? '',
-    depth: String(category?.depth ?? (defaultParentId ? 1 : 0)),
-    parent: category?.parentId ?? category?.parent ?? defaultParentId ?? '',
-    commissionRate: category?.commissionRate == null ? '' : String(category.commissionRate),
-    description: category?.description ?? '',
-    status: category?.status ?? 'live',
+    isActive: category?.isActive ?? true,
+    isTopCategory: category?.isTopCategory ?? false,
   }))
   const [issue, setIssue] = useState(null)
 
@@ -57,21 +25,11 @@ export function CategoryFormDrawer({
 
   function handleSubmit(event) {
     event.preventDefault()
-    const isSub = form.depth === '1'
-    const parentVal = isSub && form.parent ? form.parent : null
-
-    if (isSub && !parentVal && parentCategories.length > 0) {
-      setIssue('Please select a parent category for this sub-category')
-      return
-    }
 
     const payload = {
       name: form.name.trim(),
-      depth: isSub ? 1 : 0,
-      parent: parentVal,
-      commissionRate: form.commissionRate === '' ? null : Number(form.commissionRate),
-      description: form.description ? form.description.trim() : '',
-      status: form.status,
+      isActive: form.isActive,
+      isTopCategory: form.isTopCategory,
     }
 
     const result = categoryWriteSchema.safeParse(payload)
@@ -90,113 +48,133 @@ export function CategoryFormDrawer({
 
   const previewSrc = imageFile ? URL.createObjectURL(imageFile) : category?.image || undefined
 
-  const parentOptions = [
-    { value: '', label: 'Select parent category...' },
-    ...parentCategories.map((p) => ({ value: p.id, label: p.name })),
-  ]
-
   return (
     <FormDrawer
       isOpen={isOpen}
       onClose={onClose}
       title={editing ? `Edit ${category.name}` : 'Create category'}
-      description="Define category hierarchy, icon/thumbnail, and commission rate inheritance."
+      description="Name, image, visibility and top category status — configure catalog presentation."
       submitLabel={editing ? 'Save changes' : 'Create category'}
       isSubmitting={mutation.isSubmitting}
       error={issue ? { message: issue } : mutation.error}
       onSubmit={handleSubmit}
-      width="lg"
+      width="md"
     >
-      {/* Category Image */}
+      {/* Category Image Upload Area */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">
-          Category Thumbnail / Icon
+        <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
+          Category Image / Thumbnail
         </label>
-        <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5 transition-colors hover:border-brand-300">
-          <Avatar name={form.name || 'Category'} src={previewSrc} size="lg" />
-          <div className="flex flex-col gap-1">
-            <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:text-brand-600">
-              <Icon name="add" className="h-3.5 w-3.5" />
-              {previewSrc ? 'Change image' : 'Upload image'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => setImageFile(event.target.files?.[0] || null)}
-              />
-            </label>
-            <p className="text-2xs text-ink-faint">Optimized to WebP automatically. Square 600×600 recommended.</p>
+        <div className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors hover:border-brand-400">
+          {previewSrc ? (
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <img src={previewSrc} alt="Preview" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-indigo-50 text-brand-600 ring-1 ring-brand-100">
+              <Icon name="categories" className="h-7 w-7" />
+            </div>
+          )}
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-brand-600 transition-all">
+                <Icon name="upload" className="h-3.5 w-3.5" />
+                <span>{previewSrc ? 'Change Image' : 'Choose File'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              {imageFile && (
+                <button
+                  type="button"
+                  onClick={() => setImageFile(null)}
+                  className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+            <p className="text-2xs text-slate-400">Recommended: Square PNG, WebP or JPG at least 600×600 px.</p>
           </div>
         </div>
       </div>
 
       <Input
         id="category-name"
-        label="Category name"
+        label="Category Name"
         required
         placeholder="e.g. Electronics, Footwear, Home Decor"
         value={form.name}
         onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Select
-          id="category-depth"
-          label="Hierarchy level"
-          options={DEPTH_OPTIONS}
-          value={form.depth}
-          onChange={(event) => {
-            const nextDepth = event.target.value
-            setForm((c) => ({
-              ...c,
-              depth: nextDepth,
-              parent: nextDepth === '0' ? '' : c.parent || parentCategories[0]?.id || '',
-            }))
-          }}
-        />
-
-        {form.depth === '1' && (
-          <Select
-            id="category-parent"
-            label="Parent category"
-            options={parentOptions}
-            value={form.parent}
-            required
-            onChange={(event) => setForm((c) => ({ ...c, parent: event.target.value }))}
+      {/* Top Category Feature Flag */}
+      <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-yellow-50/30 p-4 transition-all">
+        <label className="flex items-start gap-3.5 cursor-pointer">
+          <input
+            type="checkbox"
+            id="category-top"
+            checked={form.isTopCategory}
+            onChange={(event) => setForm((c) => ({ ...c, isTopCategory: event.target.checked }))}
+            className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
           />
-        )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">Top Category (Spotlight & Priority)</span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-300/60">
+                ⭐ Top
+              </span>
+            </div>
+            <p className="mt-0.5 text-2xs text-slate-600">
+              Feature this category on the storefront homepage, top category navigation bar, and priority filter discovery.
+            </p>
+          </div>
+        </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input
-          id="category-commission"
-          label="Commission rate"
-          suffix="%"
-          inputMode="decimal"
-          placeholder="e.g. 12 (Blank to inherit)"
-          className="tabular text-right"
-          description={form.depth === '1' ? 'Leave empty to inherit parent rate.' : 'Default marketplace rate.'}
-          value={form.commissionRate}
-          onChange={(event) => setForm((c) => ({ ...c, commissionRate: event.target.value }))}
-        />
-
-        <Select
-          id="category-status"
-          label="Publish status"
-          options={CATEGORY_STATUS_OPTIONS}
-          value={form.status}
-          onChange={(event) => setForm((c) => ({ ...c, status: event.target.value }))}
-        />
-      </div>
-
-      <Textarea
-        id="category-description"
-        label="Description (Optional)"
-        rows={2}
-        placeholder="Brief description for SEO or catalog taxonomy notes..."
-        value={form.description}
-        onChange={(event) => setForm((c) => ({ ...c, description: event.target.value }))}
+      <Checkbox
+        id="category-active"
+        label="Active & Visible"
+        description="Active categories are published to customer storefronts and navigation menus."
+        checked={form.isActive}
+        onChange={(event) => setForm((c) => ({ ...c, isActive: event.target.checked }))}
       />
+
+      {/* Live Preview Card */}
+      <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+        <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">
+          Live Card Preview
+        </span>
+        <div className="flex items-center gap-3.5 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+          {previewSrc ? (
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 shadow-xs">
+              <img src={previewSrc} alt="Preview" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
+              {form.name ? form.name.slice(0, 2).toUpperCase() : 'CT'}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-slate-900 text-sm truncate">{form.name || 'Category Name'}</p>
+              {form.isTopCategory && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-400/40">
+                  ⭐ Top Category
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge tone={form.isActive ? 'success' : 'neutral'} dot size="sm">
+                {form.isActive ? 'Active in Store' : 'Hidden from Store'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
     </FormDrawer>
   )
 }
@@ -206,10 +184,7 @@ export function BrandFormDrawer({ isOpen, onClose, brand, writer }) {
   const [logoFile, setLogoFile] = useState(null)
   const [form, setForm] = useState(() => ({
     name: brand?.name ?? '',
-    owner: brand?.owner ?? 'In-house',
-    website: brand?.website ?? '',
-    description: brand?.description ?? '',
-    status: brand?.status ?? 'live',
+    isActive: brand?.isActive ?? true,
   }))
   const [issue, setIssue] = useState(null)
 
@@ -219,10 +194,7 @@ export function BrandFormDrawer({ isOpen, onClose, brand, writer }) {
     event.preventDefault()
     const payload = {
       name: form.name.trim(),
-      owner: form.owner.trim() || 'In-house',
-      website: form.website.trim(),
-      description: form.description.trim(),
-      status: form.status,
+      isActive: form.isActive,
     }
 
     const result = brandWriteSchema.safeParse(payload)
@@ -246,79 +218,97 @@ export function BrandFormDrawer({ isOpen, onClose, brand, writer }) {
       isOpen={isOpen}
       onClose={onClose}
       title={editing ? `Edit brand: ${brand.name}` : 'Register new brand'}
-      description="Add brands that products can be assigned to. Approved brands appear immediately."
+      description="Name, logo and visibility — configure brand directory identity."
       submitLabel={editing ? 'Save brand' : 'Create brand'}
       isSubmitting={mutation.isSubmitting}
       error={issue ? { message: issue } : mutation.error}
       onSubmit={handleSubmit}
-      width="lg"
+      width="md"
     >
       {/* Brand Logo Upload */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">
+        <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
           Brand Logo
         </label>
-        <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5 transition-colors hover:border-brand-300">
-          <Avatar name={form.name || 'Brand'} src={previewSrc} size="lg" />
-          <div className="flex flex-col gap-1">
-            <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:text-brand-600">
-              <Icon name="add" className="h-3.5 w-3.5" />
-              {previewSrc ? 'Change logo' : 'Upload logo'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => setLogoFile(event.target.files?.[0] || null)}
-              />
-            </label>
-            <p className="text-2xs text-ink-faint">Square logo with clean background (PNG, WebP or JPG).</p>
+        <div className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors hover:border-brand-400">
+          {previewSrc ? (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+              <img src={previewSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 text-amber-700 ring-1 ring-amber-100">
+              <Icon name="brands" className="h-7 w-7" />
+            </div>
+          )}
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-brand-600 transition-all">
+                <Icon name="upload" className="h-3.5 w-3.5" />
+                <span>{previewSrc ? 'Change Logo' : 'Upload Logo'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => setLogoFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              {logoFile && (
+                <button
+                  type="button"
+                  onClick={() => setLogoFile(null)}
+                  className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+            <p className="text-2xs text-slate-400">Square logo with clean background (PNG, WebP or SVG).</p>
           </div>
         </div>
       </div>
 
       <Input
         id="brand-name"
-        label="Brand name"
+        label="Brand Name"
         required
         placeholder="e.g. Boat, Philips, Krozenda Essentials"
         value={form.name}
         onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input
-          id="brand-owner"
-          label="Owner / Manufacturer"
-          placeholder="e.g. In-house or vendor entity name"
-          value={form.owner}
-          onChange={(event) => setForm((c) => ({ ...c, owner: event.target.value }))}
-        />
+      <Checkbox
+        id="brand-active"
+        label="Active & Visible"
+        description="Active brands are selectable when creating products and visible in customer filter menus."
+        checked={form.isActive}
+        onChange={(event) => setForm((c) => ({ ...c, isActive: event.target.checked }))}
+      />
 
-        <Select
-          id="brand-status"
-          label="Review status"
-          options={BRAND_STATUS_OPTIONS}
-          value={form.status}
-          onChange={(event) => setForm((c) => ({ ...c, status: event.target.value }))}
-        />
+      {/* Live Preview Card */}
+      <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+        <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">
+          Live Card Preview
+        </span>
+        <div className="flex items-center gap-3.5 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+          {previewSrc ? (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-white p-1 shadow-xs">
+              <img src={previewSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-sm ring-1 ring-amber-500/20">
+              {form.name ? form.name.slice(0, 2).toUpperCase() : 'BR'}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-slate-900 text-sm truncate">{form.name || 'Brand Name'}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge tone={form.isActive ? 'success' : 'neutral'} dot size="sm">
+                {form.isActive ? 'Active in Catalog' : 'Hidden from Catalog'}
+              </Badge>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <Input
-        id="brand-website"
-        label="Brand website"
-        placeholder="https://branddomain.com"
-        value={form.website}
-        onChange={(event) => setForm((c) => ({ ...c, website: event.target.value }))}
-      />
-
-      <Textarea
-        id="brand-description"
-        label="About the brand (Optional)"
-        rows={2}
-        placeholder="Brand story, authenticity notes, warranty terms..."
-        value={form.description}
-        onChange={(event) => setForm((c) => ({ ...c, description: event.target.value }))}
-      />
     </FormDrawer>
   )
 }
@@ -447,3 +437,589 @@ export function InventoryAdjustDialog({ isOpen, onClose, row, adjust }) {
     </ConfirmDialog>
   )
 }
+
+const MAX_PRODUCT_IMAGES = 5
+
+const DISCOUNT_TYPE_OPTIONS = [
+  { id: 'percentage', label: '% Percentage' },
+  { id: 'flat', label: '₹ Flat amount' },
+]
+
+function round2(value) {
+  return Math.round(value * 100) / 100
+}
+
+// Strips anything that isn't a digit or the first "." — so typing "-" or
+// pasting "1-2e5" can never leave a negative or scientific-notation value.
+function sanitizeDecimalInput(raw) {
+  const cleaned = raw.replace(/[^0-9.]/g, '')
+  const firstDot = cleaned.indexOf('.')
+  if (firstDot === -1) return cleaned
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
+}
+
+function sanitizeIntegerInput(raw) {
+  return raw.replace(/[^0-9]/g, '')
+}
+
+// Only rewrites the text when the number actually exceeds the cap, so a
+// trailing "." typed mid-decimal (e.g. "12.") isn't stripped on every keystroke.
+function clampDecimalText(text, max) {
+  if (text === '' || text === '.') return text
+  const n = Number(text)
+  if (!Number.isFinite(n) || n <= max) return text
+  return String(max)
+}
+
+function blockNegativeKeys(event) {
+  if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E') {
+    event.preventDefault()
+  }
+}
+
+export function ProductFormDrawer({ isOpen, onClose, product, categories = [], brands = [], writer }) {
+  const editing = Boolean(product)
+
+  const [form, setForm] = useState(() => ({
+    name: product?.name ?? '',
+    sku: product?.sku ?? '',
+    category: product?.category?.id ?? '',
+    brand: product?.brand?.id ?? '',
+    price: product?.price != null ? String(product.price) : '',
+    salePrice: product?.salePrice != null ? String(product.salePrice) : '',
+    discountType: 'percentage',
+    discountValue: product?.discountPercent ? String(product.discountPercent) : '',
+    stock: product?.stock != null ? String(product.stock) : '0',
+    weight: product?.weight != null ? String(product.weight) : '',
+    description: product?.description ?? '',
+    isActive: product?.isActive ?? true,
+    isFlashsale: product?.isFlashsale ?? false,
+    isTrending: product?.isTrending ?? false,
+  }))
+  const [keptImages, setKeptImages] = useState(() => product?.images ?? [])
+  const [newFiles, setNewFiles] = useState([])
+  const [issue, setIssue] = useState(null)
+
+  const mutation = editing ? writer.update : writer.create
+  const totalImages = keptImages.length + newFiles.length
+
+  function updateField(key, rawValue) {
+    setForm((current) => {
+      // Switching % <-> ₹ converts the entered discount so Sale Price doesn't jump.
+      if (key === 'discountType') {
+        const price = Number(current.price) || 0
+        const currentValue = current.discountValue === '' ? null : Number(current.discountValue)
+        let discountValue = current.discountValue
+        if (price > 0 && currentValue != null) {
+          discountValue =
+            rawValue === 'flat'
+              ? String(round2((currentValue / 100) * price))
+              : String(Math.round((currentValue / price) * 100))
+        }
+        return { ...current, discountType: rawValue, discountValue }
+      }
+
+      if (key === 'stock') {
+        return { ...current, stock: sanitizeIntegerInput(rawValue) }
+      }
+
+      if (key === 'weight') {
+        return { ...current, weight: sanitizeDecimalInput(rawValue) }
+      }
+
+      // Regular Price: Sale Price can never exceed it, so clamp Sale Price
+      // down along with it and recompute the discount from the new numbers.
+      if (key === 'price') {
+        const value = sanitizeDecimalInput(rawValue)
+        const price = Number(value) || 0
+        const next = { ...current, price: value }
+
+        if (price > 0 && current.salePrice !== '') {
+          next.salePrice = clampDecimalText(current.salePrice, price)
+        }
+
+        const sp = next.salePrice === '' ? null : Number(next.salePrice)
+        if (price > 0 && sp != null && sp <= price) {
+          next.discountValue =
+            current.discountType === 'flat'
+              ? String(round2(price - sp))
+              : String(Math.round(((price - sp) / price) * 100))
+        }
+
+        return next
+      }
+
+      // Sale Price: can never be typed above the Regular Price.
+      if (key === 'salePrice') {
+        const price = Number(current.price) || 0
+        let value = sanitizeDecimalInput(rawValue)
+        if (price > 0) value = clampDecimalText(value, price)
+        const next = { ...current, salePrice: value }
+
+        const sp = value === '' ? null : Number(value)
+        if (price > 0 && sp != null) {
+          next.discountValue =
+            current.discountType === 'flat'
+              ? String(round2(price - sp))
+              : String(Math.round(((price - sp) / price) * 100))
+        } else if (sp == null) {
+          next.discountValue = ''
+        }
+
+        return next
+      }
+
+      // Discount: percentage caps at 100, flat amount caps at the Regular
+      // Price (a flat discount bigger than the price makes no sense).
+      if (key === 'discountValue') {
+        const price = Number(current.price) || 0
+        const max = current.discountType === 'percentage' ? 100 : price
+        let value = sanitizeDecimalInput(rawValue)
+        if (price > 0 || current.discountType === 'percentage') {
+          value = clampDecimalText(value, max)
+        }
+        const next = { ...current, discountValue: value }
+
+        const dv = value === '' ? null : Number(value)
+        if (price > 0 && dv != null) {
+          next.salePrice =
+            current.discountType === 'flat'
+              ? String(round2(price - dv))
+              : String(round2(price - (price * dv) / 100))
+        } else if (dv == null) {
+          next.salePrice = ''
+        }
+
+        return next
+      }
+
+      return { ...current, [key]: rawValue }
+    })
+  }
+
+  function addFiles(fileList) {
+    const files = Array.from(fileList || [])
+    if (!files.length) return
+    setNewFiles((current) => [...current, ...files].slice(0, Math.max(0, MAX_PRODUCT_IMAGES - keptImages.length)))
+  }
+
+  function removeKeptImage(url) {
+    setKeptImages((current) => current.filter((img) => img !== url))
+  }
+
+  function removeNewFile(index) {
+    setNewFiles((current) => current.filter((_, i) => i !== index))
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+
+    const priceNum = Number(form.price)
+    const salePriceNum = form.salePrice.trim() === '' ? null : Number(form.salePrice)
+    // discountPercent is always derived from price/salePrice, not typed directly —
+    // that keeps it correct whether the admin entered a % or a flat ₹ amount.
+    const discountNum =
+      salePriceNum != null && priceNum > 0 && salePriceNum < priceNum
+        ? Math.round(((priceNum - salePriceNum) / priceNum) * 100)
+        : 0
+    const stockNum = Number(form.stock)
+    const weightNum = form.weight.trim() === '' ? null : Number(form.weight)
+
+    const payload = {
+      name: form.name.trim(),
+      category: form.category,
+      price: priceNum,
+      salePrice: salePriceNum,
+      discountPercent: discountNum,
+      stock: stockNum,
+      weight: weightNum,
+      isActive: form.isActive,
+      isFlashsale: form.isFlashsale,
+      isTrending: form.isTrending,
+    }
+
+    const result = productWriteSchema.safeParse(payload)
+    if (!result.success) {
+      setIssue(result.error.issues[0]?.message || 'Validation error')
+      return
+    }
+
+    if (totalImages === 0) {
+      setIssue('Add at least one product image')
+      return
+    }
+
+    setIssue(null)
+
+    const body = {
+      ...payload,
+      sku: form.sku.trim(),
+      brand: form.brand,
+      description: form.description,
+      images: newFiles,
+    }
+
+    if (editing) {
+      const removeImages = (product.images || []).filter((img) => !keptImages.includes(img))
+      mutation.run({ id: product.id, ...body, removeImages })
+    } else {
+      mutation.run(body)
+    }
+  }
+
+  // Cover image preview source for Live Preview
+  const previewCover =
+    newFiles.length > 0 && keptImages.length === 0
+      ? URL.createObjectURL(newFiles[0])
+      : keptImages[0] || (newFiles[0] ? URL.createObjectURL(newFiles[0]) : null)
+
+  const selectedCategory = categories.find((c) => c.id === form.category)
+  const selectedBrand = brands.find((b) => b.id === form.brand)
+
+  // Recomputed straight from price/salePrice, independent of discountType —
+  // matches what handleSubmit actually sends.
+  const previewPrice = Number(form.price) || 0
+  const previewSalePrice = Number(form.salePrice) || 0
+  const previewDiscountPercent =
+    previewPrice > 0 && previewSalePrice > 0 && previewSalePrice < previewPrice
+      ? Math.round(((previewPrice - previewSalePrice) / previewPrice) * 100)
+      : 0
+
+  return (
+    <FormDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? `Edit: ${product.name}` : 'Create New Product'}
+      description="Images, specifications, pricing and stock management."
+      submitLabel={editing ? 'Save changes' : 'Create product'}
+      isSubmitting={mutation.isSubmitting}
+      error={issue ? { message: issue } : mutation.error}
+      onSubmit={handleSubmit}
+      width="lg"
+    >
+      {/* Product Images Gallery */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
+            Product Images & Gallery ({totalImages}/{MAX_PRODUCT_IMAGES})
+          </label>
+          <span className="text-2xs text-slate-400 font-medium">First image will be the primary cover</span>
+        </div>
+
+        <div className="flex flex-wrap gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors hover:border-brand-400">
+          {keptImages.map((url, index) => (
+            <div
+              key={url}
+              className="group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs"
+            >
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              {index === 0 && (
+                <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+                  Cover
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => removeKeptImage(url)}
+                className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white shadow-xs opacity-90 hover:opacity-100 transition-opacity"
+                title="Remove image"
+              >
+                <Icon name="close" className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+
+          {newFiles.map((file, index) => {
+            const isCover = keptImages.length === 0 && index === 0
+            return (
+              <div
+                key={`${file.name}-${index}`}
+                className="group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border border-brand-300 bg-white shadow-xs ring-2 ring-brand-100"
+              >
+                <img src={URL.createObjectURL(file)} alt="" className="h-full w-full object-cover" />
+                {isCover && (
+                  <span className="absolute bottom-1 left-1 rounded bg-brand-600 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+                    Cover
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeNewFile(index)}
+                  className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white shadow-xs opacity-90 hover:opacity-100 transition-opacity"
+                  title="Remove image"
+                >
+                  <Icon name="close" className="h-3 w-3" />
+                </button>
+              </div>
+            )
+          })}
+
+          {totalImages < MAX_PRODUCT_IMAGES && (
+            <label className="flex h-22 w-22 shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-white text-slate-500 hover:border-brand-500 hover:text-brand-600 hover:bg-brand-50/40 transition-all">
+              <Icon name="upload" className="h-5 w-5" />
+              <span className="text-2xs font-semibold">Upload</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  addFiles(event.target.files)
+                  event.target.value = ''
+                }}
+              />
+            </label>
+          )}
+        </div>
+        <p className="text-2xs text-slate-400">High-resolution PNG, JPG or WebP. Square 1:1 or 4:3 aspect ratio recommended.</p>
+      </div>
+
+      {/* Product Name */}
+      <Input
+        id="product-name"
+        label="Product Name"
+        required
+        placeholder="e.g. Wireless ANC Noise Cancelling Headphones"
+        value={form.name}
+        onChange={(event) => updateField('name', event.target.value)}
+      />
+
+      {/* Category & Brand */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Select
+          id="product-category"
+          label="Category"
+          required
+          placeholder="Select a category"
+          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+          value={form.category}
+          onChange={(event) => updateField('category', event.target.value)}
+        />
+        <Select
+          id="product-brand"
+          label="Brand"
+          options={[{ value: '', label: 'No brand' }, ...brands.map((b) => ({ value: b.id, label: b.name }))]}
+          value={form.brand}
+          onChange={(event) => updateField('brand', event.target.value)}
+        />
+      </div>
+
+      {/* Pricing: Price, Sale Price, Discount */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
+            Discount Type
+          </label>
+          <SegmentedControl
+            items={DISCOUNT_TYPE_OPTIONS}
+            activeId={form.discountType}
+            onChange={(id) => updateField('discountType', id)}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Input
+            id="product-price"
+            label="Regular Price (₹)"
+            required
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="e.g. 4999"
+            value={form.price}
+            onKeyDown={blockNegativeKeys}
+            onChange={(event) => updateField('price', event.target.value)}
+          />
+          <Input
+            id="product-sale-price"
+            label="Sale Price (₹)"
+            type="number"
+            min="0"
+            max={form.price || undefined}
+            step="0.01"
+            placeholder="e.g. 2999"
+            description="Can't be higher than the regular price"
+            value={form.salePrice}
+            onKeyDown={blockNegativeKeys}
+            onChange={(event) => updateField('salePrice', event.target.value)}
+          />
+          <Input
+            id="product-discount"
+            label={form.discountType === 'flat' ? 'Discount Amount (₹)' : 'Discount %'}
+            type="number"
+            min="0"
+            max={form.discountType === 'flat' ? form.price || undefined : 100}
+            step="0.01"
+            placeholder={form.discountType === 'flat' ? 'e.g. 500' : 'e.g. 40'}
+            value={form.discountValue}
+            onKeyDown={blockNegativeKeys}
+            onChange={(event) => updateField('discountValue', event.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Inventory, SKU & Weight */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Input
+          id="product-stock"
+          label="Stock / Quantity"
+          required
+          type="number"
+          min="0"
+          step="1"
+          placeholder="0"
+          value={form.stock}
+          onKeyDown={blockNegativeKeys}
+          onChange={(event) => updateField('stock', event.target.value)}
+        />
+        <Input
+          id="product-sku"
+          label="SKU Identifier"
+          placeholder="e.g. BOAT-ANC-001"
+          value={form.sku}
+          onChange={(event) => updateField('sku', event.target.value)}
+        />
+        <Input
+          id="product-weight"
+          label="Weight (kg)"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="e.g. 0.35"
+          value={form.weight}
+          onKeyDown={blockNegativeKeys}
+          onChange={(event) => updateField('weight', event.target.value)}
+        />
+      </div>
+
+      {/* Description */}
+      <Textarea
+        id="product-description"
+        label="Description & Specifications"
+        rows={4}
+        placeholder="Product overview, key features, technical specifications, and box contents…"
+        value={form.description}
+        onChange={(event) => updateField('description', event.target.value)}
+      />
+
+      {/* Flash Sale Deal Feature Flag */}
+      <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-yellow-50/30 p-4 transition-all">
+        <label className="flex items-start gap-3.5 cursor-pointer">
+          <input
+            type="checkbox"
+            id="product-flashsale"
+            checked={form.isFlashsale}
+            onChange={(event) => updateField('isFlashsale', event.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">Flash Sale Deal (Limited Time / Spotlight)</span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-300/60">
+                🔥 Flash Sale
+              </span>
+            </div>
+            <p className="mt-0.5 text-2xs text-slate-600">
+              Highlight this product prominently in Flash Sale deals, countdown banners, and special high-urgency promotional sections.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Trending Product Feature Flag */}
+      <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 via-purple-50/40 to-violet-50/30 p-4 transition-all">
+        <label className="flex items-start gap-3.5 cursor-pointer">
+          <input
+            type="checkbox"
+            id="product-trending"
+            checked={form.isTrending}
+            onChange={(event) => updateField('isTrending', event.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">Trending Product (High Reseller Demand)</span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800 ring-1 ring-indigo-300/60">
+                📈 Trending
+              </span>
+            </div>
+            <p className="mt-0.5 text-2xs text-slate-600">
+              Feature this product in Trending Picks, B2B wholesale high-margin showcases, and top-seller recommendation carousels.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      {/* Active Checkbox */}
+      <Checkbox
+        id="product-active"
+        label="Active in Storefront"
+        description="Active products are visible and purchasable across the store."
+        checked={form.isActive}
+        onChange={(event) => updateField('isActive', event.target.checked)}
+      />
+
+      {/* Real-time Live Catalog Preview Card */}
+      <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">
+            Live Catalog Preview
+          </span>
+          <span className="text-2xs text-slate-400">Preview of listing in customer search</span>
+        </div>
+        <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+          {previewCover ? (
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 shadow-xs">
+              <img src={previewCover} alt="Cover Preview" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-base ring-1 ring-brand-500/20">
+              {form.name ? form.name.slice(0, 2).toUpperCase() : 'PR'}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-bold text-slate-900 text-sm truncate">{form.name || 'Product Title'}</p>
+              {form.isFlashsale && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-400/40">
+                  🔥 Flash Sale
+                </span>
+              )}
+              {form.isTrending && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-indigo-400/40">
+                  📈 Trending
+                </span>
+              )}
+            </div>
+            <div className="mt-0.5 flex items-center gap-2 text-2xs text-slate-500">
+              <span>{selectedCategory?.name || 'Category'}</span>
+              {selectedBrand?.name && <span>• {selectedBrand.name}</span>}
+              {form.sku && <span>• SKU: {form.sku}</span>}
+            </div>
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <span className="font-bold text-slate-900 text-sm tabular">
+                ₹{Number(form.salePrice || form.price || 0).toLocaleString('en-IN')}
+              </span>
+              {form.salePrice && form.price && Number(form.salePrice) < Number(form.price) && (
+                <span className="text-2xs text-slate-400 line-through tabular">
+                  ₹{Number(form.price).toLocaleString('en-IN')}
+                </span>
+              )}
+              {previewDiscountPercent > 0 && (
+                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-2xs font-semibold text-emerald-700">
+                  {previewDiscountPercent}% OFF
+                </span>
+              )}
+              <Badge tone={form.isActive ? 'success' : 'neutral'} dot size="sm" className="ml-auto">
+                {form.isActive ? 'Active' : 'Hidden'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    </FormDrawer>
+  )
+}
+
+// Alias for backward compatibility
+export const ProductFormModal = ProductFormDrawer
+

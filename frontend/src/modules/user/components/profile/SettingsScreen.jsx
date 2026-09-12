@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
+import { useAuthStore } from '../../../../lib/authStore'
 
 export function SettingsScreen({ onBack = () => {} }) {
   const navigate = useNavigate()
@@ -30,8 +31,8 @@ export function SettingsScreen({ onBack = () => {} }) {
   ]
 
   const otherItems = [
-    { label: 'Terms of Service', Icon: HiDocumentText, route: USER_ROUTES.ROOT + '/support' },
-    { label: 'Privacy Policy', Icon: HiShieldCheck, route: USER_ROUTES.ROOT + '/support' },
+    { label: 'Terms of Service', Icon: HiDocumentText, route: '/terms' },
+    { label: 'Privacy Policy', Icon: HiShieldCheck, route: '/privacy-policy' },
     { label: 'Help & Customer Support', Icon: HiQuestionMarkCircle, route: USER_ROUTES.ROOT + '/support' },
     { label: 'Log Out of Account', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },
   ]
@@ -137,7 +138,12 @@ export function SettingsScreen({ onBack = () => {} }) {
               {otherItems.map(({ label, Icon, route, isLogout }) => (
                 <div
                   key={label}
-                  onClick={() => navigate(route)}
+                  onClick={() => {
+                    if (isLogout) {
+                      useAuthStore.getState().clearSession()
+                    }
+                    navigate(route)
+                  }}
                   className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-3">

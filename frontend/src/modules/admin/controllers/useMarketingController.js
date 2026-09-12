@@ -3,6 +3,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import * as service from '../services/marketingService'
+import { useAdminMutation } from './useAdminMutation'
 import { useListController } from './useListController'
 
 export const useCouponListController = () =>
@@ -21,7 +22,106 @@ function useResource(key, queryFn, enabled = true) {
 
 export const useOffersController = () => useResource(['admin', 'marketing', 'offers'], service.fetchOffers)
 export const useBannersController = () => useResource(['admin', 'marketing', 'banners'], service.fetchBanners)
-export const useCmsPagesController = () => useResource(['admin', 'marketing', 'cms'], service.fetchCmsPages)
+export const useCmsPagesController = (query = {}) => {
+  const q = useQuery({
+    queryKey: ['admin', 'marketing', 'cms', query],
+    queryFn: () => service.fetchCmsPages(query),
+  })
+  return { data: q.data, isLoading: q.isLoading, error: q.error, refetch: q.refetch }
+}
+
+const CMS_PAGES = [['admin', 'marketing', 'cms']]
+
+export const useCmsPageWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createCmsPage,
+    invalidate: CMS_PAGES,
+    success: (page) => `${page.title} created successfully`,
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateCmsPage,
+    invalidate: CMS_PAGES,
+    success: (page) => `${page.title} updated successfully`,
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateCmsPageStatus,
+    invalidate: CMS_PAGES,
+    success: (page) => `${page.title} is now ${page.status}`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteCmsPage,
+    invalidate: CMS_PAGES,
+    success: 'CMS page removed successfully',
+  }),
+})
+
+
+// Banners are a real backend resource — writes invalidate the same key the
+// list above reads, the same way catalog's brand writer does.
+const BANNERS = [['admin', 'marketing', 'banners']]
+
+export const useBannerWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createBanner,
+    invalidate: BANNERS,
+    success: (banner) => `${banner.title} created`,
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateBanner,
+    invalidate: BANNERS,
+    success: (banner) => `${banner.title} updated`,
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateBannerStatus,
+    invalidate: BANNERS,
+    success: (banner) => `${banner.title} is now ${banner.status}`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteBanner,
+    invalidate: BANNERS,
+    success: 'Banner removed',
+  }),
+})
+// FAQs are a real backend resource, same shape as CMS pages.
+export const useFaqsController = (query = {}) => {
+  const q = useQuery({
+    queryKey: ['admin', 'marketing', 'faqs', query],
+    queryFn: () => service.fetchFaqs(query),
+  })
+  return { data: q.data, isLoading: q.isLoading, error: q.error, refetch: q.refetch }
+}
+
+const FAQS = [['admin', 'marketing', 'faqs']]
+
+export const useFaqWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createFaq,
+    invalidate: FAQS,
+    success: 'FAQ added successfully',
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateFaq,
+    invalidate: FAQS,
+    success: 'FAQ updated successfully',
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateFaqStatus,
+    invalidate: FAQS,
+    success: (faq) => `FAQ is now ${faq.status}`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteFaq,
+    invalidate: FAQS,
+    success: 'FAQ removed',
+  }),
+})
+
 export const useTemplatesController = () => useResource(['admin', 'marketing', 'templates'], service.fetchTemplates)
 export const useReportCatalogueController = () => useResource(['admin', 'reports'], service.fetchReportCatalogue)
 

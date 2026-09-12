@@ -61,7 +61,7 @@ export function AdminLayout() {
     isDashboardOrRoot && firstAccessibleRoute ? firstAccessibleRoute : ADMIN_ROUTES.FORBIDDEN
 
   return (
-    <div className="admin-root flex h-screen overflow-hidden">
+    <div className="admin-root flex h-screen overflow-hidden bg-surface-muted">
       <div className="hidden lg:flex">
         <AdminSidebar
           groups={groups}

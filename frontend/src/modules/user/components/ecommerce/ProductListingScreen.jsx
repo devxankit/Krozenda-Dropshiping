@@ -18,15 +18,17 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { USER_ROUTES } from '../../../../config/routes'
+import { useWishlistStore } from '../../../../lib/wishlistStore'
 
 export function ProductListingScreen({ onBack, onSelectProduct }) {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   const initialCategory = location.state?.category || 'Mobiles & Tablets'
 
   const [activeCategory, setActiveCategory] = useState(initialCategory)
-  const [wishlist, setWishlist] = useState({})
+  const wishlistItems = useWishlistStore((state) => state.items)
+  const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
   const [isGridView, setIsGridView] = useState(true)
   const [brandSearch, setBrandSearch] = useState('')
   const [selectedBrands, setSelectedBrands] = useState(['Samsung', 'Apple', 'boAt'])
@@ -166,10 +168,12 @@ export function ProductListingScreen({ onBack, onSelectProduct }) {
     },
   ]
 
-  const toggleWishlist = (id, e) => {
+  const toggleWishlist = (item, e) => {
     e.stopPropagation()
-    setWishlist((prev) => ({ ...prev, [id]: !prev[id] }))
+    toggleWishlistItem(item)
   }
+
+  const isWishlisted = (id) => wishlistItems.some((entry) => entry.id === id)
 
   const toggleBrand = (brand) => {
     setSelectedBrands((prev) =>
@@ -485,10 +489,10 @@ export function ProductListingScreen({ onBack, onSelectProduct }) {
                       </span>
 
                       <button
-                        onClick={(e) => toggleWishlist(item.id, e)}
+                        onClick={(e) => toggleWishlist(item, e)}
                         className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 shadow-2xs border border-slate-200 flex items-center justify-center text-slate-600 hover:text-red-500 transition-colors"
                       >
-                        {wishlist[item.id] ? (
+                        {isWishlisted(item.id) ? (
                           <HiHeart className="w-4 h-4 text-red-500 fill-red-500" />
                         ) : (
                           <HiOutlineHeart className="w-4 h-4" />
@@ -582,10 +586,10 @@ export function ProductListingScreen({ onBack, onSelectProduct }) {
                     </div>
 
                     <button
-                      onClick={(e) => toggleWishlist(item.id, e)}
+                      onClick={(e) => toggleWishlist(item, e)}
                       className="w-9 h-9 rounded-full bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-slate-600 hover:text-red-500 transition-colors shrink-0"
                     >
-                      {wishlist[item.id] ? (
+                      {isWishlisted(item.id) ? (
                         <HiHeart className="w-5 h-5 text-red-500 fill-red-500" />
                       ) : (
                         <HiOutlineHeart className="w-5 h-5" />

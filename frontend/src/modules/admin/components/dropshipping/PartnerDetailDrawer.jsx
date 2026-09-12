@@ -27,7 +27,7 @@ export function PartnerDetailDrawer({ partner, isOpen, onClose, onToggleStatus }
       isOpen={isOpen}
       onClose={onClose}
       title={partner.name}
-      description={`${partner.supplierType} · ${partner.city}`}
+      description={`${partner.supplierType || partner.role || 'Seller Partner'} · ${partner.city || 'India'}`}
       width="lg"
       footer={
         <>
@@ -48,16 +48,16 @@ export function PartnerDetailDrawer({ partner, isOpen, onClose, onToggleStatus }
         <div className="grid grid-cols-3 gap-3 rounded-lg border border-border bg-surface-muted p-4">
           <div>
             <p className="text-2xs font-semibold uppercase text-ink-faint">Live SKUs</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{partner.products}</p>
+            <p className="mt-1 text-xl font-bold text-slate-900">{partner.products ?? 0}</p>
           </div>
           <div>
             <p className="text-2xs font-semibold uppercase text-ink-faint">Fulfilled Orders</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{partner.ordersCount}</p>
+            <p className="mt-1 text-xl font-bold text-slate-900">{partner.ordersCount ?? partner.orders ?? 0}</p>
           </div>
           <div>
             <p className="text-2xs font-semibold uppercase text-ink-faint">Gross Sales</p>
             <div className="mt-1">
-              <MoneyCell amount={partner.revenue} compact />
+              <MoneyCell amount={partner.revenue ?? 0} compact />
             </div>
           </div>
         </div>
@@ -76,8 +76,8 @@ export function PartnerDetailDrawer({ partner, isOpen, onClose, onToggleStatus }
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-ink-subtle">Integration Adapter</span>
-              <Badge tone={partner.integrationMode.includes('API') ? 'brand' : 'neutral'} size="sm">
-                {partner.integrationMode}
+              <Badge tone={(partner.integrationMode || '').includes('API') ? 'brand' : 'neutral'} size="sm">
+                {partner.integrationMode || 'Direct Portal'}
               </Badge>
             </div>
             <div className="flex flex-col gap-0.5">

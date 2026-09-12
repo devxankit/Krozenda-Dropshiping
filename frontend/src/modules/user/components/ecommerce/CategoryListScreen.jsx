@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   HiMagnifyingGlass,
   HiOutlineShoppingBag,
@@ -10,186 +10,73 @@ import {
   HiSquares2X2,
   HiListBullet,
   HiArrowLeft,
+  HiOutlineSquares2X2,
 } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { USER_ROUTES } from '../../../../config/routes'
+import { api } from '../../../../lib/axios'
+import { useCartCount } from '../../../../lib/cartStore'
+
+function formatProductCount(count) {
+  if (!count) return 'New catalog'
+  return `${count.toLocaleString('en-IN')} Product${count === 1 ? '' : 's'}`
+}
+
+function getCategoryBadge(cat) {
+  if (cat.isTopCategory) return 'TOP CATEGORY'
+  if (cat.maxDiscountPercent >= 50) return 'MEGA DEAL'
+  if (cat.maxDiscountPercent >= 30) return 'HOT DEAL'
+  if (cat.productCount > 0) return 'IN STOCK'
+  return null
+}
+
+const FILTER_CHIPS = [
+  { id: 'all', label: 'All Categories' },
+  { id: 'top', label: 'Top Categories' },
+]
 
 export function CategoryListScreen() {
   const navigate = useNavigate()
+  const cartCount = useCartCount()
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [layoutMode, setLayoutMode] = useState('grid') // 'grid' or 'list'
+  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState([])
 
-  const allCategories = [
-    {
-      id: 'mobiles',
-      filterGroup: 'tech',
-      name: 'Mobiles & Tablets',
-      itemCount: '1,250+ Curated Products',
-      image: '/images/cat_mobiles.jpg',
-      discount: 'Up to 40% OFF - New Tiers',
-      badge: 'BESTSELLER',
-      margin: '₹8,500 Margin / Unit',
-      subcategories: ['5G Smartphones', 'iPhones & iPads', 'Android Tablets', 'Mobile Accessories'],
-    },
-    {
-      id: 'laptops',
-      filterGroup: 'tech',
-      name: 'Laptops & Workstat...',
-      fullName: 'Laptops & Workstations',
-      itemCount: '1,250+ Curated Products',
-      image: '/images/cat_laptops_new.jpg',
-      discount: 'Up to 40% OFF - New Tiers',
-      badge: 'POPULAR',
-      margin: '₹12,000 Margin / Unit',
-      subcategories: ['Gaming Laptops', 'Ultrabooks', 'MacBooks', 'Monitors & Docks'],
-    },
-    {
-      id: 'watches',
-      filterGroup: 'tech',
-      name: 'Smartwatches',
-      itemCount: '1,120+ Curated Products',
-      image: '/images/cat_watches_new.jpg',
-      discount: 'Max Savings 60% OFF',
-      badge: 'TRENDING',
-      margin: '₹1,100 Margin / Unit',
-      subcategories: ['AMOLED Smartwatches', 'Fitness Trackers', 'Rugged Watches', 'Strips & Chargers'],
-    },
-    {
-      id: 'audio',
-      filterGroup: 'tech',
-      name: 'Audio & Headphones',
-      itemCount: '2,350+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
-      discount: 'Flash Sale: Up to 75% OFF',
-      badge: 'HOT',
-      margin: 'Wholesale Tier 1',
-      subcategories: ['TWS Earbuds', 'ANC Headphones', 'Bluetooth Speakers', 'Neckbands'],
-    },
-    {
-      id: 'fashion',
-      filterGroup: 'lifestyle',
-      name: 'Fashion & Apparel',
-      itemCount: '3,400+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80',
-      discount: 'Max Savings 60% OFF',
-      badge: 'NEW TIERS',
-      margin: 'Fast Moving',
-      subcategories: ['Men Jackets', 'Hoodies & Sweatshirts', 'Women Wear', 'Casual Denim'],
-    },
-    {
-      id: 'shoes',
-      filterGroup: 'lifestyle',
-      name: 'Shoes & Footwear',
-      itemCount: '1,890+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80',
-      discount: 'Max Savings 60% OFF',
-      badge: 'TOP SELLER',
-      margin: '₹1,200 Margin / Unit',
-      subcategories: ['Sports Sneakers', 'Running Shoes', 'Formal Leather', 'Casual Slides'],
-    },
-    {
-      id: 'appliances',
-      filterGroup: 'home',
-      name: 'Home Appliances',
-      itemCount: '1,250+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&auto=format&fit=crop&q=80',
-      discount: 'Upto 45% OFF',
-      topLeftBadge: 'ESSENTIAL',
-      badge: 'ESSENTIAL',
-      margin: 'High Value Tier',
-      subcategories: ['Coffee Makers', 'Air Fryers', 'Blenders & Grinders', 'Smart Vacuums'],
-    },
-    {
-      id: 'beauty',
-      filterGroup: 'lifestyle',
-      name: 'Beauty & Skincare',
-      itemCount: '1,560+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1608248597261-833258657b45?w=600&auto=format&fit=crop&q=80',
-      discount: 'Upto 55% OFF',
-      topLeftBadge: 'POPULAR',
-      badge: 'POPULAR',
-      margin: 'High Reorder Rate',
-      subcategories: ['Serums & Oils', 'Moisturizers', 'Cleansers', 'Makeup Kits'],
-    },
-    {
-      id: 'gaming',
-      filterGroup: 'tech',
-      name: 'Gaming Consoles',
-      itemCount: '940+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=600&auto=format&fit=crop&q=80',
-      discount: 'Upto 35% OFF',
-      topLeftBadge: 'PRO TECH',
-      badge: 'PRO TECH',
-      margin: 'Official Supplier',
-      subcategories: ['Controllers', 'Gaming Keyboards', 'VR Headsets', 'Console Accessories'],
-    },
-    {
-      id: 'smartgadgets',
-      filterGroup: 'tech',
-      name: 'Smart Gadgets',
-      itemCount: '1,680+ Curated Products',
-      image: '/images/cat_watches_new.jpg',
-      discount: 'Flash Sale: Up to 75% OFF',
-      topLeftBadge: 'POPULAR',
-      badge: 'POPULAR',
-      margin: 'White-Label Ready',
-      subcategories: ['Smart Plugs', 'Security Cameras', 'LED Strip Lights', 'Sensor Hubs'],
-    },
-    {
-      id: 'home',
-      filterGroup: 'home',
-      name: 'Home & Kitchen',
-      itemCount: '2,100+ Curated Products',
-      image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80',
-      discount: 'Upto 40% OFF',
-      topLeftBadge: 'BULK READY',
-      badge: 'BULK READY',
-      margin: 'Direct Mill Rate',
-      subcategories: ['Desk Setup', 'Ergonomic Chairs', 'Ambient Lighting', 'Storage Solutions'],
-    },
-    {
-      id: 'all',
-      filterGroup: 'all',
-      name: 'Explore All Catalogs...',
-      itemCount: '100k+ Catalog',
-      image: '/images/cat_mobiles.jpg',
-      discount: 'All Direct Tiers',
-      topLeftBadge: 'VIEW ALL',
-      badge: 'VIEW ALL',
-      isBrowseAll: true,
-      margin: 'Full Access',
-      subcategories: ['All Categories', 'Supplier Directory', 'Exclusive Dropship Tiers'],
-      collageImages: [
-        '/images/cat_mobiles.jpg',
-        '/images/cat_watches_new.jpg',
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&auto=format&fit=crop&q=80',
-      ],
-    },
-  ]
+  useEffect(() => {
+    let isMounted = true
+    async function fetchCategories() {
+      try {
+        setLoading(true)
+        const { data } = await api.get('/catalog/categories')
+        if (isMounted && data?.data?.items) {
+          setCategories(data.data.items)
+        }
+      } catch (err) {
+        console.warn('[CategoryListScreen] Could not load categories:', err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchCategories()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
-  const filterChips = [
-    { id: 'all', label: 'All Categories' },
-    { id: 'tech', label: 'Mobiles & Tech' },
-    { id: 'lifestyle', label: 'Fashion & Beauty' },
-    { id: 'home', label: 'Home & Kitchen' },
-  ]
-
-  const filteredCategories = allCategories.filter((cat) => {
-    const matchesFilter = selectedFilter === 'all' || cat.filterGroup === selectedFilter || cat.id === 'all'
-    const matchesSearch =
-      searchQuery.trim() === '' ||
-      cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cat.subcategories.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredCategories = categories.filter((cat) => {
+    const matchesFilter = selectedFilter === 'all' || (selectedFilter === 'top' && cat.isTopCategory)
+    const matchesSearch = searchQuery.trim() === '' || cat.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesFilter && matchesSearch
   })
 
   const handleCategoryClick = (cat) => {
-    if (cat.id === 'all') return
-    navigate(USER_ROUTES.ROOT + '/listing', { state: { category: cat.name || cat.id } })
+    navigate(USER_ROUTES.ROOT + '/listing', {
+      state: { category: cat.name, categoryId: cat.id || cat._id },
+    })
   }
 
   return (
@@ -213,7 +100,7 @@ export function CategoryListScreen() {
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wide">
-                    All Categories ({allCategories.length})
+                    All Categories ({categories.length})
                   </span>
                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                     <HiCheckBadge className="w-4 h-4 text-emerald-500" />
@@ -270,16 +157,18 @@ export function CategoryListScreen() {
                 className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 relative shrink-0 transition-colors border border-slate-200/80"
               >
                 <HiOutlineShoppingBag className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
-                  3
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
           {/* Category Filter Chips */}
           <div className="flex items-center space-x-2 overflow-x-auto pt-2 pb-1 scrollbar-none">
-            {filterChips.map((chip) => (
+            {FILTER_CHIPS.map((chip) => (
               <button
                 key={chip.id}
                 onClick={() => setSelectedFilter(chip.id)}
@@ -324,112 +213,134 @@ export function CategoryListScreen() {
         </div>
 
         {/* All Categories Grid / List View */}
-        {layoutMode === 'grid' ? (
+        {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {filteredCategories.map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat)}
-                className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-2xs hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col justify-between group cursor-pointer relative"
-              >
-                {/* Top Badge (Single Pill Badge) */}
-                <div className="flex items-center justify-between z-10 w-full mb-1">
-                  <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-slate-600 bg-slate-100 group-hover:bg-blue-600 group-hover:text-white px-2 py-0.5 rounded-md uppercase transition-colors">
-                    {cat.badge}
-                  </span>
-                </div>
-
-                {/* Product Image Area - Fitted edge-to-edge to card */}
-                {cat.isBrowseAll ? (
-                  <div className="w-full aspect-[4/3] grid grid-cols-2 gap-1 p-1 bg-slate-50 rounded-xl overflow-hidden my-1 border border-slate-100">
-                    {(cat.collageImages || [cat.image, cat.image, cat.image, cat.image]).map((imgUrl, idx) => (
-                      <div
-                        key={idx}
-                        className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-white"
-                      >
-                        <img
-                          src={imgUrl}
-                          alt="Mini catalog thumbnail"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden my-1 bg-slate-100 flex items-center justify-center">
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                    />
-                  </div>
-                )}
-
-                {/* Offer Tag Pill below Image */}
-                {cat.discount && (
-                  <div className="w-full mt-1">
-                    <div className="w-full bg-slate-50 border border-slate-200/60 rounded-lg py-1 px-1.5 text-center group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
-                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 group-hover:text-blue-700 tracking-tight block truncate">
-                        {cat.discount}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Title & Product Count */}
-                <div className="pt-2.5 space-y-0.5 text-left border-t border-slate-100 mt-2">
-                  <h3
-                    className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate tracking-tight"
-                    title={cat.fullName || cat.name}
-                  >
-                    {cat.name}
-                  </h3>
-
-                  <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
-                    <span className="truncate">{cat.itemCount}</span>
-                    <HiArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1" />
-                  </div>
-                </div>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="bg-white rounded-2xl p-3.5 border border-slate-200/90 space-y-2 animate-pulse">
+                <div className="h-4 w-16 bg-slate-200 rounded-md" />
+                <div className="w-full aspect-[4/3] bg-slate-200 rounded-xl" />
+                <div className="h-6 w-full bg-slate-200 rounded-lg" />
+                <div className="h-3 w-3/4 bg-slate-200 rounded-md" />
               </div>
             ))}
+          </div>
+        ) : filteredCategories.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-10 flex flex-col items-center text-center gap-2">
+            <HiOutlineSquares2X2 className="w-9 h-9 text-slate-300" />
+            <h3 className="text-sm font-bold text-slate-700">
+              {categories.length === 0 ? 'No categories published yet' : 'No categories match your search'}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              {categories.length === 0
+                ? 'Check back soon — new wholesale categories are added regularly.'
+                : 'Try a different search term or filter.'}
+            </p>
+          </div>
+        ) : layoutMode === 'grid' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {filteredCategories.map((cat) => {
+              const badge = getCategoryBadge(cat)
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat)}
+                  className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-2xs hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col justify-between group cursor-pointer relative"
+                >
+                  {/* Top Badge (Single Pill Badge) */}
+                  {badge && (
+                    <div className="flex items-center justify-between z-10 w-full mb-1">
+                      <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-slate-600 bg-slate-100 group-hover:bg-blue-600 group-hover:text-white px-2 py-0.5 rounded-md uppercase transition-colors">
+                        {badge}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Product Image Area - Fitted edge-to-edge to card */}
+                  <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden my-1 bg-slate-100 flex items-center justify-center">
+                    <img
+                      src={cat.image || '/images/cat_mobiles.jpg'}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/cat_mobiles.jpg'
+                      }}
+                    />
+                  </div>
+
+                  {/* Offer Tag Pill below Image */}
+                  {cat.maxDiscountPercent > 0 && (
+                    <div className="w-full mt-1">
+                      <div className="w-full bg-slate-50 border border-slate-200/60 rounded-lg py-1 px-1.5 text-center group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 group-hover:text-blue-700 tracking-tight block truncate">
+                          Up to {cat.maxDiscountPercent}% OFF
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Title & Product Count */}
+                  <div className="pt-2.5 space-y-0.5 text-left border-t border-slate-100 mt-2">
+                    <h3
+                      className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate tracking-tight"
+                      title={cat.name}
+                    >
+                      {cat.name}
+                    </h3>
+
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                      <span className="truncate">{formatProductCount(cat.productCount)}</span>
+                      <HiArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1" />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         ) : (
           /* Detailed Horizontal Cards List View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCategories.map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                className="bg-white rounded-3xl border border-slate-200/90 p-4 flex items-center space-x-4 shadow-xs hover:shadow-lg hover:border-blue-400 transition-all cursor-pointer group"
-              >
-                <div className="w-24 h-24 rounded-2xl bg-slate-50 p-2 flex items-center justify-center border border-slate-100 shrink-0 group-hover:scale-105 transition-transform">
-                  <img src={cat.image} alt={cat.name} className="max-h-full max-w-full object-contain drop-shadow-xs" />
-                </div>
-
-                <div className="flex-1 space-y-1 min-w-0 text-left">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700">
-                      {cat.badge}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600">
-                      {cat.discount}
-                    </span>
+            {filteredCategories.map((cat) => {
+              const badge = getCategoryBadge(cat)
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat)}
+                  className="bg-white rounded-3xl border border-slate-200/90 p-4 flex items-center space-x-4 shadow-xs hover:shadow-lg hover:border-blue-400 transition-all cursor-pointer group"
+                >
+                  <div className="w-24 h-24 rounded-2xl bg-slate-50 p-2 flex items-center justify-center border border-slate-100 shrink-0 group-hover:scale-105 transition-transform">
+                    <img
+                      src={cat.image || '/images/cat_mobiles.jpg'}
+                      alt={cat.name}
+                      className="max-h-full max-w-full object-contain drop-shadow-xs"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/cat_mobiles.jpg'
+                      }}
+                    />
                   </div>
-                  <h3 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                    {cat.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">{cat.itemCount} • {cat.margin}</p>
-                  
-                  {cat.subcategories && (
-                    <p className="text-[10px] text-slate-400 truncate">
-                      {cat.subcategories.join(', ')}
-                    </p>
-                  )}
-                </div>
 
-                <HiChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0" />
-              </div>
-            ))}
+                  <div className="flex-1 space-y-1 min-w-0 text-left">
+                    <div className="flex items-center space-x-2">
+                      {badge && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                          {badge}
+                        </span>
+                      )}
+                      {cat.maxDiscountPercent > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-600">
+                          Up to {cat.maxDiscountPercent}% OFF
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                      {cat.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">{formatProductCount(cat.productCount)}</p>
+                  </div>
+
+                  <HiChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0" />
+                </div>
+              )
+            })}
           </div>
         )}
 

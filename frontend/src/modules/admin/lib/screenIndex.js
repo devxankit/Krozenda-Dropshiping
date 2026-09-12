@@ -98,7 +98,8 @@ export const SCREEN_GROUPS = Object.freeze([
     screens: [
       { to: ADMIN_ROUTES.COUPONS, name: 'Coupons' },
       { to: ADMIN_ROUTES.OFFERS, name: 'Offers' },
-      { to: ADMIN_ROUTES.BANNERS, name: 'Banners & CMS' },
+      { to: ADMIN_ROUTES.BANNERS, name: 'Banners' },
+      { to: ADMIN_ROUTES.CMS_PAGES, name: 'CMS pages' },
       { to: ADMIN_ROUTES.CAMPAIGNS, name: 'Campaigns' },
       { to: ADMIN_ROUTES.TEMPLATES, name: 'Templates' },
       { to: ADMIN_ROUTES.REVIEWS, name: 'Review moderation' },

@@ -21,17 +21,21 @@ import { useNavigate } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
+import { useAuthStore } from '../../../../lib/authStore'
 
 export function ProfileDashboardScreen({
-  user = {
-    name: 'Rahul Sharma',
-    mobile: '+91 98765 43210',
-    email: 'rahulsharma@example.com',
-    walletBalance: '2,450.00',
-  },
+  user: userProp,
   onNavigateMenu = () => {},
 }) {
   const navigate = useNavigate()
+  const authUser = useAuthStore((state) => state.user)
+
+  const user = {
+    name: authUser?.name || userProp?.name || 'Customer',
+    mobile: authUser?.mobileNumber || authUser?.phone || userProp?.mobile || '+91 98765 43210',
+    email: authUser?.email || userProp?.email || 'customer@krozenda.com',
+    walletBalance: userProp?.walletBalance || '2,450.00',
+  }
 
   const orderShortcuts = [
     { label: 'All Orders', Icon: HiShoppingBag, route: USER_ROUTES.ROOT + '/orders' },
@@ -165,6 +169,9 @@ export function ProfileDashboardScreen({
                   key={idx}
                   onClick={() => {
                     onNavigateMenu(item.label)
+                    if (item.isLogout) {
+                      useAuthStore.getState().clearSession()
+                    }
                     navigate(item.route)
                   }}
                   className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"

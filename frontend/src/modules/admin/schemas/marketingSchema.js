@@ -46,36 +46,74 @@ export const offerListSchema = z.object({
   ),
 })
 
+export const bannerSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  productId: z.string().nullable().optional(),
+  productName: z.string().optional(),
+  image: z.string().nullable().optional(),
+  placement: z.enum(['hero', 'promo', 'strip']).optional(),
+  subtitle: z.string().optional(),
+  tag: z.string().optional(),
+  icon: z.string().optional(),
+  theme: z.string().optional(),
+  ctaPath: z.string().optional(),
+  status: z.enum(['active', 'inactive']),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+}).passthrough()
+
 export const bannerListSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      title: z.string(),
-      placement: z.string(),
-      audience: z.string(),
-      startsOn: z.string(),
-      endsOn: z.string(),
-      priority: z.number().int(),
-      status: z.enum(['scheduled', 'live', 'ended', 'draft']),
-      clicks: z.number().int(),
-      impressions: z.number().int(),
-    }),
-  ),
+  items: z.array(bannerSchema),
+  stats: z.record(z.string(), z.any()).optional(),
+}).passthrough()
+
+export const bannerWriteSchema = z.object({
+  title: z.string().min(2, 'Give the banner a title'),
+  productId: z.string().nullable().optional(),
+  productName: z.string().optional(),
+  status: z.string().optional(),
+  placement: z.enum(['hero', 'promo', 'strip']).optional(),
+  subtitle: z.string().optional(),
+  tag: z.string().optional(),
+  icon: z.string().optional(),
+  theme: z.string().optional(),
+  ctaPath: z.string().optional(),
 })
 
-export const cmsPageListSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      title: z.string(),
-      slug: z.string(),
-      version: z.string(),
-      updatedAt: z.string(),
-      updatedBy: z.string(),
-      status: z.enum(['draft', 'published', 'archived']),
-      requiresAcceptance: z.boolean(),
-    }),
-  ),
+export const cmsPageSchema = z
+  .object({
+    id: z.string(),
+    _id: z.string().optional(),
+    title: z.string(),
+    slug: z.string(),
+    content: z.string().optional().default(''),
+    version: z.string().optional().default('v1.0'),
+    updatedAt: z.string().optional(),
+    updatedBy: z.string().optional(),
+    status: z.enum(['draft', 'published', 'archived']).default('published'),
+    requiresAcceptance: z.boolean().default(false),
+    metaTitle: z.string().optional(),
+    metaDescription: z.string().optional(),
+  })
+  .passthrough()
+
+export const cmsPageListSchema = z
+  .object({
+    items: z.array(cmsPageSchema),
+    stats: z.record(z.string(), z.any()).optional(),
+  })
+  .passthrough()
+
+export const cmsPageWriteSchema = z.object({
+  title: z.string().min(2, 'Page title is required'),
+  slug: z.string().optional(),
+  content: z.string().optional().default(''),
+  version: z.string().optional().default('v1.0'),
+  status: z.enum(['draft', 'published', 'archived']).default('published'),
+  requiresAcceptance: z.boolean().default(false),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
 })
 
 export const campaignListSchema = paged(

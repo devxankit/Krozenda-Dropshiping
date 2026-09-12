@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { ProtectedRoute } from './ProtectedRoute'
 import { Skeleton } from '../components/ui'
 import {
   AUTH_ROUTES,
@@ -9,6 +8,7 @@ import {
   DROPSHIPPING_PARTNER_ROUTES,
   ADMIN_ROUTES,
 } from '../config/routes'
+import { PublicCmsPage } from '../pages/PublicCmsPage'
 
 const AuthRoutes = lazy(() => import('../modules/auth/routes'))
 const UserRoutes = lazy(() => import('../modules/user/routes'))
@@ -28,6 +28,19 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
+        {/* Dedicated Legal & CMS Policy Pages */}
+        <Route path="/p/:slug" element={<PublicCmsPage />} />
+        <Route path="/terms" element={<PublicCmsPage defaultSlug="terms" />} />
+        <Route path="/terms-and-conditions" element={<PublicCmsPage defaultSlug="terms" />} />
+        <Route path="/privacy" element={<PublicCmsPage defaultSlug="privacy-policy" />} />
+        <Route path="/privacy-policy" element={<PublicCmsPage defaultSlug="privacy-policy" />} />
+        <Route path="/vendor-agreement" element={<PublicCmsPage defaultSlug="vendor-agreement" />} />
+        <Route path="/return-policy" element={<PublicCmsPage defaultSlug="return-policy" />} />
+        <Route path="/shipping-policy" element={<PublicCmsPage defaultSlug="shipping-policy" />} />
+        <Route path="/about" element={<PublicCmsPage defaultSlug="about" />} />
+        <Route path="/seller-faq" element={<PublicCmsPage defaultSlug="seller-faq" />} />
+        <Route path="/cod-policy" element={<PublicCmsPage defaultSlug="cod-policy" />} />
+
         <Route path={`${AUTH_ROUTES.ROOT}/*`} element={<AuthRoutes />} />
 
         {/* The admin, seller, and dropshipping partner panels carry their own
@@ -40,9 +53,7 @@ export function AppRoutes() {
           element={<DropshippingPartnerRoutes />}
         />
 
-        <Route element={<ProtectedRoute />}>
-          <Route path={`${USER_ROUTES.ROOT}/*`} element={<UserRoutes />} />
-        </Route>
+        <Route path={`${USER_ROUTES.ROOT}/*`} element={<UserRoutes />} />
 
         <Route path="/" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
         <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />

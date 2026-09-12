@@ -1,70 +1,96 @@
 import React from 'react'
-import { HiArrowLeft, HiShieldCheck } from 'react-icons/hi2'
+import { HiArrowLeft, HiShieldCheck, HiSparkles, HiShoppingBag, HiLockClosed } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { USER_ROUTES } from '../../../../config/routes'
-import { DesktopLeftShowcase } from '../../../../components/common/DesktopLeftShowcase'
 
-export function OtpVerifiedScreen({ onNext = () => {} }) {
+export function OtpVerifiedScreen({ onNext = () => {}, user = null, isNewUser = false }) {
   const navigate = useNavigate()
 
   const handleProceed = () => {
-    onNext()
-    navigate(USER_ROUTES.DASHBOARD)
+    if (onNext) {
+      onNext()
+    } else {
+      navigate(USER_ROUTES.DASHBOARD)
+    }
   }
 
+  const displayName = user?.name || (user?.mobileNumber ? `Customer ${user.mobileNumber.slice(-4)}` : 'Customer')
+  const displayPhone = user?.mobileNumber || user?.phone || ''
+
   return (
-    <div className="w-full min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans">
-      {/* DESKTOP LEFT SHOWCASE */}
-      <DesktopLeftShowcase
-        title="Verification Complete! Ready to Trade"
-        subtitle="Access live wholesale catalogs, real-time inventory updates, and pan-India order execution."
-        tag="AUTHENTICATED"
-      />
+    <div className="w-full h-full min-h-full bg-slate-50 flex flex-col justify-between font-sans">
+      <div className="px-5 py-3.5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 shadow-2xs">
+        <button
+          type="button"
+          onClick={handleProceed}
+          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all active:scale-95"
+          aria-label="Proceed"
+        >
+          <HiArrowLeft className="w-4 h-4" />
+        </button>
 
-      {/* RIGHT SIDE: AUTH STEP FLOW */}
-      <div className="w-full md:w-[480px] lg:w-[540px] shrink-0 min-h-screen bg-white flex flex-col justify-between shadow-2xl relative">
-        
+        <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+          Verified
+        </span>
+      </div>
 
-        <div className="px-6 py-2 flex items-center">
+      <div className="px-5 sm:px-8 py-6 flex-1 flex flex-col justify-center items-center text-center space-y-5">
+        <div className="relative w-28 h-28 flex items-center justify-center">
+          <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
+          <div className="w-20 h-20 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-3xl flex items-center justify-center shadow-xl shadow-emerald-500/30 transform rotate-3 hover:rotate-0 transition-transform">
+            <HiShieldCheck className="w-12 h-12 text-white" />
+          </div>
+        </div>
+
+        <div className="space-y-2 max-w-xs">
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-bold">
+            {isNewUser ? (
+              <>
+                <HiSparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>New Customer Registered</span>
+              </>
+            ) : (
+              <>
+                <HiShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Welcome Back</span>
+              </>
+            )}
+          </div>
+
+          <h2 className="text-2xl font-black text-slate-900">
+            {isNewUser ? 'Welcome to KroZenda!' : `Welcome Back, ${displayName}!`}
+          </h2>
+
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {displayPhone ? (
+              <>
+                Verified mobile:{' '}
+                <strong className="text-slate-800 font-semibold">+91 {displayPhone}</strong>
+              </>
+            ) : (
+              'Your number has been successfully verified.'
+            )}
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm pt-2">
           <button
+            type="button"
             onClick={handleProceed}
-            className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
+            className="w-full bg-blue-700 hover:bg-blue-800 active:scale-[0.98] text-white font-bold h-12 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
           >
-            <HiArrowLeft className="w-5 h-5" />
+            <HiShoppingBag className="w-4 h-4" />
+            <span>Continue to Shopping & Orders</span>
           </button>
         </div>
+      </div>
 
-        <div className="px-6 md:px-10 py-8 flex-1 flex flex-col justify-center items-center text-center space-y-8">
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            <div className="absolute top-2 left-4 w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-            <div className="absolute top-6 right-2 w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <div className="absolute bottom-4 left-2 w-2 h-2 rounded-full bg-emerald-400" />
-            <div className="absolute bottom-2 right-6 w-3 h-3 rounded-full bg-blue-400" />
-
-            <div className="w-28 h-28 bg-gradient-to-tr from-blue-600 to-blue-500 text-white rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/30 transform rotate-3 hover:rotate-0 transition-transform">
-              <HiShieldCheck className="w-16 h-16 text-white" />
-            </div>
-          </div>
-
-          <div className="space-y-2 max-w-xs">
-            <h2 className="text-2xl font-black text-slate-900">OTP Verified!</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Your number has been successfully verified.
-            </p>
-          </div>
-
-          <div className="w-full max-w-sm pt-4">
-            <button
-              onClick={handleProceed}
-              className="w-full bg-blue-700 hover:bg-blue-800 active:scale-[0.98] text-white font-bold py-3.5 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-
-        <div className="pb-8" />
+      <div className="px-4 py-3 bg-white border-t border-slate-100 flex items-center justify-center space-x-2 text-[10.5px] text-slate-400 shrink-0">
+        <HiLockClosed className="w-3.5 h-3.5 text-emerald-600" />
+        <span>100% Verified Customer Session</span>
       </div>
     </div>
   )
 }
+
+export default OtpVerifiedScreen

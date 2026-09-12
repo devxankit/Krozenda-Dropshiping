@@ -178,9 +178,16 @@ export const NAV_TREE = Object.freeze([
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
       },
       {
-        label: 'Categories & brands',
+        label: 'Categories',
         to: ADMIN_ROUTES.CATEGORIES,
         icon: 'categories',
+        permission: ADMIN_PERMISSIONS.CATALOG_CATEGORIES,
+        legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
+      },
+      {
+        label: 'Brands',
+        to: ADMIN_ROUTES.BRANDS,
+        icon: 'brands',
         permission: ADMIN_PERMISSIONS.CATALOG_CATEGORIES,
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
       },
@@ -326,10 +333,11 @@ export const NAV_TREE = Object.freeze([
         badgeTone: 'warning',
       },
       {
-        label: 'Staff & roles',
-        to: ADMIN_ROUTES.STAFF,
-        icon: 'staff',
+        label: 'Roles',
+        to: ADMIN_ROUTES.ROLES,
+        icon: 'roles',
         permission: ADMIN_PERMISSIONS.ROLES_MANAGE,
+        adminOnly: true,
       },
       {
         label: 'User Management',
@@ -393,8 +401,15 @@ export const NAV_TREE = Object.freeze([
         legacyPermission: ADMIN_PERMISSIONS.MARKETING_VIEW,
       },
       {
-        label: 'Banners & CMS',
+        label: 'Banners',
         to: ADMIN_ROUTES.BANNERS,
+        icon: 'banners',
+        permission: ADMIN_PERMISSIONS.MARKETING_BANNERS,
+        legacyPermission: ADMIN_PERMISSIONS.MARKETING_VIEW,
+      },
+      {
+        label: 'CMS pages',
+        to: ADMIN_ROUTES.CMS_PAGES,
         icon: 'cms',
         permission: ADMIN_PERMISSIONS.MARKETING_BANNERS,
         legacyPermission: ADMIN_PERMISSIONS.MARKETING_VIEW,
@@ -713,5 +728,21 @@ export const PRODUCT_TYPE_LABELS = Object.freeze({
   [PRODUCT_TYPE.WHOLESALE]: 'Wholesale',
   [PRODUCT_TYPE.PACK_SIZE]: 'Pack size',
 })
+
+// Temporary static catalog for the Banner "linked product" dropdown — there's
+// no live product API to query yet. Swap for a real product search once the
+// catalog module is wired up; the id here is what gets stored as productId.
+export const STATIC_BANNER_PRODUCTS = Object.freeze([
+  { id: 'prd-1', name: 'Nirvaan Triply Stainless Steel Kadai, 1.2 L' },
+  { id: 'prd-2', name: 'Aarohi Cotton Table Runner, 180 cm' },
+  { id: 'prd-3', name: 'Vayu 1.5 Ton 3-Star Inverter AC' },
+  { id: 'prd-4', name: 'Surya Cold-Pressed Groundnut Oil, 5 L' },
+  { id: 'prd-5', name: 'Meher Handloom Cotton Kurta' },
+  { id: 'prd-6', name: 'Surya Turmeric Powder, 500 g' },
+  { id: 'prd-7', name: 'Vayu Ceiling Fan 1200 mm, BLDC' },
+  { id: 'prd-8', name: 'Aarohi Jute Storage Basket, Large' },
+  { id: 'prd-9', name: 'Nirvaan Silicone Spatula Set of 3' },
+  { id: 'prd-10', name: 'Kritika Bulk Cotton Fabric, 100 m roll' },
+])
 
 export const DEFAULT_ROWS_PER_PAGE = 25

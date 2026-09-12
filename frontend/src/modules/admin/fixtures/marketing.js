@@ -60,19 +60,6 @@ export function offerListFixture() {
   }
 }
 
-export function bannerListFixture() {
-  return {
-    items: [
-      { id: 'bnr-1', title: 'Festive season — up to 40% off', placement: 'Home hero', audience: 'All buyers', startsOn: '20 Aug 2026', endsOn: '30 Sep 2026', priority: 1, status: 'live', clicks: 48210, impressions: 1284000 },
-      { id: 'bnr-2', title: 'B2B pricing — register your business', placement: 'Home strip', audience: 'Retail buyers only', startsOn: '1 Aug 2026', endsOn: '31 Dec 2026', priority: 2, status: 'live', clicks: 6420, impressions: 842000 },
-      { id: 'bnr-3', title: 'Free shipping over ₹499', placement: 'Cart banner', audience: 'Cart under ₹499', startsOn: '1 Jan 2026', endsOn: '31 Mar 2027', priority: 1, status: 'live', clicks: 18640, impressions: 412000 },
-      { id: 'bnr-4', title: 'Diwali sale — mark your calendar', placement: 'Home hero', audience: 'All buyers', startsOn: '10 Oct 2026', endsOn: '25 Oct 2026', priority: 1, status: 'scheduled', clicks: 0, impressions: 0 },
-      { id: 'bnr-5', title: 'Monsoon essentials', placement: 'Category header', audience: 'All buyers', startsOn: '1 Jul 2026', endsOn: '15 Aug 2026', priority: 3, status: 'ended', clicks: 21400, impressions: 684000 },
-      { id: 'bnr-6', title: 'Refer a business, earn ₹1,000', placement: 'Profile banner', audience: 'B2B buyers', startsOn: '', endsOn: '', priority: 4, status: 'draft', clicks: 0, impressions: 0 },
-    ],
-  }
-}
-
 export function cmsPageListFixture() {
   return {
     items: [

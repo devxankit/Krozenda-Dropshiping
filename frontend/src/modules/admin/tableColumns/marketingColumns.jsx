@@ -326,69 +326,7 @@ export const REVIEW_TABS = Object.freeze([
   { id: 'rejected', label: 'Rejected' },
 ])
 
-const BANNER_TONE = Object.freeze({
-  live: 'success',
-  scheduled: 'brand',
-  ended: 'neutral',
-  draft: 'neutral',
-})
 const CMS_TONE = Object.freeze({ published: 'success', draft: 'warning', archived: 'neutral' })
-
-export const BANNER_COLUMNS = Object.freeze([
-  {
-    key: 'title',
-    header: 'Banner',
-    render: (row) => (
-      <span className="block min-w-0">
-        <span className="block truncate text-xs font-semibold text-slate-900">{row.title}</span>
-        <span className="block text-2xs text-ink-faint">
-          {row.placement} · {row.audience}
-        </span>
-      </span>
-    ),
-  },
-  {
-    key: 'startsOn',
-    header: 'Runs',
-    width: '11rem',
-    render: (row) =>
-      row.startsOn ? (
-        <span className="text-2xs text-ink-muted">
-          {row.startsOn} → {row.endsOn}
-        </span>
-      ) : (
-        <span className="text-2xs text-ink-faint">not scheduled</span>
-      ),
-  },
-  { key: 'priority', header: 'Priority', width: '6rem', align: 'right', cellClassName: 'tabular' },
-  {
-    key: 'clicks',
-    header: 'Clicks / impressions',
-    width: '11rem',
-    align: 'right',
-    render: (row) =>
-      row.impressions ? (
-        <span className="tabular text-xs text-ink-muted">
-          {row.clicks.toLocaleString('en-IN')} / {row.impressions.toLocaleString('en-IN')}
-          <span className="ml-1.5 font-semibold text-slate-900">
-            {((row.clicks / row.impressions) * 100).toFixed(1)}%
-          </span>
-        </span>
-      ) : (
-        <span className="text-2xs text-ink-faint">—</span>
-      ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '7.5rem',
-    render: (row) => (
-      <Badge tone={BANNER_TONE[row.status]} size="sm" dot>
-        {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-      </Badge>
-    ),
-  },
-])
 
 export const CMS_COLUMNS = Object.freeze([
   {

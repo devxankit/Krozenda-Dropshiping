@@ -20,6 +20,8 @@ export const USER_ROUTES = Object.freeze({
 
 export const SELLER_ROUTES = Object.freeze({
   ROOT: '/seller',
+  LOGIN: '/seller/login',
+  REGISTER: '/seller/register',
   DASHBOARD: '/seller/dashboard',
   KYC_DOCUMENTS: '/seller/kyc-documents',
 })

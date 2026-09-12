@@ -1,231 +1,113 @@
 const Category = require('../Models/Category');
+const Product = require('../Models/Product');
 const { getImageUrl } = require('../utils/imageHelper');
 
-function slugify(text) {
-  return (text || '')
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
+function toBool(value, fallback) {
+  if (value === undefined) return fallback;
+  return value === true || value === 'true';
 }
 
 function serializeCategory(cat) {
-  const parentId = cat.parent ? (cat.parent._id ? cat.parent._id.toString() : cat.parent.toString()) : null;
-  const parentName = cat.parent && cat.parent.name ? cat.parent.name : null;
-
   return {
     id: cat._id.toString(),
     _id: cat._id.toString(),
     name: cat.name,
-    slug: cat.slug || slugify(cat.name),
     image: getImageUrl(cat.image),
-    parent: parentId,
-    parentId,
-    parentName,
-    depth: typeof cat.depth === 'number' ? cat.depth : (parentId ? 1 : 0),
-    commissionRate: cat.commissionRate == null ? null : Number(cat.commissionRate),
-    description: cat.description || '',
-    status: cat.status || 'live',
-    productCount: cat.productCount || 0,
-    order: cat.order || 0,
+    isActive: cat.isActive !== false,
+    isTopCategory: cat.isTopCategory === true,
     createdAt: cat.createdAt,
     updatedAt: cat.updatedAt,
   };
 }
 
-async function seedDefaultCategoriesIfEmpty() {
-  const count = await Category.countDocuments({ isDeleted: false });
-  if (count > 0) return;
-
-  const defaults = [
-    {
-      name: 'Electronics',
-      slug: 'electronics',
-      depth: 0,
-      commissionRate: 8,
-      status: 'live',
-      children: [
-        { name: 'Audio & Headphones', slug: 'audio-headphones', commissionRate: 10 },
-        { name: 'Smartphones & Tablets', slug: 'smartphones-tablets', commissionRate: null },
-        { name: 'Wearables & Smartwatches', slug: 'wearables-smartwatches', commissionRate: 12 },
-      ],
-    },
-    {
-      name: 'Fashion & Apparel',
-      slug: 'fashion-apparel',
-      depth: 0,
-      commissionRate: 15,
-      status: 'live',
-      children: [
-        { name: "Men's Wear", slug: 'mens-wear', commissionRate: null },
-        { name: "Women's Western & Ethnic", slug: 'womens-western-ethnic', commissionRate: null },
-        { name: 'Footwear & Sneakers', slug: 'footwear-sneakers', commissionRate: 18 },
-      ],
-    },
-    {
-      name: 'Home & Kitchen',
-      slug: 'home-kitchen',
-      depth: 0,
-      commissionRate: 12,
-      status: 'live',
-      children: [
-        { name: 'Kitchen Appliances', slug: 'kitchen-appliances', commissionRate: null },
-        { name: 'Home Decor & Lighting', slug: 'home-decor-lighting', commissionRate: 14 },
-      ],
-    },
-    {
-      name: 'Health & Personal Care',
-      slug: 'health-personal-care',
-      depth: 0,
-      commissionRate: 10,
-      status: 'live',
-      children: [
-        { name: 'Skincare & Cosmetics', slug: 'skincare-cosmetics', commissionRate: null },
-        { name: 'Personal Grooming', slug: 'personal-grooming', commissionRate: null },
-      ],
-    },
-  ];
-
-  for (const rootData of defaults) {
-    const root = await Category.create({
-      name: rootData.name,
-      slug: rootData.slug,
-      depth: 0,
-      commissionRate: rootData.commissionRate,
-      status: rootData.status,
-      parent: null,
-    });
-
-    for (const childData of rootData.children) {
-      await Category.create({
-        name: childData.name,
-        slug: childData.slug,
-        depth: 1,
-        commissionRate: childData.commissionRate,
-        status: 'live',
-        parent: root._id,
-      });
-    }
-  }
-}
-
-async function getCategoryTree(req, res) {
-  await seedDefaultCategoriesIfEmpty();
-
-  const allCategories = await Category.find({ isDeleted: false })
-    .populate('parent', 'name _id')
-    .sort({ order: 1, createdAt: 1 })
+// Unauthenticated — used by public-facing pickers (e.g. the vendor
+// registration wizard's category dropdown) and the storefront categories
+// page, which needs real per-category product counts and deal ranges
+// instead of hand-authored copy.
+async function listPublicCategories(req, res) {
+  const categories = await Category.find({ isActive: true })
+    .sort({ isTopCategory: -1, name: 1 })
+    .select('name image isTopCategory')
     .lean();
 
-  const roots = allCategories.filter((c) => !c.parent);
-  const children = allCategories.filter((c) => Boolean(c.parent));
+  const productStats = await Product.aggregate([
+    { $match: { isActive: true } },
+    {
+      $group: {
+        _id: '$category',
+        productCount: { $sum: 1 },
+        maxDiscountPercent: { $max: '$discountPercent' },
+      },
+    },
+  ]);
+  const statsByCategory = new Map(productStats.map((stat) => [stat._id.toString(), stat]));
 
-  // Build tree order: parent followed by its children
-  const orderedNodes = [];
-  roots.forEach((root) => {
-    orderedNodes.push(serializeCategory(root));
-    const subs = children.filter((child) => {
-      const pId = child.parent?._id ? child.parent._id.toString() : child.parent?.toString();
-      return pId === root._id.toString();
-    });
-    subs.forEach((sub) => {
-      orderedNodes.push(serializeCategory(sub));
-    });
+  const items = categories.map((cat) => {
+    const stat = statsByCategory.get(cat._id.toString());
+    return {
+      ...serializeCategory(cat),
+      productCount: stat?.productCount || 0,
+      maxDiscountPercent: stat?.maxDiscountPercent || 0,
+    };
   });
 
-  // Any orphaned subcategories (whose parent was deleted or not found)
-  const orphanSubs = children.filter(
-    (child) =>
-      !orderedNodes.some((node) => node.id === child._id.toString())
-  );
-  orphanSubs.forEach((child) => orderedNodes.push(serializeCategory(child)));
+  res.json({ success: true, data: { items } });
+}
+
+async function listCategories(req, res) {
+  const categories = await Category.find().sort({ createdAt: -1 }).lean();
+  const items = categories.map(serializeCategory);
 
   const stats = {
-    totalCategories: orderedNodes.length,
-    rootCategories: roots.length,
-    subCategories: children.length,
-    liveCategories: orderedNodes.filter((c) => c.status === 'live').length,
+    total: items.length,
+    active: items.filter((c) => c.isActive).length,
+    inactive: items.filter((c) => !c.isActive).length,
+    top: items.filter((c) => c.isTopCategory).length,
   };
 
-  res.json({
-    success: true,
-    data: {
-      nodes: orderedNodes,
-      stats,
-    },
-  });
+  res.json({ success: true, data: { items, stats } });
 }
 
 async function createCategory(req, res) {
-  const { name, parent, depth, commissionRate, description, status } = req.body;
+  const { name, isActive, isTopCategory } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Category name is required' });
   }
 
-  const parsedDepth = parent ? 1 : Number(depth || 0);
-  const parsedCommission =
-    commissionRate === '' || commissionRate == null ? null : Number(commissionRate);
-
   const category = await Category.create({
     name: name.trim(),
-    slug: slugify(name),
     image: req.file?.url || null,
-    parent: parent || null,
-    depth: parsedDepth,
-    commissionRate: parsedCommission,
-    description: description ? description.trim() : '',
-    status: status || 'live',
-    createdBy: req.admin?._id || null,
+    isActive: toBool(isActive, true),
+    isTopCategory: toBool(isTopCategory, false),
   });
-
-  const populated = await Category.findById(category._id).populate('parent', 'name _id');
 
   res.status(201).json({
     success: true,
     message: 'Category created successfully',
-    data: serializeCategory(populated),
+    data: serializeCategory(category),
   });
 }
 
 async function updateCategory(req, res) {
   const { id } = req.params;
-  const { name, parent, depth, commissionRate, description, status } = req.body;
+  const { name, isActive, isTopCategory } = req.body;
 
-  const category = await Category.findOne({ _id: id, isDeleted: false });
+  const category = await Category.findById(id);
   if (!category) {
     return res.status(404).json({ success: false, message: 'Category not found' });
   }
 
-  if (name) {
+  if (name && name.trim()) {
     category.name = name.trim();
-    category.slug = slugify(name);
   }
 
-  if (parent !== undefined) {
-    // Cannot set self as parent
-    if (parent === id) {
-      return res.status(400).json({ success: false, message: 'A category cannot be its own parent' });
-    }
-    category.parent = parent || null;
-    category.depth = parent ? 1 : 0;
-  } else if (depth !== undefined) {
-    category.depth = Number(depth);
+  if (isActive !== undefined) {
+    category.isActive = toBool(isActive, category.isActive);
   }
 
-  if (commissionRate !== undefined) {
-    category.commissionRate =
-      commissionRate === '' || commissionRate == null ? null : Number(commissionRate);
-  }
-
-  if (description !== undefined) {
-    category.description = description ? description.trim() : '';
-  }
-
-  if (status) {
-    category.status = status;
+  if (isTopCategory !== undefined) {
+    category.isTopCategory = toBool(isTopCategory, category.isTopCategory);
   }
 
   if (req.file?.url) {
@@ -233,34 +115,53 @@ async function updateCategory(req, res) {
   }
 
   await category.save();
-  const populated = await Category.findById(category._id).populate('parent', 'name _id');
 
   res.json({
     success: true,
     message: 'Category updated successfully',
-    data: serializeCategory(populated),
+    data: serializeCategory(category),
   });
 }
 
 async function updateCategoryStatus(req, res) {
   const { id } = req.params;
-  const { status } = req.body;
+  const { isActive } = req.body;
 
-  if (!status) {
-    return res.status(400).json({ success: false, message: 'Status is required' });
+  if (isActive === undefined) {
+    return res.status(400).json({ success: false, message: 'isActive is required' });
   }
 
-  const category = await Category.findOne({ _id: id, isDeleted: false });
+  const category = await Category.findById(id);
   if (!category) {
     return res.status(404).json({ success: false, message: 'Category not found' });
   }
 
-  category.status = status;
+  category.isActive = toBool(isActive, category.isActive);
   await category.save();
 
   res.json({
     success: true,
-    message: `Category status set to ${status}`,
+    message: `Category ${category.isActive ? 'activated' : 'deactivated'}`,
+    data: serializeCategory(category),
+  });
+}
+
+async function updateCategoryTopStatus(req, res) {
+  const { id } = req.params;
+  const { isTopCategory } = req.body;
+
+  const category = await Category.findById(id);
+  if (!category) {
+    return res.status(404).json({ success: false, message: 'Category not found' });
+  }
+
+  category.isTopCategory =
+    isTopCategory !== undefined ? toBool(isTopCategory, false) : !category.isTopCategory;
+  await category.save();
+
+  res.json({
+    success: true,
+    message: `Category ${category.isTopCategory ? 'marked as top category' : 'removed from top categories'}`,
     data: serializeCategory(category),
   });
 }
@@ -268,41 +169,26 @@ async function updateCategoryStatus(req, res) {
 async function deleteCategory(req, res) {
   const { id } = req.params;
 
-  const category = await Category.findOne({ _id: id, isDeleted: false });
+  const category = await Category.findById(id);
   if (!category) {
     return res.status(404).json({ success: false, message: 'Category not found' });
   }
 
-  // Check for child subcategories
-  const childCount = await Category.countDocuments({ parent: id, isDeleted: false });
-  if (childCount > 0) {
-    return res.status(400).json({
-      success: false,
-      message: `Cannot delete "${category.name}" because it contains ${childCount} sub-category(ies). Delete or move them first.`,
-    });
-  }
-
-  if (category.productCount > 0) {
-    return res.status(400).json({
-      success: false,
-      message: `Cannot delete "${category.name}" because it has ${category.productCount} active products.`,
-    });
-  }
-
-  category.isDeleted = true;
-  await category.save();
+  await category.deleteOne();
 
   res.json({
     success: true,
-    message: 'Category removed successfully',
+    message: 'Category deleted successfully',
     data: { id: category._id.toString() },
   });
 }
 
 module.exports = {
-  getCategoryTree,
+  listCategories,
+  listPublicCategories,
   createCategory,
   updateCategory,
   updateCategoryStatus,
+  updateCategoryTopStatus,
   deleteCategory,
 };

@@ -11,28 +11,10 @@ import {
   fetchCategoryTree,
   fetchImportRun,
   fetchInventory,
-  fetchProductDetail,
   fetchProducts,
   fetchSupplierSync,
 } from '../services/catalogService'
 import { useListController } from './useListController'
-
-export function useProductListController() {
-  return useListController({
-    queryKey: ['admin', 'catalog', 'products'],
-    queryFn: fetchProducts,
-    defaultSort: { key: 'updatedAt', direction: 'desc' },
-  })
-}
-
-export function useProductDetailController(productId) {
-  const query = useQuery({
-    queryKey: ['admin', 'catalog', 'products', productId],
-    queryFn: () => fetchProductDetail(productId),
-    enabled: Boolean(productId),
-  })
-  return { product: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
-}
 
 export function useInventoryController() {
   return useListController({
@@ -47,6 +29,7 @@ function useCatalogResource(key, queryFn) {
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
 }
 
+export const useProductListController = () => useCatalogResource('products', fetchProducts)
 export const useApprovalQueueController = () => useCatalogResource('approvals', fetchApprovalQueue)
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
@@ -64,7 +47,6 @@ export const useProductWriteController = ({ onSaved } = {}) => ({
     mutationFn: service.createProduct,
     invalidate: CATALOG,
     success: (product) => `${product.name} created`,
-    describe: (product) => (product.status === 'draft' ? 'Saved as a draft.' : 'Submitted for approval.'),
     onDone: onSaved,
   }),
   update: useAdminMutation({
@@ -74,14 +56,26 @@ export const useProductWriteController = ({ onSaved } = {}) => ({
     onDone: onSaved,
   }),
   setStatus: useAdminMutation({
-    mutationFn: service.setProductStatus,
+    mutationFn: service.updateProductStatus,
     invalidate: CATALOG,
-    success: (product) => `${product.name} is now ${product.status}`,
+    success: (product) => `${product.name} ${product.isActive ? 'activated' : 'deactivated'}`,
+  }),
+  setFlashSaleStatus: useAdminMutation({
+    mutationFn: service.updateProductFlashSaleStatus,
+    invalidate: CATALOG,
+    success: (product) =>
+      `${product.name} ${product.isFlashsale ? 'marked for Flash Sale 🔥' : 'removed from Flash Sale'}`,
+  }),
+  setTrendingStatus: useAdminMutation({
+    mutationFn: service.updateProductTrendingStatus,
+    invalidate: CATALOG,
+    success: (product) =>
+      `${product.name} ${product.isTrending ? 'marked as Trending 📈' : 'removed from Trending'}`,
   }),
   remove: useAdminMutation({
     mutationFn: service.deleteProduct,
     invalidate: CATALOG,
-    success: 'Listing removed',
+    success: 'Product removed',
   }),
 })
 
@@ -116,7 +110,13 @@ export const useCategoryWriteController = ({ onSaved } = {}) => ({
   setStatus: useAdminMutation({
     mutationFn: service.updateCategoryStatus,
     invalidate: CATALOG,
-    success: (node) => `${node.name} status updated`,
+    success: (node) => `${node.name} ${node.isActive ? 'activated' : 'deactivated'}`,
+  }),
+  setTopStatus: useAdminMutation({
+    mutationFn: service.updateCategoryTopStatus,
+    invalidate: CATALOG,
+    success: (node) =>
+      `${node.name} ${node.isTopCategory ? 'marked as top category' : 'removed from top categories'}`,
   }),
   remove: useAdminMutation({
     mutationFn: service.deleteCategory,
@@ -142,7 +142,7 @@ export const useBrandWriteController = ({ onSaved } = {}) => ({
   setStatus: useAdminMutation({
     mutationFn: service.updateBrandStatus,
     invalidate: CATALOG,
-    success: (brand) => `${brand.name} status updated`,
+    success: (brand) => `${brand.name} ${brand.isActive ? 'activated' : 'deactivated'}`,
   }),
   remove: useAdminMutation({
     mutationFn: service.deleteBrand,

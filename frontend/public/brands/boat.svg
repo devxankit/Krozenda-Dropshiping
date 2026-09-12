@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 46" width="140" height="46">
+  <g transform="translate(8, 6) scale(1.35)">
+    <path fill="#E21B24" d="M12.081 0 5.833 17.686 17.15 13.93Z"/>
+    <path fill="#1A1A1A" d="m1.881 18.223 3.08 5.777H19.14l2.98-5.777z"/>
+  </g>
+  <text x="44" y="30" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="24" fill="#111827" letter-spacing="-0.5">
+    bo<tspan fill="#E21B24">A</tspan>t
+  </text>
+</svg>

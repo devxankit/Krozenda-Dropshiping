@@ -20,6 +20,7 @@ export function FormDrawer({
   error,
   onSubmit,
   width = 'md',
+  side = 'right',
   children,
 }) {
   const formId = useId()
@@ -31,6 +32,7 @@ export function FormDrawer({
       title={title}
       description={description}
       width={width}
+      side={side}
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="quiet" size="control" onClick={onClose} disabled={isSubmitting}>

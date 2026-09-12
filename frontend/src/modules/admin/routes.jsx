@@ -12,10 +12,9 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ShowcasePage } from './pages/ShowcasePage'
 import { ProductsPage } from './pages/catalog/ProductsPage'
-import { ProductDetailPage } from './pages/catalog/ProductDetailPage'
-import { ProductNewPage } from './pages/catalog/ProductNewPage'
 import { ApprovalsPage } from './pages/catalog/ApprovalsPage'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
+import { BrandsPage } from './pages/catalog/BrandsPage'
 import { AttributesPage } from './pages/catalog/AttributesPage'
 import { InventoryPage } from './pages/catalog/InventoryPage'
 import { ImportPage } from './pages/catalog/ImportPage'
@@ -42,6 +41,7 @@ import { KycQueuePage } from './pages/people/KycQueuePage'
 import { KycReviewPage } from './pages/people/KycReviewPage'
 import { PolicyAcceptancesPage } from './pages/people/PolicyAcceptancesPage'
 import { StaffPage } from './pages/people/StaffPage'
+import { RolesManagementPage } from './pages/people/RolesManagementPage'
 import { UserManagementPage } from './pages/people/UserManagementPage'
 import { RoleDetailPage } from './pages/people/RoleDetailPage'
 import {
@@ -63,7 +63,8 @@ import {
 } from './pages/finance/StatementPages'
 import { TaxCentrePage } from './pages/finance/TaxCentrePage'
 import { CouponsPage, CampaignsPage, ReviewsPage } from './pages/marketing/MarketingListPages'
-import { OffersPage, BannersPage, TemplatesPage } from './pages/marketing/ContentPages'
+import { OffersPage, CmsPagesPage, TemplatesPage } from './pages/marketing/ContentPages'
+import { BannersPage } from './pages/marketing/BannersPage'
 import { ReportsPage, ReportRunnerPage } from './pages/reports/ReportPages'
 import { BusinessRulesPage } from './pages/system/BusinessRulesPage'
 import {
@@ -201,15 +202,17 @@ export default function AdminRoutes() {
               }
             />
 
-            {/* Catalog. PRODUCT_NEW is declared before PRODUCT_DETAIL so
-                "/products/new" is not swallowed by the ":productId" pattern. */}
+            {/* Catalog. Product create/edit now happens in a modal on the list
+                screen itself; PRODUCT_NEW/PRODUCT_DETAIL stay registered
+                (redirecting back to the list) purely so links built elsewhere
+                with adminPath.productDetail(...) don't 404. */}
             <Route path={rel(ADMIN_ROUTES.PRODUCTS)} element={<ProductsPage />} />
-            <Route path={rel(ADMIN_ROUTES.PRODUCT_NEW)} element={<ProductNewPage />} />
-            <Route path={rel(ADMIN_ROUTES.PRODUCT_DETAIL)} element={<ProductDetailPage />} />
+            <Route path={rel(ADMIN_ROUTES.PRODUCT_NEW)} element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />} />
+            <Route path={rel(ADMIN_ROUTES.PRODUCT_DETAIL)} element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />} />
             <Route path={rel(ADMIN_ROUTES.CATALOG_APPROVALS)} element={<ApprovalsPage />} />
             <Route path={rel(ADMIN_ROUTES.CATALOG_IMPORT)} element={<ImportPage />} />
             <Route path={rel(ADMIN_ROUTES.CATEGORIES)} element={<CategoriesPage />} />
-            <Route path={rel(ADMIN_ROUTES.BRANDS)} element={<CategoriesPage />} />
+            <Route path={rel(ADMIN_ROUTES.BRANDS)} element={<BrandsPage />} />
             <Route path={rel(ADMIN_ROUTES.ATTRIBUTES)} element={<AttributesPage />} />
             <Route path={rel(ADMIN_ROUTES.INVENTORY)} element={<InventoryPage />} />
             <Route path={rel(ADMIN_ROUTES.SUPPLIER_SYNC)} element={<SupplierSyncPage />} />
@@ -251,7 +254,7 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.POLICY_ACCEPTANCES)} element={<PolicyAcceptancesPage />} />
             <Route path={rel(ADMIN_ROUTES.STAFF)} element={<StaffPage />} />
             <Route path={rel(ADMIN_ROUTES.USER_MANAGEMENT)} element={<UserManagementPage />} />
-            <Route path={rel(ADMIN_ROUTES.ROLES)} element={<StaffPage />} />
+            <Route path={rel(ADMIN_ROUTES.ROLES)} element={<RolesManagementPage />} />
             <Route path={rel(ADMIN_ROUTES.ROLE_DETAIL)} element={<RoleDetailPage />} />
 
             {/* Finance & accounting */}
@@ -284,7 +287,7 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.COUPONS)} element={<CouponsPage />} />
             <Route path={rel(ADMIN_ROUTES.OFFERS)} element={<OffersPage />} />
             <Route path={rel(ADMIN_ROUTES.BANNERS)} element={<BannersPage />} />
-            <Route path={rel(ADMIN_ROUTES.CMS_PAGES)} element={<BannersPage />} />
+            <Route path={rel(ADMIN_ROUTES.CMS_PAGES)} element={<CmsPagesPage />} />
             <Route path={rel(ADMIN_ROUTES.CAMPAIGNS)} element={<CampaignsPage />} />
             <Route path={rel(ADMIN_ROUTES.TEMPLATES)} element={<TemplatesPage />} />
             <Route path={rel(ADMIN_ROUTES.REVIEWS)} element={<ReviewsPage />} />

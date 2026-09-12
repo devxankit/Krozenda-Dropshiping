@@ -9,63 +9,20 @@ import {
   HiChevronRight,
 } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { useNotificationStore } from '../../../../lib/notificationStore'
+
+const TYPE_ICON = {
+  order: { Icon: HiTruck, iconColor: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+  offer: { Icon: HiTag, iconColor: 'bg-amber-50 text-amber-600 border border-amber-200' },
+  system: { Icon: HiSparkles, iconColor: 'bg-blue-50 text-blue-600 border border-blue-200' },
+}
 
 export function NotificationCenterScreen({ onBack = () => {} }) {
   const [activeTab, setActiveTab] = useState('All')
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'order',
-      title: 'Order Delivered',
-      message: 'Your order #KRO1234567890 (Samsung S23 5G) has been delivered successfully.',
-      time: '10 mins ago',
-      isUnread: true,
-      actionLabel: 'View Order',
-      Icon: HiTruck,
-      iconColor: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
-    },
-    {
-      id: 2,
-      type: 'offer',
-      title: 'Flash Sale Live 🔥',
-      message: 'Get up to 60% OFF on B2B electronics bulk orders. Code: KROZ10.',
-      time: '2 hours ago',
-      isUnread: true,
-      actionLabel: 'View Deals',
-      Icon: HiTag,
-      iconColor: 'bg-amber-50 text-amber-600 border border-amber-200',
-    },
-    {
-      id: 3,
-      type: 'system',
-      title: 'Cashback Credited',
-      message: '₹250 promo cashback credited to your KroZenda Wallet.',
-      time: 'Yesterday',
-      isUnread: false,
-      actionLabel: 'Check Wallet',
-      Icon: HiSparkles,
-      iconColor: 'bg-blue-50 text-blue-600 border border-blue-200',
-    },
-    {
-      id: 4,
-      type: 'order',
-      title: 'Shipment Dispatched',
-      message: 'Package containing boAt Airdopes 141 has been dispatched via Delhivery Air.',
-      time: '2 days ago',
-      isUnread: false,
-      actionLabel: 'Track Package',
-      Icon: HiTruck,
-      iconColor: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
-    },
-  ])
-
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, isUnread: false })))
-  }
-
-  const deleteNotification = (id) => {
-    setNotifications((prev) => prev.filter((item) => item.id !== id))
-  }
+  const notifications = useNotificationStore((state) => state.notifications)
+  const markAsRead = useNotificationStore((state) => state.markAsRead)
+  const markAllRead = useNotificationStore((state) => state.markAllRead)
+  const deleteNotification = useNotificationStore((state) => state.remove)
 
   const filteredNotifications = notifications.filter((item) => {
     if (activeTab === 'Orders') return item.type === 'order'
@@ -134,16 +91,17 @@ export function NotificationCenterScreen({ onBack = () => {} }) {
         ) : (
           <div className="space-y-3">
             {filteredNotifications.map((item) => {
-              const NotificationIcon = item.Icon
+              const { Icon: NotificationIcon, iconColor } = TYPE_ICON[item.type] || TYPE_ICON.system
               return (
                 <div
                   key={item.id}
-                  className={`bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start justify-between gap-3 ${
+                  onClick={() => item.isUnread && markAsRead(item.id)}
+                  className={`bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start justify-between gap-3 cursor-pointer ${
                     item.isUnread ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200/80'
                   }`}
                 >
                   <div className="flex items-start space-x-3 min-w-0 flex-1">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.iconColor}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconColor}`}>
                       <NotificationIcon className="w-4 h-4" />
                     </div>
 
@@ -161,7 +119,10 @@ export function NotificationCenterScreen({ onBack = () => {} }) {
                   </div>
 
                   <button
-                    onClick={() => deleteNotification(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteNotification(item.id)
+                    }}
                     className="p-1 text-slate-400 hover:text-red-600 rounded-lg shrink-0 mt-0.5"
                   >
                     <HiTrash className="w-3.5 h-3.5" />

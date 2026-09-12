@@ -10,10 +10,10 @@ const DEFAULT_DEMO_PERMISSIONS = ['seller.access', 'dropshipping_partner.access'
 const DEFAULT_DEMO_ROLES = ['seller', 'dropshipping_partner', 'admin', 'user']
 
 export const useAuthStore = create((set) => ({
-  user: savedUser || { name: 'Ramesh Sharma', email: 'seller@krozenda.com', storeName: 'Arya Manufacturing' },
-  roles: savedGrants?.roles ?? DEFAULT_DEMO_ROLES,
+  user: savedUser || (savedToken ? { name: 'Ramesh Sharma', email: 'seller@krozenda.com', storeName: 'Arya Manufacturing' } : null),
+  roles: savedGrants?.roles ?? (savedToken ? DEFAULT_DEMO_ROLES : []),
   capabilities: savedGrants?.capabilities ?? [],
-  permissions: savedGrants?.permissions ?? DEFAULT_DEMO_PERMISSIONS,
+  permissions: savedGrants?.permissions ?? (savedToken ? DEFAULT_DEMO_PERMISSIONS : []),
   isAuthenticated: Boolean(savedToken),
 
   setSession: ({

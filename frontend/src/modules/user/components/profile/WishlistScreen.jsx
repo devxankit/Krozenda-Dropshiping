@@ -1,21 +1,24 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { HiArrowLeft, HiHeart, HiOutlineShoppingBag, HiTrash } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { USER_ROUTES } from '../../../../config/routes'
+import { useWishlistStore } from '../../../../lib/wishlistStore'
+import { useCartStore } from '../../../../lib/cartStore'
 
 export function WishlistScreen({ onBack = () => {} }) {
   const navigate = useNavigate()
-  const [wishlistItems, setWishlistItems] = useState([
-    { id: 1, name: 'iPhone 14 128GB', subtitle: 'Blue', price: 59999, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/iphone_14.png' },
-    { id: 2, name: 'boAt Airdopes 141', subtitle: 'Wireless Earbuds', price: 1299, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/boat_airdopes.png' },
-    { id: 3, name: 'Samsung Galaxy S23 5G', subtitle: 'Phantom Black', price: 49999, stock: 'In Stock', stockColor: 'text-emerald-600', image: '/images/samsung_s23.png' },
-    { id: 4, name: 'Portronics Power Bank', subtitle: '10000mAh', price: 1199, stock: 'Only 2 left', stockColor: 'text-amber-600', image: '/images/iphone_14.png' },
-  ])
+  const wishlistItems = useWishlistStore((state) => state.items)
+  const removeFromWishlist = useWishlistStore((state) => state.removeItem)
+  const clearWishlist = useWishlistStore((state) => state.clear)
+  const addToCart = useCartStore((state) => state.addItem)
 
-  const removeFromWishlist = (id) => {
-    setWishlistItems((prev) => prev.filter((item) => item.id !== id))
+  const moveToCart = (item, e) => {
+    e.stopPropagation()
+    addToCart(item)
+    removeFromWishlist(item.id)
+    navigate(USER_ROUTES.ROOT + '/cart')
   }
 
   return (
@@ -33,7 +36,7 @@ export function WishlistScreen({ onBack = () => {} }) {
 
         {wishlistItems.length > 0 && (
           <button
-            onClick={() => setWishlistItems([])}
+            onClick={clearWishlist}
             className="text-xs font-bold text-red-600 hover:text-red-700 transition-colors flex items-center space-x-1"
           >
             <HiTrash className="w-4 h-4" />
@@ -86,7 +89,9 @@ export function WishlistScreen({ onBack = () => {} }) {
                 </div>
 
                 <div className="space-y-1">
-                  <span className={`text-[10px] font-bold ${item.stockColor} block`}>{item.stock}</span>
+                  <span className={`text-[10px] font-bold block ${item.stockColor || 'text-emerald-600'}`}>
+                    {item.stock || 'In Stock'}
+                  </span>
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                     {item.name}
                   </h3>
@@ -97,10 +102,7 @@ export function WishlistScreen({ onBack = () => {} }) {
                       ₹{item.price.toLocaleString('en-IN')}
                     </span>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(USER_ROUTES.ROOT + '/cart')
-                      }}
+                      onClick={(e) => moveToCart(item, e)}
                       className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
                     >
                       <HiOutlineShoppingBag className="w-4 h-4" />

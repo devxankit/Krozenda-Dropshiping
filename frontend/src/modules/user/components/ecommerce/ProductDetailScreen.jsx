@@ -20,6 +20,8 @@ import {
 } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { useCartStore } from '../../../../lib/cartStore'
+import { useWishlistStore } from '../../../../lib/wishlistStore'
 
 export function ProductDetailScreen({
   product = {
@@ -38,7 +40,6 @@ export function ProductDetailScreen({
 }) {
   const [selectedStorage, setSelectedStorage] = useState('128GB')
   const [selectedColor, setSelectedColor] = useState('Phantom Black')
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [pincode, setPincode] = useState('380051')
   const [pincodeChecked, setPincodeChecked] = useState(true)
@@ -49,6 +50,39 @@ export function ProductDetailScreen({
 
   const storageOptions = ['128GB', '256GB', '512GB']
   const colorOptions = ['Phantom Black', 'Cream', 'Green']
+
+  const productId = product.id || product._id || product.name
+  const isWishlisted = useWishlistStore((state) => state.isWishlisted(productId))
+  const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
+  const addToCart = useCartStore((state) => state.addItem)
+
+  const handleToggleWishlist = () =>
+    toggleWishlistItem({
+      id: productId,
+      name: product.name,
+      subtitle: product.subtitle,
+      image: product.images?.[0],
+      price: product.price,
+    })
+
+  const cartLineItem = () => ({
+    id: productId,
+    name: product.name,
+    variant: `${selectedColor} • ${selectedStorage}`,
+    image: product.images?.[activeImageIndex] || product.images?.[0],
+    price: product.price,
+    originalPrice: product.originalPrice,
+  })
+
+  const handleAddToCart = () => {
+    addToCart(cartLineItem())
+    onAddToCart()
+  }
+
+  const handleBuyNow = () => {
+    addToCart(cartLineItem())
+    onBuyNow()
+  }
 
   const handleScroll = () => {
     if (!scrollRef.current) return
@@ -111,7 +145,7 @@ export function ProductDetailScreen({
             <span>Back</span>
           </button>
           <div className="flex items-center space-x-2">
-            <button onClick={() => setIsWishlisted(!isWishlisted)} className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-slate-700">
+            <button onClick={handleToggleWishlist} className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-slate-700">
               {isWishlisted ? <HiHeart className="w-4 h-4 text-red-500 fill-red-500" /> : <HiOutlineHeart className="w-4 h-4" />}
             </button>
             <button className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-slate-700">
@@ -128,7 +162,7 @@ export function ProductDetailScreen({
               {/* Desktop Floating Wishlist & Share Buttons */}
               <div className="hidden md:flex flex-col space-y-2 absolute top-4 right-4 z-20">
                 <button
-                  onClick={() => setIsWishlisted(!isWishlisted)}
+                  onClick={handleToggleWishlist}
                   className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-xs border border-slate-200 shadow-sm flex items-center justify-center text-slate-700 hover:bg-white transition-all"
                 >
                   {isWishlisted ? <HiHeart className="w-5 h-5 text-red-500 fill-red-500" /> : <HiOutlineHeart className="w-5 h-5" />}
@@ -403,7 +437,7 @@ export function ProductDetailScreen({
             {/* Action Buttons Row */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
               <button
-                onClick={onAddToCart}
+                onClick={handleAddToCart}
                 className="w-full bg-white hover:bg-slate-50 text-blue-700 border-2 border-blue-700 font-extrabold py-4 px-4 rounded-2xl shadow-xs transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
                 <HiOutlineShoppingBag className="w-5 h-5" />
@@ -411,7 +445,7 @@ export function ProductDetailScreen({
               </button>
 
               <button
-                onClick={onBuyNow}
+                onClick={handleBuyNow}
                 className="w-full bg-blue-700 hover:bg-blue-800 active:scale-[0.98] text-white font-extrabold py-4 px-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all text-xs tracking-wide"
               >
                 Buy Now

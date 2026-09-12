@@ -55,7 +55,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Static uploads ---
+// --- Static uploads & brand assets ---
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
@@ -66,20 +66,41 @@ app.use(
     },
   })
 );
+app.use(
+  '/brands',
+  express.static(path.join(__dirname, 'brands'), {
+    maxAge: '7d',
+  })
+);
 
 // --- Routes ---
 app.use('/admin/auth', require('./Router/adminAuthRoutes'));
 app.use('/admin/staff', require('./Router/staffRoutes'));
 app.use('/admin/roles', require('./Router/roleRoutes'));
+app.use('/admin/catalog/products', require('./Router/productRoutes'));
 app.use('/admin/catalog/categories', require('./Router/categoryRoutes'));
 app.use('/admin/catalog/brands', require('./Router/brandRoutes'));
+app.use('/admin/marketing/banners', require('./Router/bannerRoutes'));
+app.use('/admin/marketing/coupons', require('./Router/couponRoutes'));
+app.use('/admin/marketing/cms', require('./Router/cmsRoutes'));
+app.use('/admin/marketing/faqs', require('./Router/faqRoutes'));
+app.use('/admin/vendors', require('./Router/adminVendorRoutes'));
 
-// Mount remaining resource routers here as they're built, grouped by audience prefix:
-//   app.use('/admin/<domain>/<resource>', require('./Router/<resource>Routes'));
-//   app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
-//   app.use('/vendor/<resource>', require('./Router/<resource>Routes'));
-//   app.use('/auth', require('./Router/authRoutes'));
-//   app.use('/<resource>', require('./Router/<resource>Routes'));
+app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
+app.use('/vendor/documents', require('./Router/vendorDocumentRoutes'));
+
+app.use('/catalog/categories', require('./Router/publicCategoryRoutes'));
+app.use('/catalog/products', require('./Router/publicProductRoutes'));
+app.use('/catalog/brands', require('./Router/publicBrandRoutes'));
+app.use('/catalog/banners', require('./Router/publicBannerRoutes'));
+app.use('/catalog/coupons', require('./Router/publicCouponRoutes'));
+app.get('/public/cms/:slug', require('./Controllers/cmsController').getPublicCmsPage);
+app.use('/faq', require('./Router/publicFaqRoutes'));
+
+// Customer / Buyer mobile OTP authentication
+app.use('/auth', require('./Router/userAuthRoutes'));
+app.use('/user/wishlist', require('./Router/wishlistRoutes'));
+app.use('/user/cart', require('./Router/cartRoutes'));
 
 app.get('/health', async (req, res) => {
   const readyState = mongoose.connection.readyState; // 0 disconnected, 1 connected, 2 connecting, 3 disconnecting

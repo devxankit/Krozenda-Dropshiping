@@ -1,125 +1,92 @@
 import { useMemo, useState } from 'react'
-import { Avatar, Badge, Button, Icon, Input, Table } from '../../../../components/ui'
+import { Avatar, Badge, Icon, Input, Pagination, Switch, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { ADMIN_PERMISSIONS } from '../../constants'
-import { BrandFormDrawer, CategoryFormDrawer } from '../../components/catalog/CatalogForms'
+import { CategoryFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
-import {
-  useBrandsController,
-  useBrandWriteController,
-  useCategoryTreeController,
-  useCategoryWriteController,
-} from '../../controllers/useCatalogController'
+import { useCategoryTreeController, useCategoryWriteController } from '../../controllers/useCatalogController'
 
 const MANAGE = ADMIN_PERMISSIONS.CATALOG_MANAGE
+const PAGE_SIZE = 10
+
+function formatDate(value) {
+  if (!value) return 'Recently'
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return 'Recently'
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
 
 export function CategoriesPage() {
   const categories = useCategoryTreeController()
-  const brands = useBrandsController()
 
-  // State
-  const [activeTab, setActiveTab] = useState('categories') // 'categories' | 'brands'
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [levelFilter, setLevelFilter] = useState('all') // 'all' | 'root' | 'sub'
-  const [ownerFilter, setOwnerFilter] = useState('all') // 'all' | 'in-house' | 'partner'
+  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'top' | 'active' | 'inactive'
+  const [sortBy, setSortBy] = useState('newest') // 'newest' | 'top-first' | 'name-asc' | 'name-desc' | 'status'
+  const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
 
-  // Drawers & Dialogs
   const [editingCategory, setEditingCategory] = useState(null)
-  const [quickSubCategory, setQuickSubCategory] = useState(null)
   const [removingCategory, setRemovingCategory] = useState(null)
+  const [page, setPage] = useState(1)
 
-  const [editingBrand, setEditingBrand] = useState(null)
-  const [removingBrand, setRemovingBrand] = useState(null)
-
-  // Writers
-  const categoryWriter = useCategoryWriteController({
-    onSaved: () => {
-      setEditingCategory(null)
-      setQuickSubCategory(null)
-    },
+  const writer = useCategoryWriteController({
+    onSaved: () => setEditingCategory(null),
   })
 
-  const brandWriter = useBrandWriteController({
-    onSaved: () => setEditingBrand(null),
-  })
+  const categoryItems = useMemo(() => categories.data?.items || [], [categories.data])
 
-  // Extract raw lists
-  const categoryNodes = useMemo(() => categories.data?.nodes || [], [categories.data])
-  const brandItems = useMemo(() => brands.data?.items || [], [brands.data])
+  const totalCount = categoryItems.length
+  const topCount = useMemo(() => categoryItems.filter((c) => c.isTopCategory).length, [categoryItems])
+  const activeCount = useMemo(() => categoryItems.filter((c) => c.isActive).length, [categoryItems])
+  const inactiveCount = totalCount - activeCount
+  const activeRatio = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0
+  const topRatio = totalCount > 0 ? Math.round((topCount / totalCount) * 100) : 0
 
-  // Root categories lookup (for parent selection and commission calculation)
-  const rootCategories = useMemo(
-    () => categoryNodes.filter((c) => c.depth === 0),
-    [categoryNodes]
-  )
-
-  const rootCategoryMap = useMemo(() => {
-    const map = new Map()
-    rootCategories.forEach((rc) => map.set(rc.id, rc))
-    return map
-  }, [rootCategories])
-
-  // Metrics Calculations
-  const totalCategories = categoryNodes.length
-  const rootCount = rootCategories.length
-  const subCount = totalCategories - rootCount
-  const liveCategoriesCount = useMemo(
-    () => categoryNodes.filter((c) => c.status === 'live').length,
-    [categoryNodes]
-  )
-
-  const totalBrands = brandItems.length
-  const liveBrandsCount = useMemo(
-    () => brandItems.filter((b) => b.status === 'live').length,
-    [brandItems]
-  )
-  const inHouseBrandsCount = useMemo(
-    () => brandItems.filter((b) => (b.owner || '').toLowerCase().includes('in-house')).length,
-    [brandItems]
-  )
-  const partnerBrandsCount = totalBrands - inHouseBrandsCount
-
-  // Filtered Categories
   const filteredCategories = useMemo(() => {
-    return categoryNodes.filter((node) => {
-      if (statusFilter !== 'all' && node.status !== statusFilter) return false
-      if (levelFilter === 'root' && node.depth !== 0) return false
-      if (levelFilter === 'sub' && node.depth === 0) return false
+    const list = categoryItems.filter((item) => {
+      if (statusFilter === 'top' && !item.isTopCategory) return false
+      if (statusFilter === 'active' && !item.isActive) return false
+      if (statusFilter === 'inactive' && item.isActive) return false
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
-        const nameMatch = node.name?.toLowerCase().includes(q)
-        const slugMatch = node.slug?.toLowerCase().includes(q)
-        const parentMatch = node.parentName?.toLowerCase().includes(q)
-        return Boolean(nameMatch || slugMatch || parentMatch)
+        return Boolean(item.name?.toLowerCase().includes(q))
       }
       return true
     })
-  }, [categoryNodes, statusFilter, levelFilter, searchQuery])
 
-  // Filtered Brands
-  const filteredBrands = useMemo(() => {
-    return brandItems.filter((brand) => {
-      if (statusFilter !== 'all' && brand.status !== statusFilter) return false
-      if (ownerFilter === 'in-house' && !(brand.owner || '').toLowerCase().includes('in-house'))
-        return false
-      if (ownerFilter === 'partner' && (brand.owner || '').toLowerCase().includes('in-house'))
-        return false
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim()
-        const nameMatch = brand.name?.toLowerCase().includes(q)
-        const ownerMatch = brand.owner?.toLowerCase().includes(q)
-        const websiteMatch = brand.website?.toLowerCase().includes(q)
-        return Boolean(nameMatch || ownerMatch || websiteMatch)
-      }
-      return true
+    return [...list].sort((a, b) => {
+      if (sortBy === 'top-first') return Number(b.isTopCategory || 0) - Number(a.isTopCategory || 0)
+      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '')
+      if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '')
+      if (sortBy === 'status') return Number(b.isActive) - Number(a.isActive)
+      const dateA = new Date(a.createdAt || 0).getTime()
+      const dateB = new Date(b.createdAt || 0).getTime()
+      return dateB - dateA
     })
-  }, [brandItems, statusFilter, ownerFilter, searchQuery])
+  }, [categoryItems, statusFilter, searchQuery, sortBy])
 
-  if (categories.isLoading || brands.isLoading) {
+  // Resets to page 1 whenever the filters change
+  const filterKey = `${statusFilter}|${searchQuery}|${sortBy}`
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+
+  const pagedCategories = useMemo(
+    () => filteredCategories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredCategories, currentPage],
+  )
+
+  if (categories.isLoading) {
     return (
       <PageBody>
         <PageSkeleton rows={4} />
@@ -135,303 +102,120 @@ export function CategoriesPage() {
     )
   }
 
-  // Category Columns
-  const categoryColumns = [
+  const FILTER_TABS = [
+    { id: 'all', label: 'All Categories', count: totalCount },
+    { id: 'top', label: '⭐ Top Featured', count: topCount },
+    { id: 'active', label: 'Active in Store', count: activeCount },
+    { id: 'inactive', label: 'Inactive / Hidden', count: inactiveCount },
+  ]
+
+  const tableColumns = [
     {
       key: 'name',
-      header: 'Category & Hierarchy',
-      render: (node) => {
-        const isRoot = node.depth === 0
-        const parent = node.parentId ? rootCategoryMap.get(node.parentId) : null
-
-        return (
-          <div
-            className="flex items-center gap-3 py-1"
-            style={{ paddingLeft: `${node.depth * 1.75}rem` }}
-          >
-            {/* Indent Branch Indicator */}
-            {!isRoot && (
-              <span className="flex items-center text-slate-400 font-mono text-xs select-none">
-                └──
-              </span>
-            )}
-
-            {/* Thumbnail / Avatar */}
-            <div className="relative shrink-0">
-              <Avatar
-                name={node.name}
-                src={node.image}
-                size="md"
-                className={isRoot ? 'ring-2 ring-indigo-500/20 shadow-sm' : 'opacity-90'}
-              />
-              {isRoot && (
-                <span
-                  className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-indigo-600 ring-2 ring-white flex items-center justify-center text-[8px] text-white font-bold"
-                  title="Root category"
-                >
-                  R
+      header: 'Category Details',
+      render: (item) => (
+        <div className="flex items-center gap-3.5 py-1">
+          {item.image ? (
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 shadow-xs">
+              <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
+              {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
+              {item.isTopCategory && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-400/40">
+                  ⭐ Top Category
                 </span>
               )}
             </div>
-
-            {/* Details */}
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`truncate ${
-                    isRoot ? 'font-bold text-slate-900 text-sm' : 'font-medium text-slate-700 text-xs'
-                  }`}
-                >
-                  {node.name}
-                </span>
-
-                <Badge
-                  tone={isRoot ? 'brand' : 'neutral'}
-                  size="sm"
-                  className="text-[10px] tracking-wide uppercase px-1.5 py-0.5"
-                >
-                  {isRoot ? 'Root' : 'Sub-category'}
-                </Badge>
-              </div>
-
-              <div className="flex items-center gap-2 text-2xs text-ink-faint mt-0.5">
-                <span className="font-mono">/{node.slug || node.name.toLowerCase().replace(/\s+/g, '-')}</span>
-                {!isRoot && parent && (
-                  <>
-                    <span>•</span>
-                    <span className="text-indigo-600 font-medium">Child of {parent.name}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      },
-    },
-    {
-      key: 'commissionRate',
-      header: 'Commission %',
-      width: '10rem',
-      align: 'right',
-      render: (node) => {
-        if (node.commissionRate !== null && node.commissionRate !== undefined) {
-          return (
-            <div className="flex flex-col items-end">
-              <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs ring-1 ring-emerald-600/20 tabular">
-                <Icon name="check" className="h-3 w-3 text-emerald-600" />
-                {node.commissionRate}%
-              </span>
-              <span className="text-[10px] text-ink-faint mt-0.5">Custom rate</span>
-            </div>
-          )
-        }
-
-        // Inherits
-        const parent = node.parentId ? rootCategoryMap.get(node.parentId) : null
-        const parentRate = parent?.commissionRate != null ? `${parent.commissionRate}%` : 'Standard'
-
-        return (
-          <div className="flex flex-col items-end">
-            <span className="inline-flex items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md text-2xs font-medium tabular">
-              Inherits ({parentRate})
-            </span>
-            <span className="text-[10px] text-ink-faint mt-0.5">From parent</span>
-          </div>
-        )
-      },
-    },
-    {
-      key: 'productCount',
-      header: 'Products',
-      width: '7rem',
-      align: 'right',
-      render: (node) => (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 ring-1 ring-slate-200 tabular">
-          {node.productCount.toLocaleString('en-IN')}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: '8.5rem',
-      render: (node) => {
-        const isLive = node.status === 'live'
-        return (
-          <button
-            type="button"
-            onClick={() =>
-              categoryWriter.setStatus.run({
-                id: node.id,
-                status: isLive ? 'pending' : 'live',
-              })
-            }
-            className="group flex items-center gap-1.5 focus:outline-none"
-            title="Click to toggle status"
-          >
-            <Badge
-              tone={isLive ? 'success' : 'neutral'}
-              dot
-              size="sm"
-              className="cursor-pointer group-hover:ring-1 group-hover:ring-offset-1 transition-all"
-            >
-              {isLive ? 'Live' : 'Pending'}
-            </Badge>
-          </button>
-        )
-      },
-    },
-    {
-      key: '__actions',
-      header: 'Actions',
-      width: '9rem',
-      align: 'right',
-      render: (node) => (
-        <PermissionGate permission={MANAGE}>
-          <div className="flex items-center justify-end gap-1">
-            {/* Quick add sub-category shortcut on root categories */}
-            {node.depth === 0 && (
-              <button
-                type="button"
-                onClick={() => setQuickSubCategory(node)}
-                className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors"
-                title={`Add sub-category under ${node.name}`}
-              >
-                <Icon name="add" className="h-4 w-4" />
-              </button>
-            )}
-
-            {/* Edit */}
-            <button
-              type="button"
-              onClick={() => setEditingCategory(node)}
-              className="p-1 text-slate-600 hover:text-brand-600 hover:bg-slate-100 rounded transition-colors"
-              title="Edit category"
-            >
-              <Icon name="edit" className="h-4 w-4" />
-            </button>
-
-            {/* Delete */}
-            <button
-              type="button"
-              onClick={() => setRemovingCategory(node)}
-              className="p-1 text-slate-400 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
-              title="Delete category"
-            >
-              <Icon name="delete" className="h-4 w-4" />
-            </button>
-          </div>
-        </PermissionGate>
-      ),
-    },
-  ]
-
-  // Brand Columns
-  const brandColumns = [
-    {
-      key: 'name',
-      header: 'Brand Name',
-      render: (brand) => (
-        <div className="flex items-center gap-3 py-1">
-          <Avatar name={brand.name} src={brand.logo} size="md" className="rounded-lg shadow-sm" />
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-slate-900 text-sm truncate">{brand.name}</span>
-            {brand.website ? (
-              <a
-                href={brand.website.startsWith('http') ? brand.website : `https://${brand.website}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-2xs text-brand-600 hover:underline mt-0.5 truncate"
-              >
-                <span>{brand.website.replace(/^https?:\/\//, '')}</span>
-                <Icon name="chevronRight" className="h-2.5 w-2.5" />
-              </a>
-            ) : (
-              <span className="text-2xs text-ink-faint mt-0.5">No website registered</span>
-            )}
+            <p className="text-2xs text-slate-400 truncate">ID: {item.id ? String(item.id).slice(-8) : '—'}</p>
           </div>
         </div>
       ),
     },
     {
-      key: 'owner',
-      header: 'Ownership',
-      width: '12rem',
-      render: (brand) => {
-        const isInHouse = (brand.owner || '').toLowerCase().includes('in-house')
-        return (
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-slate-800">{brand.owner || 'In-house'}</span>
-            <span className="text-[10px] text-ink-faint">
-              {isInHouse ? 'Verified flagship' : 'Partner supplier'}
-            </span>
-          </div>
-        )
-      },
-    },
-    {
-      key: 'productCount',
-      header: 'Products',
-      width: '7.5rem',
-      align: 'right',
-      render: (brand) => (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 ring-1 ring-slate-200 tabular">
-          {brand.productCount.toLocaleString('en-IN')}
-        </span>
+      key: 'isTopCategory',
+      header: 'Top Category',
+      width: '11rem',
+      render: (item) => (
+        <PermissionGate
+          permission={MANAGE}
+          fallback={
+            <Badge tone={item.isTopCategory ? 'accent' : 'neutral'} size="sm">
+              {item.isTopCategory ? '⭐ Top Category' : 'Standard'}
+            </Badge>
+          }
+        >
+          <button
+            type="button"
+            disabled={writer.setTopStatus.isSubmitting}
+            onClick={() =>
+              writer.setTopStatus.run({ id: item.id, isTopCategory: !item.isTopCategory })
+            }
+            className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all ${
+              item.isTopCategory
+                ? 'bg-amber-100/90 text-amber-800 ring-1 ring-amber-400/60 shadow-xs hover:bg-amber-200'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200/80 hover:text-slate-800'
+            }`}
+            title={item.isTopCategory ? 'Click to remove from Top Categories' : 'Click to mark as Top Category'}
+          >
+            <span>{item.isTopCategory ? '⭐ Featured' : '☆ Not Top'}</span>
+          </button>
+        </PermissionGate>
       ),
     },
     {
-      key: 'status',
-      header: 'Status',
-      width: '9rem',
-      render: (brand) => {
-        const isLive = brand.status === 'live'
-        return (
-          <button
-            type="button"
-            onClick={() =>
-              brandWriter.setStatus.run({
-                id: brand.id,
-                status: isLive ? 'pending' : 'live',
-              })
-            }
-            className="group flex items-center gap-1.5 focus:outline-none"
-            title="Click to toggle status"
-          >
-            <Badge
-              tone={isLive ? 'success' : brand.status === 'pending' ? 'warning' : 'neutral'}
-              dot
-              size="sm"
-              className="cursor-pointer group-hover:ring-1 group-hover:ring-offset-1 transition-all capitalize"
-            >
-              {brand.status}
-            </Badge>
-          </button>
-        )
-      },
+      key: 'createdAt',
+      header: 'Created On',
+      width: '10rem',
+      render: (item) => (
+        <span className="text-xs text-slate-500 font-medium">{formatDate(item.createdAt)}</span>
+      ),
+    },
+    {
+      key: 'isActive',
+      header: 'Storefront Visibility',
+      width: '12rem',
+      render: (item) => (
+        <div className="flex items-center gap-3">
+          <Switch
+            id={`category-table-active-${item.id}`}
+            checked={item.isActive}
+            disabled={writer.setStatus.isSubmitting}
+            onChange={() => writer.setStatus.run({ id: item.id, isActive: !item.isActive })}
+          />
+          <Badge tone={item.isActive ? 'success' : 'neutral'} dot size="sm">
+            {item.isActive ? 'Active' : 'Hidden'}
+          </Badge>
+        </div>
+      ),
     },
     {
       key: '__actions',
       header: 'Actions',
       width: '7.5rem',
       align: 'right',
-      render: (brand) => (
+      render: (item) => (
         <PermissionGate permission={MANAGE}>
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-1.5">
             <button
               type="button"
-              onClick={() => setEditingBrand(brand)}
-              className="p-1 text-slate-600 hover:text-brand-600 hover:bg-slate-100 rounded transition-colors"
-              title="Edit brand"
+              onClick={() => setEditingCategory(item)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+              title="Edit category"
             >
               <Icon name="edit" className="h-4 w-4" />
             </button>
-
             <button
               type="button"
-              onClick={() => setRemovingBrand(brand)}
-              className="p-1 text-slate-400 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
-              title="Delete brand"
+              onClick={() => setRemovingCategory(item)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+              title="Delete category"
             >
               <Icon name="delete" className="h-4 w-4" />
             </button>
@@ -444,369 +228,446 @@ export function CategoriesPage() {
   return (
     <>
       <PageBody>
-        {/* Executive Header */}
         <PageHeader
-          title="Categories & Brands"
-          description="Manage taxonomy tree, nested commission rate inheritance, and approved brand directory."
+          title={
+            <div className="flex items-center gap-2.5">
+              <span>Categories</span>
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/70">
+                {totalCount}
+              </span>
+            </div>
+          }
+          description="Create, curate, and organize collections to drive product discovery across the store."
           actions={
-            <PermissionGate permission={ADMIN_PERMISSIONS.CATALOG_MANAGE}>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="control"
-                  icon="add"
-                  onClick={() => setEditingBrand('new')}
-                >
-                  New brand
-                </Button>
-                <Button
-                  size="control"
-                  icon="add"
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => categories.refetch()}
+                disabled={categories.isFetching}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50"
+                title="Refresh categories"
+              >
+                <Icon name="refresh" className={`h-3.5 w-3.5 ${categories.isFetching ? 'animate-spin text-brand-600' : ''}`} />
+                <span>Refresh</span>
+              </button>
+              <PermissionGate permission={MANAGE}>
+                <button
+                  type="button"
                   onClick={() => setEditingCategory('new')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20"
                 >
-                  New category
-                </Button>
-              </div>
-            </PermissionGate>
+                  <Icon name="add" className="h-3.5 w-3.5" />
+                  <span>New Category</span>
+                </button>
+              </PermissionGate>
+            </div>
           }
         />
 
-        {/* Executive KPI Metric Cards */}
+        {/* Upgraded KPI Metric Cards (4 Grid) */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Card 1: Total Categories */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+          {/* Total Categories */}
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Categories Tree
-              </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                <Icon name="chevronRight" className="h-4 w-4 rotate-90" />
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Categories</span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+                <Icon name="categories" className="h-5 w-5" />
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 tabular">
-                {totalCategories}
-              </span>
-              <span className="text-xs text-slate-500">total categories</span>
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{totalCount}</span>
+              <span className="text-xs font-medium text-slate-500">collections</span>
             </div>
-            <div className="mt-2 flex items-center gap-2 text-2xs text-slate-600">
-              <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
-                {rootCount} Root
-              </span>
-              <span>•</span>
-              <span className="text-slate-500">{subCount} Sub-categories</span>
+            <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+              <span>Catalog grouping taxonomy</span>
             </div>
           </div>
 
-          {/* Card 2: Active Categories */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+          {/* Top Featured Categories */}
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-300">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Live Storefront
-              </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                <Icon name="check" className="h-4 w-4" />
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Top Categories</span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+                <span className="text-base font-bold">⭐</span>
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 tabular">
-                {liveCategoriesCount}
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{topCount}</span>
+              <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                {topRatio}% of catalog
               </span>
-              <span className="text-xs text-emerald-600 font-medium">active categories</span>
             </div>
-            <div className="mt-2 text-2xs text-slate-500">
-              {totalCategories > 0
-                ? `${Math.round((liveCategoriesCount / totalCategories) * 100)}% published in catalog`
-                : 'No categories active'}
+            <div className="mt-3.5">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                  style={{ width: `${topRatio}%` }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Card 3: Registered Brands */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+          {/* Active Categories */}
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Brand Directory
-              </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                <Icon name="filter" className="h-4 w-4" />
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active in Store</span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+                <Icon name="check" className="h-5 w-5" />
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 tabular">
-                {totalBrands}
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{activeCount}</span>
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {activeRatio}% live
               </span>
-              <span className="text-xs text-slate-500">verified brands</span>
             </div>
-            <div className="mt-2 flex items-center gap-2 text-2xs text-slate-600">
-              <span className="font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded">
-                {inHouseBrandsCount} In-house
-              </span>
-              <span>•</span>
-              <span className="text-slate-500">{partnerBrandsCount} Partners</span>
+            <div className="mt-3.5">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${activeRatio}%` }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Card 4: Live Approved Brands */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+          {/* Inactive Categories */}
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Brand Approvals
-              </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Icon name="check" className="h-4 w-4" />
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Inactive / Hidden</span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 ring-1 ring-slate-200 transition-transform group-hover:scale-105">
+                <Icon name="warning" className="h-5 w-5" />
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 tabular">
-                {liveBrandsCount}
-              </span>
-              <span className="text-xs text-blue-600 font-medium">approved live</span>
+              <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{inactiveCount}</span>
+              <span className="text-xs font-medium text-slate-500">drafts</span>
             </div>
-            <div className="mt-2 text-2xs text-slate-500">
-              Ready for vendor & dropshipper listing
+            <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${inactiveCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              <span>{inactiveCount > 0 ? 'Unpublished from storefront' : 'All categories are active'}</span>
             </div>
           </div>
         </div>
 
-        {/* Modern Tab Bar & Action Toolbar Container */}
-        <div className="flex flex-col gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          {/* Top Bar: Tabs & Search */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3">
-            {/* Segmented Tabs */}
-            <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('categories')
-                  setStatusFilter('all')
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  activeTab === 'categories'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>📁 Categories Hierarchy</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                    activeTab === 'categories'
-                      ? 'bg-indigo-50 text-indigo-600 font-bold'
-                      : 'bg-slate-200 text-slate-600'
+        {/* Smart Toolbar */}
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+          {/* Status Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTER_TABS.map((tab) => {
+              const isSelected = statusFilter === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  {totalCategories}
-                </span>
-              </button>
+                  <span>{tab.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-2xs font-bold tabular ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('brands')
-                  setStatusFilter('all')
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  activeTab === 'brands'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>🏷️ Brand Directory</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                    activeTab === 'brands'
-                      ? 'bg-amber-50 text-amber-700 font-bold'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {totalBrands}
-                </span>
-              </button>
-            </div>
-
-            {/* Real-time Search Input */}
-            <div className="w-full sm:w-72">
-              <Input
-                id="catalog-search"
-                icon="search"
-                placeholder={
-                  activeTab === 'categories'
-                    ? 'Search categories or slug...'
-                    : 'Search brands, owners, sites...'
-                }
+          {/* Controls: Search, Sort & View Mode */}
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-60">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <Icon name="search" className="h-3.5 w-3.5" />
+              </span>
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="text-xs"
+                placeholder="Search categories..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
               />
-            </div>
-          </div>
-
-          {/* Sub-toolbar: Filter Pills & Category Level Pills */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 mr-1">Status:</span>
-              {['all', 'live', 'pending', 'draft'].map((status) => (
+              {searchQuery && (
                 <button
-                  key={status}
                   type="button"
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
-                    statusFilter === status
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600"
+                  title="Clear search"
                 >
-                  {status === 'all' ? 'All statuses' : status}
+                  <Icon name="close" className="h-3.5 w-3.5" />
                 </button>
-              ))}
-
-              {/* Category Level Filter Pills */}
-              {activeTab === 'categories' && (
-                <>
-                  <span className="text-slate-300 mx-1">|</span>
-                  <span className="text-xs font-medium text-slate-500 mr-1">Level:</span>
-                  {[
-                    { id: 'all', label: 'All levels' },
-                    { id: 'root', label: 'Root only' },
-                    { id: 'sub', label: 'Sub-categories only' },
-                  ].map((level) => (
-                    <button
-                      key={level.id}
-                      type="button"
-                      onClick={() => setLevelFilter(level.id)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        levelFilter === level.id
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100'
-                      }`}
-                    >
-                      {level.label}
-                    </button>
-                  ))}
-                </>
-              )}
-
-              {/* Brand Ownership Filter Pills */}
-              {activeTab === 'brands' && (
-                <>
-                  <span className="text-slate-300 mx-1">|</span>
-                  <span className="text-xs font-medium text-slate-500 mr-1">Origin:</span>
-                  {[
-                    { id: 'all', label: 'All origins' },
-                    { id: 'in-house', label: 'In-house' },
-                    { id: 'partner', label: 'Vendor partner' },
-                  ].map((owner) => (
-                    <button
-                      key={owner.id}
-                      type="button"
-                      onClick={() => setOwnerFilter(owner.id)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        ownerFilter === owner.id
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
-                      }`}
-                    >
-                      {owner.label}
-                    </button>
-                  ))}
-                </>
               )}
             </div>
 
-            {/* Summary Count Indicator */}
-            <div className="text-2xs text-slate-500">
-              Showing{' '}
-              <span className="font-semibold text-slate-800">
-                {activeTab === 'categories' ? filteredCategories.length : filteredBrands.length}
-              </span>{' '}
-              items
+            {/* Sort Select */}
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer transition-all"
+              >
+                <option value="newest">Newest First</option>
+                <option value="top-first">⭐ Top Featured First</option>
+                <option value="name-asc">Name (A–Z)</option>
+                <option value="name-desc">Name (Z–A)</option>
+                <option value="status">Active First</option>
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                <Icon name="chevronDown" className="h-3.5 w-3.5" />
+              </span>
             </div>
-          </div>
 
-          {/* Table Render */}
-          <div className="overflow-hidden rounded-lg border border-slate-200 mt-2">
-            {activeTab === 'categories' ? (
-              <Table
-                className="w-full"
-                columns={categoryColumns}
-                data={filteredCategories}
-                getRowKey={(node) => node.id}
-                density="normal"
-              />
-            ) : (
-              <Table
-                className="w-full"
-                columns={brandColumns}
-                data={filteredBrands}
-                getRowKey={(brand) => brand.id}
-                density="normal"
-              />
-            )}
+            {/* View Mode Switcher */}
+            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100/70 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-brand-600 shadow-xs ring-1 ring-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="Grid view"
+              >
+                <Icon name="categories" className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-white text-brand-600 shadow-xs ring-1 ring-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="Table view"
+              >
+                <Icon name="list" className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Content Presentation */}
+        {filteredCategories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 px-4 text-center shadow-xs">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3.5 ring-1 ring-slate-200">
+              <Icon name="categories" className="h-7 w-7" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-900">
+              {searchQuery || statusFilter !== 'all' ? 'No matching categories' : 'No categories yet'}
+            </h3>
+            <p className="mt-1 text-xs text-slate-500 max-w-sm">
+              {searchQuery || statusFilter !== 'all'
+                ? 'Try adjusting your search query or switching the filter tab.'
+                : 'Get started by creating your first category to organize products in the catalog.'}
+            </p>
+            {searchQuery || statusFilter !== 'all' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('all')
+                }}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+              >
+                <Icon name="close" className="h-3 w-3" />
+                <span>Clear Filters</span>
+              </button>
+            ) : (
+              <PermissionGate permission={MANAGE}>
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory('new')}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 transition-all"
+                >
+                  <Icon name="add" className="h-3.5 w-3.5" />
+                  <span>Create Category</span>
+                </button>
+              </PermissionGate>
+            )}
+          </div>
+        ) : viewMode === 'grid' ? (
+          /* Visual Card Grid View */
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pagedCategories.map((item) => (
+              <div
+                key={item.id}
+                className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-brand-300 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+              >
+                {/* Image Banner Showcase */}
+                <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/70 border border-slate-100 flex items-center justify-center">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
+                        {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Category floating badge at top-left */}
+                  {item.isTopCategory && (
+                    <div className="absolute top-2.5 left-2.5 z-10">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2.5 py-1 text-2xs font-extrabold text-white shadow-sm backdrop-blur-md">
+                        ⭐ Top Category
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Status Badge floating at top right */}
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <Badge
+                      tone={item.isActive ? 'success' : 'neutral'}
+                      dot
+                      size="sm"
+                      className="backdrop-blur-md bg-white/95 shadow-xs border border-white/80 font-semibold"
+                    >
+                      {item.isActive ? 'Active' : 'Hidden'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="mt-3.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3
+                      className="font-bold text-slate-900 text-base truncate group-hover:text-brand-600 transition-colors"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </h3>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-2xs text-slate-400">
+                    <span className="flex items-center gap-1 font-medium">
+                      <Icon name="calendar" className="h-3 w-3 text-slate-400" />
+                      {formatDate(item.createdAt)}
+                    </span>
+                    <span>•</span>
+                    <span className="truncate">ID: {item.id ? String(item.id).slice(-6) : '—'}</span>
+                  </div>
+                </div>
+
+                {/* Bottom Action Footer */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  {/* Left Controls: Visibility & Top Toggle */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5" title="Storefront Visibility">
+                      <Switch
+                        id={`category-grid-active-${item.id}`}
+                        checked={item.isActive}
+                        disabled={writer.setStatus.isSubmitting}
+                        onChange={() => writer.setStatus.run({ id: item.id, isActive: !item.isActive })}
+                      />
+                      <span className="text-2xs font-semibold text-slate-600">
+                        {item.isActive ? 'Live' : 'Hidden'}
+                      </span>
+                    </div>
+
+                    <PermissionGate permission={MANAGE}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          writer.setTopStatus.run({ id: item.id, isTopCategory: !item.isTopCategory })
+                        }}
+                        disabled={writer.setTopStatus.isSubmitting}
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold transition-all ${
+                          item.isTopCategory
+                            ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-400/50 hover:bg-amber-200'
+                            : 'bg-slate-100 text-slate-500 hover:text-amber-700 hover:bg-amber-50'
+                        }`}
+                        title={item.isTopCategory ? 'Click to remove from Top Categories' : 'Click to mark as Top Category'}
+                      >
+                        <span>{item.isTopCategory ? '★ Top' : '☆ Top'}</span>
+                      </button>
+                    </PermissionGate>
+                  </div>
+
+                  <PermissionGate permission={MANAGE}>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingCategory(item)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        title="Edit category"
+                      >
+                        <Icon name="edit" className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRemovingCategory(item)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+                        title="Delete category"
+                      >
+                        <Icon name="delete" className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </PermissionGate>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* High-Density Modern Table View */
+          <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+            <Table
+              className="rounded-none border-0"
+              columns={tableColumns}
+              data={pagedCategories}
+              getRowKey={(item) => item.id}
+              density="comfortable"
+            />
+          </div>
+        )}
+
+        {filteredCategories.length > 0 && (
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredCategories.length}
+            rowsPerPage={PAGE_SIZE}
+            onPageChange={setPage}
+            itemLabel="categories"
+          />
+        )}
       </PageBody>
 
       {/* Category Create/Edit Drawer */}
-      {(editingCategory || quickSubCategory) && (
+      {editingCategory && (
         <CategoryFormDrawer
-          key={
-            editingCategory === 'new'
-              ? 'new-category'
-              : editingCategory?.id || `quick-sub-${quickSubCategory?.id}`
-          }
+          key={editingCategory === 'new' ? 'new-category' : editingCategory.id}
           isOpen
-          onClose={() => {
-            setEditingCategory(null)
-            setQuickSubCategory(null)
-          }}
+          onClose={() => setEditingCategory(null)}
           category={editingCategory === 'new' ? null : editingCategory}
-          parentCategories={rootCategories}
-          defaultParentId={quickSubCategory?.id || null}
-          writer={categoryWriter}
+          writer={writer}
         />
       )}
 
-      {/* Brand Create/Edit Drawer */}
-      {editingBrand && (
-        <BrandFormDrawer
-          key={editingBrand === 'new' ? 'new-brand' : editingBrand.id}
-          isOpen
-          onClose={() => setEditingBrand(null)}
-          brand={editingBrand === 'new' ? null : editingBrand}
-          writer={brandWriter}
-        />
-      )}
-
-      {/* Category Remove Confirm Dialog */}
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={Boolean(removingCategory)}
         onClose={() => setRemovingCategory(null)}
         title={`Delete category: "${removingCategory?.name}"?`}
-        description={
-          removingCategory?.depth === 0
-            ? 'Root category removal is blocked if sub-categories or active products exist under it. Move or delete sub-categories first.'
-            : 'Sub-category removal will delete its assignment from the catalog taxonomy. This action cannot be undone.'
-        }
+        description="This category will be permanently removed from the catalog. Existing products assigned to this category may need re-categorization."
         confirmLabel="Delete category"
         tone="danger"
-        isSubmitting={categoryWriter.remove.isSubmitting}
+        isSubmitting={writer.remove.isSubmitting}
         onConfirm={() => {
-          categoryWriter.remove.run({ id: removingCategory.id })
+          writer.remove.run({ id: removingCategory.id })
           setRemovingCategory(null)
-        }}
-      />
-
-      {/* Brand Remove Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={Boolean(removingBrand)}
-        onClose={() => setRemovingBrand(null)}
-        title={`Delete brand: "${removingBrand?.name}"?`}
-        description="A brand linked to active listings cannot be deleted until its products are reassigned to another brand."
-        confirmLabel="Delete brand"
-        tone="danger"
-        isSubmitting={brandWriter.remove.isSubmitting}
-        onConfirm={() => {
-          brandWriter.remove.run({ id: removingBrand.id })
-          setRemovingBrand(null)
         }}
       />
     </>

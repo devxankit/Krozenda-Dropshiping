@@ -33,13 +33,14 @@ import { InvoicePreviewScreen } from './components/orders/InvoicePreviewScreen'
 
 import { UserAppShowcase } from './pages/UserAppShowcase'
 import { USER_ROUTES } from '../../config/routes'
+import { ProtectedRoute } from '../../routes/ProtectedRoute'
 
 export default function UserRoutes() {
   const navigate = useNavigate()
 
   return (
     <Routes>
-      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route index element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
 
       {/* Main Home & Catalog */}
       <Route
@@ -118,16 +119,23 @@ export default function UserRoutes() {
         }
       />
 
-      {/* Step 4 in Flow: Cart Page */}
-      <Route
-        path="cart"
-        element={
-          <CartPageScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/product')}
-            onCheckout={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
-          />
-        }
-      />
+      {/* Component & Flow Showcase (Public for development preview) */}
+      <Route path="showcase" element={<UserAppShowcase />} />
+
+      {/* ========================================================================= */}
+      {/* PROTECTED CUSTOMER ROUTES (Orders, Profile, Cart, Checkout, Wishlist, etc.) */}
+      {/* ========================================================================= */}
+      <Route element={<ProtectedRoute />}>
+        {/* Step 4 in Flow: Cart Page */}
+        <Route
+          path="cart"
+          element={
+            <CartPageScreen
+              onBack={() => navigate(USER_ROUTES.ROOT + '/product')}
+              onCheckout={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
+            />
+          }
+        />
 
       {/* Step 5-8 in Flow: Checkout Steps */}
       <Route
@@ -301,9 +309,13 @@ export default function UserRoutes() {
           />
         }
       />
+      </Route>
 
-      <Route path="showcase" element={<UserAppShowcase />} />
-      <Route path="*" element={<Navigate to="dashboard" replace />} />
+      {/* Absolute path — a relative "dashboard" here re-resolves against the
+          already-unmatched URL on every render of an unmatched deep link,
+          appending itself indefinitely instead of landing on the dashboard
+          (observed as a "Maximum update depth exceeded" infinite loop). */}
+      <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
     </Routes>
   )
 }

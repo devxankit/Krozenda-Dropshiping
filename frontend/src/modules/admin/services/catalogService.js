@@ -4,47 +4,25 @@ import * as fixtures from '../fixtures/catalog'
 const {
   approvalQueueFixture,
   attributeListFixture,
-  brandListFixture,
-  categoryTreeFixture,
   importRunFixture,
   inventoryFixture,
-  productDetailFixture,
-  productListFixture,
   supplierSyncFixture,
 } = fixtures
 import {
   approvalQueueSchema,
   attributeListSchema,
-  brandListSchema,
-  categoryTreeSchema,
   importRunSchema,
   inventorySchema,
-  productDetailSchema,
-  productListSchema,
   supplierSyncSchema,
   attributeSchema,
-  categoryNodeSchema,
   deletedSchema,
   inventoryRowSchema,
-  productSchema,
   queueDecisionSchema,
 } from '../schemas/catalogSchema'
 
-export function fetchProducts(query) {
-  return fetchResource({
-    path: '/admin/catalog/products',
-    params: { tab: query.tab, page: query.page, rowsPerPage: query.rowsPerPage, ...query.filters },
-    fixture: () => productListFixture(query),
-    schema: productListSchema,
-  })
-}
-
-export function fetchProductDetail(productId) {
-  return fetchResource({
-    path: `/admin/catalog/products/${productId}`,
-    fixture: () => productDetailFixture(productId),
-    schema: productDetailSchema,
-  })
+export async function fetchProducts() {
+  const { data } = await api.get('/admin/catalog/products')
+  return data.data
 }
 
 export function fetchApprovalQueue(query = {}) {
@@ -101,17 +79,61 @@ export function fetchSupplierSync() {
 
 // --- writes ---------------------------------------------------------------
 
-export const createProduct = (body) =>
-  mutateResource({ path: '/admin/catalog/products', body, fixture: fixtures.createProductFixture, schema: productSchema })
+// Products carry a gallery (multiple files under one field) and an optional
+// removeImages list, which the generic toFormData below cannot express — it
+// appends one value per key. This builds the multipart body by hand instead.
+//
+// Unlike toFormData, this only drops `undefined` (field not part of the
+// request). `null` is sent as an empty string rather than skipped, because
+// the product form always resends its full state — an empty sale price,
+// weight or brand is the user clearing that field, and the backend reads an
+// empty string on those keys as "clear it" rather than "leave it alone".
+function buildProductFormData(payload) {
+  const formData = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (key === 'images' && Array.isArray(value)) {
+      value.forEach((file) => formData.append('images', file))
+      return
+    }
+    if (key === 'removeImages' && Array.isArray(value)) {
+      if (value.length) formData.append('removeImages', JSON.stringify(value))
+      return
+    }
+    formData.append(key, value === null ? '' : value)
+  })
+  return formData
+}
 
-export const updateProduct = ({ id, ...body }) =>
-  mutateResource({ method: 'put', path: `/admin/catalog/products/${id}`, body, fixture: (p) => fixtures.updateProductFixture(id, p), schema: productSchema })
+export async function createProduct(payload) {
+  const { data } = await api.post('/admin/catalog/products', buildProductFormData(payload))
+  return data.data
+}
 
-export const setProductStatus = ({ id, status }) =>
-  mutateResource({ method: 'put', path: `/admin/catalog/products/${id}/status`, body: { status }, fixture: () => fixtures.setProductStatusFixture(id, status), schema: productSchema })
+export async function updateProduct({ id, ...payload }) {
+  const { data } = await api.put(`/admin/catalog/products/${id}`, buildProductFormData(payload))
+  return data.data
+}
 
-export const deleteProduct = ({ id }) =>
-  mutateResource({ method: 'delete', path: `/admin/catalog/products/${id}`, fixture: () => fixtures.deleteProductFixture(id), schema: deletedSchema })
+export async function updateProductStatus({ id, isActive }) {
+  const { data } = await api.patch(`/admin/catalog/products/${id}/status`, { isActive })
+  return data.data
+}
+
+export async function updateProductFlashSaleStatus({ id, isFlashsale }) {
+  const { data } = await api.patch(`/admin/catalog/products/${id}/flash-sale`, { isFlashsale })
+  return data.data
+}
+
+export async function updateProductTrendingStatus({ id, isTrending }) {
+  const { data } = await api.patch(`/admin/catalog/products/${id}/trending`, { isTrending })
+  return data.data
+}
+
+export async function deleteProduct({ id }) {
+  const { data } = await api.delete(`/admin/catalog/products/${id}`)
+  return data.data
+}
 
 export const approveQueueItem = ({ id }) =>
   mutateResource({ path: `/admin/catalog/approvals/${id}/approve`, body: { id }, fixture: () => fixtures.approveQueueItemFixture(id), schema: queueDecisionSchema })
@@ -141,8 +163,13 @@ export async function updateCategory({ id, ...payload }) {
   return data.data
 }
 
-export async function updateCategoryStatus({ id, status }) {
-  const { data } = await api.patch(`/admin/catalog/categories/${id}/status`, { status })
+export async function updateCategoryStatus({ id, isActive }) {
+  const { data } = await api.patch(`/admin/catalog/categories/${id}/status`, { isActive })
+  return data.data
+}
+
+export async function updateCategoryTopStatus({ id, isTopCategory }) {
+  const { data } = await api.patch(`/admin/catalog/categories/${id}/top`, { isTopCategory })
   return data.data
 }
 
@@ -163,8 +190,8 @@ export async function updateBrand({ id, ...payload }) {
   return data.data
 }
 
-export async function updateBrandStatus({ id, status }) {
-  const { data } = await api.patch(`/admin/catalog/brands/${id}/status`, { status })
+export async function updateBrandStatus({ id, isActive }) {
+  const { data } = await api.patch(`/admin/catalog/brands/${id}/status`, { isActive })
   return data.data
 }
 

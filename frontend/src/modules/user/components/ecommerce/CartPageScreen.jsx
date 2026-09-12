@@ -10,58 +10,17 @@ import {
 } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { useCartStore } from '../../../../lib/cartStore'
 
 export function CartPageScreen({
   onBack = () => {},
   onCheckout = () => {},
 }) {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Samsung Galaxy S23 5G',
-      variant: '(Phantom Black, 128GB)',
-      price: 49999,
-      originalPrice: 74999,
-      quantity: 1,
-      image: '/images/samsung_s23.png',
-    },
-    {
-      id: 2,
-      name: 'boAt Airdopes 141',
-      variant: 'Wireless Earbuds',
-      price: 1299,
-      originalPrice: 4490,
-      quantity: 1,
-      image: '/images/boat_airdopes.png',
-    },
-    {
-      id: 3,
-      name: 'Portronics Power Bank',
-      variant: '10000mAh',
-      price: 1199,
-      originalPrice: 2499,
-      quantity: 1,
-      image: '/images/boat_airdopes.png',
-    },
-  ])
+  const cartItems = useCartStore((state) => state.items)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const removeItem = useCartStore((state) => state.removeItem)
 
   const [securePackaging, setSecurePackaging] = useState(true)
-
-  const updateQuantity = (id, delta) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const newQty = Math.max(1, item.quantity + delta)
-          return { ...item, quantity: newQty }
-        }
-        return item
-      })
-    )
-  }
-
-  const removeItem = (id) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id))
-  }
 
   const totalMRP = cartItems.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0)
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)

@@ -1,9 +1,10 @@
 const express = require('express');
 const {
-  getCategoryTree,
+  listCategories,
   createCategory,
   updateCategory,
   updateCategoryStatus,
+  updateCategoryTopStatus,
   deleteCategory,
 } = require('../Controllers/categoryController');
 const { protectAdmin } = require('../Middlewares/authMiddleware');
@@ -19,10 +20,11 @@ const uploadCategoryImage = [
   handleUploadError,
 ];
 
-router.get('/', getCategoryTree);
+router.get('/', listCategories);
 router.post('/', ...uploadCategoryImage, createCategory);
 router.put('/:id', ...uploadCategoryImage, updateCategory);
 router.patch('/:id/status', updateCategoryStatus);
+router.patch('/:id/top', updateCategoryTopStatus);
 router.delete('/:id', deleteCategory);
 
 module.exports = router;

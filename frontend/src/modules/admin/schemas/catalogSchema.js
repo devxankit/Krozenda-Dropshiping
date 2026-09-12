@@ -1,101 +1,33 @@
 import { z } from 'zod'
-import { BUSINESS_MODEL } from '../../../config/constants'
-import { PRODUCT_TYPE, REVIEW_STATUS } from '../constants'
 
-// Runtime contract for the catalog endpoints. Money is in PAISE.
+// Runtime contract for the catalog endpoints.
 
-const businessModel = z.enum([
-  BUSINESS_MODEL.MARKETPLACE,
-  BUSINESS_MODEL.DROPSHIPPING,
-  BUSINESS_MODEL.OWN_STOCK,
-])
-
-const reviewStatus = z.enum(Object.values(REVIEW_STATUS))
-const productType = z.enum(Object.values(PRODUCT_TYPE))
-
-export const productListItemSchema = z.object({
+// The real product entity — a single-tenant catalog item with a category,
+// brand, price/discount and an image gallery. Unlike the schemas below it, it
+// talks to the real backend rather than a fixture.
+export const productNodeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  sku: z.string(),
-  type: productType,
-  model: businessModel,
-  seller: z.string(),
-  category: z.string(),
-  brand: z.string(),
-  price: z.number().int(),
-  stock: z.number().int(),
-  status: reviewStatus,
-  updatedAt: z.string(),
-})
+  sku: z.string().optional(),
+  category: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  brand: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  price: z.number(),
+  salePrice: z.number().nullable().optional(),
+  discountPercent: z.number().optional(),
+  stock: z.number(),
+  weight: z.number().nullable().optional(),
+  images: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  isActive: z.boolean(),
+  isFlashsale: z.boolean().optional(),
+  isFlashSale: z.boolean().optional(),
+  isTrending: z.boolean().optional(),
+}).passthrough()
 
 export const productListSchema = z.object({
-  items: z.array(productListItemSchema),
-  page: z.number().int().positive(),
-  rowsPerPage: z.number().int().positive(),
-  totalItems: z.number().int().nonnegative(),
-  totalPages: z.number().int().nonnegative(),
-  tabCounts: z.record(z.string(), z.number()),
-})
-
-export const priceTierSchema = z.object({
-  role: z.string(),
-  label: z.string(),
-  mrp: z.number().int(),
-  price: z.number().int(),
-  minQty: z.number().int().positive(),
-  margin: z.number(),
-})
-
-export const productDetailSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  sku: z.string(),
-  barcode: z.string().nullable(),
-  type: productType,
-  model: businessModel,
-  status: reviewStatus,
-  seller: z.object({ id: z.string(), name: z.string() }),
-  category: z.string(),
-  brand: z.object({ name: z.string(), status: reviewStatus }),
-  description: z.string(),
-  tax: z.object({ hsn: z.string(), gstRate: z.number(), countryOfOrigin: z.string() }),
-  moq: z.number().int().positive(),
-  priceTiers: z.array(priceTierSchema),
-  // The resolution chain from project context §6.5, most specific first.
-  commission: z.object({
-    resolvedFrom: z.enum(['product', 'vendor', 'category', 'company', 'default']),
-    type: z.enum(['percentage', 'fixed']),
-    value: z.number(),
-    chain: z.array(
-      z.object({
-        scope: z.enum(['product', 'vendor', 'category', 'company', 'default']),
-        label: z.string(),
-        value: z.number().nullable(),
-        applies: z.boolean(),
-      }),
-    ),
-  }),
-  inventory: z.array(
-    z.object({
-      bucket: z.string(),
-      location: z.string(),
-      onHand: z.number().int(),
-      reserved: z.number().int(),
-      available: z.number().int(),
-    }),
-  ),
-  approvalHistory: z.array(
-    z.object({
-      label: z.string(),
-      at: z.string().nullable(),
-      actor: z.string().nullable(),
-      reason: z.string().nullable(),
-      done: z.boolean(),
-      tone: z.enum(['default', 'success', 'warning', 'danger']).optional(),
-    }),
-  ),
-  issues: z.array(z.object({ field: z.string(), message: z.string() })),
-})
+  items: z.array(productNodeSchema),
+  stats: z.record(z.string(), z.any()).optional(),
+}).passthrough()
 
 export const approvalQueueSchema = z.object({
   items: z.array(
@@ -114,20 +46,13 @@ export const approvalQueueSchema = z.object({
 })
 
 export const categoryTreeSchema = z.object({
-  nodes: z.array(
+  items: z.array(
     z.object({
       id: z.string(),
       name: z.string(),
-      depth: z.number().int().nonnegative(),
-      productCount: z.number().int(),
-      commissionRate: z.number().nullable(),
-      status: z.string(),
-      slug: z.string().optional(),
       image: z.string().nullable().optional(),
-      parent: z.string().nullable().optional(),
-      parentId: z.string().nullable().optional(),
-      parentName: z.string().nullable().optional(),
-      description: z.string().optional(),
+      isActive: z.boolean(),
+      isTopCategory: z.boolean().optional(),
     }).passthrough(),
   ),
   stats: z.record(z.string(), z.any()).optional(),
@@ -138,14 +63,8 @@ export const brandListSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
-      owner: z.string(),
-      productCount: z.number().int(),
-      status: z.string(),
-      submittedAt: z.string().optional(),
-      slug: z.string().optional(),
       logo: z.string().nullable().optional(),
-      website: z.string().optional(),
-      description: z.string().optional(),
+      isActive: z.boolean(),
     }).passthrough(),
   ),
   stats: z.record(z.string(), z.any()).optional(),
@@ -222,23 +141,21 @@ export const attributeListSchema = z.object({
 // Write contracts
 // ---------------------------------------------------------------------------
 
-export const productSchema = productListItemSchema
+export const productSchema = productNodeSchema
 
 export const categoryNodeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  depth: z.number().int().nonnegative(),
-  productCount: z.number().int(),
-  commissionRate: z.number().nullable(),
-  status: z.string(),
+  image: z.string().nullable().optional(),
+  isActive: z.boolean(),
+  isTopCategory: z.boolean().optional(),
 }).passthrough()
 
 export const brandNodeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  owner: z.string(),
-  productCount: z.number().int(),
-  status: z.string(),
+  logo: z.string().nullable().optional(),
+  isActive: z.boolean(),
 }).passthrough()
 
 export const attributeSchema = z.object({
@@ -269,33 +186,37 @@ export const queueDecisionSchema = z.object({
 
 export const deletedSchema = z.object({ id: z.string() })
 
-export const productWriteSchema = z.object({
-  name: z.string().min(3, 'Give the product a name'),
-  sku: z.string().min(3, 'Every product needs a SKU'),
-  category: z.string().min(1, 'Pick a category'),
-  brand: z.string().min(1, 'Pick a brand'),
-  price: z.number().int().positive('Enter a price above zero'),
-  stock: z.number().int().min(0),
-  model: z.string().min(1),
-  type: z.string().min(1),
-  status: z.enum(['draft', 'submitted']),
-})
+export const productWriteSchema = z
+  .object({
+    name: z.string().min(2, 'Give the product a name'),
+    sku: z.string().optional(),
+    category: z.string().min(1, 'Pick a category'),
+    brand: z.string().optional(),
+    price: z.number().positive('Enter a price above zero'),
+    salePrice: z.number().min(0).nullable().optional(),
+    discountPercent: z.number().min(0).max(100).optional(),
+    stock: z.number().int().min(0, 'Stock cannot be negative'),
+    weight: z.number().min(0).nullable().optional(),
+    description: z.string().optional(),
+    isActive: z.boolean().optional(),
+    isFlashsale: z.boolean().optional(),
+    isFlashSale: z.boolean().optional(),
+    isTrending: z.boolean().optional(),
+  })
+  .refine((data) => data.salePrice == null || data.salePrice <= data.price, {
+    message: 'Sale price cannot be higher than the regular price',
+    path: ['salePrice'],
+  })
 
 export const categoryWriteSchema = z.object({
   name: z.string().min(2, 'Give the category a name'),
-  depth: z.number().int().min(0).max(2).optional(),
-  parent: z.string().nullable().optional(),
-  commissionRate: z.union([z.number(), z.null()]).optional(),
-  description: z.string().optional(),
-  status: z.string().optional(),
+  isActive: z.boolean().optional(),
+  isTopCategory: z.boolean().optional(),
 })
 
 export const brandWriteSchema = z.object({
   name: z.string().min(2, 'Give the brand a name'),
-  owner: z.string().optional(),
-  website: z.string().optional(),
-  description: z.string().optional(),
-  status: z.string().optional(),
+  isActive: z.boolean().optional(),
 })
 
 export const attributeWriteSchema = z.object({
