@@ -19,6 +19,7 @@ import { InvoiceDownloadScreen } from './components/orders/InvoiceDownloadScreen
 import { RateReviewScreen } from './components/orders/RateReviewScreen'
 
 import { ProfileDashboardScreen } from './components/profile/ProfileDashboardScreen'
+import { EditProfileScreen } from './components/profile/EditProfileScreen'
 import { MyAddressesScreen } from './components/profile/MyAddressesScreen'
 import { WishlistScreen } from './components/profile/WishlistScreen'
 import { CouponsOffersScreen } from './components/profile/CouponsOffersScreen'
@@ -163,7 +164,9 @@ export default function UserRoutes() {
           <OrderSummaryScreen
             onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/delivery')}
             onEditCart={() => navigate(USER_ROUTES.ROOT + '/cart')}
-            onProceedToPayment={() => navigate(USER_ROUTES.ROOT + '/checkout/payment')}
+            onProceedToPayment={({ total }) =>
+              navigate(USER_ROUTES.ROOT + '/checkout/payment', { state: { total } })
+            }
           />
         }
       />
@@ -172,7 +175,9 @@ export default function UserRoutes() {
         element={
           <PaymentScreen
             onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/summary')}
-            onPaymentSuccess={() => navigate(USER_ROUTES.ROOT + '/checkout/success')}
+            onPaymentSuccess={(order) =>
+              navigate(USER_ROUTES.ROOT + '/checkout/success', { state: { order } })
+            }
           />
         }
       />
@@ -270,12 +275,11 @@ export default function UserRoutes() {
       />
       <Route
         path="profile/addresses"
-        element={
-          <MyAddressesScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
-            onAddNew={() => navigate(USER_ROUTES.ROOT + '/profile/addresses')}
-          />
-        }
+        element={<MyAddressesScreen onBack={() => navigate(USER_ROUTES.ROOT + '/profile')} />}
+      />
+      <Route
+        path="profile/edit"
+        element={<EditProfileScreen onBack={() => navigate(USER_ROUTES.ROOT + '/profile')} />}
       />
       <Route
         path="wishlist"

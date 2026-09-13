@@ -1,17 +1,32 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { HiArrowLeft, HiPlus, HiCheck, HiShieldCheck, HiChevronRight } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { useAddressesController } from '../../controllers/useAddressesController'
+import { AddressFormModal } from '../profile/AddressFormModal'
+import { useCheckoutStore } from '../../../../lib/checkoutStore'
 
 export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () => {} }) {
-  const [selectedAddressId, setSelectedAddressId] = useState('home')
-  const addresses = [
-    { id: 'home', label: 'Home', isDefault: true, name: 'Rahul Sharma', address: '123, Sunrise Apartments, Near SG Highway, Ahmedabad, Gujarat - 380051', phone: '+91 98765 43210' },
-    { id: 'office', label: 'Office', isDefault: false, name: 'Rahul Sharma', address: '45, Corporate Park, Prahlad Nagar, Ahmedabad, Gujarat - 380015', phone: '+91 98765 43210' },
-    { id: 'other', label: 'Other Address', isDefault: false, name: 'Rahul Sharma', address: '12, Shanti Nagar, Satellite Road, Ahmedabad, Gujarat - 380015', phone: '+91 98765 43210' },
-  ]
+  const { addresses, isLoading, createAddress, isCreating } = useAddressesController()
+  const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
+  const setSelectedAddressId = useCheckoutStore((s) => s.setSelectedAddressId)
+  const [showAddForm, setShowAddForm] = useState(false)
 
-  const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0]
+  // Default to the buyer's default address the first time this screen sees
+  // a real address list (e.g. arriving fresh from the cart).
+  useEffect(() => {
+    if (!selectedAddressId && addresses.length > 0) {
+      const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0]
+      setSelectedAddressId(defaultAddress.id)
+    }
+  }, [addresses, selectedAddressId, setSelectedAddressId])
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0]
+
+  const handleCreate = async (values) => {
+    const created = await createAddress(values)
+    setSelectedAddressId(created.id)
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
@@ -61,53 +76,75 @@ export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () =>
                 </button>
                 <h1 className="text-base sm:text-xl font-black text-slate-900">Select Delivery Address</h1>
               </div>
-              <button className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1 transition-colors">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1 transition-colors"
+              >
                 <HiPlus className="w-4 h-4" />
                 <span className="hidden sm:inline">Add New Address</span>
                 <span className="sm:hidden">Add New</span>
               </button>
             </div>
 
-            <div className="space-y-3">
-              {addresses.map((item) => {
-                const isSelected = selectedAddressId === item.id
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedAddressId(item.id)}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-md'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2.5">
-                        <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                          }`}
-                        >
-                          {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+            {isLoading ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs font-semibold text-slate-400">
+                Loading your addresses...
+              </div>
+            ) : addresses.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+                <p className="text-sm font-bold text-slate-900">No saved addresses yet</p>
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
+                >
+                  Add Your First Address
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {addresses.map((item) => {
+                  const isSelected = selectedAddressId === item.id
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedAddressId(item.id)}
+                      className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-md'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2.5">
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                              isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
+                            }`}
+                          >
+                            {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                          </div>
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 capitalize">{item.type}</span>
+                          {item.isDefault && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-extrabold text-[9px] uppercase rounded-full">
+                              Default
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs sm:text-sm font-bold text-slate-900">{item.label}</span>
-                        {item.isDefault && (
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-extrabold text-[9px] uppercase rounded-full">
-                            Default
-                          </span>
-                        )}
+                        {isSelected && <HiCheck className="w-5 h-5 text-blue-600 shrink-0" />}
                       </div>
-                      {isSelected && <HiCheck className="w-5 h-5 text-blue-600 shrink-0" />}
+                      <div className="pl-7 text-xs text-slate-600 space-y-1">
+                        <p className="font-bold text-slate-900 text-xs sm:text-sm">{item.fullName}</p>
+                        <p className="leading-relaxed">
+                          {item.line1}
+                          {item.line2 ? `, ${item.line2}` : ''}, {item.city}, {item.state} - {item.pincode}
+                        </p>
+                        <p className="font-semibold text-slate-700">{item.phone}</p>
+                      </div>
                     </div>
-                    <div className="pl-7 text-xs text-slate-600 space-y-1">
-                      <p className="font-bold text-slate-900 text-xs sm:text-sm">{item.name}</p>
-                      <p className="leading-relaxed">{item.address}</p>
-                      <p className="font-semibold text-slate-700">{item.phone}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Selected Shipping Summary & Action */}
@@ -117,14 +154,21 @@ export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () =>
                 Selected Shipping Destination
               </h3>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
-                <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">
-                  {selectedAddress.label} Address
-                </span>
-                <p className="font-bold text-slate-900 text-xs sm:text-sm">{selectedAddress.name}</p>
-                <p className="text-slate-600 leading-relaxed">{selectedAddress.address}</p>
-                <p className="font-semibold text-slate-800 pt-1">{selectedAddress.phone}</p>
-              </div>
+              {selectedAddress ? (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
+                  <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">
+                    {selectedAddress.type} Address
+                  </span>
+                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{selectedAddress.fullName}</p>
+                  <p className="text-slate-600 leading-relaxed">
+                    {selectedAddress.line1}
+                    {selectedAddress.line2 ? `, ${selectedAddress.line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
+                  </p>
+                  <p className="font-semibold text-slate-800 pt-1">{selectedAddress.phone}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">Select or add an address to continue.</p>
+              )}
 
               <div className="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100 flex items-center space-x-2 text-[11px] font-semibold text-emerald-800">
                 <HiShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -132,8 +176,9 @@ export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () =>
               </div>
 
               <button
-                onClick={() => onSelectAddress(selectedAddress)}
-                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
+                onClick={() => selectedAddress && onSelectAddress(selectedAddress)}
+                disabled={!selectedAddress}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
                 <span>Deliver to this Address</span>
                 <HiChevronRight className="w-4 h-4" />
@@ -142,6 +187,13 @@ export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () =>
           </div>
         </div>
       </main>
+
+      <AddressFormModal
+        open={showAddForm}
+        onClose={() => setShowAddForm(false)}
+        onSubmit={handleCreate}
+        isSubmitting={isCreating}
+      />
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">

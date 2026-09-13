@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     mobileNumber: { type: String, trim: true, index: true },
     gender: { type: String, enum: ['male', 'female', 'other'] },
     dob: { type: Date },
+    walletBalance: { type: Number, default: 0, min: 0 },
     role: { type: String, enum: ['admin', 'staff', 'customer'], default: 'customer' },
     roleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

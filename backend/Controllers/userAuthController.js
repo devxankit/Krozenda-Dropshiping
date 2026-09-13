@@ -1,5 +1,6 @@
 const User = require('../Models/User');
 const { signToken } = require('../utils/jwt');
+const { getImageUrl } = require('../utils/imageHelper');
 
 // Normalize phone to clean 10-digit format
 function normalizePhone(raw) {
@@ -22,8 +23,11 @@ function serializeCustomer(user) {
     mobileNumber: user.mobileNumber || '',
     phone: user.mobileNumber || '',
     email: user.email || '',
+    gender: user.gender || null,
+    dob: user.dob || null,
     role: user.role || 'customer',
-    image: user.image || null,
+    image: user.image ? getImageUrl(user.image) : null,
+    walletBalance: user.walletBalance || 0,
     createdAt: user.createdAt,
   };
 }
@@ -141,8 +145,59 @@ async function getMe(req, res) {
   });
 }
 
+// PUT /auth/profile — direct edit, no OTP re-verification on mobile number
+// change: this backend's auth is already mock-OTP (123456 for every user),
+// so gating a mobile edit behind the same mock flow would add friction
+// without adding real security.
+async function updateProfile(req, res) {
+  const { name, email, dob, gender, mobileNumber } = req.body;
+
+  if (email !== undefined && email) {
+    const existing = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user._id } });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'This email is already in use' });
+    }
+  }
+
+  if (mobileNumber !== undefined && mobileNumber) {
+    const cleanNumber = normalizePhone(mobileNumber);
+    if (cleanNumber.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
+    }
+    const existing = await User.findOne({ mobileNumber: cleanNumber, _id: { $ne: req.user._id } });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'This mobile number is already in use' });
+    }
+    req.user.mobileNumber = cleanNumber;
+  }
+
+  if (name !== undefined) req.user.name = name.trim();
+  if (email !== undefined) req.user.email = email ? email.toLowerCase().trim() : undefined;
+  if (dob !== undefined) req.user.dob = dob ? new Date(dob) : null;
+  if (gender !== undefined) req.user.gender = gender || undefined;
+
+  await req.user.save();
+
+  res.json({ success: true, message: 'Profile updated successfully', data: { user: serializeCustomer(req.user) } });
+}
+
+// POST /auth/profile/image — multipart, field name "image" (see
+// uploadMiddleware.upload / processImage, same pipeline productRoutes uses).
+async function uploadProfileImage(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No image uploaded' });
+  }
+
+  req.user.image = req.file.url;
+  await req.user.save();
+
+  res.json({ success: true, message: 'Profile photo updated', data: { user: serializeCustomer(req.user) } });
+}
+
 module.exports = {
   requestOtp,
   verifyOtp,
   getMe,
+  updateProfile,
+  uploadProfileImage,
 };

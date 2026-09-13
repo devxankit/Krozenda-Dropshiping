@@ -1,20 +1,32 @@
 import React, { useState } from 'react'
 import { HiArrowLeft, HiPlus, HiPencil, HiTrash, HiCheckCircle } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { useAddressesController } from '../../controllers/useAddressesController'
+import { AddressFormModal } from './AddressFormModal'
 
-export function MyAddressesScreen({ onBack = () => {}, onAddNew = () => {} }) {
-  const [addresses, setAddresses] = useState([
-    { id: 'home', label: 'Home', isDefault: true, name: 'Rahul Sharma', address: '123, Sunrise Apartments, Near SG Highway, Ahmedabad, Gujarat - 380051', phone: '+91 98765 43210' },
-    { id: 'office', label: 'Office', isDefault: false, name: 'Rahul Sharma', address: '45, Corporate Park, Prahlad Nagar, Ahmedabad, Gujarat - 380015', phone: '+91 98765 43210' },
-    { id: 'other', label: 'Other Address', isDefault: false, name: 'Rahul Sharma', address: '12, Shanti Nagar, Satellite Road, Ahmedabad, Gujarat - 380015', phone: '+91 98765 43210' },
-  ])
+export function MyAddressesScreen({ onBack = () => {} }) {
+  const {
+    addresses,
+    isLoading,
+    createAddress,
+    updateAddress,
+    setDefaultAddress,
+    removeAddress,
+    isCreating,
+    isUpdating,
+  } = useAddressesController()
 
-  const setDefaultAddress = (id) => {
-    setAddresses((prev) => prev.map((item) => ({ ...item, isDefault: item.id === id })))
-  }
+  const [formState, setFormState] = useState({ open: false, editing: null })
 
-  const removeAddress = (id) => {
-    setAddresses((prev) => prev.filter((item) => item.id !== id))
+  const openAddForm = () => setFormState({ open: true, editing: null })
+  const openEditForm = (address) => setFormState({ open: true, editing: address })
+  const closeForm = () => setFormState({ open: false, editing: null })
+
+  const handleSubmit = (values) => {
+    if (formState.editing) {
+      return updateAddress({ id: formState.editing.id, ...values })
+    }
+    return createAddress(values)
   }
 
   return (
@@ -35,7 +47,7 @@ export function MyAddressesScreen({ onBack = () => {}, onAddNew = () => {} }) {
           </div>
 
           <button
-            onClick={onAddNew}
+            onClick={openAddForm}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center space-x-1.5"
           >
             <HiPlus className="w-4 h-4" />
@@ -43,62 +55,78 @@ export function MyAddressesScreen({ onBack = () => {}, onAddNew = () => {} }) {
           </button>
         </div>
 
-        {/* Address Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {addresses.map((item) => (
-            <div
-              key={item.id}
-              className={`bg-white rounded-3xl border p-6 shadow-xs flex flex-col justify-between space-y-4 transition-all ${
-                item.isDefault ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-slate-200/80 hover:border-slate-300'
-              }`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-black text-slate-900">{item.label}</span>
-                    {item.isDefault && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-extrabold text-[9px] uppercase rounded-full">
-                        Default
-                      </span>
-                    )}
+        {isLoading ? (
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center text-xs font-semibold text-slate-400">
+            Loading your addresses...
+          </div>
+        ) : addresses.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center space-y-3">
+            <p className="text-sm font-bold text-slate-900">No saved addresses yet</p>
+            <p className="text-xs text-slate-500">Add a delivery address to speed up checkout.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {addresses.map((item) => (
+              <div
+                key={item.id}
+                className={`bg-white rounded-3xl border p-6 shadow-xs flex flex-col justify-between space-y-4 transition-all ${
+                  item.isDefault ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-black text-slate-900 capitalize">{item.type}</span>
+                      {item.isDefault && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-extrabold text-[9px] uppercase rounded-full">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    {item.isDefault && <HiCheckCircle className="w-5 h-5 text-blue-600" />}
                   </div>
-                  {item.isDefault && <HiCheckCircle className="w-5 h-5 text-blue-600" />}
+
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <p className="font-bold text-slate-900 text-sm">{item.fullName}</p>
+                    <p className="leading-relaxed">
+                      {item.line1}
+                      {item.line2 ? `, ${item.line2}` : ''}, {item.city}, {item.state} - {item.pincode}
+                    </p>
+                    <p className="font-semibold text-slate-700 pt-1">{item.phone}</p>
+                  </div>
                 </div>
 
-                <div className="text-xs text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-900 text-sm">{item.name}</p>
-                  <p className="leading-relaxed">{item.address}</p>
-                  <p className="font-semibold text-slate-700 pt-1">{item.phone}</p>
-                </div>
-              </div>
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+                  {!item.isDefault ? (
+                    <button onClick={() => setDefaultAddress(item.id)} className="text-blue-600 hover:underline">
+                      Set as Default
+                    </button>
+                  ) : (
+                    <span className="text-slate-400 font-semibold text-[11px]">Default Address</span>
+                  )}
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
-                {!item.isDefault ? (
-                  <button
-                    onClick={() => setDefaultAddress(item.id)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Set as Default
-                  </button>
-                ) : (
-                  <span className="text-slate-400 font-semibold text-[11px]">Default Address</span>
-                )}
-
-                <div className="flex items-center space-x-3 text-slate-500">
-                  <button className="hover:text-blue-600">
-                    <HiPencil className="w-4 h-4" />
-                  </button>
-                  {!item.isDefault && (
+                  <div className="flex items-center space-x-3 text-slate-500">
+                    <button onClick={() => openEditForm(item)} className="hover:text-blue-600">
+                      <HiPencil className="w-4 h-4" />
+                    </button>
                     <button onClick={() => removeAddress(item.id)} className="hover:text-red-600">
                       <HiTrash className="w-4 h-4" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
+
+      <AddressFormModal
+        open={formState.open}
+        initialValues={formState.editing}
+        onClose={closeForm}
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating || isUpdating}
+      />
     </div>
   )
 }

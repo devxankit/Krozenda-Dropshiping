@@ -1,17 +1,60 @@
 import React, { useState } from 'react'
-import { HiArrowLeft, HiShieldCheck, HiCreditCard, HiBuildingLibrary, HiQrCode, HiWallet, HiChevronRight } from 'react-icons/hi2'
+import { useLocation } from 'react-router-dom'
+import { HiArrowLeft, HiShieldCheck, HiCreditCard, HiWallet, HiTruck, HiChevronRight } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { Toast } from '../../../../components/ui'
+import { useCartStore } from '../../../../lib/cartStore'
+import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { useCheckoutController } from '../../controllers/useCheckoutController'
+import { useWalletController } from '../../controllers/useWalletController'
+import { useProfileController } from '../../controllers/useProfileController'
 
-export function PaymentScreen({ amount = 49347, onBack = () => {}, onPaymentSuccess = () => {} }) {
-  const [selectedMethod, setSelectedMethod] = useState('upi')
+export function PaymentScreen({ onBack = () => {}, onPaymentSuccess = () => {} }) {
+  const location = useLocation()
+  const amount = location.state?.total ?? 0
+
+  const { profile } = useProfileController()
+  const { balance: walletBalance } = useWalletController()
+  const clearCart = useCartStore((s) => s.clearCart)
+  const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
+  const shippingFee = useCheckoutStore((s) => s.shippingFee)
+  const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
+  const resetCheckout = useCheckoutStore((s) => s.reset)
+  const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
+
+  const [selectedMethod, setSelectedMethod] = useState('RAZORPAY')
 
   const paymentMethods = [
-    { id: 'upi', name: 'Google Pay / PhonePe / Paytm UPI', icon: HiQrCode, tag: 'Instant Discount ₹50', badge: 'RECOMMENDED' },
-    { id: 'card', name: 'Credit / Debit Card (Visa, MasterCard, RuPay)', icon: HiCreditCard },
-    { id: 'netbanking', name: 'Net Banking (All Major Indian Banks)', icon: HiBuildingLibrary },
-    { id: 'wallet', name: 'Wallets (Paytm, Mobikwik, Amazon Pay)', icon: HiWallet },
+    { id: 'RAZORPAY', name: 'Pay Online (Card / UPI / Netbanking)', icon: HiCreditCard, badge: 'RECOMMENDED' },
+    {
+      id: 'WALLET',
+      name: 'Krozenda Wallet',
+      icon: HiWallet,
+      tag: `Balance: ₹${walletBalance.toLocaleString('en-IN')}`,
+      disabled: walletBalance < amount,
+    },
+    { id: 'COD', name: 'Cash on Delivery', icon: HiTruck },
   ]
+
+  const handlePay = async () => {
+    try {
+      const order = await payAndPlaceOrder({
+        addressId: selectedAddressId,
+        paymentMethod: selectedMethod,
+        couponCode: appliedCoupon?.code || undefined,
+        shippingFee,
+        total: amount,
+        prefill: { name: profile?.name, email: profile?.email, contact: profile?.mobileNumber },
+      })
+
+      clearCart()
+      resetCheckout()
+      onPaymentSuccess(order)
+    } catch {
+      // error state below already surfaces the failure
+    }
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
@@ -69,11 +112,13 @@ export function PaymentScreen({ amount = 49347, onBack = () => {}, onPaymentSucc
                 return (
                   <div
                     key={method.id}
-                    onClick={() => setSelectedMethod(method.id)}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-md'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    onClick={() => !method.disabled && setSelectedMethod(method.id)}
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                      method.disabled
+                        ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed'
+                        : isSelected
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-md cursor-pointer'
+                          : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -90,7 +135,11 @@ export function PaymentScreen({ amount = 49347, onBack = () => {}, onPaymentSucc
                               </span>
                             )}
                           </div>
-                          {method.tag && <p className="text-xs font-semibold text-emerald-600 mt-0.5">{method.tag}</p>}
+                          {method.tag && (
+                            <p className={`text-xs font-semibold mt-0.5 ${method.disabled ? 'text-red-500' : 'text-emerald-600'}`}>
+                              {method.disabled ? 'Insufficient wallet balance' : method.tag}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -124,12 +173,15 @@ export function PaymentScreen({ amount = 49347, onBack = () => {}, onPaymentSucc
                 <span>256-Bit SSL Encrypted 100% Safe Payment Gateway</span>
               </div>
 
+              {error && <Toast tone="danger" message={error?.message || 'Payment failed. Please try again.'} />}
+
               <button
-                onClick={onPaymentSuccess}
-                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
+                onClick={handlePay}
+                disabled={isPlacingOrder || amount <= 0}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
-                <span>Pay ₹{amount.toLocaleString('en-IN')} Now</span>
-                <HiChevronRight className="w-4 h-4" />
+                <span>{isPlacingOrder ? 'Processing...' : `Pay ₹${amount.toLocaleString('en-IN')} Now`}</span>
+                {!isPlacingOrder && <HiChevronRight className="w-4 h-4" />}
               </button>
             </div>
           </div>

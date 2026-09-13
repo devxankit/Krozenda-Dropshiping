@@ -1,10 +1,9 @@
 import { z } from 'zod'
 
-// Runtime contract for POST /users/reviews and GET /users/reviews — mirrors
-// backend/src/modules/user/controllers/reviewController.js's
-// serializeReview(). `photos` are absolute /uploads URLs (see
-// backend/src/middlewares/upload.js's publicUrlFor()), safe to render
-// directly in an <img src>.
+// Runtime contract for POST /user/reviews and GET /user/reviews — mirrors
+// backend/Controllers/reviewController.js's serializeReview(). `photos` are
+// absolute /uploads URLs (see backend/utils/imageHelper.js's getImageUrl()),
+// safe to render directly in an <img src>.
 export const reviewSchema = z.object({
   id: z.string(),
   productId: z.string(),
@@ -17,3 +16,26 @@ export const reviewSchema = z.object({
 })
 
 export const reviewListSchema = z.array(reviewSchema)
+
+// GET /user/reviews/reviewable — the delivered-but-maybe-not-yet-reviewed
+// products that populate the dropdown on RateReviewScreen.
+export const reviewableItemSchema = z.object({
+  orderId: z.string(),
+  productId: z.string(),
+  name: z.string(),
+  image: z.string().nullable(),
+  price: z.number(),
+  deliveredAt: z.string(),
+  reviewsCount: z.number(),
+  rating: z.number(),
+  alreadyReviewed: z.boolean(),
+  myReview: z
+    .object({
+      rating: z.number(),
+      reviewText: z.string(),
+      photos: z.array(z.string()),
+    })
+    .nullable(),
+})
+
+export const reviewableListSchema = z.array(reviewableItemSchema)

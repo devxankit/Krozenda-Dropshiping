@@ -1,18 +1,40 @@
-import React from 'react'
-import { HiArrowLeft, HiShieldCheck, HiPencilSquare, HiMapPin, HiTruck, HiChevronRight } from 'react-icons/hi2'
+import React, { useState } from 'react'
+import { HiArrowLeft, HiShieldCheck, HiPencilSquare, HiMapPin, HiTruck, HiChevronRight, HiTag, HiXMark } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { useCartStore } from '../../../../lib/cartStore'
+import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { useAddressesController } from '../../controllers/useAddressesController'
+import { useApplyCouponController } from '../../controllers/useCouponsController'
 
 export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, onProceedToPayment = () => {} }) {
-  const cartItems = [
-    { id: 1, name: 'Samsung Galaxy S23 5G', subtitle: 'Phantom Black, 128GB', price: 49999, qty: 1, image: '/images/samsung_s23.png' },
-    { id: 2, name: 'boAt Airdopes 141', subtitle: 'Wireless Earbuds', price: 1299, qty: 1, image: '/images/boat_airdopes.png' },
-    { id: 3, name: 'Portronics Power Bank', subtitle: '10000mAh', price: 1199, qty: 1, image: '/images/boat_airdopes.png' },
-  ]
+  const cartItems = useCartStore((s) => s.items)
+  const { addresses } = useAddressesController()
+  const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
+  const shippingFee = useCheckoutStore((s) => s.shippingFee)
+  const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
+  const setAppliedCoupon = useCheckoutStore((s) => s.setAppliedCoupon)
+  const clearCoupon = useCheckoutStore((s) => s.clearCoupon)
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0)
-  const discount = 1500
-  const finalTotal = subtotal - discount
+  const { applyCoupon, isApplying, error: couponError, reset: resetCouponError } = useApplyCouponController()
+  const [couponInput, setCouponInput] = useState('')
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
+
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const discount = appliedCoupon?.discountAmount || 0
+  const finalTotal = Math.max(0, subtotal - discount + shippingFee)
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    resetCouponError()
+    try {
+      const result = await applyCoupon(couponInput.trim())
+      setAppliedCoupon(result)
+    } catch {
+      // couponError below already surfaces the backend's message
+    }
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
@@ -74,9 +96,19 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                   <HiMapPin className="w-4 h-4" />
                   <span>Deliver To</span>
                 </div>
-                <p className="text-xs font-bold text-slate-900">Rahul Sharma (Home)</p>
-                <p className="text-xs text-slate-500">123, Sunrise Apartments, SG Highway, Ahmedabad, 380051</p>
-                <p className="text-xs font-semibold text-slate-700 pt-1">+91 98765 43210</p>
+                {selectedAddress ? (
+                  <>
+                    <p className="text-xs font-bold text-slate-900">
+                      {selectedAddress.fullName} ({selectedAddress.type})
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {selectedAddress.line1}, {selectedAddress.city}, {selectedAddress.pincode}
+                    </p>
+                    <p className="text-xs font-semibold text-slate-700 pt-1">{selectedAddress.phone}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500">No address selected</p>
+                )}
               </div>
 
               <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1 shadow-xs">
@@ -87,7 +119,7 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                 <p className="text-xs font-bold text-slate-900">Standard Express Delivery</p>
                 <p className="text-xs text-slate-500">Expected arrival in 3-5 business days</p>
                 <span className="inline-block mt-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  FREE SHIPPING
+                  {shippingFee === 0 ? 'FREE SHIPPING' : `₹${shippingFee} SHIPPING`}
                 </span>
               </div>
             </div>
@@ -97,25 +129,66 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
               <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
                 Order Items ({cartItems.length})
               </h3>
-              <div className="divide-y divide-slate-100">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="py-3 flex items-center justify-between gap-4">
-                    <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="w-14 h-14 bg-slate-50 rounded-xl p-1 shrink-0 border border-slate-100 flex items-center justify-center">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+              {cartItems.length === 0 ? (
+                <p className="text-xs text-slate-500 py-4">Your cart is empty.</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="w-14 h-14 bg-slate-50 rounded-xl p-1 shrink-0 border border-slate-100 flex items-center justify-center">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
+                          <p className="text-[11px] text-slate-500 truncate">{item.variant}</p>
+                          <span className="text-xs text-slate-400 font-semibold">Qty: {item.quantity}</span>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
-                        <p className="text-[11px] text-slate-500 truncate">{item.subtitle}</p>
-                        <span className="text-xs text-slate-400 font-semibold">Qty: {item.qty}</span>
-                      </div>
+                      <span className="text-xs sm:text-sm font-black text-slate-900 shrink-0">
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </span>
                     </div>
-                    <span className="text-xs sm:text-sm font-black text-slate-900 shrink-0">
-                      ₹{(item.price * item.qty).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Coupon Code */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <HiTag className="w-4 h-4 text-blue-600" />
+                <span>Have a Coupon Code?</span>
+              </h3>
+
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5">
+                  <span className="text-xs font-bold text-emerald-800">
+                    "{appliedCoupon.code}" applied — you saved ₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
+                  </span>
+                  <button onClick={clearCoupon} className="text-emerald-700 hover:text-emerald-900">
+                    <HiXMark className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    placeholder="Enter coupon code"
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={isApplying || !couponInput.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shrink-0"
+                  >
+                    {isApplying ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+              )}
+              {couponError && <p className="text-xs font-semibold text-red-600">{couponError.message}</p>}
             </div>
           </div>
 
@@ -131,13 +204,17 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                   <span>Items Subtotal</span>
                   <span className="font-semibold text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Promo Discount ('FIRSTB2B')</span>
-                  <span>- ₹{discount.toLocaleString('en-IN')}</span>
-                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-semibold">
+                    <span>Coupon Discount ('{appliedCoupon.code}')</span>
+                    <span>- ₹{discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-600">
                   <span>Shipping Fee</span>
-                  <span className="font-bold text-emerald-600">FREE</span>
+                  <span className={shippingFee === 0 ? 'font-bold text-emerald-600' : 'font-semibold text-slate-900'}>
+                    {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                  </span>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex justify-between text-sm font-black text-slate-900">
                   <span>Total Amount Payable</span>
@@ -151,8 +228,9 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
               </div>
 
               <button
-                onClick={onProceedToPayment}
-                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
+                onClick={() => onProceedToPayment({ total: finalTotal })}
+                disabled={cartItems.length === 0 || !selectedAddress}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
                 <span>Proceed to Payment</span>
                 <HiChevronRight className="w-4 h-4" />

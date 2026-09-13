@@ -16,6 +16,7 @@ export const USER_ROUTES = Object.freeze({
   ROOT: '/app',
   DASHBOARD: '/app/dashboard',
   SHOWCASE: '/app/showcase',
+  PROFILE_EDIT: '/app/profile/edit',
 })
 
 export const SELLER_ROUTES = Object.freeze({

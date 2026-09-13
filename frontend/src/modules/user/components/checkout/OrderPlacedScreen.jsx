@@ -1,13 +1,13 @@
 import React from 'react'
-import { HiCheck, HiDocumentDuplicate, HiTruck, HiSparkles } from 'react-icons/hi2'
+import { useLocation } from 'react-router-dom'
+import { HiCheck, HiTruck } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 
-export function OrderPlacedScreen({
-  orderId = 'KRO1234567890',
-  amount = 49347,
-  onViewOrderDetails = () => {},
-  onContinueShopping = () => {},
-}) {
+export function OrderPlacedScreen({ onViewOrderDetails = () => {}, onContinueShopping = () => {} }) {
+  const location = useLocation()
+  const order = location.state?.order
+  const orderId = order?.id ? `#${order.id.slice(-10).toUpperCase()}` : 'Order Confirmed'
+  const amount = order?.total ?? 0
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
       <div className="hidden md:block"><WebHeader /></div>

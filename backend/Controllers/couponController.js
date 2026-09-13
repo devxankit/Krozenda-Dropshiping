@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Coupon = require('../Models/Coupon');
 const CouponRedemption = require('../Models/CouponRedemption');
+const Cart = require('../Models/Cart');
+const Order = require('../Models/Order');
+const { getImageUrl } = require('../utils/imageHelper');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -306,14 +309,10 @@ async function deleteCoupon(req, res) {
 }
 
 // ---------------------------------------------------------------------------
-// Checkout-time engine. Not wired to any route yet: there is no Order/Cart
-// model and no shopper-auth middleware in this backend (Middlewares/
-// userAuthMiddleware.js and utils/orderHelper.js are still empty stubs), so
-// there is nowhere safe to source an authenticated `userId` from. Trusting a
-// client-supplied userId over an unauthenticated endpoint would let anyone
-// redeem/exhaust coupons on another shopper's behalf. Once the order/checkout
-// module exists, call evaluateCoupon/redeemCoupon/releaseCoupon directly from
-// it (req.user.id from real auth), or wrap them in routes at that point.
+// Checkout-time engine. evaluateCoupon/redeemCoupon/releaseCoupon are called
+// directly by orderController (real req.user._id from protectUser) — never
+// trust a client-supplied userId. applyCoupon below is the read-only,
+// route-facing preview used by the Order Summary step before payment.
 // ---------------------------------------------------------------------------
 
 function filterEligibleItems(coupon, cartItems) {
@@ -544,6 +543,92 @@ async function listPublicCoupons(req, res) {
   res.json({ success: true, data: { items } });
 }
 
+// POST /user/coupons/apply — read-only preview used at Order Summary time.
+// Pulls the cart server-side (never trusts client-supplied prices/items) and
+// runs it through evaluateCoupon without touching usage counters — the real
+// redemption only happens inside orderController.createOrder once the order
+// itself exists, via redeemCoupon above.
+async function applyCoupon(req, res) {
+  const { code } = req.body;
+  if (!code || !String(code).trim()) {
+    return res.status(400).json({ success: false, message: 'Coupon code is required' });
+  }
+
+  const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() });
+  if (!coupon) {
+    return res.status(404).json({ success: false, message: 'Invalid coupon code' });
+  }
+
+  const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+  const cartItems = (cart?.items || [])
+    .filter((entry) => entry.product)
+    .map((entry) => ({
+      productId: entry.product._id,
+      categoryId: entry.product.category,
+      price: entry.product.salePrice ?? entry.product.price ?? 0,
+      quantity: entry.quantity,
+    }));
+
+  if (cartItems.length === 0) {
+    return res.status(400).json({ success: false, message: 'Your cart is empty' });
+  }
+
+  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const previousOrders = await Order.countDocuments({ user: req.user._id, paymentStatus: 'PAID' });
+
+  const evaluation = await evaluateCoupon(coupon, {
+    userId: req.user._id,
+    cartItems,
+    cartTotal,
+    isNewCustomer: previousOrders === 0,
+  });
+
+  if (!evaluation.valid) {
+    return res.status(400).json({ success: false, message: evaluation.reason });
+  }
+
+  res.json({
+    success: true,
+    data: { code: coupon.code, discountAmount: evaluation.discountAmount },
+  });
+}
+
+// GET /user/coupons/used — redemption history "with product details": each
+// entry is the coupon plus a snapshot of what was actually bought on the
+// order it was applied to.
+async function listUsedCoupons(req, res) {
+  const redemptions = await CouponRedemption.find({ userId: req.user._id, status: 'SUCCESS' })
+    .populate('couponId')
+    .sort({ redeemedAt: -1 });
+
+  const orderIds = redemptions.map((r) => r.orderId);
+  const orders = await Order.find({ _id: { $in: orderIds } }).select('items total createdAt');
+  const ordersById = new Map(orders.map((o) => [o._id.toString(), o]));
+
+  const items = redemptions
+    .filter((r) => r.couponId && ordersById.has(r.orderId.toString()))
+    .map((r) => {
+      const order = ordersById.get(r.orderId.toString());
+      return {
+        id: r._id.toString(),
+        code: r.couponId.code,
+        description: r.couponId.description || '',
+        discountAmount: r.discountAmount,
+        redeemedAt: r.redeemedAt,
+        orderId: order._id.toString(),
+        orderTotal: order.total,
+        products: order.items.map((item) => ({
+          name: item.name,
+          image: item.image ? getImageUrl(item.image) : null,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      };
+    });
+
+  res.json({ success: true, data: { items } });
+}
+
 module.exports = {
   listCoupons,
   getCoupon,
@@ -555,4 +640,6 @@ module.exports = {
   redeemCoupon,
   releaseCoupon,
   listPublicCoupons,
+  applyCoupon,
+  listUsedCoupons,
 };

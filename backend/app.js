@@ -85,6 +85,7 @@ app.use('/admin/marketing/coupons', require('./Router/couponRoutes'));
 app.use('/admin/marketing/cms', require('./Router/cmsRoutes'));
 app.use('/admin/marketing/faqs', require('./Router/faqRoutes'));
 app.use('/admin/vendors', require('./Router/adminVendorRoutes'));
+app.use('/admin/orders', require('./Router/adminOrderRoutes'));
 
 app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
 app.use('/vendor/documents', require('./Router/vendorDocumentRoutes'));
@@ -101,6 +102,11 @@ app.use('/faq', require('./Router/publicFaqRoutes'));
 app.use('/auth', require('./Router/userAuthRoutes'));
 app.use('/user/wishlist', require('./Router/wishlistRoutes'));
 app.use('/user/cart', require('./Router/cartRoutes'));
+app.use('/user/addresses', require('./Router/addressRoutes'));
+app.use('/user/wallet', require('./Router/walletRoutes'));
+app.use('/user/orders', require('./Router/orderRoutes'));
+app.use('/user/reviews', require('./Router/reviewRoutes'));
+app.use('/user/coupons', require('./Router/userCouponRoutes'));
 
 app.get('/health', async (req, res) => {
   const readyState = mongoose.connection.readyState; // 0 disconnected, 1 connected, 2 connecting, 3 disconnecting
