@@ -1,5 +1,6 @@
 // Layer rule: services/ is the ONLY place that imports the axios instance.
 
+import { api } from '../../../lib/axios'
 import { fetchResource } from './mockTransport'
 import {
   customerListFixture,
@@ -20,6 +21,7 @@ import {
   roleListSchema,
   staffListSchema,
   vendorListSchema,
+  vendorSchema,
 } from '../schemas/peopleSchema'
 
 const params = (query) => ({
@@ -29,13 +31,74 @@ const params = (query) => ({
   ...query.filters,
 })
 
+function toFormData(payload) {
+  const formData = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    formData.append(key, value)
+  })
+  return formData
+}
+
 export const fetchCustomers = (query) =>
   fetchResource({
     path: '/admin/customers',
     params: params(query),
     fixture: () => customerListFixture(query),
     schema: customerListSchema,
+    live: true,
   })
+
+export async function createCustomer(payload) {
+  const { data } = await api.post('/admin/customers', toFormData(payload))
+  return data.data
+}
+
+export async function updateCustomerStatus({ id, isActive }) {
+  const { data } = await api.patch(`/admin/customers/${id}/status`, { isActive })
+  return data.data
+}
+
+const BUSINESS_TYPE_LABELS = {
+  proprietorship: 'Proprietorship',
+  partnership: 'Partnership',
+  llp: 'LLP',
+  private_limited: 'Private limited',
+  public_limited: 'Public limited',
+  huf: 'HUF',
+  society_trust: 'Society / Trust',
+  other: 'Other',
+}
+
+// The directory screen, its table and the detail drawer all read one flat
+// row. Flattening happens here rather than in the screens so the nested
+// API shape (business/address/bank blocks) stays in the service layer.
+function toVendorRow(vendor) {
+  const isRejected = vendor.verificationStatus === 'REJECTED'
+  const status = isRejected || (vendor.verificationStatus === 'APPROVED' && !vendor.isActive)
+    ? 'suspended'
+    : vendor.isActive
+      ? 'active'
+      : 'pending'
+
+  return {
+    ...vendor,
+    businessName: vendor.business.businessName || '',
+    role:
+      vendor.vendorType === 'B2B'
+        ? BUSINESS_TYPE_LABELS[vendor.business.businessType] || 'Business seller'
+        : 'Individual seller',
+    city: vendor.address.city || '',
+    state: vendor.address.state || '',
+    gstin: vendor.business.gstin || null,
+    pan: vendor.business.pan || null,
+    phone: vendor.mobile,
+    contactPersonName: vendor.contactPerson.name || '',
+    bankLinked: Boolean(vendor.bank.accountNumber && vendor.bank.ifsc),
+    status,
+    joinedAt: vendor.createdAt,
+  }
+}
 
 export const fetchVendors = (query) =>
   fetchResource({
@@ -43,7 +106,18 @@ export const fetchVendors = (query) =>
     params: params(query),
     fixture: () => vendorListFixture(query),
     schema: vendorListSchema,
-  })
+    live: true,
+  }).then((data) => ({ ...data, items: data.items.map(toVendorRow) }))
+
+export async function createVendor(payload) {
+  const { data } = await api.post('/admin/vendors', payload)
+  return toVendorRow(vendorSchema.parse(data.data))
+}
+
+export async function setVendorActive({ id, isActive }) {
+  const { data } = await api.patch(`/admin/vendors/${id}/active`, { isActive })
+  return toVendorRow(vendorSchema.parse({ ...data.data.vendor, products: 0, orders: 0, revenue: 0 }))
+}
 
 export const fetchKycQueue = (query) =>
   fetchResource({

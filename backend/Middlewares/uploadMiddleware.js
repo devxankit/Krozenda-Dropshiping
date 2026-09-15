@@ -101,6 +101,12 @@ function processDocument(subfolder) {
       const destDir = path.join(__dirname, '..', 'uploads', subfolder);
 
       if (req.file.mimetype === 'application/pdf') {
+        // The client-supplied Content-Type is just a claim — confirm the
+        // bytes actually start with the PDF magic number before writing
+        // them to disk under a .pdf extension and serving them statically.
+        if (req.file.buffer.subarray(0, 5).toString('latin1') !== '%PDF-') {
+          return res.status(400).json({ success: false, message: 'File is not a valid PDF' });
+        }
         const filename = `doc-${Date.now()}-${Math.round(Math.random() * 1e9)}.pdf`;
         await fs.promises.writeFile(path.join(destDir, filename), req.file.buffer);
         req.file.url = `/uploads/${subfolder}/${filename}`;

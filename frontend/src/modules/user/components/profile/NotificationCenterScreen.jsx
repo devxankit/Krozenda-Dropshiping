@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   HiArrowLeft,
   HiTruck,
@@ -7,31 +7,63 @@ import {
   HiSparkles,
   HiTrash,
   HiChevronRight,
+  HiWallet,
 } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { USER_ROUTES } from '../../../../config/routes'
 import { useNotificationStore } from '../../../../lib/notificationStore'
 
 const TYPE_ICON = {
-  order: { Icon: HiTruck, iconColor: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-  offer: { Icon: HiTag, iconColor: 'bg-amber-50 text-amber-600 border border-amber-200' },
-  system: { Icon: HiSparkles, iconColor: 'bg-blue-50 text-blue-600 border border-blue-200' },
+  ORDER: { Icon: HiTruck, iconColor: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+  OFFER: { Icon: HiTag, iconColor: 'bg-amber-50 text-amber-600 border border-amber-200' },
+  WALLET: { Icon: HiWallet, iconColor: 'bg-indigo-50 text-indigo-600 border border-indigo-200' },
+  SYSTEM: { Icon: HiSparkles, iconColor: 'bg-blue-50 text-blue-600 border border-blue-200' },
+}
+
+const ACTION_LABEL = { ORDER: 'View Orders', WALLET: 'Check Wallet' }
+
+function formatTime(iso) {
+  const date = new Date(iso)
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} min${diffMins === 1 ? '' : 's'} ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
 }
 
 export function NotificationCenterScreen({ onBack = () => {} }) {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All')
   const notifications = useNotificationStore((state) => state.notifications)
+  const hydrate = useNotificationStore((state) => state.hydrate)
   const markAsRead = useNotificationStore((state) => state.markAsRead)
   const markAllRead = useNotificationStore((state) => state.markAllRead)
   const deleteNotification = useNotificationStore((state) => state.remove)
 
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
   const filteredNotifications = notifications.filter((item) => {
-    if (activeTab === 'Orders') return item.type === 'order'
-    if (activeTab === 'Promotions') return item.type === 'offer'
-    if (activeTab === 'Wallet') return item.type === 'system'
+    if (activeTab === 'Orders') return item.type === 'ORDER'
+    if (activeTab === 'Promotions') return item.type === 'OFFER'
+    if (activeTab === 'Wallet') return item.type === 'WALLET'
     return true
   })
 
-  const unreadCount = notifications.filter((n) => n.isUnread).length
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  const handleAction = (item) => {
+    markAsRead(item.id)
+    if (item.actionType === 'ORDER') navigate(USER_ROUTES.ROOT + '/orders')
+    else if (item.actionType === 'WALLET') navigate(USER_ROUTES.ROOT + '/profile')
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
@@ -57,13 +89,15 @@ export function NotificationCenterScreen({ onBack = () => {} }) {
             </div>
           </div>
 
-          <button
-            onClick={markAllRead}
-            className="text-xs font-bold text-blue-600 hover:underline flex items-center space-x-1"
-          >
-            <HiCheckCircle className="w-4 h-4" />
-            <span>Mark all read</span>
-          </button>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="text-xs font-bold text-blue-600 hover:underline flex items-center space-x-1"
+            >
+              <HiCheckCircle className="w-4 h-4" />
+              <span>Mark all read</span>
+            </button>
+          )}
         </div>
 
         {/* Filter Tabs */}
@@ -91,13 +125,14 @@ export function NotificationCenterScreen({ onBack = () => {} }) {
         ) : (
           <div className="space-y-3">
             {filteredNotifications.map((item) => {
-              const { Icon: NotificationIcon, iconColor } = TYPE_ICON[item.type] || TYPE_ICON.system
+              const { Icon: NotificationIcon, iconColor } = TYPE_ICON[item.type] || TYPE_ICON.SYSTEM
+              const actionLabel = ACTION_LABEL[item.actionType]
               return (
                 <div
                   key={item.id}
-                  onClick={() => item.isUnread && markAsRead(item.id)}
+                  onClick={() => !item.isRead && markAsRead(item.id)}
                   className={`bg-white rounded-2xl border p-4 shadow-xs transition-all flex items-start justify-between gap-3 cursor-pointer ${
-                    item.isUnread ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200/80'
+                    !item.isRead ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200/80'
                   }`}
                 >
                   <div className="flex items-start space-x-3 min-w-0 flex-1">
@@ -108,13 +143,21 @@ export function NotificationCenterScreen({ onBack = () => {} }) {
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
-                        <span className="text-[10px] text-slate-400 font-medium">{item.time}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{formatTime(item.createdAt)}</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-normal">{item.message}</p>
-                      <button className="text-[11px] font-bold text-blue-600 hover:underline pt-1 inline-flex items-center space-x-0.5">
-                        <span>{item.actionLabel}</span>
-                        <HiChevronRight className="w-3 h-3" />
-                      </button>
+                      {actionLabel && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAction(item)
+                          }}
+                          className="text-[11px] font-bold text-blue-600 hover:underline pt-1 inline-flex items-center space-x-0.5"
+                        >
+                          <span>{actionLabel}</span>
+                          <HiChevronRight className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
 

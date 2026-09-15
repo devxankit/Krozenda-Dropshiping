@@ -122,6 +122,8 @@ const ICONS = Object.freeze({
   tax: FiPercent,
   reports: FiPieChart,
   marketing: FiTag,
+  coupons: FiTag,
+  store: FiShoppingBag,
   banners: FiImage,
   cms: FiLayout,
   campaigns: FiSend,
@@ -134,6 +136,11 @@ const ICONS = Object.freeze({
   integrations: FiServer,
   support: FiLifeBuoy,
   notifications: FiBell,
+  catalog: FiPackage,
+  truck: FiTruck,
+  eye: FiEye,
+  shield: FiShield,
+  star: FiStar,
 
   // ---- actions ---------------------------------------------------------
   search: FiSearch,

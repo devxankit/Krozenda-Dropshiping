@@ -35,7 +35,7 @@ import {
   SiOneplus,
   SiBoat,
 } from 'react-icons/si'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { USER_ROUTES } from '../../../../config/routes'
@@ -141,14 +141,18 @@ const PASTEL_BG_COLORS = [
 ]
 
 const FALLBACK_CATEGORIES = [
-  { id: '1', name: 'Mobiles', img: '/images/samsung_s23.png', bg: 'bg-orange-100/80' },
-  { id: '2', name: 'Laptops', img: '/images/cat_laptops.jpg', bg: 'bg-indigo-100/80' },
-  { id: '3', name: 'Smartwatches', img: '/images/cat_watches.jpg', bg: 'bg-rose-100/80' },
-  { id: '4', name: 'Headphones', img: '/images/boat_airdopes.png', bg: 'bg-amber-100/80' },
-  { id: '5', name: 'Fashion', img: '/images/cat_fashion.jpg', bg: 'bg-pink-100/80' },
-  { id: '6', name: 'Sneakers', img: '/images/cat_shoes.jpg', bg: 'bg-emerald-100/80' },
-  { id: '7', name: 'Appliances', img: '/images/cat_appliances.jpg', bg: 'bg-sky-100/80' },
-  { id: '8', name: 'Gaming', img: '/images/cat_gaming.jpg', bg: 'bg-teal-100/80' },
+  { id: '1', name: 'Electronics & Gadgets', img: '/uploads/categories/cat_electronics_gadgets.webp', bg: 'bg-orange-100/80' },
+  { id: '2', name: 'Mobiles & Accessories', img: '/uploads/categories/cat_mobiles_accessories.webp', bg: 'bg-indigo-100/80' },
+  { id: '3', name: 'Computers & Peripherals', img: '/uploads/categories/cat_computers_peripherals.webp', bg: 'bg-rose-100/80' },
+  { id: '4', name: 'Fashion & Apparel', img: '/uploads/categories/cat_fashion_apparel.webp', bg: 'bg-amber-100/80' },
+  { id: '5', name: 'Footwear & Sneakers', img: '/uploads/categories/cat_footwear_sneakers.webp', bg: 'bg-pink-100/80' },
+  { id: '6', name: 'Beauty & Personal Care', img: '/uploads/categories/cat_beauty_personal_care.webp', bg: 'bg-emerald-100/80' },
+  { id: '7', name: 'Home & Living', img: '/uploads/categories/cat_home_living.webp', bg: 'bg-sky-100/80' },
+  { id: '8', name: 'Kitchen & Appliances', img: '/uploads/categories/cat_kitchen_appliances.webp', bg: 'bg-teal-100/80' },
+  { id: '9', name: 'Fitness & Outdoors', img: '/uploads/categories/cat_fitness_outdoors.webp', bg: 'bg-orange-100/80' },
+  { id: '10', name: 'Grocery & Essentials', img: '/uploads/categories/cat_grocery_essentials.webp', bg: 'bg-indigo-100/80' },
+  { id: '11', name: 'Toys & Games', img: '/uploads/categories/cat_toys_games.webp', bg: 'bg-rose-100/80' },
+  { id: '12', name: 'Automotive Accessories', img: '/uploads/categories/cat_automotive_accessories.webp', bg: 'bg-amber-100/80' },
 ]
 
 const FALLBACK_FLASH_SALE = [
@@ -257,14 +261,30 @@ const FALLBACK_BRANDS = [
 const BRAND_LOGO_MAP = {
   boat: '/brands/boat.svg',
   'boat audio': '/brands/boat.svg',
+  jbl: '/brands/jbl.svg',
+  'jbl audio': '/brands/jbl.svg',
+  sony: '/brands/sony.svg',
   nike: '/brands/nike.svg',
+  puma: '/brands/puma.svg',
+  adidas: '/brands/adidas.svg',
+  "levi's": '/brands/levis.svg',
+  levis: '/brands/levis.svg',
+  roadster: '/brands/roadster.svg',
   samsung: '/brands/samsung.svg',
   philips: '/brands/philips.svg',
   'philips personal care': '/brands/philips.svg',
+  havells: '/brands/havells.svg',
   noise: '/brands/noise.svg',
   'noise wearables': '/brands/noise.svg',
   prestige: '/brands/prestige.svg',
   'prestige cookware': '/brands/prestige.svg',
+  pigeon: '/brands/pigeon.svg',
+  hp: '/brands/hp.svg',
+  lenovo: '/brands/lenovo.svg',
+  logitech: '/brands/logitech.svg',
+  mamaearth: '/brands/mamaearth.svg',
+  wow: '/brands/wow.svg',
+  'wow skin science': '/brands/wow.svg',
   'krozenda essentials': '/brands/krozenda.svg',
   'integration test brand': '/brands/krozenda.svg',
   apple: '/brands/apple.svg',
@@ -275,14 +295,30 @@ const BRAND_LOGO_MAP = {
 const BRAND_OFFER_MAP = {
   boat: 'Up to 70% OFF',
   'boat audio': 'Up to 70% OFF',
+  jbl: 'Mega Bass Deals',
+  'jbl audio': 'Up to 60% OFF',
+  sony: 'Premium Sound',
   nike: 'Min. 40% OFF',
+  puma: 'Min. 45% OFF',
+  adidas: 'Flat 40% OFF',
+  "levi's": 'Up to 50% OFF',
+  levis: 'Up to 50% OFF',
+  roadster: 'Min. 60% OFF',
   samsung: 'Flagship Deals',
   philips: 'Min. 35% OFF',
   'philips personal care': 'Up to 50% OFF',
+  havells: 'Up to 45% OFF',
   noise: 'Up to 65% OFF',
   'noise wearables': 'Up to 65% OFF',
   prestige: 'Kitchen Specials',
   'prestige cookware': 'Up to 45% OFF',
+  pigeon: 'Cookware Fest',
+  hp: 'Up to 30% OFF',
+  lenovo: 'Work & Play',
+  logitech: 'Top Accessories',
+  mamaearth: 'Natural Care',
+  wow: 'Glow Deals',
+  'wow skin science': 'Flat 35% OFF',
   'krozenda essentials': 'Top Dropship Picks',
   apple: 'Best Value',
   oneplus: 'Fast Deals',
@@ -377,24 +413,38 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
   const heroBanners = [
     {
       id: 1,
-      image: '/images/banner_wholesale_deals.png',
-      alt: 'Mega Factory Wholesale Deals',
-      tag: '⚡ Hot Wholesale Tier',
+      image: '/uploads/banners/banner_factory_dropship.webp',
+      alt: 'Direct Factory Dropship Hub',
+      tag: '⚡ DIRECT FACTORY TIER',
       subtitle: 'Dispatch in 24 Hours • White-Label',
     },
     {
       id: 2,
-      image: '/images/banner_factory_dropship.png',
-      alt: 'White Label Dropshipping 24hr Dispatch',
-      tag: '⚡ Hot Wholesale Tier',
-      subtitle: 'Dispatch in 24 Hours • White-Label',
+      image: '/uploads/banners/banner_smart_gadgets.webp',
+      alt: 'Next-Gen Audio & Tech Fest',
+      tag: '🔥 AUDIO SPECIAL',
+      subtitle: 'Up to 70% Off Premium ANC Headphones & Speakers',
     },
     {
       id: 3,
-      image: '/images/banner_smart_gadgets.png',
-      alt: 'New Tech Arrivals 2026',
-      tag: '⚡ Hot Wholesale Tier',
-      subtitle: 'Dispatch in 24 Hours • White-Label',
+      image: '/uploads/banners/banner_smartphone_carnival.webp',
+      alt: 'Flagship Smartphone Carnival',
+      tag: '📱 5G CARNIVAL',
+      subtitle: 'Latest 5G Flagships with Zero Cost EMI & Exchange Bonus',
+    },
+    {
+      id: 4,
+      image: '/uploads/banners/banner_express_logistics.webp',
+      alt: 'White Label Pan-India Logistics',
+      tag: '🚀 FAST DISPATCH',
+      subtitle: 'Dispatch Within 24 Hours • Express Air Shipping',
+    },
+    {
+      id: 5,
+      image: '/uploads/banners/banner_home_appliances.webp',
+      alt: 'Modern Living & Smart Home Fest',
+      tag: '🏠 HOME ESSENTIALS',
+      subtitle: 'Kitchenware, Cookware & LED Lighting Deals',
     },
   ]
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
@@ -590,7 +640,13 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
         {/* MOBILE TOP HEADER & SEARCH */}
         <div className="md:hidden">
           <div className="bg-white px-4 py-3 border-b border-slate-200 shadow-xs flex items-center justify-between sticky top-0 z-40">
-            <img src="/images/logo.png" alt="Krozenda Logo" className="h-9 w-auto object-contain" />
+            <Link
+              to={USER_ROUTES.DASHBOARD}
+              className="flex items-center shrink-0 cursor-pointer transition-opacity hover:opacity-90"
+              title="Krozenda Home"
+            >
+              <img src="/images/logo.png" alt="Krozenda Logo" className="h-9 w-auto object-contain" />
+            </Link>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate(USER_ROUTES.ROOT + '/notifications')}
@@ -662,7 +718,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                     alt={banner.alt}
                     className="w-full h-full object-cover rounded-2xl md:rounded-3xl transform group-hover:scale-103 transition-transform duration-700"
                     onError={(e) => {
-                      e.currentTarget.src = '/images/banner_wholesale_deals.png'
+                      e.currentTarget.src = '/uploads/banners/banner_factory_dropship.webp'
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20 pointer-events-none" />
@@ -788,7 +844,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-120"
                           onError={(e) => {
-                            e.currentTarget.src = '/images/samsung_s23.png'
+                            e.currentTarget.src = '/uploads/categories/cat_electronics_gadgets.webp'
                           }}
                         />
                       </div>

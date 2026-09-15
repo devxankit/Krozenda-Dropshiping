@@ -14,3 +14,8 @@ export async function getCustomerProfile() {
   const { data } = await api.get('/auth/me')
   return data.data
 }
+
+export async function registerFcmToken(token) {
+  const { data } = await api.post('/user/notifications/fcm-token', { token })
+  return data
+}

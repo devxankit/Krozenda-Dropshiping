@@ -84,6 +84,7 @@ import {
   SupportTicketsPage,
   AdminProfilePage,
 } from './pages/system/SystemPages'
+import { SupportTicketDetailPage } from './pages/system/SupportTicketDetailPage'
 import { LoginPage } from './pages/auth/LoginPage'
 import { TwoFactorPage } from './pages/auth/TwoFactorPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
@@ -308,6 +309,7 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.AUDIT_LOGS)} element={<AuditLogPage />} />
             <Route path={rel(ADMIN_ROUTES.BACKUPS)} element={<BackupsPage />} />
             <Route path={rel(ADMIN_ROUTES.SUPPORT_TICKETS)} element={<SupportTicketsPage />} />
+            <Route path={rel(ADMIN_ROUTES.SUPPORT_TICKET_DETAIL)} element={<SupportTicketDetailPage />} />
             <Route path={rel(ADMIN_ROUTES.PROFILE)} element={<AdminProfilePage />} />
 
             {/* Routes whose screen lands in a later phase. Navigation,

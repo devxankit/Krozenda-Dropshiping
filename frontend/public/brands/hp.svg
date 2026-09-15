@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 42" width="120" height="42">
+  <circle cx="21" cy="21" r="16" fill="#0096D6"/>
+  <text x="13" y="28" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-style="italic" font-size="20" fill="#ffffff">hp</text>
+  <text x="44" y="28" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="20" fill="#111827" letter-spacing="1">Laptops</text>
+</svg>

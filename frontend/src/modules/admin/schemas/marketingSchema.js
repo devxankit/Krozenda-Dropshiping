@@ -13,22 +13,33 @@ const paged = (item) =>
     tabCounts: z.record(z.string(), z.number()),
   })
 
-export const couponListSchema = paged(
-  z.object({
-    id: z.string(),
-    code: z.string(),
-    description: z.string(),
-    discountType: z.enum(['percentage', 'fixed', 'shipping']),
-    discountValue: z.number(),
-    minCartValue: z.number().int(),
-    maxDiscount: z.number().int().nullable(),
-    usageLimit: z.number().int().nullable(),
-    used: z.number().int(),
-    startsOn: z.string(),
-    endsOn: z.string(),
-    status: z.enum(['scheduled', 'active', 'paused', 'expired', 'exhausted']),
-  }),
-)
+export const couponSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  description: z.string(),
+  discountType: z.enum(['PERCENTAGE', 'FIXED', 'FREE_SHIPPING']),
+  discountValue: z.number(), // paise when FIXED, a plain percent when PERCENTAGE — see backend serializeCoupon
+  maxDiscountAmount: z.number().int().nullable(),
+  minOrderAmount: z.number().int(),
+  minQuantity: z.number().int().nullable(),
+  maxQuantity: z.number().int().nullable(),
+  usageLimit: z.number().int().nullable(),
+  usedCount: z.number().int(),
+  perUserLimit: z.number().int().nullable(),
+  applicableTo: z.enum(['ALL', 'PRODUCTS', 'CATEGORIES', 'VENDORS']),
+  productIds: z.array(z.string()),
+  categoryIds: z.array(z.string()),
+  vendorIds: z.array(z.string()),
+  customerEligibility: z.enum(['ALL', 'NEW', 'EXISTING', 'SPECIFIC']),
+  customerIds: z.array(z.string()),
+  startDate: z.string(),
+  endDate: z.string(),
+  isActive: z.boolean(),
+  status: z.enum(['INACTIVE', 'UPCOMING', 'ACTIVE', 'EXPIRED', 'USAGE_LIMIT_REACHED']),
+  createdAt: z.string(),
+})
+
+export const couponListSchema = paged(couponSchema)
 
 export const offerListSchema = z.object({
   items: z.array(

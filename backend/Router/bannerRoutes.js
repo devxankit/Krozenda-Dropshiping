@@ -6,12 +6,12 @@ const {
   updateBannerStatus,
   deleteBanner,
 } = require('../Controllers/bannerController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 const { upload, processImage, handleUploadError } = require('../Middlewares/uploadMiddleware');
 
 const router = express.Router();
 
-router.use(protectAdmin);
+router.use(protectAdmin, requirePermission('admin.marketing.banners'));
 
 const uploadBannerImage = [
   upload.single('image'),

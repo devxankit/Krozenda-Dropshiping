@@ -9,8 +9,47 @@ import { useListController } from './useListController'
 export const useCouponListController = () =>
   useListController({ queryKey: ['admin', 'marketing', 'coupons'], queryFn: service.fetchCoupons })
 
+const COUPONS = [['admin', 'marketing', 'coupons']]
+
+export const useCouponWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createCoupon,
+    invalidate: COUPONS,
+    success: (coupon) => `${coupon.code} created`,
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateCoupon,
+    invalidate: COUPONS,
+    success: (coupon) => `${coupon.code} updated`,
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateCouponStatus,
+    invalidate: COUPONS,
+    success: (coupon) => `${coupon.code} ${coupon.isActive ? 'activated' : 'deactivated'}`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteCoupon,
+    invalidate: COUPONS,
+    success: 'Coupon removed',
+  }),
+})
+
 export const useCampaignListController = () =>
   useListController({ queryKey: ['admin', 'marketing', 'campaigns'], queryFn: service.fetchCampaigns })
+
+const CAMPAIGNS = [['admin', 'marketing', 'campaigns']]
+
+export const useCampaignWriteController = ({ onSaved } = {}) => ({
+  send: useAdminMutation({
+    mutationFn: service.sendCampaign,
+    invalidate: CAMPAIGNS,
+    success: (campaign) => `Sent to ${campaign.audienceSize.toLocaleString('en-IN')} recipient${campaign.audienceSize === 1 ? '' : 's'}`,
+    describe: (campaign) => `${campaign.delivered.toLocaleString('en-IN')} delivered`,
+    onDone: onSaved,
+  }),
+})
 
 export const useReviewListController = () =>
   useListController({ queryKey: ['admin', 'marketing', 'reviews'], queryFn: service.fetchReviews })

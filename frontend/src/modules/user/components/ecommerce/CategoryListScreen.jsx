@@ -258,11 +258,11 @@ export function CategoryListScreen() {
                   {/* Product Image Area - Fitted edge-to-edge to card */}
                   <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden my-1 bg-slate-100 flex items-center justify-center">
                     <img
-                      src={cat.image || '/images/cat_mobiles.jpg'}
+                      src={cat.image || '/uploads/categories/cat_electronics_gadgets.webp'}
                       alt={cat.name}
                       className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
                       onError={(e) => {
-                        e.currentTarget.src = '/images/cat_mobiles.jpg'
+                        e.currentTarget.src = '/uploads/categories/cat_electronics_gadgets.webp'
                       }}
                     />
                   </div>
@@ -309,11 +309,11 @@ export function CategoryListScreen() {
                 >
                   <div className="w-24 h-24 rounded-2xl bg-slate-50 p-2 flex items-center justify-center border border-slate-100 shrink-0 group-hover:scale-105 transition-transform">
                     <img
-                      src={cat.image || '/images/cat_mobiles.jpg'}
+                      src={cat.image || '/uploads/categories/cat_electronics_gadgets.webp'}
                       alt={cat.name}
                       className="max-h-full max-w-full object-contain drop-shadow-xs"
                       onError={(e) => {
-                        e.currentTarget.src = '/images/cat_mobiles.jpg'
+                        e.currentTarget.src = '/uploads/categories/cat_electronics_gadgets.webp'
                       }}
                     />
                   </div>

@@ -84,6 +84,10 @@ export const inventorySchema = z.object({
       daysCover: z.number().int().nullable(),
     }),
   ),
+  page: z.number().int().positive().optional(),
+  rowsPerPage: z.number().int().positive().optional(),
+  totalItems: z.number().int().nonnegative().optional(),
+  totalPages: z.number().int().nonnegative().optional(),
   tabCounts: z.record(z.string(), z.number()),
 })
 

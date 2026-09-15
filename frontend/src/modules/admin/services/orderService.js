@@ -1,7 +1,7 @@
 // Layer rule: services/ is the ONLY place that imports the axios instance.
 
+import { api } from '../../../lib/axios'
 import { fetchResource } from './mockTransport'
-import { orderDetailFixture, orderListFixture } from '../fixtures/orders'
 import { orderDetailSchema, orderListSchema } from '../schemas/orderSchema'
 
 export function fetchOrders(query) {
@@ -14,15 +14,25 @@ export function fetchOrders(query) {
       sort: query.sort ? `${query.sort.key}:${query.sort.direction}` : undefined,
       ...query.filters,
     },
-    fixture: () => orderListFixture(query),
     schema: orderListSchema,
+    live: true,
   })
 }
 
 export function fetchOrderDetail(orderId) {
   return fetchResource({
     path: `/admin/orders/${orderId}`,
-    fixture: () => orderDetailFixture(orderId),
     schema: orderDetailSchema,
+    live: true,
   })
+}
+
+export async function createOrder(payload) {
+  const { data } = await api.post('/admin/orders', payload)
+  return orderDetailSchema.parse(data.data)
+}
+
+export async function updateOrderStatus({ id, status }) {
+  const { data } = await api.patch(`/admin/orders/${id}/status`, { status })
+  return orderDetailSchema.parse(data.data)
 }

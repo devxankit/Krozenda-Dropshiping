@@ -1,15 +1,14 @@
 import { adminPath } from '../../../config/routes'
-import { BUSINESS_MODEL, BUSINESS_MODEL_LABELS } from '../../../config/constants'
 import {
-  BUYER_TYPE_LABELS,
-  FULFILMENT_STATUS,
-  FULFILMENT_STATUS_LABELS,
-  FULFILMENT_STATUS_TONE,
-  PAYMENT_STATUS,
-  PAYMENT_STATUS_LABELS,
-  PAYMENT_STATUS_TONE,
+  ORDER_FLOW_STATUS,
+  ORDER_FLOW_STATUS_LABELS,
+  ORDER_FLOW_STATUS_TONE,
+  ORDER_PAYMENT_METHOD_LABELS,
+  ORDER_PAYMENT_STATUS,
+  ORDER_PAYMENT_STATUS_LABELS,
+  ORDER_PAYMENT_STATUS_TONE,
 } from '../constants'
-import { DateCell, IdCell, ModelDots, MoneyCell, PrimaryCell, StatusPill } from '../components/display'
+import { DateCell, IdCell, MoneyCell, PrimaryCell, StatusPill } from '../components/display'
 
 // Rule 07: column definitions and filter schemas are DATA. A list screen
 // imports these; it never builds a <th> or a status ternary itself.
@@ -18,61 +17,60 @@ export const ORDER_COLUMNS = Object.freeze([
   {
     key: 'id',
     header: 'Order',
-    width: '8.5rem',
+    width: '9rem',
     sortable: true,
-    render: (order) => <IdCell id={order.id} to={adminPath.orderDetail(order.id)} />,
+    render: (order) => <IdCell id={order.id.slice(-8).toUpperCase()} to={adminPath.orderDetail(order.id)} />,
   },
   {
-    key: 'placedAt',
+    key: 'createdAt',
     header: 'Placed',
     width: '7.5rem',
     sortable: true,
-    render: (order) => <DateCell value={order.placedAt} />,
+    render: (order) => <DateCell value={order.createdAt} />,
   },
   {
-    key: 'buyer',
+    key: 'customer',
     header: 'Customer',
-    sortable: true,
     render: (order) => (
       <PrimaryCell
-        title={order.buyer.name}
-        subtitle={`${order.buyer.city} ${order.buyer.pincode} · ${BUYER_TYPE_LABELS[order.buyer.type]}`}
+        title={order.customer.name || 'Unknown customer'}
+        subtitle={order.customer.mobileNumber || order.customer.email}
       />
     ),
   },
   {
-    key: 'models',
-    header: 'Sub-orders',
-    width: '11rem',
-    render: (order) => (
-      <ModelDots
-        models={order.models}
-        label={`${order.sellerCount} ${order.sellerCount === 1 ? 'seller' : 'sellers'} · ${order.itemCount} ${order.itemCount === 1 ? 'item' : 'items'}`}
-      />
-    ),
+    key: 'items',
+    header: 'Items',
+    width: '5rem',
+    align: 'right',
+    cellClassName: 'tabular',
+    render: (order) => order.items.reduce((sum, item) => sum + item.quantity, 0),
   },
   {
-    key: 'paymentStatus',
+    key: 'paymentMethod',
     header: 'Payment',
-    width: '8rem',
+    width: '9rem',
     render: (order) => (
-      <StatusPill
-        status={order.paymentStatus}
-        labels={PAYMENT_STATUS_LABELS}
-        tones={PAYMENT_STATUS_TONE}
-        size="sm"
-      />
+      <span className="flex flex-col gap-1">
+        <StatusPill
+          status={order.paymentStatus}
+          labels={ORDER_PAYMENT_STATUS_LABELS}
+          tones={ORDER_PAYMENT_STATUS_TONE}
+          size="sm"
+        />
+        <span className="text-2xs text-ink-faint">{ORDER_PAYMENT_METHOD_LABELS[order.paymentMethod]}</span>
+      </span>
     ),
   },
   {
-    key: 'fulfilmentStatus',
-    header: 'Fulfilment',
-    width: '9.5rem',
+    key: 'status',
+    header: 'Status',
+    width: '9rem',
     render: (order) => (
       <StatusPill
-        status={order.fulfilmentStatus}
-        labels={FULFILMENT_STATUS_LABELS}
-        tones={FULFILMENT_STATUS_TONE}
+        status={order.status}
+        labels={ORDER_FLOW_STATUS_LABELS}
+        tones={ORDER_FLOW_STATUS_TONE}
         size="sm"
       />
     ),
@@ -89,40 +87,28 @@ export const ORDER_COLUMNS = Object.freeze([
 
 export const ORDER_FILTERS = Object.freeze([
   {
-    key: 'model',
-    label: 'Business model',
-    options: Object.values(BUSINESS_MODEL).map((value) => ({
+    key: 'status',
+    label: 'Status',
+    options: Object.values(ORDER_FLOW_STATUS).map((value) => ({
       value,
-      label: BUSINESS_MODEL_LABELS[value],
-    })),
-  },
-  {
-    key: 'fulfilmentStatus',
-    label: 'Fulfilment',
-    options: Object.values(FULFILMENT_STATUS).map((value) => ({
-      value,
-      label: FULFILMENT_STATUS_LABELS[value],
+      label: ORDER_FLOW_STATUS_LABELS[value],
     })),
   },
   {
     key: 'paymentStatus',
     label: 'Payment',
-    options: Object.values(PAYMENT_STATUS).map((value) => ({
+    options: Object.values(ORDER_PAYMENT_STATUS).map((value) => ({
       value,
-      label: PAYMENT_STATUS_LABELS[value],
+      label: ORDER_PAYMENT_STATUS_LABELS[value],
     })),
-  },
-  {
-    key: 'buyerType',
-    label: 'Buyer type',
-    options: Object.entries(BUYER_TYPE_LABELS).map(([value, label]) => ({ value, label })),
   },
 ])
 
 export const ORDER_TABS = Object.freeze([
   { id: 'all', label: 'All orders' },
-  { id: 'needs_action', label: 'Needs action' },
-  { id: 'unfulfilled', label: 'Unfulfilled' },
-  { id: 'exceptions', label: 'RTO & returns' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'processing', label: 'Processing' },
+  { id: 'shipped', label: 'Shipped' },
+  { id: 'delivered', label: 'Delivered' },
   { id: 'cancelled', label: 'Cancelled' },
 ])

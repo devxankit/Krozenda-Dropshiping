@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { granularitySchema } from './dashboardSchema'
 
 // Runtime contract for the four analytics endpoints. Money is in PAISE.
 
@@ -9,13 +10,31 @@ const kpi = z.object({
   label: z.string(),
   value: z.number(),
   format: z.enum(['money', 'count', 'percent', 'ratio']),
-  delta: z.object({ direction: z.enum(['up', 'down', 'flat']), label: z.string() }).nullable(),
+  delta: z
+    .object({
+      direction: z.enum(['up', 'down', 'flat']),
+      label: z.string(),
+      // See dashboardSchema: the arrow follows the movement, the colour
+      // follows the sentiment.
+      sentiment: z.enum(['positive', 'negative', 'neutral']).optional(),
+    })
+    .nullable(),
   caption: z.string(),
 })
 
 const slice = z.object({ label: z.string(), value: z.number() })
 
+// Present on every endpoint served by the live reporting API; absent from the
+// fixtures that still stand in for the three unbuilt ones.
+const windowMeta = {
+  updatedAt: z.string().optional(),
+  range: z.string().optional(),
+  rangeLabel: z.string().optional(),
+  granularity: granularitySchema.optional(),
+}
+
 export const salesAnalyticsSchema = z.object({
+  ...windowMeta,
   kpis: z.array(kpi),
   revenueTrend: z.array(point),
   ordersByModel: z.array(slice),
@@ -24,6 +43,7 @@ export const salesAnalyticsSchema = z.object({
 })
 
 export const vendorAnalyticsSchema = z.object({
+  ...windowMeta,
   kpis: z.array(kpi),
   fulfilmentSpeed: z.array(point),
   vendors: z.array(
@@ -42,6 +62,7 @@ export const vendorAnalyticsSchema = z.object({
 })
 
 export const catalogAnalyticsSchema = z.object({
+  ...windowMeta,
   kpis: z.array(kpi),
   categoryRevenue: z.array(z.object({ label: z.string(), revenue: z.number() })),
   topProducts: z.array(
@@ -60,6 +81,7 @@ export const catalogAnalyticsSchema = z.object({
 })
 
 export const customerAnalyticsSchema = z.object({
+  ...windowMeta,
   kpis: z.array(kpi),
   acquisition: z.array(point),
   buyerMix: z.array(slice),

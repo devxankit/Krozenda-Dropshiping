@@ -1,15 +1,25 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { VendorSidebar } from './VendorSidebar'
 import { VendorTopbar } from './VendorTopbar'
 import { ToastViewport } from '../../../admin/components/feedback'
+import { useAuthStore } from '../../../../lib/authStore'
+import { toast } from '../../../admin/stores/toastStore'
 
 export function VendorLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const clearSession = useAuthStore((state) => state.clearSession)
 
   const isPartner = pathname.startsWith('/partner')
+
+  const handleSignOut = () => {
+    clearSession()
+    toast.info('Signed Out', 'You have been signed out of your vendor portal.')
+    navigate(isPartner ? '/partner/login' : '/seller/login')
+  }
 
   return (
     <div className="vendor-root flex h-screen overflow-hidden bg-surface-sunken">
@@ -19,6 +29,7 @@ export function VendorLayout() {
           collapsed={collapsed}
           onToggle={() => setCollapsed(!collapsed)}
           isPartner={isPartner}
+          onSignOut={handleSignOut}
         />
       </div>
 
@@ -36,7 +47,12 @@ export function VendorLayout() {
         <div className="fixed inset-0 z-modal flex lg:hidden">
           <div className="fixed inset-0 bg-slate-900/40" onClick={() => setMobileOpen(false)} />
           <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-surface">
-            <VendorSidebar collapsed={false} onToggle={() => setMobileOpen(false)} isPartner={isPartner} />
+            <VendorSidebar
+              collapsed={false}
+              onToggle={() => setMobileOpen(false)}
+              isPartner={isPartner}
+              onSignOut={handleSignOut}
+            />
           </div>
         </div>
       )}

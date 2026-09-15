@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { HiXMark } from 'react-icons/hi2'
 
 const TYPES = [
@@ -24,19 +24,26 @@ const EMPTY_FORM = {
 // plain Tailwind (not components/ui/Modal) — that kit is deliberately scoped
 // to .admin-root and isn't meant to leak into the buyer app's own style.
 export function AddressFormModal({ open, initialValues = null, onClose, onSubmit, isSubmitting = false }) {
-  const [form, setForm] = useState(() => ({ ...EMPTY_FORM, ...initialValues }))
+  const [form, setForm] = useState(() => (initialValues ? { ...EMPTY_FORM, ...initialValues } : { ...EMPTY_FORM }))
   const [error, setError] = useState(null)
 
-  // Re-seed the form whenever a different address is opened for editing.
-  const [seededFor, setSeededFor] = useState(initialValues?.id ?? null)
-  if (open && (initialValues?.id ?? null) !== seededFor) {
-    setSeededFor(initialValues?.id ?? null)
-    setForm({ ...EMPTY_FORM, ...initialValues })
-  }
+  // Reset or seed form whenever modal opens or edited address changes
+  useEffect(() => {
+    if (open) {
+      setForm(initialValues ? { ...EMPTY_FORM, ...initialValues } : { ...EMPTY_FORM })
+      setError(null)
+    }
+  }, [open, initialValues?.id])
 
   if (!open) return null
 
   const update = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const handleClose = () => {
+    setForm({ ...EMPTY_FORM })
+    setError(null)
+    onClose?.()
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -49,20 +56,32 @@ export function AddressFormModal({ open, initialValues = null, onClose, onSubmit
 
     try {
       await onSubmit(form)
-      onClose()
+      setForm({ ...EMPTY_FORM })
+      setError(null)
+      onClose?.()
     } catch (err) {
       setError(err?.message || 'Could not save this address. Please try again.')
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[92vh] overflow-y-auto shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[92vh] overflow-y-auto shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sticky top-0 bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-sm font-black text-slate-900">
             {initialValues?.id ? 'Edit Address' : 'Add New Address'}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500"
+          >
             <HiXMark className="w-5 h-5" />
           </button>
         </div>

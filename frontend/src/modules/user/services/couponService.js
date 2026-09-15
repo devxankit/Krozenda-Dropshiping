@@ -1,7 +1,7 @@
 // Layer rule: services/ is the ONLY place that imports the axios instance.
 
 import { api } from '../../../lib/axios'
-import { usedCouponListSchema, applyCouponResultSchema, publicCouponListSchema } from '../schemas/couponSchema'
+import { usedCouponListSchema, applyCouponResultSchema } from '../schemas/couponSchema'
 
 export async function applyCoupon(code) {
   const response = await api.post('/user/coupons/apply', { code })
@@ -11,9 +11,4 @@ export async function applyCoupon(code) {
 export async function fetchUsedCoupons() {
   const response = await api.get('/user/coupons/used')
   return usedCouponListSchema.parse(response.data.data.items)
-}
-
-export async function fetchPublicCoupons(limit = 10) {
-  const response = await api.get('/catalog/coupons', { params: { limit } })
-  return publicCouponListSchema.parse(response.data.data.items)
 }

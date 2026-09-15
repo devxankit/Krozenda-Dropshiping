@@ -13,6 +13,9 @@ function serializeBrand(b) {
     name: b.name,
     logo: getImageUrl(b.logo),
     isActive: b.isActive !== false,
+    createdByVendor: b.createdByVendor ? b.createdByVendor.toString() : null,
+    approvalStatus: b.approvalStatus || 'APPROVED',
+    rejectionReason: b.rejectionReason || '',
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   };
@@ -26,6 +29,7 @@ async function listBrands(req, res) {
     total: items.length,
     active: items.filter((b) => b.isActive).length,
     inactive: items.filter((b) => !b.isActive).length,
+    pending: items.filter((b) => b.approvalStatus === 'PENDING').length,
   };
 
   res.json({ success: true, data: { items, stats } });
@@ -104,6 +108,30 @@ async function updateBrandStatus(req, res) {
   });
 }
 
+async function decideBrandApproval(req, res) {
+  const { id } = req.params;
+  const { decision, rejectionReason } = req.body;
+
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    return res.status(400).json({ success: false, message: 'Decision must be APPROVED or REJECTED' });
+  }
+
+  const brand = await Brand.findById(id);
+  if (!brand) {
+    return res.status(404).json({ success: false, message: 'Brand not found' });
+  }
+
+  brand.approvalStatus = decision;
+  brand.rejectionReason = decision === 'REJECTED' ? (rejectionReason || '').trim() : '';
+  await brand.save();
+
+  res.json({
+    success: true,
+    message: `Brand ${decision === 'APPROVED' ? 'approved and live' : 'rejected'}`,
+    data: serializeBrand(brand),
+  });
+}
+
 async function deleteBrand(req, res) {
   const { id } = req.params;
 
@@ -122,7 +150,7 @@ async function deleteBrand(req, res) {
 }
 
 async function listPublicBrands(req, res) {
-  const brands = await Brand.find({ isActive: true }).sort({ name: 1 }).lean();
+  const brands = await Brand.find({ isActive: true, approvalStatus: 'APPROVED' }).sort({ name: 1 }).lean();
   res.json({ success: true, data: { items: brands.map(serializeBrand) } });
 }
 
@@ -132,5 +160,6 @@ module.exports = {
   createBrand,
   updateBrand,
   updateBrandStatus,
+  decideBrandApproval,
   deleteBrand,
 };

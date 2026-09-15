@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { USER_ROUTES } from '../config/routes'
 import {
   HiArrowLeft,
   HiShieldCheck,
@@ -20,11 +21,6 @@ import { api } from '../lib/axios'
 const NAV_DOCUMENTS = [
   { slug: 'terms', title: 'Terms & Conditions', icon: HiScale, path: '/terms' },
   { slug: 'privacy-policy', title: 'Privacy Policy', icon: HiShieldCheck, path: '/privacy-policy' },
-  { slug: 'vendor-agreement', title: 'Vendor Agreement', icon: HiBuildingOffice2, path: '/p/vendor-agreement' },
-  { slug: 'return-policy', title: 'Return & Refund Policy', icon: HiArrowUturnLeft, path: '/p/return-policy' },
-  { slug: 'shipping-policy', title: 'Shipping Policy', icon: HiTruck, path: '/p/shipping-policy' },
-  { slug: 'about', title: 'About KroZenda', icon: HiOutlineBookOpen, path: '/p/about' },
-  { slug: 'seller-faq', title: 'Seller FAQ', icon: HiQuestionMarkCircle, path: '/p/seller-faq' },
 ]
 
 // Fallback legal text in case backend is loading or unreachable
@@ -158,7 +154,7 @@ export function PublicCmsPage({ defaultSlug }) {
               <HiArrowLeft className="w-5 h-5" />
             </button>
 
-            <Link to="/auth/login" className="flex items-center space-x-2.5 group">
+            <Link to={USER_ROUTES.DASHBOARD} className="flex items-center space-x-2.5 group cursor-pointer transition-opacity hover:opacity-90" title="KroZenda Home">
               <img
                 src="/images/logo.png"
                 alt="KroZenda Logo"
@@ -204,12 +200,14 @@ export function PublicCmsPage({ defaultSlug }) {
               <span className="hidden sm:inline">Print</span>
             </button>
 
-            <Link
-              to="/auth/login"
-              className="flex items-center space-x-1 px-4 py-2 text-xs font-bold rounded-xl bg-blue-700 hover:bg-blue-800 text-white shadow-sm transition-all"
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex items-center space-x-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-blue-700 hover:bg-blue-800 text-white shadow-sm transition-all cursor-pointer"
             >
-              <span>Back to Login</span>
-            </Link>
+              <HiArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
           </div>
         </div>
       </header>
@@ -371,14 +369,6 @@ export function PublicCmsPage({ defaultSlug }) {
             <span>•</span>
             <Link to="/privacy-policy" className="hover:text-blue-700 transition-colors">
               Privacy Policy
-            </Link>
-            <span>•</span>
-            <Link to="/p/vendor-agreement" className="hover:text-blue-700 transition-colors">
-              Vendor Agreement
-            </Link>
-            <span>•</span>
-            <Link to="/p/return-policy" className="hover:text-blue-700 transition-colors">
-              Return Policy
             </Link>
           </div>
         </div>

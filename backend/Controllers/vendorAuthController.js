@@ -1,6 +1,17 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const Vendor = require('../Models/Vendor');
+const VendorPasswordReset = require('../Models/VendorPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
+
+const RESET_OTP_TTL_MS = 5 * 60 * 1000;
+const MAX_RESET_ATTEMPTS = 5;
+const isProduction = process.env.ENV === 'production';
+
+function generateResetOtp() {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+}
 
 function serializeVendor(vendor) {
   return {
@@ -24,7 +35,11 @@ function serializeVendor(vendor) {
   };
 }
 
-async function register(req, res) {
+// Shared by the vendor's own sign-up and by an admin onboarding a partner
+// from the panel, so the two can never disagree about what a valid B2B or
+// B2C vendor looks like. Returns { error } or { vendor } rather than
+// touching the response, since the two callers reply differently.
+async function createVendorAccount(payload, { verificationStatus = 'PENDING', isActive = false } = {}) {
   const {
     vendorType,
     name,
@@ -38,45 +53,46 @@ async function register(req, res) {
     contactPerson,
     address,
     bank,
-  } = req.body;
+  } = payload;
 
   if (!vendorType || !['B2C', 'B2B'].includes(vendorType)) {
-    return res.status(400).json({ success: false, message: 'Vendor type must be B2C or B2B' });
+    return { error: { status: 400, message: 'Vendor type must be B2C or B2B' } };
   }
 
   if (!name?.trim() || !email?.trim() || !mobile?.trim() || !password) {
-    return res.status(400).json({ success: false, message: 'Name, email, mobile and password are required' });
+    return { error: { status: 400, message: 'Name, email, mobile and password are required' } };
   }
 
   if (password.length < 6) {
-    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    return { error: { status: 400, message: 'Password must be at least 6 characters' } };
   }
 
   if (confirmPassword !== undefined && password !== confirmPassword) {
-    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    return { error: { status: 400, message: 'Passwords do not match' } };
   }
 
   const isGstRegistered = gstRegistered === true || gstRegistered === 'true';
   if (isGstRegistered && !business?.gstin?.trim()) {
-    return res.status(400).json({ success: false, message: 'GSTIN is required when GST registered is Yes' });
+    return { error: { status: 400, message: 'GSTIN is required when GST registered is Yes' } };
   }
 
   if (vendorType === 'B2B') {
     if (!business?.businessName?.trim() || !business?.businessType) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Business name and business type are required for B2B vendors' });
+      return { error: { status: 400, message: 'Business name and business type are required for B2B vendors' } };
     }
     if (!contactPerson?.name?.trim() || !contactPerson?.mobile?.trim()) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Authorized contact person name and mobile are required for B2B vendors' });
+      return {
+        error: {
+          status: 400,
+          message: 'Authorized contact person name and mobile are required for B2B vendors',
+        },
+      };
     }
   }
 
   const existing = await Vendor.findOne({ email: email.toLowerCase().trim() });
   if (existing) {
-    return res.status(409).json({ success: false, message: 'An account with this email already exists' });
+    return { error: { status: 409, message: 'An account with this email already exists' } };
   }
 
   const vendor = await Vendor.create({
@@ -91,9 +107,18 @@ async function register(req, res) {
     contactPerson: vendorType === 'B2B' ? contactPerson || {} : {},
     address: address || {},
     bank: bank || {},
-    verificationStatus: 'PENDING',
-    isActive: false,
+    verificationStatus,
+    isActive,
   });
+
+  return { vendor };
+}
+
+async function register(req, res) {
+  const { error, vendor } = await createVendorAccount(req.body);
+  if (error) {
+    return res.status(error.status).json({ success: false, message: error.message });
+  }
 
   const token = signToken('vendor', { id: vendor._id, vendorType: vendor.vendorType });
 
@@ -124,6 +149,92 @@ async function login(req, res) {
     message: 'Login successful',
     data: { token, vendor: serializeVendor(vendor) },
   });
+}
+
+// POST /vendor/auth/forgot-password — always answers the same way whether
+// or not the email is registered, so this endpoint can't be used to
+// enumerate vendor accounts. The OTP itself is only ever generated (and, in
+// dev, echoed back — see requestOtp in userAuthController.js for the same
+// no-SMS-gateway-yet convention) when a matching vendor actually exists.
+async function forgotPassword(req, res) {
+  const { email } = req.body;
+
+  if (!email?.trim()) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const vendor = await Vendor.findOne({ email: normalizedEmail });
+
+  let devOtp;
+  if (vendor) {
+    const otp = generateResetOtp();
+    const otpHash = await bcrypt.hash(otp, 10);
+    await VendorPasswordReset.findOneAndUpdate(
+      { email: normalizedEmail },
+      { otpHash, attempts: 0, expiresAt: new Date(Date.now() + RESET_OTP_TTL_MS) },
+      { upsert: true }
+    );
+
+    if (!isProduction) {
+      console.log(`[dev-only] Vendor password reset OTP for ${normalizedEmail}: ${otp}`);
+      devOtp = otp;
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'If an account exists for this email, a reset code has been sent.',
+    // Only ever present outside production, where there is no real email
+    // gateway configured yet — never echoed once one is wired up.
+    data: devOtp ? { otp: devOtp } : undefined,
+  });
+}
+
+// POST /vendor/auth/reset-password
+async function resetPassword(req, res) {
+  const { email, otp, newPassword, confirmPassword } = req.body;
+
+  if (!email?.trim() || !otp?.trim()) {
+    return res.status(400).json({ success: false, message: 'Email and reset code are required' });
+  }
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+  }
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const resetRequest = await VendorPasswordReset.findOne({ email: normalizedEmail });
+
+  if (!resetRequest || resetRequest.expiresAt < new Date()) {
+    return res.status(400).json({ success: false, message: 'This reset code has expired. Request a new one.' });
+  }
+
+  if (resetRequest.attempts >= MAX_RESET_ATTEMPTS) {
+    await VendorPasswordReset.deleteOne({ _id: resetRequest._id });
+    return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Request a new code.' });
+  }
+
+  const isMatch = await bcrypt.compare(otp.trim(), resetRequest.otpHash);
+  if (!isMatch) {
+    resetRequest.attempts += 1;
+    await resetRequest.save();
+    return res.status(400).json({ success: false, message: 'Incorrect reset code' });
+  }
+
+  const vendor = await Vendor.findOne({ email: normalizedEmail });
+  if (!vendor) {
+    await VendorPasswordReset.deleteOne({ _id: resetRequest._id });
+    return res.status(404).json({ success: false, message: 'Account not found' });
+  }
+
+  vendor.password = newPassword;
+  await vendor.save();
+  await VendorPasswordReset.deleteOne({ _id: resetRequest._id });
+
+  res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
 }
 
 async function me(req, res) {
@@ -172,4 +283,14 @@ async function submitForVerification(req, res) {
   });
 }
 
-module.exports = { register, login, me, updateProfile, submitForVerification, serializeVendor };
+module.exports = {
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  me,
+  updateProfile,
+  submitForVerification,
+  serializeVendor,
+  createVendorAccount,
+};

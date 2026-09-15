@@ -158,6 +158,7 @@ export const ADMIN_ROUTES = Object.freeze({
   AUDIT_LOGS: '/admin/system/audit-logs',
   BACKUPS: '/admin/system/backups',
   SUPPORT_TICKETS: '/admin/support/tickets',
+  SUPPORT_TICKET_DETAIL: '/admin/support/tickets/:ticketId',
   PROFILE: '/admin/profile',
 
   // ---- utility ------------------------------------------------------------
@@ -174,6 +175,7 @@ export const adminPath = Object.freeze({
   subOrderDetail: (subOrderId) => `/admin/orders/sub-orders/${subOrderId}`,
   returnDetail: (returnId) => `/admin/orders/returns/${returnId}`,
   invoiceDetail: (invoiceId) => `/admin/orders/invoices/${invoiceId}`,
+  supportTicketDetail: (ticketId) => `/admin/support/tickets/${ticketId}`,
   customerDetail: (customerId) => `/admin/people/customers/${customerId}`,
   sellerDetail: (sellerId) => `/admin/people/sellers/${sellerId}`,
   partnerDetail: (partnerId) => `/admin/people/partners/${partnerId}`,

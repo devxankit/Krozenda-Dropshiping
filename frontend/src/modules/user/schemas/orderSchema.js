@@ -21,6 +21,11 @@ export const shippingAddressSnapshotSchema = z.object({
   country: z.string(),
 })
 
+export const orderStatusHistoryEntrySchema = z.object({
+  status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  at: z.string(),
+})
+
 export const orderSchema = z.object({
   id: z.string(),
   items: z.array(orderItemSchema),
@@ -31,11 +36,14 @@ export const orderSchema = z.object({
   shippingFee: z.number(),
   total: z.number(),
   paymentMethod: z.enum(['COD', 'WALLET', 'RAZORPAY']),
-  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED']),
+  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
   deliveredAt: z.string().nullable(),
+  statusHistory: z.array(orderStatusHistoryEntrySchema),
   createdAt: z.string(),
 })
+
+export const orderListSchema = z.array(orderSchema)
 
 // POST /user/orders/razorpay-order response — the Razorpay order to open the
 // checkout widget against for online payment.

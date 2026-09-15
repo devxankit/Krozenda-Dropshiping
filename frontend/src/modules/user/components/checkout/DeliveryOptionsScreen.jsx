@@ -1,10 +1,17 @@
 import React, { useState } from 'react'
-import { HiArrowLeft, HiMapPin, HiCheck, HiTruck, HiChevronRight } from 'react-icons/hi2'
+import { HiArrowLeft, HiMapPin, HiTruck, HiChevronRight } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { useAddressesController } from '../../controllers/useAddressesController'
 
 export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () => {}, onNext = () => {} }) {
   const [selectedOption, setSelectedOption] = useState('standard')
+  const { addresses } = useAddressesController()
+  const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
+  const setShippingFee = useCheckoutStore((s) => s.setShippingFee)
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
+
   const deliveryOptions = [
     { id: 'standard', title: 'Standard Delivery', tag: 'FREE', days: '3-5 Business Days', price: 0, desc: 'Reliable Pan-India Surface shipping' },
     { id: 'express', title: 'Express Air Delivery', days: '1-2 Business Days', price: 99, desc: 'Priority Air shipping with instant dispatch' },
@@ -12,6 +19,11 @@ export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () 
   ]
 
   const activeOption = deliveryOptions.find(d => d.id === selectedOption) || deliveryOptions[0]
+
+  const handleNext = () => {
+    setShippingFee(activeOption.price)
+    onNext({ selectedOption })
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
@@ -70,7 +82,9 @@ export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () 
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Delivering To</span>
-                  <p className="text-xs font-bold text-slate-900 truncate">Rahul Sharma - 123, Sunrise Apartments, SG Highway, Ahmedabad</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {selectedAddress ? `${selectedAddress.fullName} - ${selectedAddress.line1}, ${selectedAddress.city}` : 'No address selected'}
+                  </p>
                 </div>
               </div>
               <button onClick={onChangeAddress} className="text-xs font-bold text-blue-600 hover:underline shrink-0 whitespace-nowrap">
@@ -140,7 +154,7 @@ export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () 
               </div>
 
               <button
-                onClick={() => onNext({ selectedOption })}
+                onClick={handleNext}
                 className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
                 <span>Continue to Order Summary</span>

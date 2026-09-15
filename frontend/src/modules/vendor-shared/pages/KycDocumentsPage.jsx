@@ -8,12 +8,12 @@ import { VENDOR_KYC_DOC_COLUMNS } from '../tableColumns/vendorColumns'
 import { UploadKycModal } from '../components/modals/UploadKycModal'
 
 export function KycDocumentsPage() {
-  const { data: docs, isLoading } = useVendorKycDocsController()
+  const { data, isLoading } = useVendorKycDocsController()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
 
-  const kycList = docs || []
-  const mandatoryUploaded = kycList.filter((d) => d.required && d.status === 'approved').length
-  const totalMandatory = kycList.filter((d) => d.required).length
+  const kycList = data?.items || []
+  const approvedCount = kycList.filter((d) => d.status === 'APPROVED').length
+  const isFullyApproved = kycList.length > 0 && approvedCount === kycList.length
 
   return (
     <PageBody>
@@ -34,38 +34,38 @@ export function KycDocumentsPage() {
             KYC Verification Status
           </span>
           <div className="mt-2 flex items-center gap-2">
-            <Badge tone="success" size="md">
-              Fully Approved
+            <Badge tone={isFullyApproved ? 'success' : 'warning'} size="md">
+              {isFullyApproved ? 'Fully Approved' : 'Review Pending'}
             </Badge>
           </div>
-          <span className="mt-1 block text-2xs text-emerald-600 font-medium">
-            Account verified for live B2B & retail sales
+          <span className="mt-1 block text-2xs text-ink-subtle">
+            {isFullyApproved ? 'All submitted documents are verified' : 'Some documents are awaiting admin review'}
           </span>
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
           <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
-            Mandatory Documents
+            Documents Submitted
           </span>
           <div className="mt-2 text-xl font-bold text-slate-900">
-            {mandatoryUploaded} of {totalMandatory} Verified
+            {approvedCount} of {kycList.length} Verified
           </div>
           <span className="mt-1 block text-2xs text-ink-subtle">
-            PAN, GST, & Bank proof active
+            PAN, GST & Bank proof recommended
           </span>
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
           <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
-            Payout Clearance
+            Account Status
           </span>
           <div className="mt-2 flex items-center gap-2">
             <Badge tone="brand" size="md">
-              Unlocked
+              Submitted for Review
             </Badge>
           </div>
           <span className="mt-1 block text-2xs text-ink-subtle">
-            Razorpay Route settlement active
+            Admin reviews each document individually
           </span>
         </div>
       </div>

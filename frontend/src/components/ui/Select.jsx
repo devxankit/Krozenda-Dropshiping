@@ -42,7 +42,7 @@ export const Select = forwardRef(function Select(
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           required={required}
-          className={`w-full appearance-none rounded-md border bg-surface pl-3 pr-9 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-surface-muted disabled:text-ink-faint ${SIZE_CLASSES[size]} ${error ? 'border-danger-500' : 'border-border'} ${className}`}
+          className={`w-full appearance-none rounded-md border bg-surface pl-3 pr-9 text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 disabled:bg-surface-muted disabled:text-ink-faint ${SIZE_CLASSES[size]} ${error ? 'border-danger-500' : 'border-border'} ${className}`}
           {...props}
         >
           {placeholder && (

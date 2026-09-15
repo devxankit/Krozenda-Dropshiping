@@ -13,9 +13,9 @@ export function useCheckoutController() {
   // separate from the wallet top-up one — see lib/razorpay.js), then creates
   // the real Order once the payment succeeds, carrying the signature for the
   // backend to verify before it ever marks the order PAID.
-  const payAndPlaceOrder = ({ addressId, paymentMethod, couponCode, shippingFee, total, prefill }) => {
+  const payAndPlaceOrder = ({ addressId, paymentMethod, couponCode, shippingFee, prefill }) => {
     if (paymentMethod === 'RAZORPAY') {
-      return createRazorpayOrder(total).then(
+      return createRazorpayOrder({ addressId, couponCode, shippingFee }).then(
         (rpOrder) =>
           new Promise((resolve, reject) => {
             openRazorpayCheckout({

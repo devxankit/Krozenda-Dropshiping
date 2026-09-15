@@ -26,16 +26,3 @@ export const applyCouponResultSchema = z.object({
   code: z.string(),
   discountAmount: z.number(),
 })
-
-// GET /catalog/coupons (publicCouponRoutes -> listPublicCoupons) response.
-export const publicCouponSchema = z.object({
-  code: z.string(),
-  description: z.string(),
-  discountType: z.enum(['PERCENTAGE', 'FIXED', 'FREE_SHIPPING']),
-  discountValue: z.number(),
-  maxDiscountAmount: z.number().nullable(),
-  minOrderAmount: z.number(),
-  endDate: z.string(),
-})
-
-export const publicCouponListSchema = z.array(publicCouponSchema)

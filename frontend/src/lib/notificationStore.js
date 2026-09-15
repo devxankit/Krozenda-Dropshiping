@@ -1,74 +1,88 @@
-// Shared buyer-app notification feed. There's no backend notification
-// service yet, so this is still seeded data — but it's shared state now,
-// which means the header bell dot reflects real unread count and clears
-// when the user actually reads their notifications, instead of a bell dot
-// that was hardcoded to always show regardless of what happened.
+// Shared buyer-app notification feed, backed by the real /user/notifications
+// API — mirrors cartStore/wishlistStore's pattern (local state + hydrate on
+// auth + optimistic local update alongside the backend call) rather than
+// the zod/react-query layering modules/user/ uses, since this is consumed
+// from the shared WebHeader (outside modules/user) exactly like cart/wishlist
+// counts are.
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { api } from './axios'
+import { useAuthStore } from './authStore'
+import { onForegroundMessage, requestPushToken } from './firebase'
 
-const SEED_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'order',
-    title: 'Order Delivered',
-    message: 'Your order #KRO1234567890 (Samsung S23 5G) has been delivered successfully.',
-    time: '10 mins ago',
-    isUnread: true,
-    actionLabel: 'View Order',
+// FCM only invokes the service worker's background handler when the tab is
+// NOT focused — a push that arrives while the buyer is looking at the page
+// has to be surfaced by hand, once per session.
+let listeningForPush = false
+
+function watchForegroundPush() {
+  if (listeningForPush) return
+  listeningForPush = true
+  onForegroundMessage((payload) => {
+    const { title, body } = payload.notification || {}
+    if (title && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/images/logo.png' })
+    }
+  })
+}
+
+// Best-effort: a declined permission, an unsupported browser, or a device
+// that already registered this token must never surface as an error — push
+// is a nice-to-have on top of the in-app feed, not a login requirement.
+async function registerPushToken() {
+  try {
+    const token = await requestPushToken()
+    if (token) {
+      await api.post('/user/notifications/fcm-token', { token })
+      watchForegroundPush()
+    }
+  } catch {
+    // Ignored — see comment above.
+  }
+}
+
+export const useNotificationStore = create((set, get) => ({
+  notifications: [],
+
+  hydrate: async () => {
+    if (!useAuthStore.getState().isAuthenticated) return
+    try {
+      const { data } = await api.get('/user/notifications')
+      if (data?.data?.items) set({ notifications: data.data.items })
+    } catch {
+      // Keep whatever was loaded before if the refresh fails.
+    }
+    registerPushToken()
   },
-  {
-    id: 2,
-    type: 'offer',
-    title: 'Flash Sale Live 🔥',
-    message: 'Get up to 60% OFF on B2B electronics bulk orders. Code: KROZ10.',
-    time: '2 hours ago',
-    isUnread: true,
-    actionLabel: 'View Deals',
+
+  markAsRead: (id) => {
+    const target = get().notifications.find((n) => n.id === id)
+    if (!target || target.isRead) return
+    set((state) => ({
+      notifications: state.notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+    }))
+    api.patch(`/user/notifications/${id}/read`).catch(() => {})
   },
-  {
-    id: 3,
-    type: 'system',
-    title: 'Cashback Credited',
-    message: '₹250 promo cashback credited to your KroZenda Wallet.',
-    time: 'Yesterday',
-    isUnread: false,
-    actionLabel: 'Check Wallet',
+
+  markAllRead: () => {
+    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, isRead: true })) }))
+    api.patch('/user/notifications/read-all').catch(() => {})
   },
-  {
-    id: 4,
-    type: 'order',
-    title: 'Shipment Dispatched',
-    message: 'Package containing boAt Airdopes 141 has been dispatched via Delhivery Air.',
-    time: '2 days ago',
-    isUnread: false,
-    actionLabel: 'Track Package',
+
+  remove: (id) => {
+    set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) }))
+    api.delete(`/user/notifications/${id}`).catch(() => {})
   },
-]
-
-export const useNotificationStore = create(
-  persist(
-    (set) => ({
-      notifications: SEED_NOTIFICATIONS,
-
-      markAsRead: (id) => {
-        set((state) => ({
-          notifications: state.notifications.map((n) => (n.id === id ? { ...n, isUnread: false } : n)),
-        }))
-      },
-
-      markAllRead: () => {
-        set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, isUnread: false })) }))
-      },
-
-      remove: (id) => {
-        set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) }))
-      },
-
-      clear: () => set({ notifications: [] }),
-    }),
-    { name: 'krozenda.notifications' },
-  ),
-)
+}))
 
 export const useUnreadNotificationCount = () =>
-  useNotificationStore((state) => state.notifications.filter((n) => n.isUnread).length)
+  useNotificationStore((state) => state.notifications.filter((n) => !n.isRead).length)
+
+if (useAuthStore.getState().isAuthenticated) {
+  useNotificationStore.getState().hydrate()
+}
+
+useAuthStore.subscribe((state, prevState) => {
+  if (state.isAuthenticated && !prevState.isAuthenticated) {
+    useNotificationStore.getState().hydrate()
+  }
+})

@@ -11,12 +11,18 @@ import { DEFAULT_ROWS_PER_PAGE } from '../constants'
 //
 // Rule 05 lives here — the ~28 list screens differ only in their columns and
 // their filter schema, so those are the only things passed in.
-export function useListController({ queryKey, queryFn, defaultTab = 'all', defaultSort = null }) {
+export function useListController({
+  queryKey,
+  queryFn,
+  defaultTab = 'all',
+  defaultSort = null,
+  defaultRowsPerPage = DEFAULT_ROWS_PER_PAGE,
+}) {
   const [tab, setTab] = useState(defaultTab)
   const [filters, setFilters] = useState({})
   const [sort, setSort] = useState(defaultSort)
   const [page, setPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE)
+  const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage)
   const [selectedKeys, setSelectedKeys] = useState([])
 
   const params = useMemo(

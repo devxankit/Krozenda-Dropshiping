@@ -24,8 +24,29 @@ const params = (query) => ({
 const list = (path, fixture, schema) => (query) =>
   fetchResource({ path, params: params(query), fixture: () => fixture(query), schema })
 
-export const fetchCoupons = list('/admin/marketing/coupons', fixtures.couponListFixture, couponListSchema)
-export const fetchCampaigns = list('/admin/marketing/campaigns', fixtures.campaignListFixture, campaignListSchema)
+export const fetchCoupons = (query) =>
+  fetchResource({ path: '/admin/marketing/coupons', params: params(query), fixture: () => fixtures.couponListFixture(query), schema: couponListSchema, live: true })
+
+export async function createCoupon(payload) {
+  const { data } = await api.post('/admin/marketing/coupons', payload)
+  return data.data
+}
+
+export async function updateCoupon({ id, ...payload }) {
+  const { data } = await api.put(`/admin/marketing/coupons/${id}`, payload)
+  return data.data
+}
+
+export async function updateCouponStatus({ id, isActive }) {
+  const { data } = await api.patch(`/admin/marketing/coupons/${id}/status`, { isActive })
+  return data.data
+}
+
+export async function deleteCoupon({ id }) {
+  const { data } = await api.delete(`/admin/marketing/coupons/${id}`)
+  return data.data
+}
+
 export const fetchReviews = list('/admin/marketing/reviews', fixtures.reviewListFixture, reviewListSchema)
 
 export const fetchOffers = () =>
@@ -135,5 +156,17 @@ export async function updateFaqStatus({ id, status }) {
 
 export async function deleteFaq({ id }) {
   const { data } = await api.delete(`/admin/marketing/faqs/${id}`)
+  return data.data
+}
+
+// --- Campaigns (real backend — push only, see marketing/CampaignFormModal) -
+
+export async function fetchCampaigns(query = {}) {
+  const { data } = await api.get('/admin/marketing/campaigns', { params: params(query) })
+  return campaignListSchema.parse(data.data)
+}
+
+export async function sendCampaign(payload) {
+  const { data } = await api.post('/admin/marketing/campaigns', payload)
   return data.data
 }

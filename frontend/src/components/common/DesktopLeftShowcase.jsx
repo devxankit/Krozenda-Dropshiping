@@ -1,4 +1,6 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
+import { USER_ROUTES } from '../../config/routes'
 import {
   HiBolt,
   HiBuildingOffice2,
@@ -33,8 +35,8 @@ export function DesktopLeftShowcase({
 
       {/* Top Header Bar */}
       <div className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center space-x-3.5">
-          <div className="p-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/20 flex items-center justify-center">
+        <Link to={USER_ROUTES.DASHBOARD} className="flex items-center space-x-3.5 cursor-pointer group" title="KroZenda Home">
+          <div className="p-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/20 flex items-center justify-center group-hover:bg-white/20 transition-all">
             <img
               src="/images/logo.png"
               alt="KroZenda Logo"
@@ -43,7 +45,7 @@ export function DesktopLeftShowcase({
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-lg font-black text-white tracking-wider">
+              <span className="text-lg font-black text-white tracking-wider group-hover:text-blue-200 transition-colors">
                 KROZENDA
               </span>
               <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
@@ -55,7 +57,7 @@ export function DesktopLeftShowcase({
               B2B & B2C Dropshipping
             </span>
           </div>
-        </div>
+        </Link>
 
         <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-xs text-blue-200">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

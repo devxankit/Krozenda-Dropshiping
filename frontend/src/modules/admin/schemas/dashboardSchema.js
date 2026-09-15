@@ -15,10 +15,22 @@ export const adminDashboardSummarySchema = z.object({
 const deltaSchema = z.object({
   direction: z.enum(['up', 'down', 'flat']),
   label: z.string(),
+  // Whether the movement is good news. The arrow follows `direction`, the
+  // colour follows this — a refund rate moving up is still a red "up", and a
+  // refund rate moving down is a green "down". Optional: without it a tile
+  // falls back to treating up as good.
+  sentiment: z.enum(['positive', 'negative', 'neutral']).optional(),
 })
+
+// The bucket width of every time series in the payload. The screen labels its
+// charts from this instead of asserting "monthly" over daily data.
+export const granularitySchema = z.enum(['day', 'week', 'month'])
 
 export const dashboardSchema = z.object({
   updatedAt: z.string(),
+  range: z.string().optional(),
+  rangeLabel: z.string().optional(),
+  granularity: granularitySchema.optional(),
 
   kpis: z.array(
     z.object({
@@ -33,7 +45,7 @@ export const dashboardSchema = z.object({
     }),
   ),
 
-  // One row per month; one key per business model. Stacked in fixed order so
+  // One row per bucket; one key per business model. Stacked in fixed order so
   // a model keeps its colour regardless of how many are on screen.
   revenueByModel: z.array(
     z.object({

@@ -1,165 +1,118 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge, Button, Icon, Input, Modal, Select, Textarea } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
+import { api } from '../../../../lib/axios'
 
+const EMPTY_FORM = { name: '', sku: '', category: '', brand: '', price: '', salePrice: '', stock: '100', description: '' }
+
+// A seller only picks from the admin-created catalog — no ad-hoc category/
+// brand creation here (per platform rule: sellers get product CRUD, not
+// taxonomy CRUD) — so this loads the real, live lists from the public
+// catalog endpoints rather than a hand-authored dropdown.
 export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    category: 'Home & Living',
-    costPrice: '',
-    sellingPrice: '',
-    b2bPrice: '',
-    stock: '100',
-    moq: '1',
-    description: '',
-  })
-  const [images, setImages] = useState([])
-  const [imageUrlInput, setImageUrlInput] = useState('')
+  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [files, setFiles] = useState([])
+  const [previews, setPreviews] = useState([])
+  const [categories, setCategories] = useState([])
+  const [brands, setBrands] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files || [])
-    if (!files.length) return
+  useEffect(() => {
+    if (!isOpen) return
+    // Only APPROVED entries are selectable — a category/brand the seller just
+    // proposed isn't usable for a product until admin approves it (see
+    // CategoriesPage for where that pending status is tracked).
+    api.get('/vendor/catalog/categories').then(({ data }) => setCategories(data.data.items.filter((c) => c.approvalStatus === 'APPROVED'))).catch(() => {})
+    api.get('/vendor/catalog/brands').then(({ data }) => setBrands(data.data.items.filter((b) => b.approvalStatus === 'APPROVED'))).catch(() => {})
+  }, [isOpen])
 
-    files.forEach((file) => {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setImages((prev) => [...prev, event.target.result])
-      }
-      reader.readAsDataURL(file)
-    })
+  function handleFileUpload(e) {
+    const selected = Array.from(e.target.files || [])
+    if (!selected.length) return
+    setFiles((prev) => [...prev, ...selected])
+    setPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))])
   }
 
-  const handleAddUrlImage = () => {
-    if (!imageUrlInput.trim()) return
-    setImages((prev) => [...prev, imageUrlInput.trim()])
-    setImageUrlInput('')
+  function handleRemoveImage(index) {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+    setPreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleRemoveImage = (index) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (!formData.name || !formData.sku || !formData.sellingPrice) {
-      toast.error('Missing Required Fields', 'Please fill in product title, SKU and selling price.')
+    if (!formData.name.trim() || !formData.category || !formData.price) {
+      toast.error('Missing Required Fields', 'Please fill in product title, category and price.')
       return
     }
 
-    const costNum = Math.round(parseFloat(formData.costPrice || formData.sellingPrice * 0.7) * 100)
-    const sellingNum = Math.round(parseFloat(formData.sellingPrice) * 100)
-    const b2bNum = Math.round(parseFloat(formData.b2bPrice || formData.sellingPrice * 0.85) * 100)
-    const marginPct = sellingNum > costNum ? parseFloat((((sellingNum - costNum) / sellingNum) * 100).toFixed(1)) : 25.0
+    const body = new FormData()
+    body.append('name', formData.name.trim())
+    if (formData.sku.trim()) body.append('sku', formData.sku.trim())
+    body.append('category', formData.category)
+    if (formData.brand) body.append('brand', formData.brand)
+    body.append('price', formData.price)
+    if (formData.salePrice) body.append('salePrice', formData.salePrice)
+    body.append('stock', formData.stock || '0')
+    body.append('description', formData.description)
+    files.forEach((f) => body.append('images', f))
 
-    const newProduct = {
-      id: `vp-${Math.floor(1000 + Math.random() * 9000)}`,
-      sku: formData.sku.toUpperCase(),
-      name: formData.name,
-      category: formData.category,
-      imageUrl: images[0] || 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=300',
-      images,
-      costPrice: costNum,
-      sellingPrice: sellingNum,
-      b2bPrice: b2bNum,
-      marginPct,
-      stock: parseInt(formData.stock, 10) || 0,
-      moq: parseInt(formData.moq, 10) || 1,
-      status: 'pending_approval',
-      updatedAt: 'Just now',
+    setIsSubmitting(true)
+    try {
+      const newProduct = await onAddProduct(body)
+      toast.success('Product Submitted for Review', `${newProduct.name} was queued for admin approval.`)
+      onClose()
+      setFormData(EMPTY_FORM)
+      setFiles([])
+      setPreviews([])
+    } catch (err) {
+      toast.error('Could not add product', err?.response?.data?.message || 'Something went wrong')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onAddProduct?.(newProduct)
-    toast.success(
-      'Product Submitted for Review',
-      `${formData.name} added to catalog and queued for Admin approval.`,
-    )
-    onClose()
-    setFormData({
-      name: '',
-      sku: '',
-      category: 'Home & Living',
-      costPrice: '',
-      sellingPrice: '',
-      b2bPrice: '',
-      stock: '100',
-      moq: '1',
-      description: '',
-    })
-    setImages([])
-    setImageUrlInput('')
   }
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Vendor Product"
-      description="Upload product photos, set SKU prices, wholesale B2B pricing, and initial stock."
+      title="Add New Product"
+      description="New products go live only after admin approval — pick a category from the platform's catalog."
       size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} icon="add">
-            Submit product for review
+          <Button onClick={handleSubmit} icon="add" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting…' : 'Submit product for review'}
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 max-h-[60vh] overflow-y-auto admin-scroll pr-1.5">
-        {/* Product Images Section */}
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-subtle p-3">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-xs font-semibold text-slate-900">Product Photos</h4>
-              <p className="text-2xs text-ink-subtle">
-                First uploaded image will be primary catalog thumbnail.
-              </p>
+              <p className="text-2xs text-ink-subtle">First uploaded image will be the primary thumbnail.</p>
             </div>
-            {images.length > 0 && (
+            {previews.length > 0 && (
               <Badge tone="brand" size="xs">
-                {images.length} {images.length === 1 ? 'photo' : 'photos'}
+                {previews.length} {previews.length === 1 ? 'photo' : 'photos'}
               </Badge>
             )}
           </div>
 
-          {/* File Upload Zone + URL Paste */}
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <label className="flex items-center justify-center gap-2 cursor-pointer rounded-md border border-dashed border-border bg-surface p-2.5 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/50">
-              <Icon name="upload" className="h-4 w-4 text-brand-600" />
-              <span className="text-xs font-medium text-slate-900">Choose Image Files</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
+          <label className="flex items-center justify-center gap-2 cursor-pointer rounded-md border border-dashed border-border bg-surface p-2.5 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/50">
+            <Icon name="upload" className="h-4 w-4 text-brand-600" />
+            <span className="text-xs font-medium text-slate-900">Choose Image Files</span>
+            <input type="file" accept="image/*" multiple onChange={handleFileUpload} className="hidden" />
+          </label>
 
-            <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-1">
-              <Input
-                placeholder="Paste image URL..."
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                className="text-xs border-0 shadow-none focus:ring-0 p-0"
-              />
-              <Button type="button" size="xs" variant="secondary" onClick={handleAddUrlImage}>
-                Add
-              </Button>
-            </div>
-          </div>
-
-          {/* Image Thumbnails Gallery */}
-          {images.length > 0 && (
+          {previews.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
-              {images.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative group h-14 w-14 overflow-hidden rounded-md border border-border bg-surface shadow-2xs"
-                >
+              {previews.map((img, idx) => (
+                <div key={img} className="relative group h-14 w-14 overflow-hidden rounded-md border border-border bg-surface shadow-2xs">
                   <img src={img} alt={`Product thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
                   {idx === 0 && (
                     <span className="absolute left-0.5 top-0.5 rounded bg-brand-600 px-1 py-0.2 text-[8px] font-bold text-white shadow-2xs">
@@ -180,7 +133,6 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
           )}
         </div>
 
-        {/* Basic Product Info */}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Product Title"
@@ -190,73 +142,58 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
             required
           />
           <Input
-            label="Stock Keeping Unit (SKU)"
+            label="SKU (optional)"
             placeholder="e.g. ARY-BED-KNG"
             value={formData.sku}
             onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-            required
           />
         </div>
 
-        {/* Category & Pricing */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Select
             label="Category"
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            options={[
-              { value: 'Home & Living', label: 'Home & Living' },
-              { value: 'Kitchenware', label: 'Kitchenware' },
-              { value: 'Electronics', label: 'Electronics' },
-              { value: 'Gourmet & Spices', label: 'Gourmet & Spices' },
-              { value: 'Home & Decor', label: 'Home & Decor' },
-            ]}
-          />
-          <Input
-            label="Base Cost Price (₹)"
-            type="number"
-            placeholder="1250"
-            value={formData.costPrice}
-            onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-          />
-          <Input
-            label="Retail Price (₹)"
-            type="number"
-            placeholder="1799"
-            value={formData.sellingPrice}
-            onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="Select a category"
             required
+          />
+          <Select
+            label="Brand (optional)"
+            value={formData.brand}
+            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            options={brands.map((b) => ({ value: b.id, label: b.name }))}
+            placeholder="No brand"
           />
         </div>
 
-        {/* B2B Tier & Inventory */}
         <div className="grid gap-3 sm:grid-cols-3">
           <Input
-            label="B2B Wholesale Price (₹)"
+            label="Price (₹)"
             type="number"
-            placeholder="1450"
-            value={formData.b2bPrice}
-            onChange={(e) => setFormData({ ...formData, b2bPrice: e.target.value })}
+            placeholder="1799"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            required
           />
           <Input
-            label="Initial Stock Quantity"
+            label="Sale Price (₹, optional)"
+            type="number"
+            placeholder="1499"
+            value={formData.salePrice}
+            onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+          />
+          <Input
+            label="Initial Stock"
             type="number"
             placeholder="100"
             value={formData.stock}
             onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
           />
-          <Input
-            label="Minimum Order Qty (MOQ)"
-            type="number"
-            placeholder="1"
-            value={formData.moq}
-            onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
-          />
         </div>
 
-        {/* Description */}
         <Textarea
-          label="Product Description / Specifications"
+          label="Description"
           placeholder="Enter product features, dimensions, material and packaging details..."
           rows={2}
           value={formData.description}

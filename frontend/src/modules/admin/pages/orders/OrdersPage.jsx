@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Tabs } from '../../../../components/ui'
 import { adminPath } from '../../../../config/routes'
 import { PageBody, PageHeader } from '../../components/shell'
 import { DataTable, ExportMenu, FilterBar, FilterChips } from '../../components/data'
 import { PermissionGate } from '../../components/feedback'
+import { OrderFormModal } from '../../components/orders/OrderFormModal'
 import { ADMIN_PERMISSIONS } from '../../constants'
-import { useOrderListController } from '../../controllers/useOrderController'
+import { useOrderListController, useOrderWriteController } from '../../controllers/useOrderController'
 import { ORDER_COLUMNS, ORDER_FILTERS, ORDER_TABS } from '../../tableColumns/orderColumns'
 
 // Reference implementation for every list screen in the panel. The whole
@@ -14,24 +16,19 @@ import { ORDER_COLUMNS, ORDER_FILTERS, ORDER_TABS } from '../../tableColumns/ord
 export function OrdersPage() {
   const navigate = useNavigate()
   const list = useOrderListController()
-
-  const bulkActions = [
-    { label: 'Assign vendor', icon: 'sellers', onClick: () => {} },
-    { label: 'Mark packed', icon: 'products', onClick: () => {} },
-    { label: 'Generate AWB', icon: 'shipments', onClick: () => {} },
-    { label: 'Cancel orders', icon: 'close', tone: 'danger', onClick: () => {} },
-  ]
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const { create } = useOrderWriteController({ onSaved: () => setIsCreateOpen(false) })
 
   return (
     <PageBody>
       <PageHeader
         title="Orders"
-        description={`${list.totalItems.toLocaleString('en-IN')} parent orders · one payment fans out into a sub-order per vendor`}
+        description={`${list.totalItems.toLocaleString('en-IN')} orders`}
         actions={
           <>
             <ExportMenu onExport={() => {}} />
             <PermissionGate permission={ADMIN_PERMISSIONS.ORDERS_MANAGE}>
-              <Button size="control" icon="add">
+              <Button size="control" icon="add" onClick={() => setIsCreateOpen(true)}>
                 Create order
               </Button>
             </PermissionGate>
@@ -68,11 +65,6 @@ export function OrdersPage() {
         onRetry={list.refetch}
         sort={list.sort}
         onSortChange={list.changeSort}
-        selectable
-        selectedKeys={list.selectedKeys}
-        onSelectionChange={list.setSelectedKeys}
-        bulkActions={bulkActions}
-        bulkLabel="orders selected"
         onRowClick={(order) => navigate(adminPath.orderDetail(order.id))}
         page={list.page}
         totalPages={list.totalPages}
@@ -85,6 +77,14 @@ export function OrdersPage() {
         emptyTitle="No orders match these filters"
         emptyDescription="Try widening the date range, or clear the filters to see everything."
         emptyAction={{ label: 'Clear filters', icon: 'close', onClick: list.clearFilters }}
+      />
+
+      <OrderFormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSubmit={create.run}
+        isSubmitting={create.isSubmitting}
+        error={create.error}
       />
     </PageBody>
   )

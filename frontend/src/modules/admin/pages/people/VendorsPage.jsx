@@ -1,114 +1,90 @@
 import { useMemo, useState } from 'react'
-import { Badge, Button, Icon, Table } from '../../../../components/ui'
+import { Badge, Icon, Table } from '../../../../components/ui'
 import { ErrorState, InlineAlert, PageSkeleton, PermissionGate } from '../../components/feedback'
-import { ADMIN_PERMISSIONS } from '../../constants'
-import { useVendorListController } from '../../controllers/usePeopleController'
+import {
+  ADMIN_PERMISSIONS,
+  VENDOR_TYPE_TONE,
+  VENDOR_VERIFICATION_LABELS,
+  VENDOR_VERIFICATION_TONE,
+} from '../../constants'
+import { useVendorListController, useVendorWriteController } from '../../controllers/usePeopleController'
 import { MoneyCell, StatusPill } from '../../components/display'
-import { REVIEW_STATUS_LABELS, REVIEW_STATUS_TONE } from '../../constants'
+import { PageBody } from '../../components/shell'
 import { VendorFormDrawer } from '../../components/people/VendorFormDrawer'
 import { PartnerDetailDrawer } from '../../components/dropshipping/PartnerDetailDrawer'
-
-const MODEL_LABELS = {
-  marketplace: 'Marketplace',
-  dropshipping: 'Dropshipping',
-  own_stock: 'Own Stock',
-}
-
-const MODEL_TONES = {
-  marketplace: 'brand',
-  dropshipping: 'accent',
-  own_stock: 'neutral',
-}
 
 export function VendorsPage() {
   const list = useVendorListController()
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState('all') // 'all' | 'marketplace' | 'dropshipping' | 'pending' | 'suspended'
-  const [modelFilter, setModelFilter] = useState('all') // 'all' | 'marketplace' | 'dropshipping' | 'own_stock'
+  const [activeTab, setActiveTab] = useState('all') // 'all' | 'B2B' | 'B2C' | 'pending' | 'suspended'
 
-  const [formVendor, setFormVendor] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedVendor, setSelectedVendor] = useState(null)
+
+  const { create, setActive } = useVendorWriteController({ onSaved: () => setIsFormOpen(false) })
 
   const rawItems = list.items || []
   const totalCount = rawItems.length
 
-  const marketplaceCount = useMemo(
-    () => rawItems.filter((r) => r.model === 'marketplace').length,
-    [rawItems],
-  )
-  const dropshipCount = useMemo(
-    () => rawItems.filter((r) => r.model === 'dropshipping').length,
-    [rawItems],
-  )
+  const b2bCount = useMemo(() => rawItems.filter((r) => r.vendorType === 'B2B').length, [rawItems])
+  const b2cCount = useMemo(() => rawItems.filter((r) => r.vendorType === 'B2C').length, [rawItems])
   const pendingKycCount = useMemo(
-    () =>
-      rawItems.filter((r) =>
-        ['submitted', 'reviewing', 'changes_requested', 'pending'].includes(
-          String(r.kycStatus || r.status).toLowerCase(),
-        ),
-      ).length,
+    () => rawItems.filter((r) => ['PENDING', 'UNDER_REVIEW'].includes(r.verificationStatus)).length,
     [rawItems],
   )
-  const unlinkedCount = useMemo(
-    () => rawItems.filter((r) => !r.routeLinked && r.model !== 'own_stock').length,
-    [rawItems],
-  )
-  const routeLinkedRatio =
-    totalCount > 0 ? Math.round(((totalCount - unlinkedCount) / totalCount) * 100) : 0
+  const activeCount = useMemo(() => rawItems.filter((r) => r.isActive).length, [rawItems])
+  const unlinkedCount = useMemo(() => rawItems.filter((r) => !r.bankLinked).length, [rawItems])
+  const activeRatio = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0
 
   const filteredItems = useMemo(() => {
     return rawItems.filter((vendor) => {
-      // Tab filter
-      if (activeTab === 'marketplace' && vendor.model !== 'marketplace') return false
-      if (activeTab === 'dropshipping' && vendor.model !== 'dropshipping') return false
-      if (activeTab === 'pending' && vendor.status !== 'pending') return false
+      if (activeTab === 'B2B' && vendor.vendorType !== 'B2B') return false
+      if (activeTab === 'B2C' && vendor.vendorType !== 'B2C') return false
+      if (activeTab === 'pending' && !['PENDING', 'UNDER_REVIEW'].includes(vendor.verificationStatus)) {
+        return false
+      }
       if (activeTab === 'suspended' && vendor.status !== 'suspended') return false
 
-      // Model filter dropdown
-      if (modelFilter !== 'all' && vendor.model !== modelFilter) return false
-
-      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
         return (
           vendor.name?.toLowerCase().includes(q) ||
+          vendor.businessName?.toLowerCase().includes(q) ||
+          vendor.email?.toLowerCase().includes(q) ||
+          vendor.mobile?.includes(q) ||
           vendor.city?.toLowerCase().includes(q) ||
-          vendor.role?.toLowerCase().includes(q) ||
-          vendor.supplierType?.toLowerCase().includes(q) ||
           vendor.gstin?.toLowerCase().includes(q)
         )
       }
       return true
     })
-  }, [rawItems, activeTab, modelFilter, searchQuery])
+  }, [rawItems, activeTab, searchQuery])
 
-  if (list.isLoading) return <PageSkeleton rows={5} />
-  if (list.error) return <ErrorState error={list.error} onRetry={list.refetch} />
+  if (list.isLoading) {
+    return (
+      <PageBody>
+        <PageSkeleton rows={5} />
+      </PageBody>
+    )
+  }
+
+  if (list.error) {
+    return (
+      <PageBody>
+        <ErrorState error={list.error} onRetry={list.refetch} />
+      </PageBody>
+    )
+  }
 
   function openCreate() {
-    setFormVendor(null)
     setIsFormOpen(true)
-  }
-
-  function openEdit(vendor) {
-    setFormVendor(vendor)
-    setIsFormOpen(true)
-  }
-
-  function handleSaveVendor(savedVendor) {
-    if (formVendor) {
-      list.updateVendor?.(savedVendor)
-    } else {
-      list.addVendor?.(savedVendor)
-    }
   }
 
   const FILTER_TABS = [
-    { id: 'all', label: 'All Vendors', count: totalCount },
-    { id: 'marketplace', label: 'Marketplace', count: marketplaceCount },
-    { id: 'dropshipping', label: 'Dropshipping', count: dropshipCount },
-    { id: 'pending', label: 'Pending Review', count: pendingKycCount },
+    { id: 'all', label: 'All Partners', count: totalCount },
+    { id: 'B2B', label: 'B2B', count: b2bCount },
+    { id: 'B2C', label: 'B2C', count: b2cCount },
+    { id: 'pending', label: 'Pending Verification', count: pendingKycCount },
     { id: 'suspended', label: 'Suspended', count: rawItems.filter((r) => r.status === 'suspended').length },
   ]
 
@@ -134,14 +110,14 @@ export function VendorsPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="font-semibold text-slate-900 text-sm truncate group-hover:text-brand-600 transition-colors">
-                  {row.name}
+                  {row.businessName || row.name}
                 </p>
-                <Badge tone={MODEL_TONES[row.model] || 'neutral'} size="sm">
-                  {MODEL_LABELS[row.model] || row.model}
+                <Badge tone={VENDOR_TYPE_TONE[row.vendorType] || 'neutral'} size="sm">
+                  {row.vendorType}
                 </Badge>
               </div>
               <p className="text-2xs text-slate-400 truncate">
-                {row.role || row.supplierType || 'Supplier'} · ID: {row.id ? String(row.id).slice(-8) : '—'}
+                {row.role} · {row.email}
               </p>
             </div>
           </div>
@@ -187,32 +163,37 @@ export function VendorsPage() {
       ),
     },
     {
-      key: 'kycStatus',
-      header: 'KYC Status',
+      key: 'verificationStatus',
+      header: 'Verification',
       width: '10.5rem',
       render: (row) => (
-        <StatusPill
-          status={row.kycStatus || 'reviewing'}
-          labels={REVIEW_STATUS_LABELS}
-          tones={REVIEW_STATUS_TONE}
-          size="sm"
-        />
+        <div className="flex flex-col gap-1">
+          <StatusPill
+            status={row.verificationStatus}
+            labels={VENDOR_VERIFICATION_LABELS}
+            tones={VENDOR_VERIFICATION_TONE}
+            size="sm"
+          />
+          {!row.isActive && row.verificationStatus === 'APPROVED' && (
+            <span className="text-2xs text-slate-400">Suspended</span>
+          )}
+        </div>
       ),
     },
     {
-      key: 'routeLinked',
-      header: 'Razorpay Route',
+      key: 'bankLinked',
+      header: 'Payout Bank',
       width: '9.5rem',
       render: (row) => (
-        <Badge tone={row.routeLinked ? 'success' : 'warning'} dot size="sm">
-          {row.routeLinked ? 'Linked' : 'Not linked'}
+        <Badge tone={row.bankLinked ? 'success' : 'warning'} dot size="sm">
+          {row.bankLinked ? 'On file' : 'Missing'}
         </Badge>
       ),
     },
     {
       key: '__actions',
       header: 'Actions',
-      width: '7.5rem',
+      width: '6rem',
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -224,21 +205,15 @@ export function VendorsPage() {
           >
             <Icon name="eye" className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            title="Edit partner profile"
-            onClick={() => openEdit(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-          >
-            <Icon name="edit" className="h-4 w-4" />
-          </button>
         </div>
       ),
     },
   ]
 
   return (
-    <div className="flex flex-col gap-6">
+    // PageBody is the panel's one page container — it owns the gutter and the
+    // vertical rhythm, so this screen lines up with every other one.
+    <PageBody className="gap-6">
       {/* Top Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -305,75 +280,76 @@ export function VendorsPage() {
           </div>
         </div>
 
-        {/* Marketplace Sellers */}
+        {/* B2B Partners */}
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-brand-200">
           <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Marketplace</span>
+            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">B2B Partners</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
               <Icon name="catalog" className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{marketplaceCount}</span>
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{b2bCount}</span>
             <span className="text-xs font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full">
-              Merchants
+              Businesses
             </span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
-            <span>Multi-seller catalog storefronts</span>
+            <span>Registered entities with GST & contact person</span>
           </div>
         </div>
 
-        {/* Dropship Suppliers */}
+        {/* B2C Partners */}
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-violet-200">
           <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Dropship Partners</span>
+            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">B2C Partners</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-500/10 transition-transform group-hover:scale-105">
-              <Icon name="truck" className="h-5 w-5" />
+              <Icon name="customers" className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{dropshipCount}</span>
-            <span className="text-xs font-medium text-slate-500">suppliers</span>
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{b2cCount}</span>
+            <span className="text-xs font-medium text-slate-500">individual sellers</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-500" />
-            <span>Direct Model A order forwarding</span>
+            <span>Direct-to-shopper sellers</span>
           </div>
         </div>
 
-        {/* Payout Compliance */}
+        {/* Active partners */}
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
           <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Route Settlement</span>
+            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Live & Selling</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
               <Icon name="check" className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">
-              {routeLinkedRatio}%
+              {activeRatio}%
             </span>
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-              linked
+              {activeCount} active
             </span>
           </div>
           <div className="mt-3.5">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
                 className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                style={{ width: `${routeLinkedRatio}%` }}
+                style={{ width: `${activeRatio}%` }}
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Unlinked Settlement Banner */}
+      {/* Missing payout details banner */}
       {unlinkedCount > 0 && (
-        <InlineAlert tone="warning" title={`${unlinkedCount} vendors cannot receive settlements yet`}>
-          Vendors without an approved KYC and Razorpay Route linked account are automatically excluded from settlement disbursements.
+        <InlineAlert tone="warning" title={`${unlinkedCount} partners cannot receive settlements yet`}>
+          Partners without bank account and IFSC details on file are excluded from settlement
+          disbursements until they complete their payout profile.
         </InlineAlert>
       )}
 
@@ -444,7 +420,7 @@ export function VendorsPage() {
           <p className="mt-1 text-xs text-slate-500 max-w-sm">
             {searchQuery || activeTab !== 'all'
               ? 'Try modifying your search terms or clearing the filter tab.'
-              : 'Onboard marketplace merchants and dropshipping suppliers to build your platform catalog.'}
+              : 'Register B2B businesses and B2C sellers to build your platform catalog.'}
           </p>
           {searchQuery || activeTab !== 'all' ? (
             <button
@@ -452,7 +428,6 @@ export function VendorsPage() {
               onClick={() => {
                 setSearchQuery('')
                 setActiveTab('all')
-                setModelFilter('all')
               }}
               className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
             >
@@ -484,15 +459,13 @@ export function VendorsPage() {
         </div>
       )}
 
-      {/* Right-Side Form Drawer for Create and Edit */}
+      {/* One-step partner registration */}
       <VendorFormDrawer
         isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false)
-          setFormVendor(null)
-        }}
-        vendor={formVendor}
-        onSubmit={handleSaveVendor}
+        onClose={() => setIsFormOpen(false)}
+        onSubmit={create.run}
+        isSubmitting={create.isSubmitting}
+        error={create.error}
       />
 
       {/* Right-Side Partner Detail Drawer */}
@@ -501,10 +474,10 @@ export function VendorsPage() {
         isOpen={Boolean(selectedVendor)}
         onClose={() => setSelectedVendor(null)}
         onToggleStatus={(partnerId, nextStatus) => {
-          list.toggleVendorStatus?.(partnerId, nextStatus)
+          setActive.run({ id: partnerId, isActive: nextStatus === 'active' })
           setSelectedVendor((prev) => (prev ? { ...prev, status: nextStatus } : prev))
         }}
       />
-    </div>
+    </PageBody>
   )
 }

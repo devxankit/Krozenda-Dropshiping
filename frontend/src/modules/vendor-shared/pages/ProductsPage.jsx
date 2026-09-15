@@ -2,11 +2,7 @@ import { useState } from 'react'
 import { Button } from '../../../components/ui'
 import { ExportMenu, ListScreen } from '../../admin/components/data'
 import { useVendorProductsController } from '../controllers/useVendorController'
-import {
-  VENDOR_PRODUCT_COLUMNS,
-  VENDOR_PRODUCT_FILTERS,
-  VENDOR_PRODUCT_TABS,
-} from '../tableColumns/vendorColumns'
+import { VENDOR_PRODUCT_COLUMNS, VENDOR_PRODUCT_TABS } from '../tableColumns/vendorColumns'
 import { AddVendorProductModal } from '../components/modals/AddVendorProductModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
 
@@ -18,8 +14,8 @@ export function VendorProductsPage() {
   return (
     <>
       <ListScreen
-        title="Vendor Catalog & Products"
-        description="Manage your product listings, retail list prices, wholesale B2B pricing tiers, and warehouse stock levels."
+        title="Products"
+        description="Manage your product listings, pricing and stock. New products go live once an admin approves them."
         actions={
           <>
             <ExportMenu onExport={() => {}} />
@@ -30,7 +26,6 @@ export function VendorProductsPage() {
         }
         controller={list}
         columns={VENDOR_PRODUCT_COLUMNS}
-        filters={VENDOR_PRODUCT_FILTERS}
         tabs={VENDOR_PRODUCT_TABS}
         searchPlaceholder="SKU, product title or category…"
         itemLabel="vendor products"
@@ -46,6 +41,7 @@ export function VendorProductsPage() {
       />
 
       <UpdateStockModal
+        key={selectedProduct?.id}
         product={selectedProduct}
         isOpen={Boolean(selectedProduct)}
         onClose={() => setSelectedProduct(null)}

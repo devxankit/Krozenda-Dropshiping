@@ -5,15 +5,14 @@ const savedUser = storage.getUserData()
 const savedToken = storage.getAccessToken()
 const savedGrants = storage.getGrants()
 
-// Default permissions in demo environment to allow instant testing across panels
-const DEFAULT_DEMO_PERMISSIONS = ['seller.access', 'dropshipping_partner.access', 'admin.access']
-const DEFAULT_DEMO_ROLES = ['seller', 'dropshipping_partner', 'admin', 'user']
-
 export const useAuthStore = create((set) => ({
-  user: savedUser || (savedToken ? { name: 'Ramesh Sharma', email: 'seller@krozenda.com', storeName: 'Arya Manufacturing' } : null),
-  roles: savedGrants?.roles ?? (savedToken ? DEFAULT_DEMO_ROLES : []),
+  user: savedUser || null,
+  // An orphaned token with no saved grants (e.g. a stale/corrupted session)
+  // must never fall back to elevated roles/permissions — that previously
+  // rendered admin/seller UI for a plain customer session missing its grants.
+  roles: savedGrants?.roles ?? [],
   capabilities: savedGrants?.capabilities ?? [],
-  permissions: savedGrants?.permissions ?? (savedToken ? DEFAULT_DEMO_PERMISSIONS : []),
+  permissions: savedGrants?.permissions ?? [],
   isAuthenticated: Boolean(savedToken),
 
   setSession: ({
@@ -24,13 +23,15 @@ export const useAuthStore = create((set) => ({
     accessToken,
     refreshToken,
   }) => {
-    const token = accessToken || 'demo-krozenda-auth-token-12345'
-    storage.setAccessToken(token)
+    if (!accessToken) {
+      throw new Error('setSession requires a real accessToken from the backend');
+    }
+    storage.setAccessToken(accessToken)
     if (user) storage.setUserData(user)
     if (refreshToken) storage.setRefreshToken(refreshToken)
     storage.setGrants({ roles, capabilities, permissions })
     set({
-      user: user || { name: 'Ramesh Sharma', email: 'seller@krozenda.com', storeName: 'Arya Manufacturing' },
+      user: user || null,
       roles,
       capabilities,
       permissions,

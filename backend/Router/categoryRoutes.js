@@ -5,14 +5,15 @@ const {
   updateCategory,
   updateCategoryStatus,
   updateCategoryTopStatus,
+  decideCategoryApproval,
   deleteCategory,
 } = require('../Controllers/categoryController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 const { upload, processImage, handleUploadError } = require('../Middlewares/uploadMiddleware');
 
 const router = express.Router();
 
-router.use(protectAdmin);
+router.use(protectAdmin, requirePermission('admin.catalog.categories'));
 
 const uploadCategoryImage = [
   upload.single('image'),
@@ -25,6 +26,7 @@ router.post('/', ...uploadCategoryImage, createCategory);
 router.put('/:id', ...uploadCategoryImage, updateCategory);
 router.patch('/:id/status', updateCategoryStatus);
 router.patch('/:id/top', updateCategoryTopStatus);
+router.patch('/:id/approval', decideCategoryApproval);
 router.delete('/:id', deleteCategory);
 
 module.exports = router;

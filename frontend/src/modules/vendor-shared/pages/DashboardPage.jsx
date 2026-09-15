@@ -2,15 +2,14 @@ import { Link } from 'react-router-dom'
 import { Badge, Button, Table } from '../../../components/ui'
 import { Skeleton } from '../../../components/ui'
 import { useVendorDashboardController, useVendorOrdersController } from '../controllers/useVendorController'
-import { VENDOR_STATUS_LABELS } from '../constants'
-import { MoneyCell, StatusPill } from '../../admin/components/display'
+import { VENDOR_ORDER_STATUS_TONE, VENDOR_STATUS_LABELS } from '../constants'
+import { MoneyCell, StatusPill } from '../../admin/components/display/cells'
 import { StatTile } from '../../admin/components/StatTile'
 import { SectionCard } from '../../admin/components/display'
 import { InlineAlert } from '../../admin/components/feedback'
-import { VENDOR_ORDER_STATUS_TONE } from '../constants'
 
 export function VendorDashboardPage() {
-  const { summary, isLoading, isError, error } = useVendorDashboardController()
+  const { data: summary, isLoading, isError, error } = useVendorDashboardController()
   const orders = useVendorOrdersController()
 
   if (isLoading) {
@@ -32,45 +31,37 @@ export function VendorDashboardPage() {
   const columns = [
     {
       key: 'id',
-      header: 'Sub-Order ID',
+      header: 'Order ID',
       width: '9rem',
-      render: (row) => <span className="font-mono text-xs font-semibold text-brand-700">{row.id}</span>,
+      render: (row) => <span className="font-mono text-xs font-semibold text-brand-700">{row.id.slice(-8).toUpperCase()}</span>,
     },
     {
-      key: 'productName',
+      key: 'items',
       header: 'Ordered Product',
       render: (row) => (
         <div className="flex flex-col text-xs">
-          <span className="font-medium text-slate-900">{row.productName}</span>
-          <span className="text-ink-subtle">Qty: {row.quantity} · Buyer: {row.customerName}</span>
+          <span className="font-medium text-slate-900">{row.items[0]?.name}</span>
+          <span className="text-ink-subtle">Buyer: {row.customer.name}</span>
         </div>
       ),
     },
     {
-      key: 'orderValue',
+      key: 'itemsValue',
       header: 'Order Value',
       width: '7.5rem',
       align: 'right',
-      render: (row) => <MoneyCell amount={row.orderValue} compact />,
+      render: (row) => <MoneyCell amount={row.itemsValue} compact />,
     },
     {
-      key: 'netPayable',
-      header: 'Net Payout',
-      width: '8rem',
-      align: 'right',
-      render: (row) => <MoneyCell amount={row.netPayable} compact className="font-semibold text-emerald-600" />,
-    },
-    {
-      key: 'forwardingStatus',
+      key: 'status',
       header: 'Status',
       width: '9rem',
-      render: (row) => <StatusPill status={row.forwardingStatus} tones={VENDOR_ORDER_STATUS_TONE} size="sm" />,
+      render: (row) => <StatusPill status={row.status} tones={VENDOR_ORDER_STATUS_TONE} size="sm" />,
     },
   ]
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header Banner */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-surface p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
@@ -79,9 +70,7 @@ export function VendorDashboardPage() {
               {VENDOR_STATUS_LABELS[summary.status] ?? summary.status}
             </Badge>
           </div>
-          <p className="text-xs text-ink-subtle mt-0.5">
-            Vendor Operations Dashboard — Model A & Model B Seller Portal
-          </p>
+          <p className="text-xs text-ink-subtle mt-0.5">Seller Operations Dashboard</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -100,72 +89,44 @@ export function VendorDashboardPage() {
 
       {summary.kycStatus !== 'approved' && (
         <InlineAlert tone="warning" title="KYC Verification Required">
-          Please upload your PAN, GSTIN, and Bank Account proof under KYC Documents to enable Razorpay Route settlement payouts.
+          Upload your PAN, GSTIN, and Bank Account proof under KYC Documents to get your seller account fully approved.
         </InlineAlert>
       )}
 
-      {/* KPI Stats Row */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile
-          label="Gross Revenue"
-          value={`₹${(summary.totalRevenue / 100).toLocaleString('en-IN')}`}
-          delta={{ direction: 'up', label: '+18.4%' }}
-          tone="brand"
-        />
-        <StatTile
-          label="Pending Dispatch Orders"
-          value={summary.pendingOrdersCount}
-          caption="Requires packing or AWB dispatch"
-        />
-        <StatTile
-          label="Live Catalog SKUs"
-          value={summary.liveSkusCount}
-          caption="Active on buyer apps"
-        />
+        <StatTile label="Delivered Revenue" value={`₹${(summary.totalRevenue / 100).toLocaleString('en-IN')}`} tone="brand" />
+        <StatTile label="Pending Orders" value={summary.pendingOrdersCount} caption="Awaiting processing or shipping" />
+        <StatTile label="Live Products" value={summary.liveSkusCount} caption="Active on buyer apps" />
         <StatTile
           label="Available Payout"
           value={`₹${(summary.availablePayout / 100).toLocaleString('en-IN')}`}
-          caption="Eligible for Razorpay Route transfer"
+          caption="Net of platform commission"
           tone="brand"
         />
       </div>
 
-      {/* Quick Action Navigation Grid */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Link
-          to="../products"
-          className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs"
-        >
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Catalog & Products</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Manage SKU prices, B2B wholesale tiers, and stock availability.</p>
+        <Link to="../products" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Products</h3>
+          <p className="mt-1 text-2xs text-ink-subtle">Manage your catalog, pricing, and stock availability.</p>
         </Link>
-        <Link
-          to="../orders"
-          className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs"
-        >
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Sub-Orders Fulfillment</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Accept new orders, print packing slips, and generate Shiprocket AWBs.</p>
+        <Link to="../orders" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Orders</h3>
+          <p className="mt-1 text-2xs text-ink-subtle">Process, pack and ship items from your orders.</p>
         </Link>
-        <Link
-          to="../settlements"
-          className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs"
-        >
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Settlements & Payouts</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">View Razorpay Route split transfers and download payout statements.</p>
+        <Link to="../earnings" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Earnings & Settlements</h3>
+          <p className="mt-1 text-2xs text-ink-subtle">View your sales, commission and net earnings.</p>
         </Link>
-        <Link
-          to="../kyc-documents"
-          className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs"
-        >
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Business KYC Docs</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Upload GST certificate, PAN, cancelled cheque and Aadhaar verification.</p>
+        <Link to="../kyc-documents" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">KYC Documents</h3>
+          <p className="mt-1 text-2xs text-ink-subtle">Upload GST certificate, PAN and bank proof.</p>
         </Link>
       </div>
 
-      {/* Recent Sub-Orders Stream */}
       <SectionCard
-        title="Assigned Sub-Orders Queue"
-        description="Live stream of orders auto-assigned for warehouse packing and courier dispatch."
+        title="Recent Orders"
+        description="Latest orders containing your products."
         actions={
           <Link to="../orders">
             <Button variant="ghost" size="sm" icon="arrowRight">
@@ -174,13 +135,7 @@ export function VendorDashboardPage() {
           </Link>
         }
       >
-        <Table
-          className="rounded-none border-0 border-t"
-          columns={columns}
-          data={orders.items.slice(0, 5)}
-          getRowKey={(row) => row.id}
-          density="compact"
-        />
+        <Table className="rounded-none border-0 border-t" columns={columns} data={orders.items.slice(0, 5)} getRowKey={(row) => row.id} density="compact" />
       </SectionCard>
     </div>
   )

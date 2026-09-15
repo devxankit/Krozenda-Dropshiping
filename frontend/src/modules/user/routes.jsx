@@ -185,7 +185,7 @@ export default function UserRoutes() {
         path="checkout/success"
         element={
           <OrderPlacedScreen
-            onViewOrderDetails={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onViewOrderDetails={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order?.id } })}
             onContinueShopping={() => navigate(USER_ROUTES.DASHBOARD)}
           />
         }
@@ -196,7 +196,7 @@ export default function UserRoutes() {
         path="orders"
         element={
           <OrderListScreen
-            onSelectOrder={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onSelectOrder={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order.id } })}
           />
         }
       />
@@ -205,8 +205,9 @@ export default function UserRoutes() {
         element={
           <OrderDetailsScreen
             onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
-            onDownloadInvoice={() => navigate(USER_ROUTES.ROOT + '/orders/invoice')}
-            onTrackShipment={() => navigate(USER_ROUTES.ROOT + '/orders/track')}
+            onDownloadInvoice={(order) => navigate(USER_ROUTES.ROOT + '/orders/invoice', { state: { orderId: order.id } })}
+            onTrackShipment={(order) => navigate(USER_ROUTES.ROOT + '/orders/track', { state: { orderId: order.id } })}
+            onRequestReturn={() => navigate(USER_ROUTES.ROOT + '/returns')}
           />
         }
       />
@@ -214,8 +215,8 @@ export default function UserRoutes() {
         path="orders/track"
         element={
           <TrackShipmentScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
-            onViewDetails={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onBack={() => navigate(-1)}
+            onViewDetails={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order.id } })}
           />
         }
       />
@@ -223,8 +224,8 @@ export default function UserRoutes() {
         path="orders/invoice"
         element={
           <InvoiceDownloadScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
-            onDownload={() => navigate(USER_ROUTES.ROOT + '/orders/invoice/preview')}
+            onBack={() => navigate(-1)}
+            onDownload={(orderId) => navigate(USER_ROUTES.ROOT + '/orders/invoice/preview', { state: { orderId } })}
           />
         }
       />
@@ -232,8 +233,8 @@ export default function UserRoutes() {
         path="orders/invoice/preview"
         element={
           <InvoicePreviewScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/invoice')}
-            onDownload={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onBack={() => navigate(-1)}
+            onDownload={(orderId) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId } })}
           />
         }
       />
@@ -241,7 +242,7 @@ export default function UserRoutes() {
         path="orders/review"
         element={
           <RateReviewScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders/details')}
+            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
             onSubmitReview={() => navigate(USER_ROUTES.ROOT + '/orders')}
           />
         }

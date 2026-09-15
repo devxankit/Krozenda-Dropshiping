@@ -128,9 +128,11 @@ async function upsertReview(req, res) {
   });
 }
 
-// GET /user/reviews?productId= — public-facing review list for a product
-// (product detail page use), kept behind protectUser per this backend's
-// current convention (every /user/* route requires a signed-in buyer).
+// GET /user/reviews?productId= — public: anyone viewing a product detail
+// page should be able to read its reviews, logged in or not. (Previously
+// sat behind protectUser along with the rest of this router, which meant a
+// guest's product page couldn't load its Reviews tab at all — caught via a
+// live browser walkthrough: it 401'd exactly here.)
 async function listProductReviews(req, res) {
   const { productId } = req.query;
   if (!mongoose.isValidObjectId(productId)) {

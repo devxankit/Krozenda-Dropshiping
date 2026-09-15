@@ -9,7 +9,7 @@ import {
   HiSparkles,
   HiChevronDown,
 } from 'react-icons/hi2'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { USER_ROUTES, AUTH_ROUTES } from '../../config/routes'
 import { useAuthStore } from '../../lib/authStore'
 import { useCartCount } from '../../lib/cartStore'
@@ -66,16 +66,17 @@ export function WebHeader() {
       {/* Top Bar */}
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-2 flex items-center justify-between gap-4">
         {/* Logo */}
-        <div
-          onClick={() => navigate(USER_ROUTES.DASHBOARD)}
-          className="flex items-center space-x-2 cursor-pointer shrink-0"
+        <Link
+          to={USER_ROUTES.DASHBOARD}
+          className="flex items-center space-x-2 cursor-pointer shrink-0 transition-opacity hover:opacity-90"
+          title="KroZenda Home"
         >
           <img
             src="/images/logo.png"
             alt="KroZenda Logo"
             className="h-14 md:h-16 w-auto object-contain py-0.5"
           />
-        </div>
+        </Link>
 
         {/* Search Bar with Category Dropdown */}
         <form

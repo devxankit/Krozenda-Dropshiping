@@ -39,7 +39,6 @@ export const CUSTOMER_COLUMNS = Object.freeze([
       </Badge>
     ),
   },
-  { key: 'city', header: 'City', width: '9rem', cellClassName: 'text-xs text-ink-muted' },
   { key: 'orders', header: 'Orders', width: '5.5rem', align: 'right', sortable: true, cellClassName: 'tabular' },
   {
     key: 'lifetimeValue',
@@ -72,6 +71,30 @@ export const CUSTOMER_COLUMNS = Object.freeze([
   },
 ])
 
+export function getCustomerActionColumn(onToggleStatus) {
+  return {
+    key: '__status_action',
+    header: 'Action',
+    width: '7rem',
+    render: (row) => (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          onToggleStatus(row)
+        }}
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-2xs font-semibold ring-1 transition-colors ${
+          row.status === 'blocked'
+            ? 'bg-success-50 text-success-700 ring-success-200 hover:bg-success-100'
+            : 'bg-danger-50 text-danger-700 ring-danger-200 hover:bg-danger-100'
+        }`}
+      >
+        {row.status === 'blocked' ? 'Activate' : 'Block'}
+      </button>
+    ),
+  }
+}
+
 export const CUSTOMER_FILTERS = Object.freeze([
   {
     key: 'type',
@@ -82,9 +105,7 @@ export const CUSTOMER_FILTERS = Object.freeze([
 
 export const CUSTOMER_TABS = Object.freeze([
   { id: 'all', label: 'All customers' },
-  { id: 'retail', label: 'Retail (B2C)' },
-  { id: 'b2b', label: 'B2B buyers' },
-  { id: 'dormant', label: 'Dormant' },
+  { id: 'top', label: 'Top 10 customers' },
   { id: 'blocked', label: 'Blocked' },
 ])
 

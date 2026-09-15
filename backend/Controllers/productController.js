@@ -1,4 +1,7 @@
+const mongoose = require('mongoose');
 const Product = require('../Models/Product');
+const Cart = require('../Models/Cart');
+const Wishlist = require('../Models/Wishlist');
 const { getImageUrl } = require('../utils/imageHelper');
 
 function toBool(value, fallback) {
@@ -39,6 +42,7 @@ function serializeProduct(p) {
         : p.brand
           ? { id: p.brand.toString(), name: '' }
           : null,
+    vendor: p.vendor ? p.vendor.toString() : null,
     price: p.price,
     salePrice: p.salePrice ?? null,
     discountPercent: p.discountPercent || 0,
@@ -49,6 +53,8 @@ function serializeProduct(p) {
     isActive: p.isActive !== false,
     isFlashsale: p.isFlashsale === true,
     isTrending: p.isTrending === true,
+    approvalStatus: p.approvalStatus || 'APPROVED',
+    rejectionReason: p.rejectionReason || '',
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
@@ -83,6 +89,7 @@ async function createProduct(req, res) {
     sku,
     category,
     brand,
+    vendor,
     price,
     salePrice,
     discountPercent,
@@ -125,9 +132,11 @@ async function createProduct(req, res) {
 
   const product = await Product.create({
     name: name.trim(),
-    sku: sku && sku.trim() ? sku.trim() : null,
+    // Omitted (not `null`) when blank — see Models/Product.js for why.
+    ...(sku && sku.trim() ? { sku: sku.trim() } : {}),
     category,
     brand: brand || null,
+    vendor: vendor && mongoose.isValidObjectId(vendor) ? vendor : null,
     price: priceNum,
     salePrice: salePriceNum,
     discountPercent: toNumber(discountPercent, 0),
@@ -159,6 +168,7 @@ async function updateProduct(req, res) {
     sku,
     category,
     brand,
+    vendor,
     price,
     salePrice,
     discountPercent,
@@ -189,7 +199,10 @@ async function updateProduct(req, res) {
         return res.status(400).json({ success: false, message: `SKU ${trimmed} is already in use` });
       }
     }
-    product.sku = trimmed || null;
+    // undefined (not null) when cleared, so the sparse unique index treats
+    // it as genuinely absent rather than colliding with every other
+    // no-SKU product on a shared `sku: null`.
+    product.sku = trimmed || undefined;
   }
 
   if (category) {
@@ -198,6 +211,10 @@ async function updateProduct(req, res) {
 
   if (brand !== undefined) {
     product.brand = brand || null;
+  }
+
+  if (vendor !== undefined) {
+    product.vendor = vendor && mongoose.isValidObjectId(vendor) ? vendor : null;
   }
 
   if (price !== undefined) {
@@ -338,6 +355,34 @@ async function updateProductTrendingStatus(req, res) {
   });
 }
 
+// PATCH /admin/catalog/products/:id/approval — admin moves a seller-submitted
+// product (approvalStatus PENDING) to APPROVED (goes live, activated) or
+// REJECTED (stays hidden, with a reason the seller can see and fix).
+async function decideProductApproval(req, res) {
+  const { id } = req.params;
+  const { decision, rejectionReason } = req.body;
+
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    return res.status(400).json({ success: false, message: 'Decision must be APPROVED or REJECTED' });
+  }
+
+  const product = await Product.findById(id).populate('category', 'name').populate('brand', 'name');
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  product.approvalStatus = decision;
+  product.rejectionReason = decision === 'REJECTED' ? (rejectionReason || '').trim() : '';
+  product.isActive = decision === 'APPROVED';
+  await product.save();
+
+  res.json({
+    success: true,
+    message: `Product ${decision === 'APPROVED' ? 'approved and live' : 'rejected'}`,
+    data: serializeProduct(product),
+  });
+}
+
 async function deleteProduct(req, res) {
   const { id } = req.params;
 
@@ -348,6 +393,14 @@ async function deleteProduct(req, res) {
 
   await product.deleteOne();
 
+  // Otherwise every buyer's cart/wishlist keeps an unbounded, permanently
+  // dangling reference to a product that no longer exists — harmless
+  // (already filtered out at read time) but grows forever.
+  await Promise.all([
+    Cart.updateMany({ 'items.product': product._id }, { $pull: { items: { product: product._id } } }),
+    Wishlist.updateMany({ 'items.product': product._id }, { $pull: { items: { product: product._id } } }),
+  ]);
+
   res.json({
     success: true,
     message: 'Product deleted successfully',
@@ -356,7 +409,7 @@ async function deleteProduct(req, res) {
 }
 
 async function listPublicProducts(req, res) {
-  const { flashSale, trending, category, brand, limit = 20 } = req.query;
+  const { flashSale, trending, category, brand, search, minPrice, maxPrice, rating, limit = 20, page } = req.query;
 
   const query = { isActive: true };
 
@@ -376,38 +429,95 @@ async function listPublicProducts(req, res) {
     query.brand = brand;
   }
 
+  if (search && String(search).trim()) {
+    // Escaped before building a RegExp so user input can't inject regex
+    // metacharacters (ReDoS / unexpected matches via unescaped `.`, `*`, ...).
+    const escaped = String(search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.name = new RegExp(escaped, 'i');
+  }
+
+  const min = Number(minPrice);
+  const max = Number(maxPrice);
+  if (Number.isFinite(min) || Number.isFinite(max)) {
+    // Filter on the price the buyer actually sees (salePrice when set,
+    // else price) rather than the base price alone.
+    const bounds = [];
+    if (Number.isFinite(min)) bounds.push({ $gte: [{ $ifNull: ['$salePrice', '$price'] }, min] });
+    if (Number.isFinite(max)) bounds.push({ $lte: [{ $ifNull: ['$salePrice', '$price'] }, max] });
+    query.$expr = { $and: bounds };
+  }
+
+  const minRating = Number(rating);
+  if (Number.isFinite(minRating)) {
+    query.rating = { $gte: minRating };
+  }
+
+  // No `page` param: unchanged legacy behavior (up to 200 items, `total` is
+  // just the returned count) for existing callers that still filter/paginate
+  // client-side. With `page`, this becomes real server-side pagination —
+  // `total` is the true match count via countDocuments, and `skip` moves
+  // through the full result set instead of being capped at 200.
+  const pageSize = Math.min(200, Math.max(1, Number(limit) || 20));
+  const pageNum = Math.max(1, Number(page) || 1);
+  const usingPagination = page !== undefined;
+
   let products = await Product.find(query)
     .populate('category', 'name')
     .populate('brand', 'name logo')
     .sort({ createdAt: -1 })
-    .limit(Math.min(50, Math.max(1, Number(limit) || 20)))
+    .skip(usingPagination ? (pageNum - 1) * pageSize : 0)
+    .limit(pageSize)
     .lean();
 
-  if (products.length === 0 && (query.isFlashsale || query.isTrending)) {
+  if (products.length === 0 && !usingPagination && (query.isFlashsale || query.isTrending)) {
     products = await Product.find({ isActive: true })
       .populate('category', 'name')
       .populate('brand', 'name logo')
       .sort({ createdAt: -1 })
-      .limit(Math.min(50, Math.max(1, Number(limit) || 20)))
+      .limit(pageSize)
       .lean();
   }
+
+  const total = usingPagination ? await Product.countDocuments(query) : products.length;
 
   res.json({
     success: true,
     data: {
       items: products.map(serializeProduct),
-      total: products.length,
+      total,
+      ...(usingPagination ? { page: pageNum, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) } : {}),
     },
   });
+}
+
+async function getPublicProduct(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findOne({ _id: id, isActive: true })
+    .populate('category', 'name')
+    .populate('brand', 'name logo')
+    .lean();
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  res.json({ success: true, data: serializeProduct(product) });
 }
 
 module.exports = {
   listProducts,
   listPublicProducts,
+  getPublicProduct,
   createProduct,
   updateProduct,
   updateProductStatus,
   updateProductFlashSaleStatus,
   updateProductTrendingStatus,
+  decideProductApproval,
   deleteProduct,
 };

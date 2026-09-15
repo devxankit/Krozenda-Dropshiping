@@ -1,24 +1,41 @@
 import { useState } from 'react'
 import { Button, Input, Modal, Select } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
+import { useVendorUploadKycController } from '../../controllers/useVendorController'
+
+const DOCUMENT_TYPES = [
+  { value: 'GST_CERTIFICATE', label: 'GST Registration Certificate' },
+  { value: 'PAN_CARD', label: 'Company / Proprietor PAN Card' },
+  { value: 'CANCELLED_CHEQUE', label: 'Cancelled Cheque / Bank Proof' },
+  { value: 'FSSAI_LICENSE', label: 'FSSAI Food Safety License' },
+  { value: 'ADDRESS_PROOF', label: 'Aadhaar / Passport / Electricity Bill' },
+]
 
 export function UploadKycModal({ isOpen, onClose }) {
-  const [docType, setDocType] = useState('GST Certificate')
-  const [fileName, setFileName] = useState('')
+  const [docType, setDocType] = useState(DOCUMENT_TYPES[0].value)
+  const [file, setFile] = useState(null)
+  const { upload, isSubmitting } = useVendorUploadKycController()
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (!fileName) {
+    if (!file) {
       toast.error('File Required', 'Please choose a document file to upload.')
       return
     }
 
-    toast.success(
-      'Document Uploaded for Review',
-      `${docType} (${fileName}) uploaded successfully. Admin review queued.`,
-    )
-    onClose()
-    setFileName('')
+    const formData = new FormData()
+    formData.append('documentType', docType)
+    formData.append('documentLabel', DOCUMENT_TYPES.find((d) => d.value === docType)?.label || docType)
+    formData.append('file', file)
+
+    try {
+      await upload(formData)
+      toast.success('Document Uploaded', 'Your document was submitted for admin review.')
+      onClose()
+      setFile(null)
+    } catch (err) {
+      toast.error('Upload failed', err?.response?.data?.message || 'Could not upload document')
+    }
   }
 
   return (
@@ -33,8 +50,8 @@ export function UploadKycModal({ isOpen, onClose }) {
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} icon="upload">
-            Upload document
+          <Button onClick={handleSubmit} icon="upload" disabled={isSubmitting}>
+            {isSubmitting ? 'Uploading…' : 'Upload document'}
           </Button>
         </>
       }
@@ -44,20 +61,14 @@ export function UploadKycModal({ isOpen, onClose }) {
           label="Document Type"
           value={docType}
           onChange={(e) => setDocType(e.target.value)}
-          options={[
-            { value: 'GST Certificate', label: 'GST Registration Certificate' },
-            { value: 'PAN Card', label: 'Company / Proprietor PAN Card' },
-            { value: 'Cancelled Cheque', label: 'Cancelled Cheque / Bank Proof' },
-            { value: 'FSSAI License', label: 'FSSAI Food Safety License' },
-            { value: 'Address Proof', label: 'Aadhaar / Passport / Electricity Bill' },
-          ]}
+          options={DOCUMENT_TYPES}
         />
 
         <Input
           label="Select File"
           type="file"
           accept=".pdf,.jpg,.jpeg,.png"
-          onChange={(e) => setFileName(e.target.files[0]?.name || '')}
+          onChange={(e) => setFile(e.target.files[0] || null)}
         />
       </form>
     </Modal>

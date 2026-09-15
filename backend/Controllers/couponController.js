@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 const Coupon = require('../Models/Coupon');
 const CouponRedemption = require('../Models/CouponRedemption');
+const CouponUserUsage = require('../Models/CouponUserUsage');
 const Cart = require('../Models/Cart');
 const Order = require('../Models/Order');
 const { getImageUrl } = require('../utils/imageHelper');
+const { toPaise } = require('../utils/money');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -27,6 +29,9 @@ function normalizeIds(value) {
   return value.filter(Boolean).map((v) => String(v));
 }
 
+// discountValue is only ever money when discountType is FIXED — a
+// PERCENTAGE value (e.g. 20) must never be scaled to paise, or "20% off"
+// would render as "₹0.20% off" on admin's MoneyCell-based columns.
 function serializeCoupon(c) {
   return {
     id: c._id.toString(),
@@ -34,9 +39,9 @@ function serializeCoupon(c) {
     code: c.code,
     description: c.description || '',
     discountType: c.discountType,
-    discountValue: c.discountValue || 0,
-    maxDiscountAmount: c.maxDiscountAmount ?? null,
-    minOrderAmount: c.minOrderAmount || 0,
+    discountValue: c.discountType === 'FIXED' ? toPaise(c.discountValue || 0) : c.discountValue || 0,
+    maxDiscountAmount: c.maxDiscountAmount != null ? toPaise(c.maxDiscountAmount) : null,
+    minOrderAmount: toPaise(c.minOrderAmount || 0),
     minQuantity: c.minQuantity ?? null,
     maxQuantity: c.maxQuantity ?? null,
     usageLimit: c.usageLimit ?? null,
@@ -81,20 +86,56 @@ function validateCouponFields({ discountType, discountValue, startDate, endDate 
   return null;
 }
 
+// Admin surface — ListScreen contract (paged items + tabCounts), same
+// pattern as adminOrderController.listOrders: the collection is small
+// enough that everything is loaded once, filtered/sorted/paged in memory.
 async function listCoupons(req, res) {
-  const coupons = await Coupon.find().sort({ createdAt: -1 }).lean();
-  const items = coupons.map(serializeCoupon);
+  const { tab, search, discountType, page = 1, rowsPerPage = 25 } = req.query;
 
-  const stats = {
-    total: items.length,
-    active: items.filter((c) => c.status === 'ACTIVE').length,
-    upcoming: items.filter((c) => c.status === 'UPCOMING').length,
-    expired: items.filter((c) => c.status === 'EXPIRED').length,
-    usageLimitReached: items.filter((c) => c.status === 'USAGE_LIMIT_REACHED').length,
-    inactive: items.filter((c) => c.status === 'INACTIVE').length,
+  const coupons = await Coupon.find().sort({ createdAt: -1 }).lean();
+  const allSerialized = coupons.map(serializeCoupon);
+
+  let items = allSerialized;
+  const term = (search || '').trim().toLowerCase();
+  if (term) {
+    items = items.filter((c) => c.code.toLowerCase().includes(term) || c.description.toLowerCase().includes(term));
+  }
+
+  if (discountType && Coupon.DISCOUNT_TYPES.includes(discountType)) {
+    items = items.filter((c) => c.discountType === discountType);
+  }
+
+  const effectiveTab = tab && tab !== 'all' ? tab.toUpperCase() : null;
+  if (effectiveTab) {
+    items = items.filter((c) => c.status === effectiveTab);
+  }
+
+  const tabCounts = {
+    all: allSerialized.length,
+    active: allSerialized.filter((c) => c.status === 'ACTIVE').length,
+    upcoming: allSerialized.filter((c) => c.status === 'UPCOMING').length,
+    expired: allSerialized.filter((c) => c.status === 'EXPIRED').length,
+    usage_limit_reached: allSerialized.filter((c) => c.status === 'USAGE_LIMIT_REACHED').length,
+    inactive: allSerialized.filter((c) => c.status === 'INACTIVE').length,
   };
 
-  res.json({ success: true, data: { items, stats } });
+  const perPage = Number(rowsPerPage) || 25;
+  const currentPage = Number(page) || 1;
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const start = (currentPage - 1) * perPage;
+
+  res.json({
+    success: true,
+    data: {
+      items: items.slice(start, start + perPage),
+      page: currentPage,
+      rowsPerPage: perPage,
+      totalItems,
+      totalPages,
+      tabCounts,
+    },
+  });
 }
 
 async function getCoupon(req, res) {
@@ -436,13 +477,21 @@ async function redeemCoupon({ code, userId, orderId, cartItems = [], cartTotal, 
 
     await session.withTransaction(async () => {
       if (coupon.perUserLimit != null) {
-        const usedByUser = await CouponRedemption.countDocuments({
-          couponId: coupon._id,
-          userId,
-          status: 'SUCCESS',
-        }).session(session);
-        if (usedByUser >= coupon.perUserLimit) {
-          throw Object.assign(new Error('You have already used this coupon the maximum number of times'), { status: 400 });
+        // Atomic cap: the upsert filter only matches a usage row that either
+        // doesn't exist yet or is still under the limit, so a concurrent
+        // second attempt past the cap collides with the unique index below
+        // instead of also passing a stale read.
+        try {
+          await CouponUserUsage.findOneAndUpdate(
+            { couponId: coupon._id, userId, count: { $lt: coupon.perUserLimit } },
+            { $inc: { count: 1 } },
+            { upsert: true, session }
+          );
+        } catch (err) {
+          if (err.code === 11000) {
+            throw Object.assign(new Error('You have already used this coupon the maximum number of times'), { status: 400 });
+          }
+          throw err;
         }
       }
 
@@ -501,6 +550,11 @@ async function releaseCoupon({ orderId }) {
       redemption.status = 'CANCELLED';
       await redemption.save({ session });
       await Coupon.updateOne({ _id: redemption.couponId }, { $inc: { usedCount: -1 } }, { session });
+      await CouponUserUsage.updateOne(
+        { couponId: redemption.couponId, userId: redemption.userId, count: { $gt: 0 } },
+        { $inc: { count: -1 } },
+        { session }
+      );
     });
 
     return { redemptionId: redemption._id.toString() };

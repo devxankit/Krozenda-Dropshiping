@@ -1,5 +1,5 @@
 const express = require('express');
-const { createRazorpayOrder, createOrder, listOrders, getOrder } = require('../Controllers/orderController');
+const { createRazorpayOrder, createOrder, listOrders, getOrder, cancelOrder } = require('../Controllers/orderController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
 
 const router = express.Router();
@@ -10,5 +10,6 @@ router.get('/', listOrders);
 router.post('/razorpay-order', createRazorpayOrder);
 router.post('/', createOrder);
 router.get('/:id', getOrder);
+router.patch('/:id/cancel', cancelOrder);
 
 module.exports = router;

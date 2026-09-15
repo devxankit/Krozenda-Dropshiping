@@ -53,7 +53,7 @@ export function OrderPlacedScreen({ onViewOrderDetails = () => {}, onContinueSho
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 max-w-md mx-auto">
             <button
-              onClick={onViewOrderDetails}
+              onClick={() => onViewOrderDetails(order)}
               className="w-full sm:w-1/2 bg-blue-700 hover:bg-blue-800 active:scale-[0.98] text-white font-bold py-3.5 px-5 rounded-2xl shadow-md transition-all text-xs tracking-wide"
             >
               View Order Details

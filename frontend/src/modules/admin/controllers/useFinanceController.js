@@ -35,6 +35,13 @@ export const useFinanceOverviewController = () =>
 export const useCommissionRulesController = () =>
   useResource(['admin', 'finance', 'commission-rules'], service.fetchCommissionRules)
 
+export const useCommissionRuleWriteController = () =>
+  useAdminMutation({
+    mutationFn: service.updateCommissionRule,
+    invalidate: [['admin', 'finance', 'commission-rules']],
+    success: (rule) => `${rule.target} commission set to ${rule.value}%`,
+  })
+
 export const usePricingRulesController = () =>
   useResource(['admin', 'finance', 'pricing-rules'], service.fetchPricingRules)
 

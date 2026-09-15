@@ -1,4 +1,5 @@
-import { Badge, Button, Switch, Table } from '../../../../components/ui'
+import { useState } from 'react'
+import { Badge, Button, Input, Switch, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { SectionCard } from '../../components/display'
@@ -10,11 +11,15 @@ import {
 import { ADMIN_PERMISSIONS } from '../../constants'
 import {
   useCommissionRulesController,
+  useCommissionRuleWriteController,
   usePricingRulesController,
 } from '../../controllers/useFinanceController'
 
 export function CommissionRulesPage() {
   const { data, isLoading, error, refetch } = useCommissionRulesController()
+  const writer = useCommissionRuleWriteController()
+  const [editingId, setEditingId] = useState(null)
+  const [draftValue, setDraftValue] = useState('')
 
   if (isLoading) {
     return (
@@ -35,23 +40,65 @@ export function CommissionRulesPage() {
     (a, b) => SCOPE_ORDER.indexOf(a.scope) - SCOPE_ORDER.indexOf(b.scope),
   )
 
+  function saveEdit(row) {
+    const value = Number(draftValue)
+    if (!Number.isFinite(value) || value < 0 || value > 100) return
+    writer.run({ id: row.id, value })
+    setEditingId(null)
+  }
+
+  const columnsWithEdit = [
+    ...COMMISSION_RULE_COLUMNS,
+    {
+      key: '__edit',
+      header: '',
+      width: '9rem',
+      align: 'right',
+      render: (row) =>
+        row.scope === 'vendor' && (
+          <PermissionGate permission={ADMIN_PERMISSIONS.FINANCE_MANAGE}>
+            {editingId === row.id ? (
+              <div className="flex items-center justify-end gap-1.5">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={draftValue}
+                  onChange={(e) => setDraftValue(e.target.value)}
+                  className="w-16 text-right"
+                  size="sm"
+                />
+                <Button size="xs" onClick={() => saveEdit(row)} disabled={writer.isSubmitting}>
+                  Save
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={() => {
+                  setEditingId(row.id)
+                  setDraftValue(String(row.value))
+                }}
+              >
+                Edit rate
+              </Button>
+            )}
+          </PermissionGate>
+        ),
+    },
+  ]
+
   return (
     <PageBody>
       <PageHeader
         title="Commission rules"
-        description="Product → vendor → category → company → default. The most specific rule that matches wins."
-        actions={
-          <PermissionGate permission={ADMIN_PERMISSIONS.FINANCE_MANAGE}>
-            <Button size="control" icon="add">
-              New rule
-            </Button>
-          </PermissionGate>
-        }
+        description="Each seller's commission rate, and the platform default that applies when a seller has none set."
       />
 
       <InlineAlert tone="warning" title="Changing a rate does not change existing orders">
-        Commission is snapshotted onto each sub-order when the order is placed. Editing a rule
-        here affects orders placed from the moment you save, and nothing before it.
+        Commission is computed at settlement time from the seller&apos;s current rate. Editing a rate
+        here affects orders settled from now on, not past settlements.
       </InlineAlert>
 
       <SectionCard
@@ -60,7 +107,7 @@ export function CommissionRulesPage() {
       >
         <Table
           className="rounded-none border-0 border-t"
-          columns={COMMISSION_RULE_COLUMNS}
+          columns={columnsWithEdit}
           data={sorted}
           getRowKey={(row) => row.id}
           density="compact"

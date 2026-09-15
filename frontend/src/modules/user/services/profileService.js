@@ -19,3 +19,14 @@ export async function uploadProfileImage(file) {
   const response = await api.post('/auth/profile/image', formData)
   return profileSchema.parse(response.data.data.user)
 }
+
+export async function changePassword(payload) {
+  const response = await api.put('/auth/change-password', payload)
+  return response.data
+}
+
+export async function deleteAccount() {
+  const response = await api.delete('/auth/account')
+  return response.data
+}
+

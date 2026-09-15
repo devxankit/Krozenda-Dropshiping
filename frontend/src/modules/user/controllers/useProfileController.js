@@ -2,7 +2,13 @@
 // and are the ONLY thing components are allowed to call into.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchProfile, updateProfile, uploadProfileImage } from '../services/profileService'
+import {
+  fetchProfile,
+  updateProfile,
+  uploadProfileImage,
+  changePassword as changePasswordService,
+  deleteAccount as deleteAccountService,
+} from '../services/profileService'
 import { useAuthStore } from '../../../lib/authStore'
 import { storage } from '../../../lib/storage'
 
@@ -36,6 +42,14 @@ export function useProfileController() {
     },
   })
 
+  const passwordMutation = useMutation({
+    mutationFn: changePasswordService,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAccountService,
+  })
+
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
@@ -45,5 +59,12 @@ export function useProfileController() {
     uploadImage: imageMutation.mutateAsync,
     isUploadingImage: imageMutation.isPending,
     imageError: imageMutation.error,
+    changePassword: passwordMutation.mutateAsync,
+    isChangingPassword: passwordMutation.isPending,
+    changePasswordError: passwordMutation.error,
+    deleteAccount: deleteMutation.mutateAsync,
+    isDeletingAccount: deleteMutation.isPending,
+    deleteAccountError: deleteMutation.error,
   }
 }
+

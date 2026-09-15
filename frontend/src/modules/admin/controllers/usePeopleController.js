@@ -1,8 +1,10 @@
 // Layer rule: controllers/ hold orchestration (react-query, derived state)
 // and are the ONLY thing pages/ are allowed to call into.
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
+  createCustomer,
+  createVendor,
   fetchCustomers,
   fetchKycApplication,
   fetchKycQueue,
@@ -11,50 +13,49 @@ import {
   fetchRoles,
   fetchStaff,
   fetchVendors,
+  setVendorActive,
+  updateCustomerStatus,
 } from '../services/peopleService'
+import { useAdminMutation } from './useAdminMutation'
 import { useListController } from './useListController'
 
 export const useCustomerListController = () =>
-  useListController({ queryKey: ['admin', 'customers'], queryFn: fetchCustomers })
+  useListController({ queryKey: ['admin', 'customers'], queryFn: fetchCustomers, defaultRowsPerPage: 10 })
 
-export function useVendorListController() {
-  const queryClient = useQueryClient()
-  const list = useListController({ queryKey: ['admin', 'vendors'], queryFn: fetchVendors })
+export const useCustomerWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: createCustomer,
+    invalidate: [['admin', 'customers']],
+    success: (customer) => `${customer.name} added`,
+    onDone: onSaved,
+  }),
+  updateStatus: useAdminMutation({
+    mutationFn: updateCustomerStatus,
+    invalidate: [['admin', 'customers']],
+    success: (customer) => (customer.status === 'active' ? 'Customer activated' : 'Customer blocked'),
+  }),
+})
 
-  function addVendor(newVendor) {
-    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
-      if (!old) return old
-      const items = [newVendor, ...(old.items || [])]
-      return {
-        ...old,
-        items,
-        totalItems: (old.totalItems ?? old.items?.length ?? 0) + 1,
-      }
-    })
-  }
+export const useVendorListController = () =>
+  useListController({ queryKey: ['admin', 'vendors'], queryFn: fetchVendors })
 
-  function updateVendor(updatedVendor) {
-    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
-      if (!old) return old
-      const items = (old.items || []).map((v) =>
-        v.id === updatedVendor.id ? { ...v, ...updatedVendor } : v,
-      )
-      return { ...old, items }
-    })
-  }
-
-  function toggleVendorStatus(vendorId, status) {
-    queryClient.setQueriesData({ queryKey: ['admin', 'vendors'] }, (old) => {
-      if (!old) return old
-      const items = (old.items || []).map((v) =>
-        v.id === vendorId ? { ...v, status } : v,
-      )
-      return { ...old, items }
-    })
-  }
-
-  return { ...list, addVendor, updateVendor, toggleVendorStatus }
-}
+export const useVendorWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: createVendor,
+    invalidate: [['admin', 'vendors']],
+    success: (vendor) => `${vendor.name} onboarded`,
+    describe: (vendor) =>
+      vendor.isActive
+        ? 'The partner is approved and live.'
+        : 'The partner is registered and waiting on KYC verification.',
+    onDone: onSaved,
+  }),
+  setActive: useAdminMutation({
+    mutationFn: setVendorActive,
+    invalidate: [['admin', 'vendors']],
+    success: (vendor) => `${vendor.name} ${vendor.isActive ? 'activated' : 'suspended'}`,
+  }),
+})
 
 export const useKycQueueController = () =>
   useListController({ queryKey: ['admin', 'kyc'], queryFn: fetchKycQueue })

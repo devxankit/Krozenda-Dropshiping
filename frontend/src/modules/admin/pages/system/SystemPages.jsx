@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Switch, Table } from '../../../../components/ui'
+import { adminPath } from '../../../../config/routes'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ExportMenu, ListScreen } from '../../components/data'
 import { ErrorState, InlineAlert, PageSkeleton } from '../../components/feedback'
@@ -7,6 +9,7 @@ import {
   useAdminProfileController,
   useAuditLogController,
   useBackupsController,
+  useRunBackupController,
   useSupportTicketController,
 } from '../../controllers/useSystemController'
 import * as columns from '../../tableColumns/systemColumns'
@@ -40,6 +43,7 @@ export function AuditLogPage() {
 }
 
 export function SupportTicketsPage() {
+  const navigate = useNavigate()
   const list = useSupportTicketController()
   const unassigned = list.tabCounts.unassigned || 0
 
@@ -60,12 +64,7 @@ export function SupportTicketsPage() {
       filters={columns.TICKET_FILTERS}
       tabs={columns.TICKET_TABS}
       searchPlaceholder="Ticket, subject, person or category…"
-      selectable
-      bulkLabel="tickets selected"
-      bulkActions={[
-        { label: 'Assign to me', icon: 'user', onClick: () => {} },
-        { label: 'Mark resolved', icon: 'check', onClick: () => {} },
-      ]}
+      onRowClick={(row) => navigate(adminPath.supportTicketDetail(row.id))}
       itemLabel="tickets"
       emptyIcon="support"
       emptyTitle="No tickets in this view"
@@ -76,6 +75,7 @@ export function SupportTicketsPage() {
 
 export function BackupsPage() {
   const { data, isLoading, error, refetch } = useBackupsController()
+  const runBackup = useRunBackupController()
 
   if (isLoading) {
     return (
@@ -101,8 +101,14 @@ export function BackupsPage() {
         description="Daily snapshots, cloud replication, and when the restore path was last actually tested."
         actions={
           <>
-            <Button variant="secondary" size="control" icon="refresh">
-              Run now
+            <Button
+              variant="secondary"
+              size="control"
+              icon="refresh"
+              onClick={() => runBackup.run()}
+              disabled={runBackup.isSubmitting}
+            >
+              {runBackup.isSubmitting ? 'Running…' : 'Run now'}
             </Button>
             <Button size="control" icon="upload">
               Test a restore

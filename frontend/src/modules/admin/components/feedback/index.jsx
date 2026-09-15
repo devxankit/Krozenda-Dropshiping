@@ -86,4 +86,18 @@ export function PermissionGate({ permission, permissions = [], mode = 'any', fal
 
   return allowed ? children : fallback
 }
+
+// An empty RESULT, not a failure: the window picked has no rows. Sized to
+// fill a chart body or a card, so a screen never has to choose between a
+// misleading flat line at zero and a blank rectangle.
+export function NoData({ message = 'No data in this window', hint }) {
+  return (
+    <div className="flex h-full min-h-[6rem] flex-col items-center justify-center gap-1.5 text-center">
+      <Icon name="activity" className="h-5 w-5 text-border-strong" />
+      <p className="text-xs font-medium text-ink-subtle">{message}</p>
+      {hint && <p className="max-w-xs text-2xs text-ink-faint">{hint}</p>}
+    </div>
+  )
+}
+
 export { ToastViewport } from './Toast'

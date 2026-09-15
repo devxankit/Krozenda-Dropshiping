@@ -5,18 +5,18 @@ import { MoneyCell, PrimaryCell, StatusPill } from '../components/display'
 // Rule 07: column definitions and filter schemas are DATA.
 
 const COUPON_STATUS_LABELS = Object.freeze({
-  scheduled: 'Scheduled',
-  active: 'Active',
-  paused: 'Paused',
-  expired: 'Expired',
-  exhausted: 'Exhausted',
+  UPCOMING: 'Scheduled',
+  ACTIVE: 'Active',
+  INACTIVE: 'Paused',
+  EXPIRED: 'Expired',
+  USAGE_LIMIT_REACHED: 'Exhausted',
 })
 const COUPON_STATUS_TONE = Object.freeze({
-  scheduled: 'brand',
-  active: 'success',
-  paused: 'warning',
-  expired: 'neutral',
-  exhausted: 'neutral',
+  UPCOMING: 'brand',
+  ACTIVE: 'success',
+  INACTIVE: 'warning',
+  EXPIRED: 'neutral',
+  USAGE_LIMIT_REACHED: 'neutral',
 })
 
 const CAMPAIGN_STATUS_LABELS = Object.freeze({
@@ -48,9 +48,14 @@ const REVIEW_STATUS_TONE = Object.freeze({
 const CHANNEL_ICON = Object.freeze({ push: 'notifications', sms: 'phone', email: 'mail' })
 
 function discountLabel(row) {
-  if (row.discountType === 'shipping') return 'Free shipping'
-  if (row.discountType === 'percentage') return `${row.discountValue}% off`
+  if (row.discountType === 'FREE_SHIPPING') return 'Free shipping'
+  if (row.discountType === 'PERCENTAGE') return `${row.discountValue}% off`
   return `₹${(row.discountValue / 100).toLocaleString('en-IN')} off`
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export const COUPON_COLUMNS = Object.freeze([
@@ -74,15 +79,15 @@ export const COUPON_COLUMNS = Object.freeze([
     ),
   },
   {
-    key: 'minCartValue',
+    key: 'minOrderAmount',
     header: 'Minimum cart',
     width: '8rem',
     align: 'right',
     render: (row) =>
-      row.minCartValue ? <MoneyCell amount={row.minCartValue} muted /> : <span className="text-2xs text-ink-faint">none</span>,
+      row.minOrderAmount ? <MoneyCell amount={row.minOrderAmount} muted /> : <span className="text-2xs text-ink-faint">none</span>,
   },
   {
-    key: 'used',
+    key: 'usedCount',
     header: 'Redeemed',
     width: '9rem',
     align: 'right',
@@ -90,14 +95,14 @@ export const COUPON_COLUMNS = Object.freeze([
     render: (row) => (
       <span className="flex flex-col items-end gap-0.5">
         <span className="tabular text-xs font-semibold text-slate-900">
-          {row.used.toLocaleString('en-IN')}
+          {row.usedCount.toLocaleString('en-IN')}
           {row.usageLimit ? ` / ${row.usageLimit.toLocaleString('en-IN')}` : ''}
         </span>
         {row.usageLimit && (
           <span className="h-1 w-16 overflow-hidden rounded-full bg-surface-sunken">
             <span
-              className={`block h-1 rounded-full ${row.used >= row.usageLimit ? 'bg-danger-500' : 'bg-brand-600'}`}
-              style={{ width: `${Math.min(100, (row.used / row.usageLimit) * 100)}%` }}
+              className={`block h-1 rounded-full ${row.usedCount >= row.usageLimit ? 'bg-danger-500' : 'bg-brand-600'}`}
+              style={{ width: `${Math.min(100, (row.usedCount / row.usageLimit) * 100)}%` }}
             />
           </span>
         )}
@@ -105,12 +110,12 @@ export const COUPON_COLUMNS = Object.freeze([
     ),
   },
   {
-    key: 'endsOn',
+    key: 'endDate',
     header: 'Runs',
     width: '11rem',
     render: (row) => (
       <span className="text-2xs text-ink-muted">
-        {row.startsOn} → {row.endsOn}
+        {formatDate(row.startDate)} → {formatDate(row.endDate)}
       </span>
     ),
   },
@@ -134,9 +139,9 @@ export const COUPON_FILTERS = Object.freeze([
     key: 'discountType',
     label: 'Discount type',
     options: [
-      { value: 'percentage', label: 'Percentage' },
-      { value: 'fixed', label: 'Fixed amount' },
-      { value: 'shipping', label: 'Free shipping' },
+      { value: 'PERCENTAGE', label: 'Percentage' },
+      { value: 'FIXED', label: 'Fixed amount' },
+      { value: 'FREE_SHIPPING', label: 'Free shipping' },
     ],
   },
 ])
@@ -144,9 +149,10 @@ export const COUPON_FILTERS = Object.freeze([
 export const COUPON_TABS = Object.freeze([
   { id: 'all', label: 'All coupons' },
   { id: 'active', label: 'Active' },
-  { id: 'scheduled', label: 'Scheduled' },
-  { id: 'paused', label: 'Paused' },
-  { id: 'finished', label: 'Finished' },
+  { id: 'upcoming', label: 'Scheduled' },
+  { id: 'inactive', label: 'Paused' },
+  { id: 'expired', label: 'Expired' },
+  { id: 'usage_limit_reached', label: 'Exhausted' },
 ])
 
 export const CAMPAIGN_COLUMNS = Object.freeze([

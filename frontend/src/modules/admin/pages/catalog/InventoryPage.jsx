@@ -69,9 +69,9 @@ export function InventoryPage() {
         isLoading={list.isLoading}
         error={list.error}
         onRetry={list.refetch}
-        page={1}
-        totalPages={1}
-        totalItems={list.items.length}
+        page={list.page}
+        totalPages={list.totalPages}
+        totalItems={list.totalItems}
         rowsPerPage={list.rowsPerPage}
         onPageChange={list.setPage}
         itemLabel="products"

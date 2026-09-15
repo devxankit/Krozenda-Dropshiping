@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const PAYMENT_METHODS = ['COD', 'WALLET', 'RAZORPAY'];
-const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED'];
+const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
 const STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
 // Line items and the shipping address are snapshotted at order time (name,
@@ -17,6 +17,24 @@ const orderItemSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
     variant: { type: String, default: '' },
+    // Snapshotted from Product.vendor at order time (same reasoning as the
+    // rest of this schema): a support ticket raised against this item must
+    // keep pointing at the seller who owned it when it was bought, even if
+    // the product is reassigned or removed later.
+    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+    // Per-vendor fulfilment state for this line item. The order-level
+    // `status` above stays the buyer-facing/admin aggregate; this lets a
+    // seller move their own line item through PROCESSING/SHIPPED/DELIVERED
+    // independently in a multi-vendor cart, without touching other sellers'
+    // items or the parent order's status.
+    status: { type: String, enum: STATUSES, default: 'PENDING' },
+    courierName: { type: String, default: '', trim: true },
+    trackingNumber: { type: String, default: '', trim: true },
+    statusHistory: {
+      type: [{ status: { type: String, enum: STATUSES }, at: { type: Date, default: Date.now } }],
+      default: () => [{ status: 'PENDING', at: new Date() }],
+      _id: false,
+    },
   },
   { _id: false }
 );
@@ -54,11 +72,34 @@ const orderSchema = new mongoose.Schema(
 
     status: { type: String, enum: STATUSES, default: 'PENDING' },
     deliveredAt: { type: Date, default: null },
+    // Admin Finance > Transactions: whether this payment capture has been
+    // matched against the bank/gateway statement. Purely a bookkeeping flag —
+    // never affects order fulfilment.
+    financeReconciled: { type: Boolean, default: false },
+    // Who cancelled this order — only set when status transitions to
+    // CANCELLED. Used by Admin Fulfilment > Cancellations to show the actor.
+    cancelledBy: { type: String, enum: ['buyer', 'admin', null], default: null },
+    // Real transition log — TrackShipmentScreen renders this timeline
+    // directly instead of fabricated courier/AWB data, since there's no
+    // courier integration behind this order system.
+    statusHistory: {
+      type: [{ status: { type: String, enum: STATUSES }, at: { type: Date, default: Date.now } }],
+      default: () => [{ status: 'PENDING', at: new Date() }],
+      _id: false,
+    },
   },
   { timestamps: true }
 );
 
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
+orderSchema.index({ 'items.vendor': 1, createdAt: -1 });
+// A captured Razorpay payment can back at most one order — without this, a
+// single valid (orderId, paymentId, signature) triple could be replayed
+// across multiple POST /user/orders calls to mint unlimited "paid" orders.
+orderSchema.index(
+  { razorpayPaymentId: 1 },
+  { unique: true, partialFilterExpression: { razorpayPaymentId: { $type: 'string' } } }
+);
 
 const Order = mongoose.model('Order', orderSchema);
 Order.PAYMENT_METHODS = PAYMENT_METHODS;

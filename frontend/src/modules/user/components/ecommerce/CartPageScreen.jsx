@@ -115,61 +115,69 @@ export function CartPageScreen({
           </div>
         )}
 
-        {/* Secure Packaging Box */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs flex items-center justify-between">
-          <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-              <HiShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-xs font-bold text-slate-900">Secure Packaging</h4>
-              <p className="text-[11px] text-slate-500 truncate">Items will be packed safely</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 shrink-0">
-            <span className="text-xs font-bold text-slate-900">₹49</span>
-            <input
-              type="checkbox"
-              checked={securePackaging}
-              onChange={(e) => setSecurePackaging(e.target.checked)}
-              className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* Price Details Breakdown */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
-          <h3 className="text-xs font-bold text-slate-900">Price Details</h3>
-
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600">
-              <span>Total MRP</span>
-              <span className="font-semibold text-slate-900">₹{totalMRP.toLocaleString('en-IN')}</span>
+        {/* Secure Packaging + Price Details + Checkout only make sense once
+            there's something in the cart — otherwise this showed a ₹49
+            total and a working "Proceed to Checkout" button over an empty
+            cart, which just dead-ends at the backend's "cart is empty"
+            rejection. */}
+        {cartItems.length > 0 && (
+          <>
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs flex items-center justify-between">
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                  <HiShieldCheck className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-900">Secure Packaging</h4>
+                  <p className="text-[11px] text-slate-500 truncate">Items will be packed safely</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 shrink-0">
+                <span className="text-xs font-bold text-slate-900">₹49</span>
+                <input
+                  type="checkbox"
+                  checked={securePackaging}
+                  onChange={(e) => setSecurePackaging(e.target.checked)}
+                  className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-between text-emerald-600 font-semibold">
-              <span>Discount</span>
-              <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
-            </div>
+            {/* Price Details Breakdown */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+              <h3 className="text-xs font-bold text-slate-900">Price Details</h3>
 
-            <div className="flex justify-between text-slate-600">
-              <span>Delivery</span>
-              <span className="font-bold text-emerald-600">₹0</span>
-            </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Total MRP</span>
+                  <span className="font-semibold text-slate-900">₹{totalMRP.toLocaleString('en-IN')}</span>
+                </div>
 
-            <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-bold text-slate-900">
-              <span>Total Amount</span>
-              <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
+                <div className="flex justify-between text-emerald-600 font-semibold">
+                  <span>Discount</span>
+                  <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
+                </div>
 
-          <button
-            onClick={onCheckout}
-            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition-all tracking-wide mt-2"
-          >
-            Proceed to Checkout
-          </button>
-        </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Delivery</span>
+                  <span className="font-bold text-emerald-600">₹0</span>
+                </div>
+
+                <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-bold text-slate-900">
+                  <span>Total Amount</span>
+                  <span>₹{totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={onCheckout}
+                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition-all tracking-wide mt-2"
+              >
+                Proceed to Checkout
+              </button>
+            </div>
+          </>
+        )}
       </main>
 
       {/* Mobile Bottom Navigation Bar */}

@@ -32,12 +32,14 @@ export function useWalletController() {
             description: `Add ₹${order.amount.toLocaleString('en-IN')} to your Krozenda Wallet`,
             prefill,
             onSuccess: (response) => {
+              // The credited amount is whatever Razorpay confirms was
+              // actually captured — the backend re-fetches it server-side,
+              // so there's nothing to send here beyond the payment proof.
               verifyMutation
                 .mutateAsync({
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
-                  amount,
                 })
                 .then(resolve, reject)
             },

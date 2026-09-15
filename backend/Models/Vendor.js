@@ -89,6 +89,21 @@ const vendorSchema = new mongoose.Schema(
     },
     rejectionReason: { type: String, default: '' },
     isActive: { type: Boolean, default: false },
+
+    // Web push (FCM) device tokens — see User.fcmTokens for the same shape.
+    fcmTokens: { type: [String], default: [] },
+
+    // Platform commission taken off each delivered item's line total —
+    // admin-set, read-only from the vendor side (see vendorEarningsController).
+    commissionRatePercent: { type: Number, default: 10, min: 0, max: 100 },
+    notificationPrefs: {
+      type: {
+        orderUpdates: { type: Boolean, default: true },
+        promotions: { type: Boolean, default: true },
+      },
+      default: () => ({ orderUpdates: true, promotions: true }),
+      _id: false,
+    },
   },
   { timestamps: true }
 );

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import {
   Area,
   AreaChart,
@@ -149,6 +150,37 @@ export function DonutSplit({ data, formatValue, centreLabel, centreValue }) {
         </div>
       )}
     </div>
+  )
+}
+
+// The same trend as a filled area, sized to sit flush along the bottom edge
+// of a stat tile. Area rather than line because at 40px tall a bare stroke
+// reads as noise, while a filled shape still reads as a direction.
+export function SparkArea({ data, dataKey = 'value', color = SERIES[0], height = 40 }) {
+  // useId() emits colons, which some browsers refuse inside a url(#...)
+  // reference — strip them so the gradient actually paints.
+  const gradientId = `spark-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <Area
+          type="monotone"
+          dataKey={dataKey}
+          stroke={color}
+          strokeWidth={1.75}
+          fill={`url(#${gradientId})`}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   )
 }
 

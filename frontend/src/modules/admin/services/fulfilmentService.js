@@ -36,12 +36,17 @@ const params = (query) => ({
   ...query.filters,
 })
 
+// Sub-orders/Shipments/RTO/Returns/Cancellations are a real backend — see
+// adminFulfilmentController and adminReturnController. Invoices (GST/tax
+// document generation) stay on fixtures, same accounting-scope trade-off as
+// financeService's chart of accounts / tax centre / statements.
 export const fetchSubOrders = (query) =>
   fetchResource({
     path: '/admin/sub-orders',
     params: params(query),
     fixture: () => subOrderListFixture(query),
     schema: subOrderListSchema,
+    live: true,
   })
 
 export const fetchShipments = (query) =>
@@ -50,6 +55,7 @@ export const fetchShipments = (query) =>
     params: params(query),
     fixture: () => shipmentListFixture(query),
     schema: shipmentListSchema,
+    live: true,
   })
 
 export const fetchRtos = (query) =>
@@ -58,6 +64,7 @@ export const fetchRtos = (query) =>
     params: params(query),
     fixture: () => rtoListFixture(query),
     schema: rtoListSchema,
+    live: true,
   })
 
 export const fetchReturns = (query) =>
@@ -66,6 +73,7 @@ export const fetchReturns = (query) =>
     params: params(query),
     fixture: () => returnListFixture(query),
     schema: returnListSchema,
+    live: true,
   })
 
 export const fetchReturnDetail = (returnId) =>
@@ -73,6 +81,7 @@ export const fetchReturnDetail = (returnId) =>
     path: `/admin/returns/${returnId}`,
     fixture: () => returnDetailFixture(returnId),
     schema: returnDetailSchema,
+    live: true,
   })
 
 export const fetchCancellations = (query) =>
@@ -81,6 +90,7 @@ export const fetchCancellations = (query) =>
     params: params(query),
     fixture: () => cancellationListFixture(query),
     schema: cancellationListSchema,
+    live: true,
   })
 
 export const fetchInvoices = (query) =>
@@ -101,22 +111,22 @@ export const fetchInvoiceDetail = (invoiceId) =>
 // --- writes ---------------------------------------------------------------
 
 export const advanceSubOrder = ({ id, awb }) =>
-  mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/advance`, body: { awb }, fixture: (p) => fixtures.advanceSubOrderFixture(id, p), schema: subOrderSchema })
+  mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/advance`, body: { awb }, fixture: (p) => fixtures.advanceSubOrderFixture(id, p), schema: subOrderSchema, live: true })
 
 export const cancelSubOrder = ({ id, reason }) =>
-  mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/cancel`, body: { reason }, fixture: (p) => fixtures.cancelSubOrderFixture(id, p), schema: subOrderSchema })
+  mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/cancel`, body: { reason }, fixture: (p) => fixtures.cancelSubOrderFixture(id, p), schema: subOrderSchema, live: true })
 
 export const updateShipment = ({ id, status, lastEvent }) =>
-  mutateResource({ method: 'put', path: `/admin/fulfilment/shipments/${id}`, body: { status, lastEvent }, fixture: (p) => fixtures.updateShipmentFixture(id, p), schema: shipmentSchema })
+  mutateResource({ method: 'put', path: `/admin/fulfilment/shipments/${id}`, body: { status, lastEvent }, fixture: (p) => fixtures.updateShipmentFixture(id, p), schema: shipmentSchema, live: true })
 
 export const restockRto = ({ id }) =>
-  mutateResource({ path: `/admin/fulfilment/rto/${id}/restock`, body: { id }, fixture: () => fixtures.restockRtoFixture(id), schema: rtoSchema })
+  mutateResource({ path: `/admin/fulfilment/rto/${id}/restock`, body: { id }, fixture: () => fixtures.restockRtoFixture(id), schema: rtoSchema, live: true })
 
 export const decideReturn = ({ id, decision, reason }) =>
-  mutateResource({ path: `/admin/fulfilment/returns/${id}/decide`, body: { decision, reason }, fixture: (p) => fixtures.decideReturnFixture(id, p), schema: returnSchema })
+  mutateResource({ path: `/admin/returns/${id}/decide`, body: { decision, reason }, fixture: (p) => fixtures.decideReturnFixture(id, p), schema: returnSchema, live: true })
 
 export const resolveCancellationRefund = ({ id }) =>
-  mutateResource({ path: `/admin/fulfilment/cancellations/${id}/refund`, body: { id }, fixture: () => fixtures.resolveCancellationRefundFixture(id), schema: cancellationSchema })
+  mutateResource({ path: `/admin/fulfilment/cancellations/${id}/refund`, body: { id }, fixture: () => fixtures.resolveCancellationRefundFixture(id), schema: cancellationSchema, live: true })
 
 export const voidInvoice = ({ id, reason }) =>
   mutateResource({ method: 'put', path: `/admin/fulfilment/invoices/${id}/void`, body: { reason }, fixture: (p) => fixtures.voidInvoiceFixture(id, p), schema: invoiceSchema })

@@ -150,6 +150,8 @@ export default {
         '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
       },
       boxShadow: {
+        // The faintest step, for a card that needs an edge rather than lift.
+        xs: '0 1px 2px 0 rgb(15 23 42 / 0.05)',
         card: '0 1px 2px 0 rgb(15 23 42 / 0.04)',
         raised: '0 1px 2px 0 rgb(15 23 42 / 0.06), 0 2px 8px -2px rgb(15 23 42 / 0.08)',
         overlay: '0 8px 24px -6px rgb(15 23 42 / 0.18), 0 2px 6px -2px rgb(15 23 42 / 0.08)',

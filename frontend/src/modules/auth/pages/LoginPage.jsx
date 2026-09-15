@@ -19,7 +19,7 @@ import {
   HiCheckCircle,
   HiBuildingStorefront,
 } from 'react-icons/hi2'
-import { AUTH_ROUTES, USER_ROUTES } from '../../../config/routes'
+import { USER_ROUTES } from '../../../config/routes'
 import { useAuthStore } from '../../../lib/authStore'
 import { sendCustomerOtp, verifyCustomerOtp } from '../services/customerAuthService'
 import { DesktopLeftShowcase } from '../../../components/common/DesktopLeftShowcase'
@@ -70,14 +70,18 @@ export function LoginPage() {
     }
   }, [currentStep])
 
+  // Dashboard/categories/listing/product routes are already reachable
+  // without auth (see UserRoutes — only cart/checkout/orders/profile/etc.
+  // sit behind ProtectedRoute), so "guest" just means "don't log in" — no
+  // session to fake. A fake token used to get set here, which made
+  // cartStore/wishlistStore/notificationStore (all gated on isAuthenticated)
+  // fire real authenticated API calls that the backend correctly rejected,
+  // silently logging the guest back out within moments. `returnUrl` is
+  // ignored on purpose: if it points at a protected route (e.g. the guest
+  // arrived here via a redirect from /cart), landing there with no real
+  // session would just bounce straight back to login.
   const handleGuestAccess = () => {
-    useAuthStore.getState().setSession({
-      user: { name: 'Guest Retailer', role: 'customer', phone: 'Guest Mode' },
-      roles: ['customer', 'user'],
-      permissions: ['customer.access', 'user.access'],
-      accessToken: 'demo-krozenda-guest-token-' + Date.now(),
-    })
-    navigate(returnUrl, { replace: true })
+    navigate(USER_ROUTES.DASHBOARD, { replace: true })
   }
 
   const handlePhoneChange = (e) => {
@@ -258,7 +262,7 @@ export function LoginPage() {
             )}
 
             {/* Mobile App Brand Identity (Hidden on Desktop) */}
-            <div className="flex md:hidden items-center space-x-2">
+            <Link to={USER_ROUTES.DASHBOARD} className="flex md:hidden items-center space-x-2 cursor-pointer transition-opacity hover:opacity-90" title="KroZenda Home">
               <img
                 src="/images/logo.png"
                 alt="KroZenda"
@@ -272,7 +276,7 @@ export function LoginPage() {
                   Dropship Hub
                 </span>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Desktop Web Step Indicator (Hidden on Mobile) */}

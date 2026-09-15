@@ -1,6 +1,19 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const User = require('../Models/User');
+const OtpRequest = require('../Models/OtpRequest');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
+
+const OTP_TTL_MS = 5 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+const isProduction = process.env.ENV === 'production';
+
+function generateOtp() {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Normalize phone to clean 10-digit format
 function normalizePhone(raw) {
@@ -49,15 +62,29 @@ async function requestOtp(req, res) {
     isDeleted: false,
   });
 
-  // Mock OTP as requested: 123456
-  const mockOtp = '123456';
+  const otp = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10);
+
+  await OtpRequest.findOneAndUpdate(
+    { mobileNumber: cleanNumber },
+    { otpHash, attempts: 0, expiresAt: new Date(Date.now() + OTP_TTL_MS) },
+    { upsert: true }
+  );
+
+  // TODO: wire up a real SMS provider (see SMS_API_KEY in .env.example) and
+  // send `otp` there instead of ever returning/logging it once one exists.
+  if (!isProduction) {
+    console.log(`[dev-only] OTP for ${cleanNumber}: ${otp}`);
+  }
 
   res.json({
     success: true,
     message: 'OTP sent successfully',
     data: {
       mobileNumber: cleanNumber,
-      otp: mockOtp,
+      // Only ever present outside production, where there is no real SMS
+      // gateway configured yet — never echoed once one is wired up.
+      ...(isProduction ? {} : { otp }),
       isRegistered: Boolean(existingUser),
     },
   });
@@ -76,12 +103,35 @@ async function verifyOtp(req, res) {
   }
 
   const cleanOtp = String(otp || '').trim();
-  if (cleanOtp !== '123456') {
+
+  const otpRequest = await OtpRequest.findOne({ mobileNumber: cleanNumber });
+  if (!otpRequest || otpRequest.expiresAt < new Date()) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid OTP. Please enter 123456',
+      message: 'OTP expired or not requested. Please request a new one.',
     });
   }
+
+  if (otpRequest.attempts >= MAX_OTP_ATTEMPTS) {
+    await otpRequest.deleteOne();
+    return res.status(429).json({
+      success: false,
+      message: 'Too many incorrect attempts. Please request a new OTP.',
+    });
+  }
+
+  const otpMatches = await bcrypt.compare(cleanOtp, otpRequest.otpHash);
+  if (!otpMatches) {
+    otpRequest.attempts += 1;
+    await otpRequest.save();
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid OTP. Please try again.',
+    });
+  }
+
+  // OTP is single-use — consume it before any further processing.
+  await otpRequest.deleteOne();
 
   let user = await User.findOne({
     mobileNumber: cleanNumber,
@@ -93,12 +143,24 @@ async function verifyOtp(req, res) {
   if (!user) {
     // New customer auto-registration
     isNewUser = true;
-    user = await User.create({
-      name: name?.trim() || `Customer ${cleanNumber.slice(-4)}`,
-      mobileNumber: cleanNumber,
-      role: 'customer',
-      isActive: true,
-    });
+    try {
+      user = await User.create({
+        name: name?.trim() || `Customer ${cleanNumber.slice(-4)}`,
+        mobileNumber: cleanNumber,
+        role: 'customer',
+        isActive: true,
+      });
+    } catch (err) {
+      // Concurrent verify-otp calls for the same number can both pass the
+      // `!user` check above; the unique index on mobileNumber turns the
+      // loser into a duplicate-key error instead of a duplicate account.
+      if (err.code === 11000) {
+        isNewUser = false;
+        user = await User.findOne({ mobileNumber: cleanNumber, isDeleted: false });
+      } else {
+        throw err;
+      }
+    }
   } else {
     // Existing customer login
     if (!user.isActive) {
@@ -145,14 +207,17 @@ async function getMe(req, res) {
   });
 }
 
-// PUT /auth/profile — direct edit, no OTP re-verification on mobile number
-// change: this backend's auth is already mock-OTP (123456 for every user),
-// so gating a mobile edit behind the same mock flow would add friction
-// without adding real security.
+// PUT /auth/profile — mobile number is one-time-settable only (see the
+// "cannot be changed" branch below) precisely because it isn't re-verified
+// by OTP here; a user with one already set can never move to a different
+// number through this endpoint.
 async function updateProfile(req, res) {
   const { name, email, dob, gender, mobileNumber } = req.body;
 
   if (email !== undefined && email) {
+    if (!EMAIL_RE.test(String(email).trim())) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address' });
+    }
     const existing = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user._id } });
     if (existing) {
       return res.status(400).json({ success: false, message: 'This email is already in use' });
@@ -161,14 +226,19 @@ async function updateProfile(req, res) {
 
   if (mobileNumber !== undefined && mobileNumber) {
     const cleanNumber = normalizePhone(mobileNumber);
-    if (cleanNumber.length !== 10) {
-      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
+    if (req.user.mobileNumber && cleanNumber !== normalizePhone(req.user.mobileNumber)) {
+      return res.status(400).json({ success: false, message: 'Mobile number cannot be changed' });
     }
-    const existing = await User.findOne({ mobileNumber: cleanNumber, _id: { $ne: req.user._id } });
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'This mobile number is already in use' });
+    if (!req.user.mobileNumber) {
+      if (cleanNumber.length !== 10) {
+        return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
+      }
+      const existing = await User.findOne({ mobileNumber: cleanNumber, _id: { $ne: req.user._id } });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'This mobile number is already in use' });
+      }
+      req.user.mobileNumber = cleanNumber;
     }
-    req.user.mobileNumber = cleanNumber;
   }
 
   if (name !== undefined) req.user.name = name.trim();
@@ -194,10 +264,63 @@ async function uploadProfileImage(req, res) {
   res.json({ success: true, message: 'Profile photo updated', data: { user: serializeCustomer(req.user) } });
 }
 
+// PUT /auth/change-password
+async function changePassword(req, res) {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+    return res.status(400).json({
+      success: false,
+      message: 'New password must be at least 8 characters and include a letter and a number',
+    });
+  }
+
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+  }
+
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  // If user already has a password set, verify currentPassword
+  if (user.password) {
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password is required' });
+    }
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.json({ success: true, message: 'Password updated successfully' });
+}
+
+// DELETE /auth/account
+async function deleteAccount(req, res) {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  user.isDeleted = true;
+  user.isActive = false;
+  await user.save();
+
+  res.json({ success: true, message: 'Account deleted successfully' });
+}
+
 module.exports = {
   requestOtp,
   verifyOtp,
   getMe,
   updateProfile,
   uploadProfileImage,
+  changePassword,
+  deleteAccount,
 };

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const razorpay = require('../Config/razorpay');
 const User = require('../Models/User');
 const WalletTransaction = require('../Models/WalletTransaction');
+const { createNotification } = require('./notificationController');
 
 function serializeTransaction(t) {
   return {
@@ -63,7 +64,7 @@ async function createTopupOrder(req, res) {
 // razorpayPaymentId index on WalletTransaction, so a retried verify call
 // (e.g. the client resubmitting after a dropped response) can't double-credit.
 async function verifyTopup(req, res) {
-  const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature, amount } = req.body;
+  const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body;
 
   if (!orderId || !paymentId || !signature) {
     return res.status(400).json({ success: false, message: 'Missing payment verification fields' });
@@ -78,10 +79,21 @@ async function verifyTopup(req, res) {
     return res.status(400).json({ success: false, message: 'Payment verification failed' });
   }
 
-  const creditAmount = Number(amount);
-  if (!Number.isFinite(creditAmount) || creditAmount <= 0) {
-    return res.status(400).json({ success: false, message: 'Invalid amount' });
+  // The signature only proves the (orderId, paymentId) pair is genuine — the
+  // amount to credit must come from what Razorpay actually captured, never
+  // from the client (a client-supplied `amount` here would let someone pay
+  // ₹1 and ask to be credited ₹99,999).
+  let payment;
+  try {
+    payment = await razorpay.payments.fetch(paymentId);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: 'Unable to verify payment with Razorpay' });
   }
+  if (!payment || payment.order_id !== orderId || payment.status !== 'captured') {
+    return res.status(400).json({ success: false, message: 'Payment not captured' });
+  }
+
+  const creditAmount = payment.amount / 100;
 
   try {
     const user = await User.findByIdAndUpdate(
@@ -99,6 +111,14 @@ async function verifyTopup(req, res) {
       razorpayOrderId: orderId,
       razorpayPaymentId: paymentId,
       status: 'SUCCESS',
+    });
+
+    await createNotification({
+      userId: req.user._id,
+      type: 'WALLET',
+      title: 'Wallet Topped Up',
+      message: `₹${creditAmount.toLocaleString('en-IN')} has been added to your Krozenda Wallet.`,
+      actionType: 'WALLET',
     });
 
     res.json({

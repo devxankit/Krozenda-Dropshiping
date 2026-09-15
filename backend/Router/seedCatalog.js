@@ -1,302 +1,133 @@
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+
+// Models
 const Category = require('../Models/Category');
 const Brand = require('../Models/Brand');
 const Product = require('../Models/Product');
+const Banner = require('../Models/Banner');
+const Vendor = require('../Models/Vendor');
+const User = require('../Models/User');
+const Address = require('../Models/Address');
+const Coupon = require('../Models/Coupon');
+const Order = require('../Models/Order');
+const Review = require('../Models/Review');
+const Wishlist = require('../Models/Wishlist');
+const Cart = require('../Models/Cart');
 const Role = require('../Models/Role');
 const { ADMIN_PERMISSIONS } = require('../Config/permissions');
 
-const SEED_CATEGORIES = [
-  {
-    name: 'Electronics & Gadgets',
-    image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: true,
-  },
-  {
-    name: 'Fashion & Apparel',
-    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: true,
-  },
-  {
-    name: 'Home & Living',
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: false,
-  },
-  {
-    name: 'Footwear & Sneakers',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: true,
-  },
-  {
-    name: 'Beauty & Personal Care',
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: false,
-  },
-  {
-    name: 'Fitness & Outdoors',
-    image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
-    isActive: true,
-    isTopCategory: false,
-  },
-];
-
-const SEED_BRANDS = [
-  {
-    name: 'Boat',
-    logo: '/brands/boat.svg',
-    isActive: true,
-  },
-  {
-    name: 'Boat Audio',
-    logo: '/brands/boat.svg',
-    isActive: true,
-  },
-  {
-    name: 'Philips',
-    logo: '/brands/philips.svg',
-    isActive: true,
-  },
-  {
-    name: 'Philips Personal Care',
-    logo: '/brands/philips.svg',
-    isActive: true,
-  },
-  {
-    name: 'Nike',
-    logo: '/brands/nike.svg',
-    isActive: true,
-  },
-  {
-    name: 'Samsung',
-    logo: '/brands/samsung.svg',
-    isActive: true,
-  },
-  {
-    name: 'Noise Wearables',
-    logo: '/brands/noise.svg',
-    isActive: true,
-  },
-  {
-    name: 'Prestige Cookware',
-    logo: '/brands/prestige.svg',
-    isActive: true,
-  },
-  {
-    name: 'Krozenda Essentials',
-    logo: '/brands/krozenda.svg',
-    isActive: true,
-  },
-  {
-    name: 'Integration Test Brand',
-    logo: '/brands/krozenda.svg',
-    isActive: true,
-  },
-];
-
-const SEED_PRODUCTS = [
-  {
-    name: 'Wireless ANC Noise Cancelling Headphones',
-    categoryName: 'Electronics & Gadgets',
-    brandName: 'Boat',
-    sku: 'BOAT-ANC-001',
-    price: 4999,
-    salePrice: 2999,
-    discountPercent: 40,
-    stock: 45,
-    weight: 0.28,
-    images: [
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'High-resolution audio with 40mm drivers, active noise cancellation, ambient sound mode, and up to 40 hours of playtime with rapid USB-C charging.',
-    isActive: true,
-  },
-  {
-    name: 'Smart Fitness Tracker Watch Pro',
-    categoryName: 'Fitness & Outdoors',
-    brandName: 'Philips',
-    sku: 'PHIL-WATCH-02',
-    price: 6999,
-    salePrice: 3499,
-    discountPercent: 50,
-    stock: 28,
-    weight: 0.15,
-    images: [
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Full-color vibrant AMOLED display with continuous heart rate monitoring, SpO2 sensor, sleep analytics, 5ATM water resistance, and 14 days of battery.',
-    isActive: true,
-  },
-  {
-    name: 'UltraBoost Athletic Running Sneakers',
-    categoryName: 'Footwear & Sneakers',
-    brandName: 'Nike',
-    sku: 'NIKE-RUN-03',
-    price: 8999,
-    salePrice: 5999,
-    discountPercent: 33,
-    stock: 18,
-    weight: 0.72,
-    images: [
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Engineered knit mesh upper engineered for ultra-light breathability. Responsive foam midsole gives springy rebound for marathons and daily training.',
-    isActive: true,
-  },
-  {
-    name: 'Minimalist Matte Ceramic Planter & Vase',
-    categoryName: 'Home & Living',
-    brandName: 'Krozenda Essentials',
-    sku: 'KROZ-DECOR-04',
-    price: 1499,
-    salePrice: 999,
-    discountPercent: 33,
-    stock: 60,
-    weight: 1.1,
-    images: [
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Handcrafted terracotta stoneware finished with a silk matte glaze. Elegant minimalist silhouette designed to accent modern homes and office desks.',
-    isActive: true,
-  },
-  {
-    name: 'Organic Botanical Rejuvenating Face Serum',
-    categoryName: 'Beauty & Personal Care',
-    brandName: 'Krozenda Essentials',
-    sku: 'KROZ-SERUM-05',
-    price: 1999,
-    salePrice: 1299,
-    discountPercent: 35,
-    stock: 85,
-    weight: 0.09,
-    images: [
-      'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608248597359-2c7ebba7a840?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Formulated with 10% Niacinamide, low molecular weight Hyaluronic Acid, and Centella Asiatica for barrier strengthening, skin hydration, and youthful glow.',
-    isActive: true,
-  },
-  {
-    name: 'Ultra-Slim Mechanical Gaming Keyboard RGB',
-    categoryName: 'Electronics & Gadgets',
-    brandName: 'Samsung',
-    sku: 'SAMS-KB-06',
-    price: 5499,
-    salePrice: 4299,
-    discountPercent: 22,
-    stock: 12,
-    weight: 0.85,
-    images: [
-      'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Low profile tactile switches with hot-swappable sockets, brushed aluminum top plate, customizable per-key RGB backlighting, and 2.4GHz + Bluetooth connectivity.',
-    isActive: true,
-  },
-  {
-    name: 'Classic Tailored Linen Casual Shirt',
-    categoryName: 'Fashion & Apparel',
-    brandName: 'Krozenda Essentials',
-    sku: 'KROZ-SHIRT-07',
-    price: 2499,
-    salePrice: 1699,
-    discountPercent: 32,
-    stock: 35,
-    weight: 0.32,
-    images: [
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Woven from 100% Normandy flax linen. Garment washed for incredible softness right out of the box with relaxed classic collar and tailored fit.',
-    isActive: true,
-  },
-  {
-    name: 'Stainless Steel Insulated Thermal Flask (1L)',
-    categoryName: 'Fitness & Outdoors',
-    brandName: 'Boat',
-    sku: 'BOAT-FLASK-08',
-    price: 1299,
-    salePrice: 799,
-    discountPercent: 38,
-    stock: 50,
-    weight: 0.45,
-    images: [
-      'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&auto=format&fit=crop&q=80',
-    ],
-    description:
-      'Double-wall vacuum insulation keeps beverages piping hot for 12 hours or refreshingly ice-cold for 24 hours. Food grade 18/8 stainless steel, 100% leak proof.',
-    isActive: true,
-  },
-];
+// Seed Datasets
+const { SEED_CATEGORIES } = require('./seedData/categories');
+const { SEED_BRANDS } = require('./seedData/brands');
+const { SEED_PRODUCTS } = require('./seedData/products');
+const { SEED_BANNERS } = require('./seedData/banners');
+const { SEED_VENDORS } = require('./seedData/vendors');
+const { SEED_USERS, SEED_ADDRESSES } = require('./seedData/users');
+const { SEED_COUPONS } = require('./seedData/coupons');
+const {
+  SEED_ORDERS,
+  SEED_REVIEWS,
+  SEED_WISHLISTS,
+  SEED_CARTS,
+} = require('./seedData/ordersAndReviews');
 
 async function seedCatalog() {
+  console.log('[SeedCatalog] Starting full production-like database seeding...');
+
   try {
+    // =======================================================================
+    // 1. SEED CATEGORIES (12 Categories with WebP Assets)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding categories...');
+    const activeCategoryNames = SEED_CATEGORIES.map((c) => c.name);
+    await Category.deleteMany({ name: { $nin: activeCategoryNames } });
+
     const categoryMap = {};
     for (const cat of SEED_CATEGORIES) {
       const doc = await Category.findOneAndUpdate(
         { name: cat.name },
-        { name: cat.name, image: cat.image, isActive: cat.isActive },
+        {
+          $set: {
+            name: cat.name,
+            image: cat.image,
+            isActive: cat.isActive,
+            isTopCategory: cat.isTopCategory,
+          },
+        },
         { upsert: true, new: true }
       );
       categoryMap[cat.name] = doc._id;
     }
+    console.log(`[SeedCatalog] Seeded ${Object.keys(categoryMap).length} categories.`);
 
+    // =======================================================================
+    // 2. SEED BRANDS (27 Brands)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding brands...');
     const brandMap = {};
     for (const brand of SEED_BRANDS) {
       const doc = await Brand.findOneAndUpdate(
         { name: brand.name },
-        { name: brand.name, logo: brand.logo, isActive: brand.isActive },
+        {
+          $set: {
+            name: brand.name,
+            logo: brand.logo,
+            isActive: brand.isActive,
+          },
+        },
         { upsert: true, new: true }
       );
       brandMap[brand.name] = doc._id;
     }
+    console.log(`[SeedCatalog] Seeded ${Object.keys(brandMap).length} brands.`);
 
+    // =======================================================================
+    // 3. SEED PRODUCTS (102 Products across 12 Categories)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding products...');
+    const productMap = {};
     for (const prod of SEED_PRODUCTS) {
       const categoryId = categoryMap[prod.categoryName];
-      const brandId = brandMap[prod.brandName];
+      const brandId = brandMap[prod.brandName] || null;
 
-      await Product.findOneAndUpdate(
+      if (!categoryId) {
+        console.warn(`[SeedCatalog] Category not found for product "${prod.name}" (${prod.categoryName})`);
+        continue;
+      }
+
+      const doc = await Product.findOneAndUpdate(
         { sku: prod.sku },
         {
-          name: prod.name,
-          sku: prod.sku,
-          category: categoryId,
-          brand: brandId,
-          price: prod.price,
-          salePrice: prod.salePrice,
-          discountPercent: prod.discountPercent,
-          stock: prod.stock,
-          weight: prod.weight,
-          images: prod.images,
-          description: prod.description,
-          isActive: prod.isActive,
+          $set: {
+            name: prod.name,
+            sku: prod.sku,
+            category: categoryId,
+            brand: brandId,
+            price: prod.price,
+            salePrice: prod.salePrice,
+            discountPercent: prod.discountPercent,
+            stock: prod.stock,
+            weight: prod.weight,
+            images: prod.images,
+            description: prod.description,
+            isActive: prod.isActive,
+            isFlashsale: prod.isFlashsale,
+            isTrending: prod.isTrending,
+          },
         },
         { upsert: true, new: true }
       );
+      productMap[prod.sku] = doc;
     }
+    console.log(`[SeedCatalog] Seeded ${Object.keys(productMap).length} products.`);
 
-    // Backfill images for any existing products that currently have no images
+    // Backfill images for any existing products in DB that lack images
     const fallbackProductImages = [
       'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop&q=80',
     ];
-
     const productsWithoutImages = await Product.find({
       $or: [{ images: { $size: 0 } }, { images: { $exists: false } }, { images: null }],
     });
@@ -306,78 +137,406 @@ async function seedCatalog() {
       await p.save();
     }
 
-    // Backfill images for categories without images
-    const existingCats = await Category.find({
-      $or: [{ image: null }, { image: '' }, { image: { $exists: false } }],
-    });
-    for (const c of existingCats) {
-      const match = SEED_CATEGORIES.find(
-        (sc) =>
-          sc.name.toLowerCase().includes(c.name.toLowerCase()) ||
-          c.name.toLowerCase().includes(sc.name.toLowerCase())
-      );
-      c.image = match
-        ? match.image
-        : 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&auto=format&fit=crop&q=80';
-      await c.save();
-    }
+    // =======================================================================
+    // 4. SEED BANNERS (13 Banners: Hero, Promo, Strip with WebP Assets)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding banners...');
+    const activeBannerTitles = SEED_BANNERS.map((b) => b.title);
+    await Banner.deleteMany({ title: { $nin: activeBannerTitles } });
 
-    // Ensure initial top categories exist
-    const topCategoryCount = await Category.countDocuments({ isTopCategory: true });
-    if (topCategoryCount === 0) {
-      await Category.updateMany(
+    let bannerCount = 0;
+    for (const b of SEED_BANNERS) {
+      await Banner.findOneAndUpdate(
+        { title: b.title, placement: b.placement },
         {
-          $or: [
-            { name: { $regex: /electronics/i } },
-            { name: { $regex: /fashion/i } },
-            { name: { $regex: /footwear/i } },
-          ],
+          $set: {
+            title: b.title,
+            subtitle: b.subtitle || '',
+            tag: b.tag || '',
+            icon: b.icon || 'sparkles',
+            theme: b.theme || 'blue',
+            image: b.image || null,
+            placement: b.placement || 'hero',
+            ctaPath: b.ctaPath || '',
+            status: b.status || 'active',
+            isDeleted: false,
+          },
         },
-        { $set: { isTopCategory: true } }
+        { upsert: true, new: true }
+      );
+      bannerCount++;
+    }
+    console.log(`[SeedCatalog] Seeded ${bannerCount} banners.`);
+
+    // =======================================================================
+    // 5. SEED VENDORS (10 Indian B2C/B2B Sellers)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding vendors...');
+    const vendorPasswordHash = await bcrypt.hash('Vendor@123', 10);
+    let vendorCount = 0;
+    for (const v of SEED_VENDORS) {
+      const categoryId = categoryMap[v.categoryName] || null;
+      await Vendor.findOneAndUpdate(
+        { email: v.email.toLowerCase() },
+        {
+          $set: {
+            vendorType: v.vendorType,
+            name: v.name,
+            email: v.email.toLowerCase(),
+            mobile: v.mobile,
+            password: vendorPasswordHash,
+            profileImage: v.profileImage,
+            category: categoryId,
+            gstRegistered: v.gstRegistered,
+            business: v.business,
+            contactPerson: v.contactPerson,
+            address: v.address,
+            bank: v.bank,
+            verificationStatus: v.verificationStatus,
+            isActive: v.isActive,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      vendorCount++;
+    }
+    console.log(`[SeedCatalog] Seeded ${vendorCount} vendors.`);
+
+    // =======================================================================
+    // 6. SEED USERS (8 Customers)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding users...');
+    const userPasswordHash = await bcrypt.hash('Customer@123', 10);
+    const userMap = {};
+    for (const u of SEED_USERS) {
+      const doc = await User.findOneAndUpdate(
+        { email: u.email.toLowerCase() },
+        {
+          $set: {
+            name: u.name,
+            email: u.email.toLowerCase(),
+            mobileNumber: u.mobileNumber,
+            password: userPasswordHash,
+            gender: u.gender,
+            dob: u.dob,
+            walletBalance: u.walletBalance,
+            role: u.role || 'customer',
+            isActive: u.isActive,
+            isDeleted: false,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      userMap[u.email.toLowerCase()] = doc;
+    }
+    console.log(`[SeedCatalog] Seeded ${Object.keys(userMap).length} users.`);
+
+    // =======================================================================
+    // 7. SEED ADDRESSES (12 Addresses)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding addresses...');
+    const userAddressMap = {};
+    let addressCount = 0;
+    for (const addr of SEED_ADDRESSES) {
+      const user = userMap[addr.userEmail.toLowerCase()];
+      if (!user) continue;
+
+      const doc = await Address.findOneAndUpdate(
+        { user: user._id, line1: addr.line1 },
+        {
+          $set: {
+            user: user._id,
+            type: addr.type,
+            fullName: addr.fullName,
+            phone: addr.phone,
+            line1: addr.line1,
+            line2: addr.line2 || '',
+            city: addr.city,
+            state: addr.state,
+            pincode: addr.pincode,
+            country: addr.country || 'India',
+            isDefault: addr.isDefault,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      if (addr.isDefault || !userAddressMap[addr.userEmail.toLowerCase()]) {
+        userAddressMap[addr.userEmail.toLowerCase()] = doc;
+      }
+      addressCount++;
+    }
+    console.log(`[SeedCatalog] Seeded ${addressCount} user addresses.`);
+
+    // =======================================================================
+    // 8. SEED COUPONS (8 Coupons)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding coupons...');
+    let couponCount = 0;
+    for (const c of SEED_COUPONS) {
+      let resolvedCategoryIds = [];
+      if (c.applicableTo === 'CATEGORIES' && c.categoryNames?.length) {
+        resolvedCategoryIds = c.categoryNames
+          .map((cn) => categoryMap[cn])
+          .filter(Boolean);
+      }
+
+      await Coupon.findOneAndUpdate(
+        { code: c.code.toUpperCase() },
+        {
+          $set: {
+            code: c.code.toUpperCase(),
+            description: c.description,
+            discountType: c.discountType,
+            discountValue: c.discountValue,
+            maxDiscountAmount: c.maxDiscountAmount,
+            minOrderAmount: c.minOrderAmount,
+            usageLimit: c.usageLimit,
+            usedCount: c.usedCount,
+            perUserLimit: c.perUserLimit,
+            applicableTo: c.applicableTo,
+            categoryIds: resolvedCategoryIds,
+            customerEligibility: c.customerEligibility,
+            startDate: c.startDate,
+            endDate: c.endDate,
+            isActive: c.isActive,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      couponCount++;
+    }
+    console.log(`[SeedCatalog] Seeded ${couponCount} coupons.`);
+
+    // =======================================================================
+    // 9. SEED ORDERS (20 Orders with Full Status Histories)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding orders...');
+    const orderMap = {};
+    for (const ord of SEED_ORDERS) {
+      const user = userMap[ord.userEmail.toLowerCase()];
+      if (!user) continue;
+
+      const userAddr = userAddressMap[ord.userEmail.toLowerCase()] || {
+        fullName: user.name,
+        phone: user.mobileNumber || '9876543210',
+        line1: 'Flat 101, Central Avenue',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        country: 'India',
+      };
+
+      const items = [];
+      for (const item of ord.itemSkus) {
+        const prod = productMap[item.sku];
+        if (!prod) continue;
+        items.push({
+          product: prod._id,
+          name: prod.name,
+          image: prod.images?.[0] || null,
+          price: Number(prod.salePrice ?? prod.price),
+          quantity: item.quantity,
+          variant: item.variant || '',
+        });
+      }
+
+      if (items.length === 0) continue;
+
+      const subtotal = items.reduce((acc, it) => acc + it.price * it.quantity, 0);
+      const discount = Number(ord.discountAmount || 0);
+      const shipping = Number(ord.shippingFee || 0);
+      const total = Math.max(0, subtotal - discount + shipping);
+
+      // Build realistic chronological status history
+      const nowMs = Date.now();
+      const baseMs = nowMs - ord.daysAgo * 86400000;
+      let statusHistory = [];
+      let deliveredAt = null;
+
+      if (ord.status === 'DELIVERED') {
+        deliveredAt = new Date(baseMs);
+        statusHistory = [
+          { status: 'PENDING', at: new Date(baseMs - 3 * 86400000) },
+          { status: 'PROCESSING', at: new Date(baseMs - 2 * 86400000) },
+          { status: 'SHIPPED', at: new Date(baseMs - 1 * 86400000) },
+          { status: 'DELIVERED', at: deliveredAt },
+        ];
+      } else if (ord.status === 'SHIPPED') {
+        statusHistory = [
+          { status: 'PENDING', at: new Date(baseMs - 2 * 86400000) },
+          { status: 'PROCESSING', at: new Date(baseMs - 1 * 86400000) },
+          { status: 'SHIPPED', at: new Date(baseMs) },
+        ];
+      } else if (ord.status === 'PROCESSING') {
+        statusHistory = [
+          { status: 'PENDING', at: new Date(baseMs - 1 * 86400000) },
+          { status: 'PROCESSING', at: new Date(baseMs) },
+        ];
+      } else if (ord.status === 'CANCELLED') {
+        statusHistory = [
+          { status: 'PENDING', at: new Date(baseMs - 1 * 86400000) },
+          { status: 'CANCELLED', at: new Date(baseMs) },
+        ];
+      } else {
+        statusHistory = [{ status: 'PENDING', at: new Date(baseMs) }];
+      }
+
+      // Upsert order by user and statusHistory initial timestamp
+      const existingOrder = await Order.findOne({
+        user: user._id,
+        'shippingAddress.fullName': userAddr.fullName,
+        subtotal: subtotal,
+        status: ord.status,
+      });
+
+      let orderDoc;
+      if (existingOrder) {
+        existingOrder.items = items;
+        existingOrder.discountAmount = discount;
+        existingOrder.couponCode = ord.couponCode;
+        existingOrder.shippingFee = shipping;
+        existingOrder.total = total;
+        existingOrder.paymentMethod = ord.paymentMethod;
+        existingOrder.paymentStatus = ord.paymentStatus;
+        existingOrder.status = ord.status;
+        existingOrder.deliveredAt = deliveredAt;
+        existingOrder.statusHistory = statusHistory;
+        orderDoc = await existingOrder.save();
+      } else {
+        orderDoc = await Order.create({
+          user: user._id,
+          items,
+          shippingAddress: {
+            fullName: userAddr.fullName,
+            phone: userAddr.phone,
+            line1: userAddr.line1,
+            line2: userAddr.line2 || '',
+            city: userAddr.city,
+            state: userAddr.state,
+            pincode: userAddr.pincode,
+            country: userAddr.country || 'India',
+          },
+          subtotal,
+          discountAmount: discount,
+          couponCode: ord.couponCode,
+          shippingFee: shipping,
+          total,
+          paymentMethod: ord.paymentMethod,
+          paymentStatus: ord.paymentStatus,
+          status: ord.status,
+          deliveredAt,
+          statusHistory,
+          createdAt: statusHistory[0].at,
+        });
+      }
+
+      orderMap[ord.orderKey] = orderDoc;
+    }
+    console.log(`[SeedCatalog] Seeded ${Object.keys(orderMap).length} orders.`);
+
+    // =======================================================================
+    // 10. SEED REVIEWS (60 Verified Reviews)
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding reviews...');
+    let reviewCount = 0;
+    // Fallback delivered order for any edge case
+    const anyDeliveredOrder = Object.values(orderMap).find((o) => o.status === 'DELIVERED');
+
+    for (const rev of SEED_REVIEWS) {
+      const user = userMap[rev.userEmail.toLowerCase()];
+      const prod = productMap[rev.productSku];
+      const order = orderMap[rev.orderKey] || anyDeliveredOrder;
+
+      if (!user || !prod || !order) continue;
+
+      await Review.findOneAndUpdate(
+        { user: user._id, product: prod._id },
+        {
+          $set: {
+            user: user._id,
+            product: prod._id,
+            order: order._id,
+            rating: rev.rating,
+            reviewText: rev.reviewText,
+            photos: rev.photos || [],
+          },
+        },
+        { upsert: true, new: true }
+      );
+      reviewCount++;
+    }
+    console.log(`[SeedCatalog] Seeded ${reviewCount} reviews.`);
+
+    // =======================================================================
+    // 11. AGGREGATE PRODUCT RATINGS & REVIEW COUNTS
+    // =======================================================================
+    console.log('[SeedCatalog] Aggregating product ratings...');
+    const reviewStats = await Review.aggregate([
+      {
+        $group: {
+          _id: '$product',
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    for (const stat of reviewStats) {
+      await Product.findByIdAndUpdate(stat._id, {
+        rating: Math.round(stat.avgRating * 10) / 10,
+        reviewsCount: stat.count,
+      });
+    }
+    console.log(`[SeedCatalog] Synced ratings for ${reviewStats.length} reviewed products.`);
+
+    // =======================================================================
+    // 12. SEED WISHLISTS & CARTS
+    // =======================================================================
+    console.log('[SeedCatalog] Seeding wishlists and carts...');
+    for (const w of SEED_WISHLISTS) {
+      const user = userMap[w.userEmail.toLowerCase()];
+      if (!user) continue;
+
+      const items = w.skus
+        .map((sku) => productMap[sku]?._id)
+        .filter(Boolean)
+        .map((productId) => ({ product: productId, addedAt: new Date() }));
+
+      await Wishlist.findOneAndUpdate(
+        { user: user._id },
+        { $set: { user: user._id, items } },
+        { upsert: true, new: true }
       );
     }
 
-    // Ensure initial flash sale products exist
-    const flashSaleCount = await Product.countDocuments({ isFlashsale: true });
-    if (flashSaleCount === 0) {
-      const candidates = await Product.find({ isActive: true }).limit(3);
-      if (candidates.length > 0) {
-        await Product.updateMany(
-          { _id: { $in: candidates.map((p) => p._id) } },
-          { $set: { isFlashsale: true } }
-        );
-      }
-    }
+    for (const c of SEED_CARTS) {
+      const user = userMap[c.userEmail.toLowerCase()];
+      if (!user) continue;
 
-    // Ensure initial trending products exist
-    const trendingCount = await Product.countDocuments({ isTrending: true });
-    if (trendingCount === 0) {
-      const trendingCandidates = await Product.find({ isActive: true, isFlashsale: { $ne: true } }).limit(4);
-      if (trendingCandidates.length > 0) {
-        await Product.updateMany(
-          { _id: { $in: trendingCandidates.map((p) => p._id) } },
-          { $set: { isTrending: true } }
-        );
-      }
-    }
+      const items = c.items
+        .map((it) => {
+          const prod = productMap[it.sku];
+          if (!prod) return null;
+          return {
+            product: prod._id,
+            quantity: it.quantity,
+            variant: it.variant || '',
+            addedAt: new Date(),
+          };
+        })
+        .filter(Boolean);
 
-    // Backfill logos for brands without logos
-    const existingBrands = await Brand.find({
-      $or: [{ logo: null }, { logo: '' }, { logo: { $exists: false } }],
-    });
-    for (const b of existingBrands) {
-      const match = SEED_BRANDS.find(
-        (sb) =>
-          sb.name.toLowerCase().includes(b.name.toLowerCase()) ||
-          b.name.toLowerCase().includes(sb.name.toLowerCase())
+      await Cart.findOneAndUpdate(
+        { user: user._id },
+        { $set: { user: user._id, items } },
+        { upsert: true, new: true }
       );
-      b.logo = match
-        ? match.logo
-        : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80';
-      await b.save();
     }
+    console.log('[SeedCatalog] Wishlists and carts seeded.');
 
-    // Seed default RBAC roles if none exist
+    // =======================================================================
+    // 13. SEED DEFAULT RBAC ROLES (if none exist)
+    // =======================================================================
     const roleCount = await Role.countDocuments();
     if (roleCount === 0) {
       const defaultRoles = [
@@ -468,9 +627,9 @@ async function seedCatalog() {
       console.log(`[SeedCatalog] Seeded ${defaultRoles.length} default RBAC roles.`);
     }
 
-    console.log(
-      `[SeedCatalog] Seeded and ensured all catalog items and roles are ready.`
-    );
+    console.log('================================================================');
+    console.log('[SeedCatalog] SUCCESS: Entire multi-vendor marketplace seeded!');
+    console.log('================================================================');
   } catch (error) {
     console.error('[SeedCatalog] Error seeding catalog:', error);
   }

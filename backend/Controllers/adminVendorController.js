@@ -1,7 +1,47 @@
 const Vendor = require('../Models/Vendor');
 const VendorDocument = require('../Models/VendorDocument');
-const { serializeVendor } = require('./vendorAuthController');
+const Product = require('../Models/Product');
+const Order = require('../Models/Order');
+const { serializeVendor, createVendorAccount } = require('./vendorAuthController');
 const { serializeDocument } = require('./vendorDocumentController');
+
+// Live SKU count and gross sales per vendor, read from the catalog and the
+// order line items that snapshot their vendor at order time — the directory
+// showed hardcoded zeros before this.
+async function vendorTradeStats() {
+  const [skuRows, salesRows] = await Promise.all([
+    Product.aggregate([
+      { $match: { vendor: { $ne: null } } },
+      { $group: { _id: '$vendor', products: { $sum: 1 } } },
+    ]),
+    Order.aggregate([
+      { $match: { status: { $ne: 'CANCELLED' } } },
+      { $unwind: '$items' },
+      { $match: { 'items.vendor': { $ne: null } } },
+      {
+        $group: {
+          _id: '$items.vendor',
+          revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+          orders: { $addToSet: '$_id' },
+        },
+      },
+    ]),
+  ]);
+
+  const byVendor = new Map();
+  for (const row of skuRows) {
+    byVendor.set(row._id.toString(), { products: row.products, orders: 0, revenue: 0 });
+  }
+  for (const row of salesRows) {
+    const key = row._id.toString();
+    const existing = byVendor.get(key) || { products: 0, orders: 0, revenue: 0 };
+    existing.orders = row.orders.length;
+    // The admin panel renders money as paise; Order stores rupees.
+    existing.revenue = Math.round(row.revenue * 100);
+    byVendor.set(key, existing);
+  }
+  return byVendor;
+}
 
 async function listVendors(req, res) {
   const { vendorType, verificationStatus } = req.query;
@@ -9,8 +49,15 @@ async function listVendors(req, res) {
   if (vendorType && ['B2C', 'B2B'].includes(vendorType)) filter.vendorType = vendorType;
   if (verificationStatus) filter.verificationStatus = verificationStatus;
 
-  const vendors = await Vendor.find(filter).sort({ createdAt: -1 }).lean();
-  const items = vendors.map((v) => serializeVendor(v));
+  const [vendors, tradeStats] = await Promise.all([
+    Vendor.find(filter).sort({ createdAt: -1 }).lean(),
+    vendorTradeStats(),
+  ]);
+
+  const items = vendors.map((v) => ({
+    ...serializeVendor(v),
+    ...(tradeStats.get(v._id.toString()) || { products: 0, orders: 0, revenue: 0 }),
+  }));
 
   const stats = {
     total: items.length,
@@ -22,6 +69,28 @@ async function listVendors(req, res) {
   };
 
   res.json({ success: true, data: { items, stats } });
+}
+
+// POST /admin/vendors — one-step partner onboarding from the panel. Same
+// validation as the vendor's own sign-up (B2B needs a business and an
+// authorised contact, B2C doesn't), but an admin may approve and activate
+// the partner immediately instead of waiting on the KYC queue.
+async function createVendor(req, res) {
+  const approveNow = req.body.approveNow === true || req.body.approveNow === 'true';
+
+  const { error, vendor } = await createVendorAccount(req.body, {
+    verificationStatus: approveNow ? 'APPROVED' : 'PENDING',
+    isActive: approveNow,
+  });
+  if (error) {
+    return res.status(error.status).json({ success: false, message: error.message });
+  }
+
+  res.status(201).json({
+    success: true,
+    message: approveNow ? 'Partner onboarded and activated' : 'Partner registered, awaiting verification',
+    data: { ...serializeVendor(vendor), products: 0, orders: 0, revenue: 0 },
+  });
 }
 
 async function getVendor(req, res) {
@@ -143,4 +212,11 @@ async function reviewVendorDocument(req, res) {
   });
 }
 
-module.exports = { listVendors, getVendor, updateVendorStatus, toggleVendorActive, reviewVendorDocument };
+module.exports = {
+  listVendors,
+  getVendor,
+  createVendor,
+  updateVendorStatus,
+  toggleVendorActive,
+  reviewVendorDocument,
+};

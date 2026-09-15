@@ -200,8 +200,44 @@ export const supportTicketListSchema = paged(
     priority: z.enum(['low', 'normal', 'high', 'urgent']),
     owner: z.string().nullable(),
     status: z.enum(['open', 'waiting', 'resolved', 'closed']),
+    escalatedToAdmin: z.boolean().optional(),
+    vendorName: z.string().nullable().optional(),
   }),
 )
+
+export const supportTicketMessageSchema = z.object({
+  id: z.string().optional(),
+  sender: z.enum(['user', 'vendor', 'agent', 'system']),
+  senderName: z.string(),
+  message: z.string(),
+  attachments: z.array(z.string()).optional(),
+  isInternal: z.boolean().optional(),
+  createdAt: z.union([z.string(), z.date()]),
+})
+
+export const supportTicketDetailSchema = z.object({
+  id: z.string(),
+  ticketId: z.string(),
+  subject: z.string(),
+  name: z.string(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  party: z.enum(['buyer', 'seller']),
+  raisedByRole: z.enum(['customer', 'vendor']).optional(),
+  targetRole: z.enum(['vendor', 'admin']).optional(),
+  vendorId: z.string().nullable().optional(),
+  category: z.string(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']),
+  status: z.enum(['open', 'waiting', 'resolved', 'closed']),
+  orderId: z.string().nullable().optional(),
+  orderNumber: z.string().optional(),
+  productName: z.string().optional(),
+  owner: z.string().nullable(),
+  escalatedToAdmin: z.boolean().optional(),
+  messages: z.array(supportTicketMessageSchema),
+  createdAt: z.union([z.string(), z.date()]),
+  updatedAt: z.union([z.string(), z.date()]),
+})
 
 export const adminProfileSchema = z.object({
   name: z.string(),

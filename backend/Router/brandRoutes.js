@@ -4,14 +4,15 @@ const {
   createBrand,
   updateBrand,
   updateBrandStatus,
+  decideBrandApproval,
   deleteBrand,
 } = require('../Controllers/brandController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 const { upload, processImage, handleUploadError } = require('../Middlewares/uploadMiddleware');
 
 const router = express.Router();
 
-router.use(protectAdmin);
+router.use(protectAdmin, requirePermission('admin.catalog.manage'));
 
 const uploadBrandLogo = [
   upload.single('logo'),
@@ -23,6 +24,7 @@ router.get('/', listBrands);
 router.post('/', ...uploadBrandLogo, createBrand);
 router.put('/:id', ...uploadBrandLogo, updateBrand);
 router.patch('/:id/status', updateBrandStatus);
+router.patch('/:id/approval', decideBrandApproval);
 router.delete('/:id', deleteBrand);
 
 module.exports = router;

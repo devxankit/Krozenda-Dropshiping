@@ -8,6 +8,13 @@ const reviewSchema = new mongoose.Schema(
     rating: { type: Number, required: true, min: 1, max: 5 },
     reviewText: { type: String, default: '', trim: true, maxlength: 500 },
     photos: { type: [String], default: [] },
+    // Seller's public reply to this review, shown under it — set once via
+    // vendorReviewController, never editable by the reviewing buyer.
+    vendorReply: {
+      type: { message: { type: String, default: '', trim: true, maxlength: 500 }, repliedAt: { type: Date, default: null } },
+      default: () => ({ message: '', repliedAt: null }),
+      _id: false,
+    },
   },
   { timestamps: true }
 );

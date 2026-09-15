@@ -1,4 +1,11 @@
-import { BUYER_TYPE_LABELS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_TONE } from '../../constants'
+import {
+  ORDER_FLOW_STATUS,
+  ORDER_FLOW_STATUS_LABELS,
+  ORDER_PAYMENT_METHOD_LABELS,
+  ORDER_PAYMENT_STATUS_LABELS,
+  ORDER_PAYMENT_STATUS_TONE,
+} from '../../constants'
+import { Button } from '../../../../components/ui'
 import { KeyValueList, MoneyCell, SectionCard, StatusPill } from '../display'
 
 function TotalRow({ label, amount, strong = false, negative = false }) {
@@ -15,21 +22,46 @@ function TotalRow({ label, amount, strong = false, negative = false }) {
   )
 }
 
-export function OrderSummaryRail({ order }) {
-  const { buyer, shippingAddress, payment, totals } = order
+const NEXT_STATUS = Object.freeze({
+  [ORDER_FLOW_STATUS.PENDING]: [ORDER_FLOW_STATUS.PROCESSING, ORDER_FLOW_STATUS.CANCELLED],
+  [ORDER_FLOW_STATUS.PROCESSING]: [ORDER_FLOW_STATUS.SHIPPED, ORDER_FLOW_STATUS.CANCELLED],
+  [ORDER_FLOW_STATUS.SHIPPED]: [ORDER_FLOW_STATUS.DELIVERED, ORDER_FLOW_STATUS.CANCELLED],
+  [ORDER_FLOW_STATUS.DELIVERED]: [],
+  [ORDER_FLOW_STATUS.CANCELLED]: [],
+})
+
+export function OrderSummaryRail({ order, onStatusChange, isUpdatingStatus }) {
+  const { customer, shippingAddress, subtotal, discountAmount, shippingFee, total, paymentMethod, paymentStatus } =
+    order
+  const nextOptions = NEXT_STATUS[order.status] || []
 
   return (
     <div className="flex flex-col gap-4">
+      {nextOptions.length > 0 && (
+        <SectionCard title="Update status">
+          <div className="flex flex-wrap gap-2 p-4">
+            {nextOptions.map((status) => (
+              <Button
+                key={status}
+                type="button"
+                size="sm"
+                variant={status === 'CANCELLED' ? 'dangerOutline' : 'secondary'}
+                isLoading={isUpdatingStatus}
+                onClick={() => onStatusChange(status)}
+              >
+                Mark {ORDER_FLOW_STATUS_LABELS[status]}
+              </Button>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
       <SectionCard title="Money">
         <div className="px-4 py-3">
-          <TotalRow label="Items subtotal" amount={totals.subtotal} />
-          <TotalRow label="GST" amount={totals.tax} />
-          <TotalRow label="Shipping" amount={totals.shipping} />
-          {totals.discount > 0 && <TotalRow label="Discount" amount={totals.discount} negative />}
-          <TotalRow label="Customer paid" amount={totals.total} strong />
-          <div className="mt-3 rounded-md bg-brand-50 px-3 py-2">
-            <TotalRow label="Platform commission" amount={totals.commission} />
-          </div>
+          <TotalRow label="Items subtotal" amount={subtotal} />
+          <TotalRow label="Shipping" amount={shippingFee} />
+          {discountAmount > 0 && <TotalRow label="Discount" amount={discountAmount} negative />}
+          <TotalRow label="Total" amount={total} strong />
         </div>
       </SectionCard>
 
@@ -41,15 +73,14 @@ export function OrderSummaryRail({ order }) {
                 label: 'Status',
                 value: (
                   <StatusPill
-                    status={payment.status}
-                    labels={PAYMENT_STATUS_LABELS}
-                    tones={PAYMENT_STATUS_TONE}
+                    status={paymentStatus}
+                    labels={ORDER_PAYMENT_STATUS_LABELS}
+                    tones={ORDER_PAYMENT_STATUS_TONE}
                     size="sm"
                   />
                 ),
               },
-              { label: 'Method', value: payment.method },
-              { label: 'Reference', value: <span className="tabular">{payment.reference}</span> },
+              { label: 'Method', value: ORDER_PAYMENT_METHOD_LABELS[paymentMethod] },
             ]}
           />
         </div>
@@ -59,13 +90,9 @@ export function OrderSummaryRail({ order }) {
         <div className="px-4 py-2">
           <KeyValueList
             items={[
-              { label: 'Name', value: buyer.name },
-              { label: 'Type', value: BUYER_TYPE_LABELS[buyer.type] },
-              { label: 'Phone', value: <span className="tabular">{buyer.phone}</span> },
-              { label: 'Email', value: buyer.email },
-              ...(buyer.gstin
-                ? [{ label: 'GSTIN', value: <span className="tabular">{buyer.gstin}</span> }]
-                : []),
+              { label: 'Name', value: customer.name || '—' },
+              { label: 'Phone', value: <span className="tabular">{customer.mobileNumber || '—'}</span> },
+              { label: 'Email', value: customer.email || '—' },
             ]}
           />
         </div>
@@ -73,7 +100,7 @@ export function OrderSummaryRail({ order }) {
 
       <SectionCard title="Ship to">
         <address className="px-4 py-3 text-xs not-italic leading-relaxed text-ink-muted">
-          <span className="block font-medium text-slate-900">{buyer.name}</span>
+          <span className="block font-medium text-slate-900">{shippingAddress.fullName}</span>
           {shippingAddress.line1}
           <br />
           {shippingAddress.line2 && (
@@ -84,6 +111,8 @@ export function OrderSummaryRail({ order }) {
           )}
           {shippingAddress.city}, {shippingAddress.state}{' '}
           <span className="tabular">{shippingAddress.pincode}</span>
+          <br />
+          <span className="tabular">{shippingAddress.phone}</span>
         </address>
       </SectionCard>
     </div>

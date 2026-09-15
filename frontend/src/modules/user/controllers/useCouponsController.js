@@ -2,7 +2,7 @@
 // and are the ONLY thing components are allowed to call into.
 
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { applyCoupon, fetchUsedCoupons, fetchPublicCoupons } from '../services/couponService'
+import { applyCoupon, fetchUsedCoupons } from '../services/couponService'
 
 // OrderSummaryScreen's coupon-code field — read-only preview, the real
 // redemption happens server-side inside orderController.createOrder.
@@ -20,10 +20,4 @@ export function useApplyCouponController() {
 export function useUsedCouponsController() {
   const query = useQuery({ queryKey: ['user', 'coupons', 'used'], queryFn: fetchUsedCoupons })
   return { usedCoupons: query.data || [], isLoading: query.isLoading }
-}
-
-// CouponsOffersScreen's "Available Coupons" section.
-export function usePublicCouponsController() {
-  const query = useQuery({ queryKey: ['catalog', 'coupons', 'public'], queryFn: () => fetchPublicCoupons(10) })
-  return { coupons: query.data || [], isLoading: query.isLoading }
 }

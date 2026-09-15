@@ -1,18 +1,19 @@
-import { Badge } from '../../../components/ui'
+import { Badge, Button } from '../../../components/ui'
 import { PrimaryCell } from '../components/display'
+import { downloadBackup } from '../services/systemService'
 
 // Rule 07: column definitions and filter schemas are DATA.
 
 const SEVERITY_TONE = Object.freeze({ info: 'neutral', notable: 'warning', critical: 'danger' })
 
-const PRIORITY_TONE = Object.freeze({
+export const PRIORITY_TONE = Object.freeze({
   low: 'neutral',
   normal: 'brand',
   high: 'warning',
   urgent: 'danger',
 })
 
-const TICKET_TONE = Object.freeze({
+export const TICKET_TONE = Object.freeze({
   open: 'warning',
   waiting: 'brand',
   resolved: 'success',
@@ -184,9 +185,12 @@ export const TICKET_FILTERS = Object.freeze([
 
 export const TICKET_TABS = Object.freeze([
   { id: 'all', label: 'All tickets' },
+  { id: 'customer', label: 'Customer tickets' },
+  { id: 'seller', label: 'Seller tickets' },
   { id: 'open', label: 'Open' },
   { id: 'unassigned', label: 'Unassigned' },
   { id: 'urgent', label: 'Needs attention' },
+  { id: 'escalated', label: 'Escalated' },
   { id: 'resolved', label: 'Resolved' },
 ])
 
@@ -282,5 +286,22 @@ export const BACKUP_COLUMNS = Object.freeze([
         {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
       </Badge>
     ),
+  },
+  {
+    key: 'actions',
+    header: '',
+    width: '6rem',
+    align: 'right',
+    render: (row) =>
+      row.status === 'success' ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          icon="download"
+          onClick={() => downloadBackup(row.id)}
+        >
+          Download
+        </Button>
+      ) : null,
   },
 ])

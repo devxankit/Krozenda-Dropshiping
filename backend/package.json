@@ -5,7 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "preset": "@shelf/jest-mongodb",
+    "setupFiles": [
+      "./tests/env.js"
+    ],
+    "testTimeout": 30000
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -13,15 +21,21 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.0.1",
+    "express-rate-limit": "^8.7.0",
+    "firebase-admin": "^14.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.0",
     "multer": "^2.0.0",
+    "node-cron": "^4.6.0",
     "razorpay": "^2.9.8",
     "sharp": "^0.33.4",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "@shelf/jest-mongodb": "^6.0.2",
+    "jest": "^30.5.1",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.2.2"
   }
 }

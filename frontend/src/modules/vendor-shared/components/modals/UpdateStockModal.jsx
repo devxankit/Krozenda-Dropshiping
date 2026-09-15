@@ -1,15 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button, Input, Modal } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
 
+// Parent remounts this (key={product?.id}) whenever the target product
+// changes, so the initial stock value below is always fresh without an
+// effect-driven setState.
 export function UpdateStockModal({ product, isOpen, onClose, onUpdateStock }) {
-  const [stock, setStock] = useState('')
-
-  useEffect(() => {
-    if (product) {
-      setStock(product.stock.toString())
-    }
-  }, [product])
+  const [stock, setStock] = useState(() => product?.stock?.toString() ?? '')
 
   if (!product) return null
 
@@ -54,7 +51,7 @@ export function UpdateStockModal({ product, isOpen, onClose, onUpdateStock }) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="rounded-lg border border-border bg-surface-muted p-3 text-xs">
           <p className="font-semibold text-slate-900">{product.name}</p>
-          <p className="mt-0.5 text-ink-subtle">SKU: {product.sku} · Category: {product.category}</p>
+          <p className="mt-0.5 text-ink-subtle">SKU: {product.sku || '—'}</p>
         </div>
 
         <Input

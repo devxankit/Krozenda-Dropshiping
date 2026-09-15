@@ -15,6 +15,9 @@ function serializeCategory(cat) {
     image: getImageUrl(cat.image),
     isActive: cat.isActive !== false,
     isTopCategory: cat.isTopCategory === true,
+    createdByVendor: cat.createdByVendor ? cat.createdByVendor.toString() : null,
+    approvalStatus: cat.approvalStatus || 'APPROVED',
+    rejectionReason: cat.rejectionReason || '',
     createdAt: cat.createdAt,
     updatedAt: cat.updatedAt,
   };
@@ -23,9 +26,10 @@ function serializeCategory(cat) {
 // Unauthenticated — used by public-facing pickers (e.g. the vendor
 // registration wizard's category dropdown) and the storefront categories
 // page, which needs real per-category product counts and deal ranges
-// instead of hand-authored copy.
+// instead of hand-authored copy. Only APPROVED categories are ever public —
+// a seller-proposed one stays invisible here until admin approves it.
 async function listPublicCategories(req, res) {
-  const categories = await Category.find({ isActive: true })
+  const categories = await Category.find({ isActive: true, approvalStatus: 'APPROVED' })
     .sort({ isTopCategory: -1, name: 1 })
     .select('name image isTopCategory')
     .lean();
@@ -63,6 +67,7 @@ async function listCategories(req, res) {
     active: items.filter((c) => c.isActive).length,
     inactive: items.filter((c) => !c.isActive).length,
     top: items.filter((c) => c.isTopCategory).length,
+    pending: items.filter((c) => c.approvalStatus === 'PENDING').length,
   };
 
   res.json({ success: true, data: { items, stats } });
@@ -166,6 +171,34 @@ async function updateCategoryTopStatus(req, res) {
   });
 }
 
+// PATCH /admin/catalog/categories/:id/approval — admin decides on a
+// seller-proposed category (see Category.createdByVendor). Approving makes
+// it immediately usable on the storefront and by every seller; rejecting
+// keeps it hidden with a reason the seller can see.
+async function decideCategoryApproval(req, res) {
+  const { id } = req.params;
+  const { decision, rejectionReason } = req.body;
+
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    return res.status(400).json({ success: false, message: 'Decision must be APPROVED or REJECTED' });
+  }
+
+  const category = await Category.findById(id);
+  if (!category) {
+    return res.status(404).json({ success: false, message: 'Category not found' });
+  }
+
+  category.approvalStatus = decision;
+  category.rejectionReason = decision === 'REJECTED' ? (rejectionReason || '').trim() : '';
+  await category.save();
+
+  res.json({
+    success: true,
+    message: `Category ${decision === 'APPROVED' ? 'approved and live' : 'rejected'}`,
+    data: serializeCategory(category),
+  });
+}
+
 async function deleteCategory(req, res) {
   const { id } = req.params;
 
@@ -190,5 +223,6 @@ module.exports = {
   updateCategory,
   updateCategoryStatus,
   updateCategoryTopStatus,
+  decideCategoryApproval,
   deleteCategory,
 };

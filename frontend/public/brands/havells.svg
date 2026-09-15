@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 42" width="140" height="42">
+  <circle cx="18" cy="21" r="13" fill="#D9222A"/>
+  <path d="M12 21 L16 14 L20 28 L24 21" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="38" y="28" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="19" fill="#111827" letter-spacing="0.5">HAVELLS</text>
+</svg>

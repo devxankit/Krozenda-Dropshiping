@@ -35,6 +35,10 @@ const couponSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    // Set only for a coupon a seller created for their own catalog (via
+    // vendorCouponController) — distinct from `vendorIds` above, which is
+    // admin's cross-vendor *targeting* list. null = admin-created coupon.
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
   },
   { timestamps: true }
 );

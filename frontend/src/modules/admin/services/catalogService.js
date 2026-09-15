@@ -31,6 +31,7 @@ export function fetchApprovalQueue(query = {}) {
     params: { tab: query.tab },
     fixture: approvalQueueFixture,
     schema: approvalQueueSchema,
+    live: true,
   })
 }
 
@@ -55,9 +56,16 @@ export function fetchAttributes() {
 export function fetchInventory(query = {}) {
   return fetchResource({
     path: '/admin/catalog/inventory',
-    params: { tab: query.tab, ...query.filters },
+    params: {
+      tab: query.tab,
+      page: query.page,
+      rowsPerPage: query.rowsPerPage,
+      sort: query.sort ? `${query.sort.key}:${query.sort.direction}` : undefined,
+      ...query.filters,
+    },
     fixture: () => inventoryFixture(query),
     schema: inventorySchema,
+    live: true,
   })
 }
 
@@ -136,10 +144,10 @@ export async function deleteProduct({ id }) {
 }
 
 export const approveQueueItem = ({ id }) =>
-  mutateResource({ path: `/admin/catalog/approvals/${id}/approve`, body: { id }, fixture: () => fixtures.approveQueueItemFixture(id), schema: queueDecisionSchema })
+  mutateResource({ path: `/admin/catalog/approvals/${id}/approve`, body: { id }, fixture: () => fixtures.approveQueueItemFixture(id), schema: queueDecisionSchema, live: true })
 
 export const rejectQueueItem = ({ id, reason }) =>
-  mutateResource({ path: `/admin/catalog/approvals/${id}/reject`, body: { reason }, fixture: (p) => fixtures.rejectQueueItemFixture(id, p), schema: queueDecisionSchema })
+  mutateResource({ path: `/admin/catalog/approvals/${id}/reject`, body: { reason }, fixture: (p) => fixtures.rejectQueueItemFixture(id, p), schema: queueDecisionSchema, live: true })
 
 function toFormData(payload) {
   if (payload instanceof FormData) return payload
@@ -210,4 +218,11 @@ export const deleteAttribute = ({ id }) =>
   mutateResource({ method: 'delete', path: `/admin/catalog/attributes/${id}`, fixture: () => fixtures.deleteAttributeFixture(id), schema: deletedSchema })
 
 export const adjustInventory = ({ id, onHand, reason }) =>
-  mutateResource({ path: `/admin/catalog/inventory/${id}/adjust`, body: { onHand, reason }, fixture: (p) => fixtures.adjustInventoryFixture(id, p), schema: inventoryRowSchema })
+  mutateResource({
+    method: 'patch',
+    path: `/admin/catalog/inventory/${id}/adjust`,
+    body: { onHand, reason },
+    fixture: (p) => fixtures.adjustInventoryFixture(id, p),
+    schema: inventoryRowSchema,
+    live: true,
+  })

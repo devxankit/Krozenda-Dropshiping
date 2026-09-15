@@ -40,25 +40,34 @@ const params = (query) => ({
 const list = (path, fixture, schema) => (query) =>
   fetchResource({ path, params: params(query), fixture: () => fixture(query), schema })
 
+// Practical marketplace finance (Transactions/Refunds/Settlements/Vendor
+// Ledger/Commission Rules) is a real backend — see adminFinanceController.
+// Full double-entry accounting (vouchers, chart of accounts, trial balance,
+// P&L/balance sheet, tax centre) is intentionally out of scope for this
+// platform and stays on fixtures below.
+const liveList = (path, fixture, schema) => (query) =>
+  fetchResource({ path, params: params(query), fixture: () => fixture(query), schema, live: true })
+
 export const fetchFinanceOverview = () =>
   fetchResource({
     path: '/admin/finance/overview',
     fixture: fixtures.financeOverviewFixture,
     schema: financeOverviewSchema,
+    live: true,
   })
 
-export const fetchTransactions = list(
+export const fetchTransactions = liveList(
   '/admin/finance/transactions',
   fixtures.transactionListFixture,
   transactionListSchema,
 )
-export const fetchRefunds = list('/admin/finance/refunds', fixtures.refundListFixture, refundListSchema)
-export const fetchSettlements = list(
+export const fetchRefunds = liveList('/admin/finance/refunds', fixtures.refundListFixture, refundListSchema)
+export const fetchSettlements = liveList(
   '/admin/finance/settlements',
   fixtures.settlementListFixture,
   settlementListSchema,
 )
-export const fetchVendorLedgers = list(
+export const fetchVendorLedgers = liveList(
   '/admin/finance/vendor-ledger',
   fixtures.vendorLedgerListFixture,
   vendorLedgerListSchema,
@@ -75,6 +84,7 @@ export const fetchSettlementBatch = (batchId) =>
     path: `/admin/finance/settlements/${batchId}`,
     fixture: () => fixtures.settlementBatchFixture(batchId),
     schema: settlementBatchDetailSchema,
+    live: true,
   })
 
 export const fetchVendorStatement = (vendorId) =>
@@ -82,6 +92,7 @@ export const fetchVendorStatement = (vendorId) =>
     path: `/admin/finance/vendor-ledger/${vendorId}`,
     fixture: () => fixtures.vendorStatementFixture(vendorId),
     schema: vendorStatementSchema,
+    live: true,
   })
 
 export const fetchCommissionRules = () =>
@@ -89,6 +100,17 @@ export const fetchCommissionRules = () =>
     path: '/admin/finance/commission-rules',
     fixture: fixtures.commissionRuleListFixture,
     schema: commissionRuleListSchema,
+    live: true,
+  })
+
+export const updateCommissionRule = ({ id, value }) =>
+  mutateResource({
+    method: 'patch',
+    path: `/admin/finance/commission-rules/${id}`,
+    body: { value },
+    fixture: () => fixtures.commissionRuleListFixture().items.find((r) => r.id === id),
+    schema: commissionRuleListSchema.shape.items.element,
+    live: true,
   })
 
 export const fetchPricingRules = () =>
@@ -245,6 +267,7 @@ export const approveSettlement = ({ id, twoFactorCode }) =>
     body: { twoFactorCode },
     fixture: (payload) => fixtures.approveSettlementFixture(id, payload),
     schema: settlementBatchSchema,
+    live: true,
   })
 
 export const rejectSettlement = ({ id, reason }) =>
@@ -253,6 +276,7 @@ export const rejectSettlement = ({ id, reason }) =>
     body: { reason },
     fixture: (payload) => fixtures.rejectSettlementFixture(id, payload),
     schema: settlementBatchSchema,
+    live: true,
   })
 
 export const retrySettlement = ({ id }) =>
@@ -261,6 +285,7 @@ export const retrySettlement = ({ id }) =>
     body: { id },
     fixture: () => fixtures.retrySettlementFixture(id),
     schema: settlementBatchSchema,
+    live: true,
   })
 
 export const processRefund = ({ id }) =>
@@ -269,6 +294,7 @@ export const processRefund = ({ id }) =>
     body: { id },
     fixture: () => fixtures.processRefundFixture(id),
     schema: refundSchema,
+    live: true,
   })
 
 export const rejectRefund = ({ id, reason }) =>
@@ -277,22 +303,27 @@ export const rejectRefund = ({ id, reason }) =>
     body: { reason },
     fixture: (payload) => fixtures.rejectRefundFixture(id, payload),
     schema: refundSchema,
+    live: true,
   })
 
 export const reconcileTransaction = ({ id, reconciled = true }) =>
   mutateResource({
+    method: 'patch',
     path: `/admin/finance/transactions/${id}/reconcile`,
     body: { reconciled },
     fixture: () => fixtures.reconcileTransactionFixture(id, reconciled),
     schema: transactionSchema,
+    live: true,
   })
 
 export const bulkReconcileTransactions = ({ ids }) =>
   mutateResource({
+    method: 'patch',
     path: '/admin/finance/transactions/reconcile',
     body: { ids },
     fixture: () => fixtures.bulkReconcileTransactionsFixture(ids),
     schema: reconciledBatchSchema,
+    live: true,
   })
 
 export const adjustVendorLedger = ({ vendorId, amount, reason }) =>

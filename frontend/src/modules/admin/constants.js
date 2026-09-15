@@ -745,4 +745,89 @@ export const STATIC_BANNER_PRODUCTS = Object.freeze([
   { id: 'prd-10', name: 'Kritika Bulk Cotton Fabric, 100 m roll' },
 ])
 
+// ---------------------------------------------------------------------------
+// Vendor verification (real backend model — see backend/Models/Vendor.js).
+// A partner is either B2B or B2C and moves PENDING -> UNDER_REVIEW ->
+// APPROVED / REJECTED; `isActive` is a separate suspend switch on top.
+// ---------------------------------------------------------------------------
+export const VENDOR_TYPE_LABELS = Object.freeze({
+  B2B: 'B2B partner',
+  B2C: 'B2C partner',
+})
+
+export const VENDOR_TYPE_TONE = Object.freeze({
+  B2B: 'brand',
+  B2C: 'accent',
+})
+
+export const VENDOR_VERIFICATION_LABELS = Object.freeze({
+  PENDING: 'Pending',
+  UNDER_REVIEW: 'Under review',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+})
+
+export const VENDOR_VERIFICATION_TONE = Object.freeze({
+  PENDING: 'neutral',
+  UNDER_REVIEW: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+})
+
+// ---------------------------------------------------------------------------
+// Order status (real backend model — see backend/Models/Order.js). Distinct
+// from ORDER_STATUS above, which describes the sub-order lifecycle of the
+// marketplace concept this platform doesn't implement.
+// ---------------------------------------------------------------------------
+export const ORDER_FLOW_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+})
+
+export const ORDER_FLOW_STATUS_LABELS = Object.freeze({
+  [ORDER_FLOW_STATUS.PENDING]: 'Pending',
+  [ORDER_FLOW_STATUS.PROCESSING]: 'Processing',
+  [ORDER_FLOW_STATUS.SHIPPED]: 'Shipped',
+  [ORDER_FLOW_STATUS.DELIVERED]: 'Delivered',
+  [ORDER_FLOW_STATUS.CANCELLED]: 'Cancelled',
+})
+
+export const ORDER_FLOW_STATUS_TONE = Object.freeze({
+  [ORDER_FLOW_STATUS.PENDING]: 'neutral',
+  [ORDER_FLOW_STATUS.PROCESSING]: 'brand',
+  [ORDER_FLOW_STATUS.SHIPPED]: 'accent',
+  [ORDER_FLOW_STATUS.DELIVERED]: 'success',
+  [ORDER_FLOW_STATUS.CANCELLED]: 'danger',
+})
+
+export const ORDER_PAYMENT_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+})
+
+export const ORDER_PAYMENT_STATUS_LABELS = Object.freeze({
+  [ORDER_PAYMENT_STATUS.PENDING]: 'Pending',
+  [ORDER_PAYMENT_STATUS.PAID]: 'Paid',
+  [ORDER_PAYMENT_STATUS.FAILED]: 'Failed',
+  [ORDER_PAYMENT_STATUS.REFUNDED]: 'Refunded',
+})
+
+export const ORDER_PAYMENT_STATUS_TONE = Object.freeze({
+  [ORDER_PAYMENT_STATUS.PENDING]: 'neutral',
+  [ORDER_PAYMENT_STATUS.PAID]: 'success',
+  [ORDER_PAYMENT_STATUS.FAILED]: 'danger',
+  [ORDER_PAYMENT_STATUS.REFUNDED]: 'warning',
+})
+
+export const ORDER_PAYMENT_METHOD_LABELS = Object.freeze({
+  COD: 'Cash on delivery',
+  WALLET: 'Wallet',
+  RAZORPAY: 'Razorpay',
+})
+
 export const DEFAULT_ROWS_PER_PAGE = 25

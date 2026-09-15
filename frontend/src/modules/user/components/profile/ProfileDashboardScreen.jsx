@@ -18,6 +18,7 @@ import {
   HiXCircle,
   HiPencilSquare,
   HiXMark,
+  HiTrash,
 } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
@@ -102,12 +103,72 @@ function AddMoneyModal({ open, onClose, onConfirm, isSubmitting }) {
   )
 }
 
+function DeleteAccountModal({ open, onClose, onConfirm, isSubmitting }) {
+  const [error, setError] = useState(null)
+
+  if (!open) return null
+
+  const handleDelete = async () => {
+    setError(null)
+    try {
+      await onConfirm()
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to delete account. Please try again.')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl shadow-2xl border border-red-100 overflow-hidden">
+        <div className="p-6 text-center space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
+            <HiTrash className="w-7 h-7" />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-black text-slate-900">Delete Account?</h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Are you sure you want to permanently delete your account? This action cannot be undone. All your profile data, saved addresses, and order history will be permanently deleted.
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-2.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl text-left">
+              {error}
+            </div>
+          )}
+
+          <div className="pt-2 flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-xl shadow-md transition-colors"
+            >
+              {isSubmitting ? 'Deleting...' : 'Yes, Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
   const navigate = useNavigate()
   const authUser = useAuthStore((state) => state.user)
-  const { profile } = useProfileController()
+  const { profile, deleteAccount, isDeletingAccount } = useProfileController()
   const { balance, topup, isToppingUp } = useWalletController()
   const [showAddMoney, setShowAddMoney] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const user = {
     name: profile?.name || authUser?.name || 'Customer',
@@ -118,6 +179,12 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
 
   const handleAddMoney = (amount) =>
     topup(amount, { name: user.name, email: user.email, contact: user.mobile })
+
+  const handleDeleteAccount = async () => {
+    await deleteAccount()
+    useAuthStore.getState().clearSession()
+    navigate(AUTH_ROUTES.LOGIN, { replace: true })
+  }
 
   const orderShortcuts = [
     { label: 'All Orders', Icon: HiShoppingBag, route: USER_ROUTES.ROOT + '/orders' },
@@ -136,6 +203,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
     { label: 'Support Center', Icon: HiQuestionMarkCircle, route: USER_ROUTES.ROOT + '/support' },
     { label: 'Settings', Icon: HiCog6Tooth, route: USER_ROUTES.ROOT + '/settings' },
     { label: 'Logout', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },
+    { label: 'Delete Account', Icon: HiTrash, isDelete: true },
   ]
 
   return (
@@ -254,6 +322,10 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
                 <div
                   key={idx}
                   onClick={() => {
+                    if (item.isDelete) {
+                      setShowDeleteModal(true)
+                      return
+                    }
                     onNavigateMenu(item.label)
                     if (item.isLogout) {
                       useAuthStore.getState().clearSession()
@@ -265,14 +337,14 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
                   <div className="flex items-center space-x-3">
                     <div
                       className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        item.isLogout ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-700'
+                        item.isDelete || item.isLogout ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       <IconComp className="w-4 h-4" />
                     </div>
                     <span
                       className={`text-xs font-bold ${
-                        item.isLogout ? 'text-red-600' : 'text-slate-800'
+                        item.isDelete || item.isLogout ? 'text-red-600' : 'text-slate-800'
                       }`}
                     >
                       {item.label}
@@ -292,6 +364,13 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
         onClose={() => setShowAddMoney(false)}
         onConfirm={handleAddMoney}
         isSubmitting={isToppingUp}
+      />
+
+      <DeleteAccountModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        isSubmitting={isDeletingAccount}
       />
 
       {/* MOBILE BOTTOM NAVBAR */}
