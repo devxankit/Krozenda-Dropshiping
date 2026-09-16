@@ -4,10 +4,27 @@ const User = require('../Models/User');
 const OtpRequest = require('../Models/OtpRequest');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
+const { sendOtpSms } = require('../utils/smsService');
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 const isProduction = process.env.ENV === 'production';
+// Every dev/staging login uses this same fixed code — never random — so
+// nobody needs a live SMS account (or to read server logs) to test the OTP
+// flow locally. Production always generates a real random one below.
+const DEV_FIXED_OTP = '123456';
+
+// Numbers that skip the SMS gateway even in production and get DEV_FIXED_OTP
+// instead — for app-store reviewers and our own QA handsets, so verifying a
+// build never depends on a live SMS arriving (and never burns a credit).
+// Comma separated in .env; unset or empty disables the bypass entirely.
+function isBypassNumber(mobileNumber) {
+  return (process.env.TEST_PHONE_NUMBERS || '')
+    .split(',')
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .includes(mobileNumber);
+}
 
 function generateOtp() {
   return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
@@ -62,7 +79,8 @@ async function requestOtp(req, res) {
     isDeleted: false,
   });
 
-  const otp = generateOtp();
+  const useLiveSms = isProduction && !isBypassNumber(cleanNumber);
+  const otp = useLiveSms ? generateOtp() : DEV_FIXED_OTP;
   const otpHash = await bcrypt.hash(otp, 10);
 
   await OtpRequest.findOneAndUpdate(
@@ -71,10 +89,22 @@ async function requestOtp(req, res) {
     { upsert: true }
   );
 
-  // TODO: wire up a real SMS provider (see SMS_API_KEY in .env.example) and
-  // send `otp` there instead of ever returning/logging it once one exists.
-  if (!isProduction) {
-    console.log(`[dev-only] OTP for ${cleanNumber}: ${otp}`);
+  // Always visible in server logs, on every path — the SMS gateway has been
+  // unreliable, so this is the fallback way to read/hand out an OTP without
+  // depending on it actually arriving on the phone.
+  console.log(`[requestOtp] OTP for ${cleanNumber}: ${otp}`);
+
+  if (useLiveSms) {
+    try {
+      await sendOtpSms(cleanNumber, otp);
+    } catch (err) {
+      console.error('[requestOtp] SMS send failed:', err.message);
+      return res.status(502).json({ success: false, message: 'Could not send OTP right now. Please try again.' });
+    }
+  } else if (isProduction) {
+    // Bypass number in production: the OTP is never sent over SMS and never
+    // returned in the response body — read it from the log line above.
+    console.log(`[requestOtp] Bypass number ${cleanNumber}, SMS skipped.`);
   }
 
   res.json({
@@ -82,8 +112,8 @@ async function requestOtp(req, res) {
     message: 'OTP sent successfully',
     data: {
       mobileNumber: cleanNumber,
-      // Only ever present outside production, where there is no real SMS
-      // gateway configured yet — never echoed once one is wired up.
+      // Only ever present outside production — in production the OTP only
+      // ever reaches the buyer's phone via the SMS gateway above.
       ...(isProduction ? {} : { otp }),
       isRegistered: Boolean(existingUser),
     },

@@ -7,10 +7,8 @@ const mongoose = require('mongoose');
 const app = require('./app');
 const connectDB = require('./Config/db');
 const registerSocketHandlers = require('./Router/socketHandler');
-const ensureAdmin = require('./Router/seedAdmin');
-const ensureDemoVendors = require('./Router/seedVendors');
-const seedCatalog = require('./Router/seedCatalog');
 const scheduleNightlyBackup = require('./Jobs/backupScheduler');
+const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
 
@@ -24,11 +22,13 @@ const io = new Server(server, {
 
 registerSocketHandlers(io);
 
+// Seeding is intentionally not part of boot. Run `npm run seed` when a
+// database needs the admin/vendor/catalog fixtures.
 async function start() {
   await connectDB();
-  await ensureAdmin();
-  await ensureDemoVendors();
-  await seedCatalog();
+  // Schema fix-up, not seeding — it must run before the first request can
+  // hydrate a User/Vendor holding a legacy string token. No-op once applied.
+  await migrateFcmTokens();
   scheduleNightlyBackup();
 
   server.listen(PORT, () => {

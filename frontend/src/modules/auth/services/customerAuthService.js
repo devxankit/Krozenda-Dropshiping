@@ -15,7 +15,9 @@ export async function getCustomerProfile() {
   return data.data
 }
 
-export async function registerFcmToken(token) {
-  const { data } = await api.post('/user/notifications/fcm-token', { token })
+// deviceType tells the backend which platform the token came from — the
+// browser is always 'web', the mobile apps pass 'app'.
+export async function registerFcmToken(token, deviceType = 'web') {
+  const { data } = await api.post('/user/notifications/fcm-token', { token, deviceType })
   return data
 }

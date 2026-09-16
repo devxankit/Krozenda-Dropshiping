@@ -18,8 +18,6 @@ function scheduleNightlyBackup() {
       .then((run) => console.log(`Scheduled backup ${run.status}: ${run.filename}`))
       .catch((err) => console.error('Scheduled backup failed:', err.message));
   });
-
-  console.log(`Nightly backup scheduled (cron: ${schedule})`);
 }
 
 module.exports = scheduleNightlyBackup;

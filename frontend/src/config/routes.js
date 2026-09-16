@@ -123,6 +123,24 @@ export const ADMIN_ROUTES = Object.freeze({
   CASH_FLOW: '/admin/finance/cash-flow',
   TAX_CENTER: '/admin/finance/tax-center',
 
+  // ---- accounting ---------------------------------------------------------
+  // The marketplace money trail: order -> payment -> commission -> seller
+  // ledger -> settlement -> payout -> refund. Distinct from the Finance group
+  // above, which is the operational payments view over orders.
+  ACCOUNTING: '/admin/accounting',
+  ACCOUNTING_TRANSACTIONS: '/admin/accounting/transactions',
+  ACCOUNTING_TRANSACTION_DETAIL: '/admin/accounting/transactions/:transactionId',
+  ACCOUNTING_SELLER_LEDGER: '/admin/accounting/seller-ledger',
+  ACCOUNTING_SELLER_LEDGER_DETAIL: '/admin/accounting/seller-ledger/:sellerId',
+  ACCOUNTING_COMMISSIONS: '/admin/accounting/commissions',
+  ACCOUNTING_SETTLEMENTS: '/admin/accounting/settlements',
+  ACCOUNTING_SETTLEMENT_DETAIL: '/admin/accounting/settlements/:settlementId',
+  ACCOUNTING_PAYOUTS: '/admin/accounting/payouts',
+  ACCOUNTING_PAYOUT_DETAIL: '/admin/accounting/payouts/:payoutId',
+  ACCOUNTING_REFUNDS: '/admin/accounting/refunds',
+  ACCOUNTING_REPORTS: '/admin/accounting/reports',
+  ACCOUNTING_REPORT_DETAIL: '/admin/accounting/reports/:reportKey',
+
   // ---- dropshipping -------------------------------------------------------
   DROPSHIPPING_OVERVIEW: '/admin/dropshipping',
   DROPSHIPPING_PARTNERS: '/admin/dropshipping/partners',
@@ -185,6 +203,11 @@ export const adminPath = Object.freeze({
   settlementBatch: (batchId) => `/admin/finance/settlements/${batchId}`,
   vendorLedger: (vendorId) => `/admin/finance/vendor-ledger/${vendorId}`,
   reportRunner: (reportKey) => `/admin/reports/${reportKey}`,
+  accountingTransaction: (transactionId) => `/admin/accounting/transactions/${transactionId}`,
+  accountingSellerLedger: (sellerId) => `/admin/accounting/seller-ledger/${sellerId}`,
+  accountingSettlement: (settlementId) => `/admin/accounting/settlements/${settlementId}`,
+  accountingPayout: (payoutId) => `/admin/accounting/payouts/${payoutId}`,
+  accountingReport: (reportKey) => `/admin/accounting/reports/${reportKey}`,
 })
 
 export const ROUTES = Object.freeze({

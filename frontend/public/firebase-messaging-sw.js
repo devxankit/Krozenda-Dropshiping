@@ -6,10 +6,10 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js')
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyCPfYIkEx37GVKxyBcqcuPhkZjkyDTJBpE',
-  projectId: 'krozenda-f9b5c',
-  messagingSenderId: '267446179597',
-  appId: '1:267446179597:web:ce1102e3405f0827878244',
+  apiKey: 'AIzaSyB45UzaDO-bEyqJVWKVPdBrpVMsTdE3am8',
+  projectId: 'krozenda-a62bb',
+  messagingSenderId: '778748845767',
+  appId: '1:778748845767:web:f0fc02b7a257bdfc4928e2',
 })
 
 const messaging = firebase.messaging()

@@ -4,3 +4,6 @@ firebase-service-account.json
 uploads/**/*
 !uploads/**/.gitkeep
 backups/
+.env.bak-sms
+.env.*
+!.env.example

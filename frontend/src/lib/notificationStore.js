@@ -32,7 +32,7 @@ async function registerPushToken() {
   try {
     const token = await requestPushToken()
     if (token) {
-      await api.post('/user/notifications/fcm-token', { token })
+      await api.post('/user/notifications/fcm-token', { token, deviceType: 'web' })
       watchForegroundPush()
     }
   } catch {

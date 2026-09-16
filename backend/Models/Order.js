@@ -76,6 +76,15 @@ const orderSchema = new mongoose.Schema(
     // matched against the bank/gateway statement. Purely a bookkeeping flag —
     // never affects order fulfilment.
     financeReconciled: { type: Boolean, default: false },
+    // COD only. A cash order is collected by the courier at the door, so the
+    // money does not reach the platform when the order is placed or even when
+    // it is delivered — it arrives when the courier remits it. Admin
+    // Accounting > Transactions records that remittance, which is the moment
+    // the order's sale is posted to the ledger and the seller's line becomes
+    // settleable (see services/accountingPosting.recordCodRemittance).
+    // Null on every prepaid order.
+    codRemittedAt: { type: Date, default: null },
+    codRemittanceReference: { type: String, default: '', trim: true },
     // Who cancelled this order — only set when status transitions to
     // CANCELLED. Used by Admin Fulfilment > Cancellations to show the actor.
     cancelledBy: { type: String, enum: ['buyer', 'admin', null], default: null },

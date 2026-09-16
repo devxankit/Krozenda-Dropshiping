@@ -75,6 +75,21 @@ export const ADMIN_PERMISSIONS = Object.freeze({
   PAYOUT_APPROVE: 'admin.payout.approve',
   ACCOUNTING_VIEW: 'admin.accounting.view',
   ACCOUNTING_POST: 'admin.accounting.post',
+  // Accounting module. One key per surface, so a CA/auditor who reads
+  // everything is a genuinely different role from whoever releases a payout.
+  // Mirrors backend/Config/permissions.js — keep the two in sync.
+  ACCOUNTING_TRANSACTIONS_VIEW: 'admin.accounting.transactions.view',
+  ACCOUNTING_LEDGER_VIEW: 'admin.accounting.ledger.view',
+  ACCOUNTING_COMMISSION_VIEW: 'admin.accounting.commission.view',
+  ACCOUNTING_COMMISSION_MANAGE: 'admin.accounting.commission.manage',
+  ACCOUNTING_SETTLEMENT_VIEW: 'admin.accounting.settlement.view',
+  ACCOUNTING_SETTLEMENT_MANAGE: 'admin.accounting.settlement.manage',
+  ACCOUNTING_PAYOUT_VIEW: 'admin.accounting.payout.view',
+  ACCOUNTING_PAYOUT_MANAGE: 'admin.accounting.payout.manage',
+  ACCOUNTING_REFUND_VIEW: 'admin.accounting.refund.view',
+  ACCOUNTING_REFUND_MANAGE: 'admin.accounting.refund.manage',
+  ACCOUNTING_REPORT_VIEW: 'admin.accounting.report.view',
+  ACCOUNTING_REPORT_EXPORT: 'admin.accounting.report.export',
   TAX_EXPORT: 'admin.tax.export',
 
   // Marketing
@@ -110,13 +125,34 @@ export const ADMIN_ROLE_PRESETS = Object.freeze({
     ADMIN_PERMISSIONS.PAYOUT_PREPARE,
     ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
     ADMIN_PERMISSIONS.ACCOUNTING_POST,
+    ADMIN_PERMISSIONS.ACCOUNTING_TRANSACTIONS_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_LEDGER_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_MANAGE,
+    ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_MANAGE,
+    ADMIN_PERMISSIONS.ACCOUNTING_PAYOUT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REFUND_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REFUND_MANAGE,
+    ADMIN_PERMISSIONS.ACCOUNTING_REPORT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REPORT_EXPORT,
     ADMIN_PERMISSIONS.TAX_EXPORT,
     ADMIN_PERMISSIONS.REPORTS_VIEW,
   ]),
+  // Deliberately without PAYOUT_MANAGE: a finance manager prepares and
+  // settles, but releasing money to a seller is a separate hand.
   ca_auditor: Object.freeze([
     ADMIN_PERMISSIONS.ACCESS,
     ADMIN_PERMISSIONS.FINANCE_VIEW,
     ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_TRANSACTIONS_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_LEDGER_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_PAYOUT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REFUND_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REPORT_VIEW,
+    ADMIN_PERMISSIONS.ACCOUNTING_REPORT_EXPORT,
     ADMIN_PERMISSIONS.TAX_EXPORT,
     ADMIN_PERMISSIONS.REPORTS_VIEW,
   ]),
@@ -386,6 +422,72 @@ export const NAV_TREE = Object.freeze([
         to: ADMIN_ROUTES.TAX_CENTER,
         icon: 'tax',
         permission: ADMIN_PERMISSIONS.TAX_EXPORT,
+      },
+    ],
+  },
+  {
+    // The marketplace money trail, end to end. Eight screens, deliberately —
+    // this is the MVP scope, not a general ledger.
+    id: 'accounting',
+    label: 'Accounting',
+    items: [
+      {
+        label: 'Overview',
+        to: ADMIN_ROUTES.ACCOUNTING,
+        icon: 'ledger',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+        // Overview sits at the group root, which is a prefix of every sibling
+        // path — `exact` stops it reading as active on all of them.
+        exact: true,
+      },
+      {
+        label: 'Transactions',
+        to: ADMIN_ROUTES.ACCOUNTING_TRANSACTIONS,
+        icon: 'money',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_TRANSACTIONS_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Seller ledger',
+        to: ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER,
+        icon: 'ledger',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_LEDGER_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Commissions',
+        to: ADMIN_ROUTES.ACCOUNTING_COMMISSIONS,
+        icon: 'sliders',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Settlements',
+        to: ADMIN_ROUTES.ACCOUNTING_SETTLEMENTS,
+        icon: 'settlements',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Payouts',
+        to: ADMIN_ROUTES.ACCOUNTING_PAYOUTS,
+        icon: 'send',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_PAYOUT_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Refunds',
+        to: ADMIN_ROUTES.ACCOUNTING_REFUNDS,
+        icon: 'returns',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_REFUND_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
+      },
+      {
+        label: 'Reports',
+        to: ADMIN_ROUTES.ACCOUNTING_REPORTS,
+        icon: 'reports',
+        permission: ADMIN_PERMISSIONS.ACCOUNTING_REPORT_VIEW,
+        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
       },
     ],
   },
@@ -683,6 +785,152 @@ export const SETTLEMENT_STATUS_TONE = Object.freeze({
   [SETTLEMENT_STATUS.FAILED]: 'danger',
   [SETTLEMENT_STATUS.REVERSED]: 'danger',
 })
+
+// ---------------------------------------------------------------------------
+// Accounting (real backend — see backend/Models/AccountingTransaction.js).
+// Money in this module is INTEGER PAISE end to end: the ledger stores paise,
+// the API returns paise, formatMoney renders paise. Nothing converts on the
+// way through, so nothing can round twice.
+// ---------------------------------------------------------------------------
+
+export const ACCOUNTING_TXN_TYPE = Object.freeze({
+  SALE: 'SALE',
+  COMMISSION: 'COMMISSION',
+  PAYMENT_GATEWAY_FEE: 'PAYMENT_GATEWAY_FEE',
+  SHIPPING_CHARGE: 'SHIPPING_CHARGE',
+  REFUND: 'REFUND',
+  REFUND_REVERSAL: 'REFUND_REVERSAL',
+  PAYOUT: 'PAYOUT',
+  ADJUSTMENT: 'ADJUSTMENT',
+})
+
+export const ACCOUNTING_TXN_TYPE_LABELS = Object.freeze({
+  [ACCOUNTING_TXN_TYPE.SALE]: 'Sale',
+  [ACCOUNTING_TXN_TYPE.COMMISSION]: 'Commission',
+  [ACCOUNTING_TXN_TYPE.PAYMENT_GATEWAY_FEE]: 'Gateway fee',
+  [ACCOUNTING_TXN_TYPE.SHIPPING_CHARGE]: 'Shipping',
+  [ACCOUNTING_TXN_TYPE.REFUND]: 'Refund',
+  [ACCOUNTING_TXN_TYPE.REFUND_REVERSAL]: 'Refund reversal',
+  [ACCOUNTING_TXN_TYPE.PAYOUT]: 'Payout',
+  [ACCOUNTING_TXN_TYPE.ADJUSTMENT]: 'Adjustment',
+})
+
+export const ACCOUNTING_TXN_TYPE_TONE = Object.freeze({
+  [ACCOUNTING_TXN_TYPE.SALE]: 'success',
+  [ACCOUNTING_TXN_TYPE.COMMISSION]: 'brand',
+  [ACCOUNTING_TXN_TYPE.PAYMENT_GATEWAY_FEE]: 'neutral',
+  [ACCOUNTING_TXN_TYPE.SHIPPING_CHARGE]: 'neutral',
+  [ACCOUNTING_TXN_TYPE.REFUND]: 'danger',
+  [ACCOUNTING_TXN_TYPE.REFUND_REVERSAL]: 'warning',
+  [ACCOUNTING_TXN_TYPE.PAYOUT]: 'accent',
+  [ACCOUNTING_TXN_TYPE.ADJUSTMENT]: 'warning',
+})
+
+export const ACCOUNTING_TXN_STATUS_LABELS = Object.freeze({
+  PENDING: 'Pending',
+  COMPLETED: 'Completed',
+  REVERSED: 'Reversed',
+  FAILED: 'Failed',
+})
+
+export const ACCOUNTING_TXN_STATUS_TONE = Object.freeze({
+  PENDING: 'warning',
+  COMPLETED: 'success',
+  REVERSED: 'neutral',
+  FAILED: 'danger',
+})
+
+export const ACCOUNTING_SETTLEMENT_STATUS_LABELS = Object.freeze({
+  PENDING: 'Pending',
+  ELIGIBLE: 'Eligible',
+  PROCESSING: 'Processing',
+  COMPLETED: 'Completed',
+  ON_HOLD: 'On hold',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+  // Batches drafted before the Accounting module shipped still carry these.
+  AWAITING_APPROVAL: 'Eligible',
+  SETTLED: 'Completed',
+})
+
+export const ACCOUNTING_SETTLEMENT_STATUS_TONE = Object.freeze({
+  PENDING: 'neutral',
+  ELIGIBLE: 'brand',
+  PROCESSING: 'accent',
+  COMPLETED: 'success',
+  ON_HOLD: 'warning',
+  FAILED: 'danger',
+  CANCELLED: 'neutral',
+  AWAITING_APPROVAL: 'brand',
+  SETTLED: 'success',
+})
+
+export const PAYOUT_STATUS_LABELS = Object.freeze({
+  PENDING: 'Pending',
+  PROCESSING: 'Processing',
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+})
+
+export const PAYOUT_STATUS_TONE = Object.freeze({
+  PENDING: 'neutral',
+  PROCESSING: 'brand',
+  COMPLETED: 'success',
+  FAILED: 'danger',
+  CANCELLED: 'neutral',
+})
+
+export const ACCOUNTING_REFUND_STATUS_LABELS = Object.freeze({
+  REQUESTED: 'Requested',
+  APPROVED: 'Approved',
+  PROCESSING: 'Processing',
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+})
+
+export const ACCOUNTING_REFUND_STATUS_TONE = Object.freeze({
+  REQUESTED: 'warning',
+  APPROVED: 'brand',
+  PROCESSING: 'brand',
+  COMPLETED: 'success',
+  FAILED: 'danger',
+  CANCELLED: 'neutral',
+})
+
+export const COMMISSION_SCOPE_LABELS = Object.freeze({
+  GLOBAL: 'Global',
+  SELLER: 'Seller',
+  CATEGORY: 'Category',
+  PRODUCT: 'Product',
+})
+
+export const COMMISSION_RULE_STATE_LABELS = Object.freeze({
+  ACTIVE: 'Active',
+  SCHEDULED: 'Scheduled',
+  EXPIRED: 'Expired',
+  INACTIVE: 'Retired',
+})
+
+export const COMMISSION_RULE_STATE_TONE = Object.freeze({
+  ACTIVE: 'success',
+  SCHEDULED: 'brand',
+  EXPIRED: 'neutral',
+  INACTIVE: 'neutral',
+})
+
+// The Overview/report range picker. `custom` opens the two date inputs.
+export const ACCOUNTING_RANGES = Object.freeze([
+  { id: 'today', label: 'Today' },
+  { id: 'yesterday', label: 'Yesterday' },
+  { id: 'last_7_days', label: 'Last 7 days' },
+  { id: 'last_30_days', label: 'Last 30 days' },
+  { id: 'this_month', label: 'This month' },
+  { id: 'previous_month', label: 'Previous month' },
+  { id: 'all', label: 'All time' },
+  { id: 'custom', label: 'Custom' },
+])
 
 export const INTEGRATION_HEALTH = Object.freeze({
   OPERATIONAL: 'operational',

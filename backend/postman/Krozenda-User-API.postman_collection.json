@@ -3924,7 +3924,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"sample-fcm-device-token\"\n}",
+              "raw": "{\n  \"token\": \"sample-fcm-device-token\",\n  \"deviceType\": \"web\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

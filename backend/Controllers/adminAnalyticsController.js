@@ -448,8 +448,10 @@ function integrationHealth() {
     {
       id: 'sms',
       name: 'SMS gateway',
-      status: process.env.SMS_API_KEY ? 'operational' : 'not_configured',
-      note: process.env.SMS_API_KEY ? null : 'OTPs go to the server log',
+      // SMS_INDIA_HUB_API_KEY, not SMS_API_KEY — this panel read a var this
+      // project never sets, so it always reported the gateway as down.
+      status: process.env.SMS_INDIA_HUB_API_KEY ? 'operational' : 'not_configured',
+      note: process.env.SMS_INDIA_HUB_API_KEY ? null : 'OTPs go to the server log',
     },
     {
       id: 'shipping',

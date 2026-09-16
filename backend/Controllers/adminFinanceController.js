@@ -9,16 +9,31 @@ const User = require('../Models/User');
 const Product = require('../Models/Product');
 const { createNotification } = require('./notificationController');
 const { toPaise } = require('../utils/money');
+const settlementService = require('../services/settlementService');
+const refundService = require('../services/refundService');
+const posting = require('../services/accountingPosting');
 
 // A line becomes payable once it's been DELIVERED for this many days — no
 // real "return window elapsed" signal exists beyond time, so this mirrors
 // the buyer-facing return window (returnController.RETURN_WINDOW_DAYS).
+// Now only a display default: the authoritative window is
+// AccountingConfig.settlementHoldDays, which the settlement service reads.
 const HOLD_DAYS = 7;
 const DEFAULT_COMMISSION_RATE = 10;
 
+// The Accounting module added statuses to Settlement (see Models/Settlement.js).
+// ELIGIBLE is its equivalent of AWAITING_APPROVAL and COMPLETED of SETTLED, so
+// both map onto the same outward strings and these screens keep reading
+// batches from either source correctly.
 const SETTLEMENT_STATUS_OUT = Object.freeze({
   AWAITING_APPROVAL: 'awaiting_approval',
+  PENDING: 'awaiting_approval',
+  ELIGIBLE: 'awaiting_approval',
+  PROCESSING: 'processing',
   SETTLED: 'settled',
+  COMPLETED: 'settled',
+  ON_HOLD: 'locked_in_hold',
+  CANCELLED: 'reversed',
   FAILED: 'failed',
 });
 
@@ -58,7 +73,8 @@ async function getOverview(req, res) {
     ]),
     Order.countDocuments({ paymentStatus: 'PAID', financeReconciled: false }),
     Settlement.aggregate([
-      { $match: { status: 'AWAITING_APPROVAL' } },
+      // Drafted-but-unpaid, under either module's vocabulary.
+      { $match: { status: { $in: ['AWAITING_APPROVAL', 'ELIGIBLE', 'PENDING'] } } },
       { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } },
     ]),
     ReturnRequest.countDocuments({ requestType: 'REFUND', status: 'PENDING' }),
@@ -268,39 +284,23 @@ async function decideRefund(req, res, decision) {
   }
   const rawId = id.slice('return:'.length);
 
-  const request = await ReturnRequest.findOneAndUpdate(
-    { _id: rawId, status: 'PENDING' },
-    { $set: { status: decision, adminNote: reason || '', resolvedAt: new Date() } },
-    { new: true }
-  ).populate('user', 'name');
-  if (!request) {
-    return res.status(404).json({ success: false, message: 'Refund request not found or already decided' });
-  }
-
-  if (decision === 'APPROVED') {
-    const user = await User.findByIdAndUpdate(request.user._id, { $inc: { walletBalance: request.refundAmount } }, { new: true });
-    await WalletTransaction.create({
-      user: request.user._id,
-      type: 'CREDIT',
-      amount: request.refundAmount,
-      balanceAfter: user.walletBalance,
-      source: 'ORDER_REFUND',
-      orderId: request.order,
-      status: 'SUCCESS',
+  // One decision path for the whole platform. Accounting > Refunds calls the
+  // same service, so a refund approved from either screen credits the wallet,
+  // notifies the buyer AND posts the ledger reversal identically.
+  const result = await refundService.decideReturnRefund({
+    requestId: rawId,
+    decision,
+    reason,
+    admin: req.admin,
+  });
+  if (!result.ok) {
+    return res.status(result.status === 409 ? 404 : result.status).json({
+      success: false,
+      message: result.status === 409 ? 'Refund request not found or already decided' : result.message,
     });
   }
 
-  await createNotification({
-    userId: request.user._id,
-    type: 'ORDER',
-    title: decision === 'APPROVED' ? 'Refund Approved' : 'Refund Declined',
-    message:
-      decision === 'APPROVED'
-        ? `Your refund of ₹${request.refundAmount.toLocaleString('en-IN')} has been credited to your wallet.`
-        : `Your refund request was declined.${reason ? ` Reason: ${reason}` : ''}`,
-    actionType: decision === 'APPROVED' ? 'WALLET' : 'ORDER',
-    actionRefId: decision === 'APPROVED' ? null : request.order,
-  });
+  const request = result.request;
 
   res.json({
     success: true,
@@ -345,70 +345,18 @@ function serializeSettlement(s) {
   };
 }
 
-// Auto-drafts a fresh AWAITING_APPROVAL batch per vendor for every delivered
-// line that's past the hold window and not already claimed by an earlier
-// batch. No cron exists yet, so this runs opportunistically on read — it's
-// idempotent (the exclusion set below prevents double-booking a line).
+// Drafting a settlement batch is ONE operation on this platform, and it
+// lives in services/settlementService.js — the Accounting module calls the
+// same function. That matters: two generators over one Settlement collection
+// would each see a delivered line as unclaimed and pay it twice.
+//
+// Still opportunistic on read, as it always was, and still idempotent — the
+// service excludes any line already owned by a live batch.
 async function draftEligibleSettlements() {
-  const existing = await Settlement.find().select('items.order items.product').lean();
-  const claimed = new Set();
-  for (const s of existing) {
-    for (const item of s.items) claimed.add(`${item.order}:${item.product}`);
-  }
-
-  const cutoff = new Date(Date.now() - HOLD_DAYS * 24 * 60 * 60 * 1000);
-  const orders = await Order.find({ 'items.status': 'DELIVERED', deliveredAt: { $lte: cutoff } }).lean();
-
-  const byVendor = new Map();
-  for (const order of orders) {
-    for (const item of order.items) {
-      if (item.status !== 'DELIVERED' || !item.vendor) continue;
-      const key = `${order._id}:${item.product}`;
-      if (claimed.has(key)) continue;
-
-      const vendorId = item.vendor.toString();
-      if (!byVendor.has(vendorId)) byVendor.set(vendorId, []);
-      byVendor.get(vendorId).push({
-        order: order._id,
-        product: item.product,
-        name: item.name,
-        quantity: item.quantity,
-        gross: item.price * item.quantity,
-        deliveredAt: order.deliveredAt,
-      });
-    }
-  }
-
-  if (byVendor.size === 0) return;
-
-  const vendors = await Vendor.find({ _id: { $in: [...byVendor.keys()] } }).select('commissionRatePercent');
-  const rateById = new Map(vendors.map((v) => [v._id.toString(), v.commissionRatePercent ?? DEFAULT_COMMISSION_RATE]));
-
-  const batches = [];
-  for (const [vendorId, lines] of byVendor) {
-    const rate = rateById.get(vendorId) ?? DEFAULT_COMMISSION_RATE;
-    let grossAmount = 0;
-    let commissionAmount = 0;
-    const items = lines.map((l) => {
-      const commission = Math.round((l.gross * rate) / 100);
-      grossAmount += l.gross;
-      commissionAmount += commission;
-      return { order: l.order, product: l.product, name: l.name, quantity: l.quantity, grossAmount: l.gross, commissionAmount: commission, netAmount: l.gross - commission, deliveredAt: l.deliveredAt };
-    });
-    batches.push({
-      vendor: vendorId,
-      items,
-      grossAmount,
-      commissionAmount,
-      tdsAmount: 0,
-      deductions: 0,
-      netAmount: grossAmount - commissionAmount,
-      status: 'AWAITING_APPROVAL',
-      scheduledFor: new Date(),
-    });
-  }
-
-  if (batches.length > 0) await Settlement.insertMany(batches);
+  // Post anything the order hooks missed first, so a line that is genuinely
+  // eligible is not skipped just because its sale never reached the ledger.
+  await posting.reconcileLedger();
+  await settlementService.generateSettlements();
 }
 
 async function listSettlements(req, res) {
@@ -429,13 +377,13 @@ async function listSettlements(req, res) {
   if (effective === 'awaiting') items = items.filter((s) => s.status === 'awaiting_approval');
   else if (effective === 'failed') items = items.filter((s) => s.status === 'failed');
   else if (effective === 'settled') items = items.filter((s) => s.status === 'settled');
-  else if (effective === 'hold') items = [];
+  else if (effective === 'hold') items = items.filter((s) => s.status === 'locked_in_hold');
   else if (effective && effective !== 'all') items = items.filter((s) => s.status === effective);
 
   const tabCounts = {
     all: allSerialized.length,
     awaiting: allSerialized.filter((s) => s.status === 'awaiting_approval').length,
-    hold: 0,
+    hold: allSerialized.filter((s) => s.status === 'locked_in_hold').length,
     failed: allSerialized.filter((s) => s.status === 'failed').length,
     settled: allSerialized.filter((s) => s.status === 'settled').length,
   };
@@ -482,13 +430,39 @@ async function approveSettlement(req, res) {
   const { id } = req.params;
   const utr = `UTR${crypto.randomInt(0, 1000000000).toString().padStart(9, '0')}`;
 
+  // Batches drafted by the Accounting module arrive as ELIGIBLE rather than
+  // AWAITING_APPROVAL (see Models/Settlement.js) — both mean "drafted, not
+  // yet paid", so both are releasable from here.
   const s = await Settlement.findOneAndUpdate(
-    { _id: id, status: 'AWAITING_APPROVAL' },
-    { $set: { status: 'SETTLED', approvedAt: new Date(), approvedBy: req.admin._id, utr } },
+    { _id: id, status: { $in: ['AWAITING_APPROVAL', 'ELIGIBLE', 'PENDING'] } },
+    { $set: { status: 'COMPLETED', approvedAt: new Date(), approvedBy: req.admin._id, paidAt: new Date(), utr } },
     { new: true }
   ).populate('vendor', 'name business.businessName');
   if (!s) {
     return res.status(400).json({ success: false, message: 'Batch not found or not awaiting approval' });
+  }
+
+  // Record the money leaving on the ledger, so a release from this screen and
+  // one from Accounting > Payouts leave the seller's balance in the same
+  // place. Idempotent on the settlement id, and never fatal.
+  try {
+    await posting.insertRows([
+      posting.row({
+        type: 'PAYOUT',
+        direction: 'DEBIT',
+        amountPaise: s.netPayablePaise || toPaise(s.netAmount),
+        vendor: s.vendor._id,
+        settlement: s._id,
+        referenceType: 'SETTLEMENT',
+        referenceId: s._id,
+        description: `Settlement released — UTR ${utr}`,
+        metadata: { utr, releasedFrom: 'finance-settlements' },
+        eventKey: `SETTLEMENT_RELEASE:${s._id}`,
+        createdBy: req.admin._id,
+      }),
+    ]);
+  } catch (err) {
+    console.error('Settlement released but not posted to the ledger:', err.message);
   }
 
   await createNotification({
@@ -502,30 +476,29 @@ async function approveSettlement(req, res) {
   res.json({ success: true, message: 'Batch released', data: serializeSettlement(s) });
 }
 
-// Rejecting deletes the draft so its lines become eligible again on the next
-// auto-draft pass — nothing was ever paid, so there's nothing to reverse.
+// Rejecting CANCELS the draft rather than deleting it. Its lines become
+// eligible again on the next auto-draft pass exactly as before (the generator
+// ignores cancelled batches), but the batch itself stays on the record —
+// financial documents are never destroyed, only superseded (task §15 Rule 1).
 async function rejectSettlement(req, res) {
   const { id } = req.params;
   const { reason } = req.body;
 
   const s = await Settlement.findOneAndUpdate(
-    { _id: id, status: 'AWAITING_APPROVAL' },
-    { $set: { rejectionReason: reason || '' } },
+    { _id: id, status: { $in: ['AWAITING_APPROVAL', 'ELIGIBLE', 'PENDING'] } },
+    { $set: { rejectionReason: reason || '', status: 'CANCELLED' } },
     { new: true }
   ).populate('vendor', 'name business.businessName');
   if (!s) {
     return res.status(400).json({ success: false, message: 'Batch not found or not awaiting approval' });
   }
 
-  const responseBody = { ...serializeSettlement(s), status: 'reversed' };
-  await Settlement.deleteOne({ _id: id });
-
-  res.json({ success: true, message: 'Batch rejected', data: responseBody });
+  res.json({ success: true, message: 'Batch rejected', data: { ...serializeSettlement(s), status: 'reversed' } });
 }
 
 async function retrySettlement(req, res) {
   const { id } = req.params;
-  const s = await Settlement.findOneAndUpdate({ _id: id, status: 'FAILED' }, { $set: { status: 'AWAITING_APPROVAL' } }, { new: true }).populate(
+  const s = await Settlement.findOneAndUpdate({ _id: id, status: 'FAILED' }, { $set: { status: 'ELIGIBLE' } }, { new: true }).populate(
     'vendor',
     'name business.businessName'
   );

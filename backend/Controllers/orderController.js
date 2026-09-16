@@ -11,6 +11,22 @@ const WalletTransaction = require('../Models/WalletTransaction');
 const { evaluateCoupon, redeemCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
 const { getImageUrl } = require('../utils/imageHelper');
+const accounting = require('../services/accountingPosting');
+
+// Accounting is posted alongside the order, never in front of it. A ledger
+// write must never be able to fail a customer's checkout or a cancellation —
+// the money has already moved by the time these run — so every call is
+// wrapped and only logged on failure. Nothing is lost when one does fail:
+// every posting path is idempotent and the Accounting screens re-run the
+// reconciler on read, so a missed row is picked up on the next look
+// (see services/accountingPosting.reconcileLedger).
+async function postAccounting(label, work) {
+  try {
+    await work();
+  } catch (err) {
+    console.error(`Accounting posting failed (${label}), will be reconciled on next read:`, err.message);
+  }
+}
 
 // The only shipping prices DeliveryOptionsScreen ever offers — anything else
 // arriving in the request body is client tampering, not a legitimate choice.
@@ -384,6 +400,11 @@ async function createOrder(req, res) {
 
   await notifyVendorsOfNewOrder(items, order._id);
 
+  // A prepaid order's money is in hand right now, so its sale, commission and
+  // gateway fee post immediately. A COD order posts nothing yet — the cash is
+  // still with the courier until an admin records the remittance (task §12).
+  await postAccounting('order sale', () => accounting.postOrderSale(order.toObject()));
+
   res.status(201).json({ success: true, message: 'Order placed successfully', data: serializeOrder(order) });
 }
 
@@ -457,6 +478,13 @@ async function cancelOrder(req, res) {
       status: 'SUCCESS',
     });
     await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: 'REFUNDED' } });
+
+    // Reverse whatever was posted for this order. The original SALE rows stay
+    // exactly as they were — this writes REFUND debits against them and hands
+    // the commission back (task §15 Rules 1 and 3).
+    await postAccounting('cancellation refund', () =>
+      accounting.postOrderCancellationRefund({ order: { ...order.toObject(), paymentStatus: 'REFUNDED' } })
+    );
   }
 
   await createNotification({

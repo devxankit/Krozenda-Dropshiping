@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { fcmTokenSchema } = require('./fcmTokenSchema');
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,9 +12,10 @@ const userSchema = new mongoose.Schema(
     gender: { type: String, enum: ['male', 'female', 'other'] },
     dob: { type: Date },
     walletBalance: { type: Number, default: 0, min: 0 },
-    // Web push (FCM) device tokens — one browser/device can register more
-    // than one over time, so this is a deduped array, not a single field.
-    fcmTokens: { type: [String], default: [] },
+    // Push (FCM) device tokens — one account can be signed in on several
+    // devices at once, so each entry carries the platform it registered
+    // from. Deduped on `token` by pushTokenController.
+    fcmTokens: { type: [fcmTokenSchema], default: [] },
     role: { type: String, enum: ['admin', 'staff', 'customer'], default: 'customer' },
     roleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

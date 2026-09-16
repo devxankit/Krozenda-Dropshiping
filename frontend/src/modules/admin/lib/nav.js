@@ -7,9 +7,15 @@ import { NAV_TREE } from '../constants'
 // A nav item is active when the URL is the item's own path, a child of it, or
 // a child of its declared `match` prefix (used where a group's landing page
 // and its siblings live under different paths — Analytics, Settings).
+//
+// `exact` opts out of the child rule, for a landing page whose path is a
+// PREFIX of its siblings' (Accounting Overview sits at /admin/accounting while
+// Transactions sits at /admin/accounting/transactions). Without it that
+// landing page would read as active on every sibling screen, and findNavItem
+// would hand the breadcrumb the wrong item.
 export function isNavItemActive(item, pathname) {
   if (pathname === item.to) return true
-  if (pathname.startsWith(`${item.to}/`)) return true
+  if (!item.exact && pathname.startsWith(`${item.to}/`)) return true
   if (item.match && pathname.startsWith(item.match)) return true
   return false
 }

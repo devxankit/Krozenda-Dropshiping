@@ -87,6 +87,11 @@ export function useListController({
     totalItems: query.data?.totalItems ?? 0,
     totalPages: query.data?.totalPages ?? 1,
     tabCounts: query.data?.tabCounts ?? {},
+    // The whole payload, for the few list endpoints that return something
+    // alongside the page — Accounting > Commissions ships the platform's
+    // commission policy with its rules so the screen can explain the
+    // fallback rate without a second request.
+    data: query.data,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error: query.error,

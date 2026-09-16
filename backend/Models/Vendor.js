@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { fcmTokenSchema } = require('./fcmTokenSchema');
 
 // One shared shape for both vendor types — B2C leaves most of this blank,
 // B2B fills it in. Keeping a single `vendors` collection (rather than
@@ -90,8 +91,8 @@ const vendorSchema = new mongoose.Schema(
     rejectionReason: { type: String, default: '' },
     isActive: { type: Boolean, default: false },
 
-    // Web push (FCM) device tokens — see User.fcmTokens for the same shape.
-    fcmTokens: { type: [String], default: [] },
+    // Push (FCM) device tokens — see User.fcmTokens for the same shape.
+    fcmTokens: { type: [fcmTokenSchema], default: [] },
 
     // Platform commission taken off each delivered item's line total —
     // admin-set, read-only from the vendor side (see vendorEarningsController).

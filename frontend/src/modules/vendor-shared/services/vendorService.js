@@ -177,7 +177,7 @@ export async function addVendorTicketMessage(id, message) {
 }
 
 // Real backend call — see registerPushToken() in VendorLoginPage.
-export async function registerVendorFcmToken(token) {
-  const { data } = await api.post('/vendor/notifications/fcm-token', { token })
+export async function registerVendorFcmToken(token, deviceType = 'web') {
+  const { data } = await api.post('/vendor/notifications/fcm-token', { token, deviceType })
   return data
 }

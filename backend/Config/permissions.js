@@ -45,6 +45,22 @@ const ADMIN_PERMISSIONS = Object.freeze([
   'admin.payout.approve',
   'admin.accounting.view',
   'admin.accounting.post',
+  // Accounting module (Admin > Accounting). One key per surface so a
+  // read-only auditor, a settlements clerk and the person who actually
+  // releases money are genuinely different roles — see
+  // Router/adminAccountingRoutes.js for what each one gates.
+  'admin.accounting.transactions.view',
+  'admin.accounting.ledger.view',
+  'admin.accounting.commission.view',
+  'admin.accounting.commission.manage',
+  'admin.accounting.settlement.view',
+  'admin.accounting.settlement.manage',
+  'admin.accounting.payout.view',
+  'admin.accounting.payout.manage',
+  'admin.accounting.refund.view',
+  'admin.accounting.refund.manage',
+  'admin.accounting.report.view',
+  'admin.accounting.report.export',
   'admin.tax.export',
   'admin.marketing.view',
   'admin.marketing.manage',

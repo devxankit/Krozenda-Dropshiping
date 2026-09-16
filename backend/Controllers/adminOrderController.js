@@ -6,6 +6,7 @@ const WalletTransaction = require('../Models/WalletTransaction');
 const { serializeOrder, releaseStock, reserveStock, notifyVendorsOfNewOrder } = require('./orderController');
 const { createNotification } = require('./notificationController');
 const { toPaise } = require('../utils/money');
+const accounting = require('../services/accountingPosting');
 
 const STATUS_NOTIFICATION = {
   PROCESSING: { title: 'Order Processing', message: (o) => `Your order #${o._id.toString().slice(-8).toUpperCase()} is now being processed.` },
@@ -279,6 +280,19 @@ async function updateOrderStatus(req, res) {
         status: 'SUCCESS',
       });
       await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: 'REFUNDED' } });
+
+      // Reverse the posted sale. Never fatal — the buyer's wallet has already
+      // been credited, and every posting path is idempotent, so a failure
+      // here is picked up by the reconciler the next time an Accounting
+      // screen is opened.
+      try {
+        await accounting.postOrderCancellationRefund({
+          order: { ...order.toObject(), paymentStatus: 'REFUNDED' },
+          createdBy: req.admin?._id || null,
+        });
+      } catch (err) {
+        console.error('Accounting posting failed (admin cancellation), will be reconciled on next read:', err.message);
+      }
     }
   }
 

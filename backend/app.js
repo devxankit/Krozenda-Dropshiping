@@ -99,6 +99,7 @@ app.use('/admin/returns', require('./Router/adminReturnRoutes'));
 app.use('/admin/support/tickets', require('./Router/adminTicketRoutes'));
 app.use('/admin/system/backups', require('./Router/adminBackupRoutes'));
 app.use('/admin/finance', require('./Router/adminFinanceRoutes'));
+app.use('/admin/accounting', require('./Router/adminAccountingRoutes'));
 app.use('/admin', require('./Router/adminFulfilmentRoutes'));
 
 app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));

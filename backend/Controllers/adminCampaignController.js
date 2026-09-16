@@ -79,8 +79,8 @@ async function tokensForAudience(audience) {
   ]);
 
   const tokens = new Set();
-  customers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t)));
-  sellers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t)));
+  customers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t.token)));
+  sellers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t.token)));
 
   return Array.from(tokens);
 }
@@ -88,8 +88,8 @@ async function tokensForAudience(audience) {
 async function pruneStaleTokens(staleTokens) {
   if (!staleTokens.length) return;
   await Promise.all([
-    User.updateMany({}, { $pull: { fcmTokens: { $in: staleTokens } } }),
-    Vendor.updateMany({}, { $pull: { fcmTokens: { $in: staleTokens } } }),
+    User.updateMany({}, { $pull: { fcmTokens: { token: { $in: staleTokens } } } }),
+    Vendor.updateMany({}, { $pull: { fcmTokens: { token: { $in: staleTokens } } } }),
   ]);
 }
 

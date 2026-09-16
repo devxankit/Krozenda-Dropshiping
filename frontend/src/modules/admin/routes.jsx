@@ -62,6 +62,25 @@ import {
   CashFlowPage,
 } from './pages/finance/StatementPages'
 import { TaxCentrePage } from './pages/finance/TaxCentrePage'
+import {
+  AccountingTransactionsPage,
+  AccountingTransactionDetailPage,
+} from './pages/accounting/TransactionsPage'
+import {
+  SellerLedgerListPage,
+  SellerLedgerDetailPage,
+} from './pages/accounting/SellerLedgerPage'
+import { CommissionsPage } from './pages/accounting/CommissionsPage'
+import {
+  AccountingSettlementsPage,
+  AccountingSettlementDetailPage,
+} from './pages/accounting/SettlementsPage'
+import { PayoutsPage, PayoutDetailPage } from './pages/accounting/PayoutsPage'
+import { AccountingRefundsPage } from './pages/accounting/RefundsPage'
+import {
+  AccountingReportsPage,
+  AccountingReportRunnerPage,
+} from './pages/accounting/ReportsPage'
 import { CouponsPage, CampaignsPage, ReviewsPage } from './pages/marketing/MarketingListPages'
 import { OffersPage, CmsPagesPage, TemplatesPage } from './pages/marketing/ContentPages'
 import { BannersPage } from './pages/marketing/BannersPage'
@@ -111,6 +130,11 @@ const CustomerAnalyticsPage = lazy(() =>
 )
 const FinanceOverviewPage = lazy(() =>
   import('./pages/finance/FinanceOverviewPage').then((m) => ({ default: m.FinanceOverviewPage })),
+)
+const AccountingOverviewPage = lazy(() =>
+  import('./pages/accounting/AccountingOverviewPage').then((m) => ({
+    default: m.AccountingOverviewPage,
+  })),
 )
 
 // Paths in config/routes.js are absolute; this router is mounted at /admin,
@@ -283,6 +307,41 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.TRIAL_BALANCE)} element={<TrialBalancePage />} />
             <Route path={rel(ADMIN_ROUTES.CASH_FLOW)} element={<CashFlowPage />} />
             <Route path={rel(ADMIN_ROUTES.TAX_CENTER)} element={<TaxCentrePage />} />
+
+            {/* Accounting — the marketplace money trail. Eight screens plus
+                their detail views. */}
+            <Route
+              path={rel(ADMIN_ROUTES.ACCOUNTING)}
+              element={
+                <Suspense fallback={<ChunkFallback />}>
+                  <AccountingOverviewPage />
+                </Suspense>
+              }
+            />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_TRANSACTIONS)} element={<AccountingTransactionsPage />} />
+            <Route
+              path={rel(ADMIN_ROUTES.ACCOUNTING_TRANSACTION_DETAIL)}
+              element={<AccountingTransactionDetailPage />}
+            />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER)} element={<SellerLedgerListPage />} />
+            <Route
+              path={rel(ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER_DETAIL)}
+              element={<SellerLedgerDetailPage />}
+            />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_COMMISSIONS)} element={<CommissionsPage />} />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_SETTLEMENTS)} element={<AccountingSettlementsPage />} />
+            <Route
+              path={rel(ADMIN_ROUTES.ACCOUNTING_SETTLEMENT_DETAIL)}
+              element={<AccountingSettlementDetailPage />}
+            />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_PAYOUTS)} element={<PayoutsPage />} />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_PAYOUT_DETAIL)} element={<PayoutDetailPage />} />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_REFUNDS)} element={<AccountingRefundsPage />} />
+            <Route path={rel(ADMIN_ROUTES.ACCOUNTING_REPORTS)} element={<AccountingReportsPage />} />
+            <Route
+              path={rel(ADMIN_ROUTES.ACCOUNTING_REPORT_DETAIL)}
+              element={<AccountingReportRunnerPage />}
+            />
 
             {/* Marketing, content & reports */}
             <Route path={rel(ADMIN_ROUTES.COUPONS)} element={<CouponsPage />} />
