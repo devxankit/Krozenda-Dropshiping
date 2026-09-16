@@ -17,8 +17,18 @@ const DEV_FIXED_OTP = '123456';
 // Numbers that skip the SMS gateway even in production and get DEV_FIXED_OTP
 // instead — for app-store reviewers and our own QA handsets, so verifying a
 // build never depends on a live SMS arriving (and never burns a credit).
-// Comma separated in .env; unset or empty disables the bypass entirely.
+//
+// 1111111111 is pinned here rather than left to .env so the demo login behaves
+// identically on staging and production without anyone having to remember to
+// wire an env var on each server. Pinning it is safe: Indian mobile numbers
+// start with 6-9, so 1111111111 can never be issued to a real buyer and no
+// real account is reachable through this bypass.
+const PERMANENT_TEST_NUMBERS = ['1111111111'];
+
+// Extra numbers, comma separated in .env; unset or empty just leaves the
+// permanent list above in force.
 function isBypassNumber(mobileNumber) {
+  if (PERMANENT_TEST_NUMBERS.includes(mobileNumber)) return true;
   return (process.env.TEST_PHONE_NUMBERS || '')
     .split(',')
     .map((n) => n.trim())
@@ -353,4 +363,8 @@ module.exports = {
   uploadProfileImage,
   changePassword,
   deleteAccount,
+  // Exported so the bypass list can be asserted directly: isProduction is
+  // frozen at module load, so a test can't otherwise reach the production
+  // branch of requestOtp without re-requiring the whole app.
+  isBypassNumber,
 };

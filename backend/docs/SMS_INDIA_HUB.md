@@ -107,11 +107,22 @@ When Krozenda moves to its own template, update `MYNZO_ENTITY_ID` and
 
 ## Test-number bypass
 
-`TEST_PHONE_NUMBERS` in `.env` (comma separated) lists numbers that skip the gateway
-**even in production** and accept the fixed OTP `123456` — for app-store reviewers and
-QA handsets, so verifying a build never depends on a live SMS arriving or spends a
-credit. The OTP is still never returned in the API response; whoever uses these numbers
-already knows the fixed code. Unset or empty disables the bypass.
+Some numbers skip the gateway **even in production** and accept the fixed OTP `123456` —
+for app-store reviewers and QA handsets, so verifying a build never depends on a live SMS
+arriving or spends a credit. The OTP is still never returned in the API response; whoever
+uses these numbers already knows the fixed code.
+
+Two sources, checked in this order:
+
+1. `PERMANENT_TEST_NUMBERS` in `userAuthController.js` — currently just `1111111111`.
+   Pinned in code so the demo login is identical on staging and production with no
+   per-server `.env` wiring. Safe to pin because Indian mobile numbers start with 6-9,
+   so `1111111111` is not dialable and can never belong to a real buyer.
+2. `TEST_PHONE_NUMBERS` in `.env` (comma separated) — extra numbers, per server. Unset
+   or empty just leaves the pinned list in force.
+
+Removing the `1111111111` bypass means editing the constant and redeploying; there is no
+env flag that switches it off.
 
 ---
 

@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../app');
 const { connectTestDb, disconnectTestDb, createCustomer, createAdmin, createAddress } = require('./helpers');
 const OtpRequest = require('../Models/OtpRequest');
+const { isBypassNumber } = require('../Controllers/userAuthController');
 
 beforeAll(connectTestDb);
 afterAll(disconnectTestDb);
@@ -70,6 +71,49 @@ describe('OTP login (regression: no more universal 123456)', () => {
 
     const remaining = await OtpRequest.findOne({ mobileNumber: number });
     expect(remaining).toBeNull();
+  });
+});
+
+describe('pinned test number 1111111111', () => {
+  const testNumber = '1111111111';
+
+  // isProduction is read once at module load, so these assert the predicate
+  // that decides the production path rather than driving a second app under
+  // ENV=production (which would recompile every mongoose model).
+  it('bypasses the SMS gateway with TEST_PHONE_NUMBERS unset', () => {
+    const previous = process.env.TEST_PHONE_NUMBERS;
+    delete process.env.TEST_PHONE_NUMBERS;
+    expect(isBypassNumber(testNumber)).toBe(true);
+    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
+  });
+
+  it('stays bypassed when TEST_PHONE_NUMBERS lists other numbers', () => {
+    const previous = process.env.TEST_PHONE_NUMBERS;
+    process.env.TEST_PHONE_NUMBERS = '9876543210,9000000000';
+    expect(isBypassNumber(testNumber)).toBe(true);
+    expect(isBypassNumber('9876543210')).toBe(true);
+    expect(isBypassNumber('9111111105')).toBe(false);
+    if (previous === undefined) delete process.env.TEST_PHONE_NUMBERS;
+    else process.env.TEST_PHONE_NUMBERS = previous;
+  });
+
+  it('logs in end to end with the fixed 123456', async () => {
+    const sendRes = await request(app).post('/auth/send-otp').send({ mobileNumber: testNumber });
+    expect(sendRes.status).toBe(200);
+
+    const verifyRes = await request(app)
+      .post('/auth/verify-otp')
+      .send({ mobileNumber: testNumber, otp: '123456' });
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.data.accessToken).toBeTruthy();
+  });
+
+  it('accepts the number in +91 form too', async () => {
+    await request(app).post('/auth/send-otp').send({ mobileNumber: '+911111111111' });
+    const verifyRes = await request(app)
+      .post('/auth/verify-otp')
+      .send({ mobileNumber: '+911111111111', otp: '123456' });
+    expect(verifyRes.status).toBe(200);
   });
 });
 
