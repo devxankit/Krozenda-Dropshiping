@@ -4,6 +4,7 @@ const User = require('../Models/User');
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
 const Address = require('../Models/Address');
+const Vendor = require('../Models/Vendor');
 
 async function connectTestDb() {
   if (mongoose.connection.readyState === 0) {
@@ -47,6 +48,21 @@ async function createAdmin(overrides = {}) {
   return { admin, token };
 }
 
+async function createVendor(overrides = {}) {
+  const suffix = uniqueSuffix();
+  const vendor = await Vendor.create({
+    vendorType: 'B2C',
+    name: 'Test Vendor',
+    email: `vendor${suffix}@test.local`,
+    mobile: `8${suffix.slice(-9).padStart(9, '0')}`.slice(0, 10),
+    password: 'secret123',
+    isActive: true,
+    ...overrides,
+  });
+  const token = signToken('vendor', { id: vendor._id.toString(), vendorType: vendor.vendorType });
+  return { vendor, token };
+}
+
 async function createCategory(overrides = {}) {
   return Category.create({ name: `Test Category ${uniqueSuffix()}`, isActive: true, ...overrides });
 }
@@ -81,6 +97,7 @@ module.exports = {
   disconnectTestDb,
   createCustomer,
   createAdmin,
+  createVendor,
   createCategory,
   createProduct,
   createAddress,

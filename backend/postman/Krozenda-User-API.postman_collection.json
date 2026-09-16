@@ -3912,13 +3912,11 @@
               }
             ],
             "url": {
-              "raw": "{{BASE_URL}}/user/notifications/fcm-token",
+              "raw": "{{BASE_URL}}/fcm-token",
               "host": [
                 "{{BASE_URL}}"
               ],
               "path": [
-                "user",
-                "notifications",
                 "fcm-token"
               ]
             },

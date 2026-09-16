@@ -15,9 +15,11 @@ export async function getCustomerProfile() {
   return data.data
 }
 
-// deviceType tells the backend which platform the token came from — the
-// browser is always 'web', the mobile apps pass 'app'.
+// One shared endpoint for every audience — the backend files the device
+// against whichever account the bearer token belongs to. deviceType tells it
+// which platform the token came from: the browser is always 'web', the
+// mobile apps pass 'app'.
 export async function registerFcmToken(token, deviceType = 'web') {
-  const { data } = await api.post('/user/notifications/fcm-token', { token, deviceType })
+  const { data } = await api.post('/fcm-token', { token, deviceType })
   return data
 }

@@ -176,8 +176,10 @@ export async function addVendorTicketMessage(id, message) {
   return data.data
 }
 
-// Real backend call — see registerPushToken() in VendorLoginPage.
+// Real backend call — see registerPushToken() in VendorLoginPage. The
+// endpoint is shared with the buyer app; the vendor JWT is what files the
+// device under this vendor.
 export async function registerVendorFcmToken(token, deviceType = 'web') {
-  const { data } = await api.post('/vendor/notifications/fcm-token', { token, deviceType })
+  const { data } = await api.post('/fcm-token', { token, deviceType })
   return data
 }

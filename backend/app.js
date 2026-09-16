@@ -76,6 +76,10 @@ app.use(
 );
 
 // --- Routes ---
+// Audience-neutral: buyers, vendors, admins and staff all register their push
+// devices here, on whichever token they happen to be signed in with.
+app.use('/fcm-token', require('./Router/pushTokenRoutes'));
+
 app.use('/admin/auth', require('./Router/adminAuthRoutes'));
 // Reporting surface (dashboard + analytics). Mounted on /admin itself, so it
 // must declare only its own paths.
