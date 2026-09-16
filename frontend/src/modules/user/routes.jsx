@@ -33,6 +33,7 @@ import { ReturnReplacementScreen } from './components/support/ReturnReplacementS
 import { InvoicePreviewScreen } from './components/orders/InvoicePreviewScreen'
 
 import { UserAppShowcase } from './pages/UserAppShowcase'
+import { AiAssistantLauncher } from './components/ai'
 import { USER_ROUTES } from '../../config/routes'
 import { ProtectedRoute } from '../../routes/ProtectedRoute'
 
@@ -40,6 +41,7 @@ export default function UserRoutes() {
   const navigate = useNavigate()
 
   return (
+    <>
     <Routes>
       <Route index element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
 
@@ -322,5 +324,12 @@ export default function UserRoutes() {
           (observed as a "Maximum update depth exceeded" infinite loop). */}
       <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
     </Routes>
+
+    {/* Mounted as a sibling of <Routes> rather than inside a screen, so the
+        floating button and any open chat persist across navigation instead of
+        unmounting (and losing the in-progress conversation) on every route
+        change. It renders nothing for signed-out visitors. */}
+    <AiAssistantLauncher />
+    </>
   )
 }

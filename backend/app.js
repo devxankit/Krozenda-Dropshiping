@@ -143,6 +143,9 @@ app.use('/user/coupons', require('./Router/userCouponRoutes'));
 app.use('/user/notifications', require('./Router/notificationRoutes'));
 app.use('/user/returns', require('./Router/returnRoutes'));
 app.use('/user/tickets', require('./Router/ticketRoutes'));
+// Gemini-backed customer assistant. Scoped to /user like every other
+// buyer-facing surface, and authenticated inside the router itself.
+app.use('/user/ai', require('./Router/aiRoutes'));
 app.get('/health', async (req, res) => {
   const readyState = mongoose.connection.readyState; // 0 disconnected, 1 connected, 2 connecting, 3 disconnecting
   let db = 'disconnected';

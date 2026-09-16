@@ -101,6 +101,12 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
+// Not redundant with the index above: with `status` sitting between them,
+// that one can only use `user` as a prefix for an unfiltered "my orders,
+// newest first" query and still has to sort in memory. This serves
+// listOrders() and the AI assistant's getMyLatestOrder/getMyRecentOrders
+// lookups, which are exactly that shape.
+orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ 'items.vendor': 1, createdAt: -1 });
 // A captured Razorpay payment can back at most one order — without this, a
 // single valid (orderId, paymentId, signature) triple could be replayed
