@@ -101,6 +101,12 @@ export function SmartImage({
           // reaches the DOM and the hint does nothing. Lowercase passes
           // straight through as a plain attribute, which is what the browser
           // reads anyway.
+          //
+          // react/no-unknown-property disagrees, but its list is not version
+          // gated and this config already declares React 18.3. Verified by
+          // rendering to static markup: lowercase emits fetchpriority="high"
+          // with no warning, camelCase emits nothing. The runtime wins.
+          // eslint-disable-next-line react/no-unknown-property
           fetchpriority={priority ? 'high' : 'auto'}
           decoding={priority ? 'sync' : 'async'}
           onLoad={() => setStatus('loaded')}
