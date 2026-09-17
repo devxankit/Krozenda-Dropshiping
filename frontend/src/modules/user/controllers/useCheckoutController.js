@@ -36,7 +36,10 @@ export function useCheckoutController() {
   const inFlightRef = useRef(false)
 
   const payAndPlaceOrder = useCallback(
-    async ({ addressId, paymentMethod, couponCode, shippingFee, prefill }) => {
+    // No `shippingFee`: the server quotes it from the carrier for this cart,
+    // address and payment method. Sending one was the old hole — any value in
+    // [0, 99, 199] was accepted, so a buyer could choose 0.
+    async ({ addressId, paymentMethod, couponCode, prefill }) => {
       if (inFlightRef.current) {
         // Not an error the user should see — it is the second half of a double
         // tap. The first call is still running and will resolve.
@@ -66,7 +69,6 @@ export function useCheckoutController() {
             addressId,
             paymentMethod,
             couponCode,
-            shippingFee,
             idempotencyKey,
           })
           return finish(order)
@@ -76,7 +78,7 @@ export function useCheckoutController() {
         // recomputes it server-side from the caller's own cart, address and
         // coupon, and createOrder then re-verifies the captured payment
         // against that same computation before the order is written.
-        const rpOrder = await createRazorpayOrder({ addressId, couponCode, shippingFee })
+        const rpOrder = await createRazorpayOrder({ addressId, couponCode })
 
         const response = await new Promise((resolve, reject) => {
           openRazorpayCheckout({
@@ -96,7 +98,6 @@ export function useCheckoutController() {
           addressId,
           paymentMethod,
           couponCode,
-          shippingFee,
           idempotencyKey,
           razorpay_order_id: response.razorpay_order_id,
           razorpay_payment_id: response.razorpay_payment_id,

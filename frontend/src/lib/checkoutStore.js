@@ -19,52 +19,52 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-// The only shipping prices the app offers. Mirrors ALLOWED_SHIPPING_FEES in
-// backend/Controllers/orderController.js — anything else is rejected there, so
-// keeping the two lists aligned is what stops the UI quoting a fee the server
-// will silently replace with 0.
-export const SHIPPING_OPTIONS = [
+// The buyer chooses how to PAY. What shipping costs follows from that — a
+// courier charges more to collect cash — and is quoted by the server from the
+// carrier, per cart and per address.
+//
+// This replaces a hardcoded [Standard 0, Express 99, Priority 199] ladder.
+// Those numbers were invented: nothing checked whether a courier could do
+// "next business day" to the buyer's PIN code, and the client sent the fee it
+// had picked to the server, which accepted any of the three.
+export const PAYMENT_METHODS = [
   {
-    id: 'standard',
-    fee: 0,
-    label: 'Standard Delivery',
-    description: 'Free • 5-7 business days',
+    id: 'RAZORPAY',
+    label: 'Pay Online',
+    description: 'Card, UPI or Netbanking',
+    badge: 'CHEAPER DELIVERY',
   },
   {
-    id: 'express',
-    fee: 99,
-    label: 'Express Delivery',
-    description: '2-3 business days',
+    id: 'WALLET',
+    label: 'Krozenda Wallet',
+    description: 'Pay from your wallet balance',
   },
   {
-    id: 'priority',
-    fee: 199,
-    label: 'Priority Delivery',
-    description: 'Next business day where serviceable',
+    id: 'COD',
+    label: 'Cash on Delivery',
+    description: 'Pay the courier when it arrives',
   },
 ]
-
-export const ALLOWED_SHIPPING_FEES = SHIPPING_OPTIONS.map((option) => option.fee)
 
 export const useCheckoutStore = create(
   persist(
     (set) => ({
       selectedAddressId: null,
-      shippingFee: 0,
+      paymentMethod: 'RAZORPAY',
       appliedCoupon: null, // { code, discountAmount }
 
       setSelectedAddressId: (addressId) => set({ selectedAddressId: addressId }),
 
-      setShippingFee: (fee) =>
-        // Clamped to the allowed set rather than stored as given: a value the
-        // server will not honour must never reach the summary screen, or the
-        // buyer agrees to a total that is not the one they are charged.
-        set({ shippingFee: ALLOWED_SHIPPING_FEES.includes(Number(fee)) ? Number(fee) : 0 }),
+      // Allowlisted rather than stored as given: a tampered persisted store
+      // must not carry an unknown method into checkout. The server validates
+      // it again anyway — this just keeps the UI honest.
+      setPaymentMethod: (method) =>
+        set({ paymentMethod: PAYMENT_METHODS.some((m) => m.id === method) ? method : 'RAZORPAY' }),
 
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
       clearCoupon: () => set({ appliedCoupon: null }),
 
-      reset: () => set({ selectedAddressId: null, shippingFee: 0, appliedCoupon: null }),
+      reset: () => set({ selectedAddressId: null, paymentMethod: 'RAZORPAY', appliedCoupon: null }),
     }),
     {
       name: 'krozenda.checkout',

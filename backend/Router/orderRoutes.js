@@ -6,6 +6,7 @@ const {
   getOrder,
   cancelOrder,
   getOrderTracking,
+  getShippingQuote,
 } = require('../Controllers/orderController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
 const { orderRateLimiter } = require('../Middlewares/rateLimiter');
@@ -18,6 +19,10 @@ router.get('/', listOrders);
 // Both money-moving endpoints are throttled: each one can reserve stock or
 // capture a payment, so an unbounded retry loop is expensive in a way a GET
 // never is.
+// What shipping costs for this cart, before anything is placed. Each call
+// can reach the carrier, so it shares the order limiter — a buyer toggling
+// between COD and prepaid is a handful of calls, not a flood.
+router.post('/shipping-quote', orderRateLimiter, getShippingQuote);
 router.post('/razorpay-order', orderRateLimiter, createRazorpayOrder);
 router.post('/', orderRateLimiter, createOrder);
 router.get('/:id', getOrder);

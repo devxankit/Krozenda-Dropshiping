@@ -75,6 +75,12 @@ const shippingSettingsSchema = new mongoose.Schema(
     // delivery rate at all, because there is no lane to price.
     defaultOriginPincode: { type: String, default: '', trim: true },
 
+    // Orders at or above this subtotal ship free, with the marketplace
+    // absorbing the carrier's charge. 0 disables it and every order pays the
+    // real rate. A setting rather than a constant because it is a commercial
+    // lever, pulled far more often than code is deployed.
+    freeShippingThreshold: { type: Number, default: 499, min: 0 },
+
     // --- COD ---------------------------------------------------------------
     codEnabled: { type: Boolean, default: true },
 

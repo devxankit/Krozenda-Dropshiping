@@ -16,7 +16,7 @@ import { ProductDetailScreen } from '../components/ecommerce/ProductDetailScreen
 import { CartPageScreen } from '../components/ecommerce/CartPageScreen'
 
 import { SelectAddressScreen } from '../components/checkout/SelectAddressScreen'
-import { DeliveryOptionsScreen } from '../components/checkout/DeliveryOptionsScreen'
+import { PaymentMethodScreen } from '../components/checkout/PaymentMethodScreen'
 import { OrderSummaryScreen } from '../components/checkout/OrderSummaryScreen'
 import { PaymentScreen } from '../components/checkout/PaymentScreen'
 import { OrderPlacedScreen } from '../components/checkout/OrderPlacedScreen'
@@ -319,7 +319,7 @@ export function UserAppShowcase() {
                     ) : activeFlow === 'checkout' ? (
                       <>
                         {screen.id === 1 && <SelectAddressScreen />}
-                        {screen.id === 2 && <DeliveryOptionsScreen />}
+                        {screen.id === 2 && <PaymentMethodScreen />}
                         {screen.id === 3 && <OrderSummaryScreen />}
                         {screen.id === 4 && <PaymentScreen />}
                         {screen.id === 5 && <OrderPlacedScreen />}
@@ -391,7 +391,7 @@ export function UserAppShowcase() {
               ) : activeFlow === 'checkout' ? (
                 <>
                   {currentStep === 1 && <SelectAddressScreen onNext={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <DeliveryOptionsScreen onBack={() => setCurrentStep(1)} onNext={() => setCurrentStep(3)} />}
+                  {currentStep === 2 && <PaymentMethodScreen />}
                   {currentStep === 3 && <OrderSummaryScreen onBack={() => setCurrentStep(2)} onProceedToPayment={() => setCurrentStep(4)} />}
                   {currentStep === 4 && <PaymentScreen onBack={() => setCurrentStep(3)} onPaymentSuccess={() => setCurrentStep(5)} />}
                   {currentStep === 5 && <OrderPlacedScreen />}

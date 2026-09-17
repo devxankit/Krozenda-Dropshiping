@@ -118,3 +118,24 @@ export const orderTrackingSchema = z.object({
   hasShipments: z.boolean(),
   parcels: z.array(buyerParcelSchema),
 })
+
+// What checkout will actually charge. Every number here is the SERVER's — the
+// client no longer adds up its own total, because the server's arithmetic is
+// the one that gets billed and two implementations drift.
+export const shippingQuoteSchema = z.object({
+  paymentMethod: z.string(),
+  subtotal: z.number(),
+  shippingFee: z.number(),
+  discountAmount: z.number(),
+  total: z.number(),
+
+  isFree: z.boolean(),
+  freeReason: z.string().nullable(),
+  freeShippingThreshold: z.number(),
+  amountToFreeShipping: z.number(),
+  // What the marketplace absorbs when an order ships free.
+  carrierCost: z.number(),
+
+  parcelCount: z.number().int(),
+  estimatedDeliveryDays: z.number().nullable(),
+})

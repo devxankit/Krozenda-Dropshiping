@@ -28,8 +28,8 @@ import { ListSkeleton } from '../../components/ui/AsyncBoundary'
 const SelectAddressScreen = lazy(() =>
   import('./components/checkout/SelectAddressScreen').then((m) => ({ default: m.SelectAddressScreen })),
 )
-const DeliveryOptionsScreen = lazy(() =>
-  import('./components/checkout/DeliveryOptionsScreen').then((m) => ({ default: m.DeliveryOptionsScreen })),
+const PaymentMethodScreen = lazy(() =>
+  import('./components/checkout/PaymentMethodScreen').then((m) => ({ default: m.PaymentMethodScreen })),
 )
 const OrderSummaryScreen = lazy(() =>
   import('./components/checkout/OrderSummaryScreen').then((m) => ({ default: m.OrderSummaryScreen })),
@@ -153,7 +153,7 @@ export default function UserRoutes() {
               <Route path="cart" element={<CartPageScreen />} />
 
               <Route path="checkout/address" element={<SelectAddressScreen />} />
-              <Route path="checkout/delivery" element={<DeliveryOptionsScreen />} />
+              <Route path="checkout/delivery" element={<PaymentMethodScreen />} />
               <Route path="checkout/summary" element={<OrderSummaryScreen />} />
               <Route path="checkout/payment" element={<PaymentScreen />} />
               <Route path="checkout/success" element={<OrderPlacedScreen />} />

@@ -5,7 +5,8 @@ import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { useCartStore } from '../../../../lib/cartStore'
-import { SHIPPING_OPTIONS, useCheckoutStore } from '../../../../lib/checkoutStore'
+import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { useShippingQuoteController } from '../../controllers/useShippingQuoteController'
 import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useAddressesController } from '../../controllers/useAddressesController'
@@ -18,7 +19,7 @@ export function OrderSummaryScreen() {
   const hydrateCart = useCartStore((s) => s.hydrate)
   const { addresses } = useAddressesController()
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
-  const shippingFee = useCheckoutStore((s) => s.shippingFee)
+  const paymentMethod = useCheckoutStore((s) => s.paymentMethod)
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const setAppliedCoupon = useCheckoutStore((s) => s.setAppliedCoupon)
   const clearCoupon = useCheckoutStore((s) => s.clearCoupon)
@@ -39,14 +40,22 @@ export function OrderSummaryScreen() {
   const onEditCart = () => navigate(USER_ROUTES.CART)
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
-  const shippingOption = SHIPPING_OPTIONS.find((o) => o.fee === shippingFee) || SHIPPING_OPTIONS[0]
+  // The server quotes the price; this screen displays it. It used to add the
+  // total up itself, which meant the number agreed to here and the number
+  // charged came from two different implementations.
+  const { quote } = useShippingQuoteController({
+    addressId: selectedAddressId,
+    paymentMethod,
+    couponCode: appliedCoupon?.code,
+  })
+  const shippingFee = quote?.shippingFee ?? 0
 
   // Server-computed when signed in. The figures below are a PREVIEW — the
   // order endpoint recomputes every one of them from the buyer's own cart,
   // address and coupon before anything is charged, and refuses a mismatch.
   const subtotal = summary?.subtotal ?? cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const discount = appliedCoupon?.discountAmount || 0
-  const finalTotal = Math.max(0, subtotal - discount + shippingFee)
+  const finalTotal = quote?.total ?? Math.max(0, subtotal - discount + shippingFee)
 
   // Anything that will make the order endpoint refuse, surfaced here rather
   // than after the buyer has chosen a payment method.
@@ -157,10 +166,20 @@ export function OrderSummaryScreen() {
               <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1 shadow-xs">
                 <div className="flex items-center space-x-2 text-blue-700 font-bold text-xs mb-1">
                   <HiTruck className="w-4 h-4" />
-                  <span>Delivery Speed</span>
+                  <span>Delivery</span>
                 </div>
-                <p className="text-xs font-bold text-slate-900">{shippingOption.label}</p>
-                <p className="text-xs text-slate-500">{shippingOption.description}</p>
+                {/* The carrier's own estimate for this lane, not a "Standard /
+                    Express" label the platform invented. */}
+                <p className="text-xs font-bold text-slate-900">
+                  {quote?.estimatedDeliveryDays
+                    ? `Arrives in about ${quote.estimatedDeliveryDays} business day${quote.estimatedDeliveryDays === 1 ? '' : 's'}`
+                    : 'Delivery estimate confirmed at dispatch'}
+                </p>
+                {quote?.parcelCount > 1 && (
+                  <p className="text-xs text-slate-500">
+                    Arriving as {quote.parcelCount} separate parcels from different sellers
+                  </p>
+                )}
                 <span className="inline-block mt-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   {shippingFee === 0 ? 'FREE SHIPPING' : `₹${shippingFee} SHIPPING`}
                 </span>

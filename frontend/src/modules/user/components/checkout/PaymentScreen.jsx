@@ -6,6 +6,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { Toast } from '../../../../components/ui'
 import { USER_ROUTES } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
+import { useShippingQuoteController } from '../../controllers/useShippingQuoteController'
 import { useCheckoutStore } from '../../../../lib/checkoutStore'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useCheckoutController } from '../../controllers/useCheckoutController'
@@ -23,12 +24,14 @@ export function PaymentScreen() {
   const hydrateCart = useCartStore((s) => s.hydrate)
 
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
-  const shippingFee = useCheckoutStore((s) => s.shippingFee)
+  const chosenMethod = useCheckoutStore((s) => s.paymentMethod)
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const resetCheckout = useCheckoutStore((s) => s.reset)
 
   const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
-  const [selectedMethod, setSelectedMethod] = useState('RAZORPAY')
+  // Chosen back at step 2, where its delivery cost was shown. Changing it
+  // here would change the shipping price after the buyer agreed to a total.
+  const [selectedMethod, setSelectedMethod] = useState(chosenMethod || 'RAZORPAY')
 
   usePageMeta({ title: 'Payment', noindex: true })
 
@@ -40,7 +43,13 @@ export function PaymentScreen() {
   // deep link (§111, §112).
   const subtotal = cartSummary?.subtotal ?? cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
   const discount = appliedCoupon?.discountAmount || 0
-  const amount = Math.max(0, subtotal - discount + shippingFee)
+  const { quote } = useShippingQuoteController({
+    addressId: selectedAddressId,
+    paymentMethod: selectedMethod,
+    couponCode: appliedCoupon?.code,
+  })
+  const shippingFee = quote?.shippingFee ?? 0
+  const amount = quote?.total ?? Math.max(0, subtotal - discount + shippingFee)
 
   useEffect(() => {
     hydrateCart()
@@ -80,7 +89,6 @@ export function PaymentScreen() {
         addressId: selectedAddressId,
         paymentMethod: selectedMethod,
         couponCode: appliedCoupon?.code || undefined,
-        shippingFee,
         prefill: { name: profile?.name, email: profile?.email, contact: profile?.mobileNumber },
       })
 

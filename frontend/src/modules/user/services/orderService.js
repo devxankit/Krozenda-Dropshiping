@@ -1,7 +1,13 @@
 // Layer rule: services/ is the ONLY place that imports the axios instance.
 
 import { api } from '../../../lib/axios'
-import { orderSchema, orderListSchema, orderTrackingSchema, razorpayOrderSchema } from '../schemas/orderSchema'
+import {
+  orderSchema,
+  orderListSchema,
+  orderTrackingSchema,
+  razorpayOrderSchema,
+  shippingQuoteSchema,
+} from '../schemas/orderSchema'
 
 // The backend computes the amount itself from the caller's own cart/address/
 // coupon — it never trusts a client-supplied total (see orderController.js's
@@ -61,4 +67,14 @@ export async function fetchOrder(id, { signal } = {}) {
 export async function fetchOrderTracking(id, { signal } = {}) {
   const response = await api.get(`/user/orders/${id}/tracking`, { signal })
   return orderTrackingSchema.parse(response.data.data)
+}
+
+// What this cart will cost to ship, for a given payment method.
+//
+// Runs the same computation the order will run, so the number shown is the
+// number charged. Each call can reach the carrier, so it is only made when the
+// buyer changes something that affects the answer.
+export async function fetchShippingQuote({ addressId, paymentMethod, couponCode }, { signal } = {}) {
+  const response = await api.post('/user/orders/shipping-quote', { addressId, paymentMethod, couponCode }, { signal })
+  return shippingQuoteSchema.parse(response.data.data)
 }

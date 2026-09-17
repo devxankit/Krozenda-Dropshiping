@@ -13,6 +13,7 @@ const { createNotification } = require('./notificationController');
 const Shipment = require('../Models/Shipment');
 const trackingService = require('../services/shipping/trackingService');
 const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
+const checkoutQuoteService = require('../services/shipping/checkoutQuoteService');
 const { getImageUrl } = require('../utils/imageHelper');
 const accounting = require('../services/accountingPosting');
 const { readPagination, buildPagination } = require('../utils/pagination');
@@ -45,7 +46,9 @@ function normaliseIdempotencyKey(raw) {
 
 // The only shipping prices DeliveryOptionsScreen ever offers — anything else
 // arriving in the request body is client tampering, not a legitimate choice.
-const ALLOWED_SHIPPING_FEES = [0, 99, 199];
+// The old fixed ladder [0, 99, 199] is gone: shipping is quoted from the
+// carrier per cart, per address and per payment method. See
+// services/shipping/checkoutQuoteService.
 
 function serializeOrder(o) {
   return {
@@ -91,7 +94,14 @@ function serializeCheckoutError(error) {
 // the cart actually costs — the only source of truth is the live DB state,
 // never anything the client sends beyond which address/coupon/shipping
 // option it picked.
-async function computeCheckoutTotals(user, { addressId, couponCode, shippingFee }) {
+// `paymentMethod` is part of the price now: a courier charges more to collect
+// cash, so COD and prepaid are genuinely different quotes.
+//
+// Note what is NOT a parameter any more — `shippingFee`. It used to come from
+// the client and be accepted if it appeared in [0, 99, 199], which meant any
+// buyer could choose 0. The fee is now quoted from the carrier here, and
+// whatever the client thought it was is ignored.
+async function computeCheckoutTotals(user, { addressId, couponCode, paymentMethod }) {
   if (!mongoose.isValidObjectId(addressId)) {
     return { error: { status: 400, message: 'Select a valid delivery address' } };
   }
@@ -166,7 +176,24 @@ async function computeCheckoutTotals(user, { addressId, couponCode, shippingFee 
   }));
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = ALLOWED_SHIPPING_FEES.includes(Number(shippingFee)) ? Number(shippingFee) : 0;
+
+  // Quoted from the carrier for THIS cart, THIS address and THIS payment
+  // method. `cartEntries` is passed straight through so the quote cannot be
+  // for a different basket than the one being priced.
+  const quote = await checkoutQuoteService.quoteCart({
+    entries: cartEntries,
+    address,
+    paymentMethod,
+    subtotal,
+  });
+
+  if (!quote.ok) {
+    // A rate we could not get must not silently become zero. Stopping is the
+    // honest outcome — the alternative is shipping at a price nobody agreed to.
+    return { error: { status: 409, code: quote.code, message: quote.message } };
+  }
+
+  const shipping = quote.shippingFee;
   const previousOrders = await Order.countDocuments({ user: user._id, paymentStatus: 'PAID' });
   const isNewCustomer = previousOrders === 0;
 
@@ -207,6 +234,9 @@ async function computeCheckoutTotals(user, { addressId, couponCode, shippingFee 
     items,
     subtotal,
     shipping,
+    // Carried out so the quote endpoint can explain the number rather than
+    // just stating it.
+    quote,
     discountAmount,
     normalizedCouponCode,
     total,
@@ -269,9 +299,15 @@ async function notifyVendorsOfNewOrder(items, orderId) {
 // never a client-supplied figure — so the payment collected by Razorpay can
 // later be checked against this same computation in createOrder.
 async function createRazorpayOrder(req, res) {
-  const { addressId, couponCode, shippingFee } = req.body;
+  const { addressId, couponCode } = req.body;
 
-  const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, shippingFee });
+  // A Razorpay order is prepaid by definition, so it is quoted at the prepaid
+  // rate. The client does not get to say.
+  const checkout = await computeCheckoutTotals(req.user, {
+    addressId,
+    couponCode,
+    paymentMethod: 'RAZORPAY',
+  });
   if (checkout.error) {
     return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
   }
@@ -304,7 +340,6 @@ async function createOrder(req, res) {
     addressId,
     paymentMethod,
     couponCode,
-    shippingFee,
     razorpay_order_id: razorpayOrderId,
     razorpay_payment_id: razorpayPaymentId,
     razorpay_signature: razorpaySignature,
@@ -335,7 +370,9 @@ async function createOrder(req, res) {
     }
   }
 
-  const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, shippingFee });
+  // Quoted at the method being paid with — COD costs more to ship, and that
+  // difference has to be in the total the buyer is actually charged.
+  const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, paymentMethod });
   if (checkout.error) {
     return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
   }
@@ -716,7 +753,63 @@ async function getOrderTracking(req, res) {
   });
 }
 
+// POST /user/orders/shipping-quote
+//
+// What shipping will cost, before anything is placed. The checkout screen
+// calls this when the buyer picks a payment method, because COD and prepaid
+// are different prices and the buyer should see which they are choosing.
+//
+// It runs the SAME computeCheckoutTotals the order will run, so the number on
+// screen is the number that gets charged — not a second implementation that
+// can drift from it.
+async function getShippingQuote(req, res) {
+  const { addressId, paymentMethod, couponCode } = req.body;
+
+  if (!Order.PAYMENT_METHODS.includes(paymentMethod)) {
+    return res.status(400).json({ success: false, message: 'Select a valid payment method' });
+  }
+
+  const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, paymentMethod });
+  if (checkout.error) {
+    return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
+  }
+
+  const { quote, subtotal, shipping, discountAmount, total } = checkout;
+
+  res.json({
+    success: true,
+    message: 'Shipping quote',
+    data: {
+      paymentMethod,
+      subtotal,
+      shippingFee: shipping,
+      discountAmount,
+      total,
+
+      // Why it is what it is. A buyer told "free" without being told why has
+      // no reason to trust the number, and one told "₹166" without being told
+      // it is the COD fee will just think the site is expensive.
+      isFree: shipping === 0,
+      freeReason: quote?.freeReason ?? null,
+      freeShippingThreshold: quote?.freeShippingThreshold ?? 0,
+      amountToFreeShipping: quote?.amountToFreeShipping ?? 0,
+      // What the marketplace absorbs when the order ships free.
+      carrierCost: quote?.carrierCost ?? shipping,
+
+      // A multi-vendor cart genuinely arrives in several boxes, and the total
+      // is the sum of them. Saying so is better than an unexplained bigger
+      // number.
+      parcelCount: quote?.parcelCount ?? 1,
+      estimatedDeliveryDays: quote?.estimatedDeliveryDays ?? null,
+    },
+  });
+}
+
 module.exports = {
+  getShippingQuote,
+  // Exported so the checkout price can be tested directly. It is the single
+  // place the total is decided, so testing it is testing what gets charged.
+  computeCheckoutTotals,
   serializeOrderSummary,
   createRazorpayOrder,
   createOrder,
