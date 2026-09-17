@@ -1,14 +1,21 @@
-import React, { useState } from 'react'
-import { HiArrowLeft, HiShieldCheck, HiPencilSquare, HiMapPin, HiTruck, HiChevronRight, HiTag, HiXMark } from 'react-icons/hi2'
+import { useEffect, useState } from 'react'
+import { HiArrowLeft, HiShieldCheck, HiPencilSquare, HiMapPin, HiTruck, HiChevronRight, HiTag, HiXMark, HiExclamationTriangle } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { SmartImage } from '../../../../components/ui/SmartImage'
 import { useCartStore } from '../../../../lib/cartStore'
-import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { SHIPPING_OPTIONS, useCheckoutStore } from '../../../../lib/checkoutStore'
+import { USER_ROUTES } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { useApplyCouponController } from '../../controllers/useCouponsController'
 
-export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, onProceedToPayment = () => {} }) {
+export function OrderSummaryScreen() {
+  const navigate = useNavigate()
   const cartItems = useCartStore((s) => s.items)
+  const summary = useCartStore((s) => s.summary)
+  const hydrateCart = useCartStore((s) => s.hydrate)
   const { addresses } = useAddressesController()
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
   const shippingFee = useCheckoutStore((s) => s.shippingFee)
@@ -19,11 +26,47 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
   const { applyCoupon, isApplying, error: couponError, reset: resetCouponError } = useApplyCouponController()
   const [couponInput, setCouponInput] = useState('')
 
-  const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
+  usePageMeta({ title: 'Order Summary', noindex: true })
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  // Last stop before payment: re-read the cart so a price change, a stock drop
+  // or a delisting that happened while the buyer was picking an address is
+  // reflected in the total they are about to agree to.
+  useEffect(() => {
+    hydrateCart()
+  }, [hydrateCart])
+
+  const onBack = () => navigate(USER_ROUTES.CHECKOUT_DELIVERY)
+  const onEditCart = () => navigate(USER_ROUTES.CART)
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
+  const shippingOption = SHIPPING_OPTIONS.find((o) => o.fee === shippingFee) || SHIPPING_OPTIONS[0]
+
+  // Server-computed when signed in. The figures below are a PREVIEW — the
+  // order endpoint recomputes every one of them from the buyer's own cart,
+  // address and coupon before anything is charged, and refuses a mismatch.
+  const subtotal = summary?.subtotal ?? cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const discount = appliedCoupon?.discountAmount || 0
   const finalTotal = Math.max(0, subtotal - discount + shippingFee)
+
+  // Anything that will make the order endpoint refuse, surfaced here rather
+  // than after the buyer has chosen a payment method.
+  const blockedItems = cartItems.filter(
+    (item) =>
+      item.availability === 'UNAVAILABLE' ||
+      item.availability === 'OUT_OF_STOCK' ||
+      item.availability === 'INSUFFICIENT_STOCK',
+  )
+  const priceChangedItems = cartItems.filter((item) => item.priceChanged)
+
+  // Arriving without the earlier steps (deep link, reload after the address
+  // was deleted, an emptied cart) has nothing to summarise.
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      navigate(USER_ROUTES.CART, { replace: true })
+    } else if (!selectedAddressId) {
+      navigate(USER_ROUTES.CHECKOUT_ADDRESS, { replace: true })
+    }
+  }, [cartItems.length, selectedAddressId, navigate])
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return
@@ -116,8 +159,8 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                   <HiTruck className="w-4 h-4" />
                   <span>Delivery Speed</span>
                 </div>
-                <p className="text-xs font-bold text-slate-900">Standard Express Delivery</p>
-                <p className="text-xs text-slate-500">Expected arrival in 3-5 business days</p>
+                <p className="text-xs font-bold text-slate-900">{shippingOption.label}</p>
+                <p className="text-xs text-slate-500">{shippingOption.description}</p>
                 <span className="inline-block mt-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   {shippingFee === 0 ? 'FREE SHIPPING' : `₹${shippingFee} SHIPPING`}
                 </span>
@@ -136,9 +179,14 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                   {cartItems.map((item) => (
                     <div key={item.id} className="py-3 flex items-center justify-between gap-4">
                       <div className="flex items-center space-x-3 min-w-0 flex-1">
-                        <div className="w-14 h-14 bg-slate-50 rounded-xl p-1 shrink-0 border border-slate-100 flex items-center justify-center">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                        </div>
+                        <SmartImage
+                          src={item.image}
+                          srcSet={item.imageSrcSet}
+                          sizes="56px"
+                          alt={item.name}
+                          ratio="1 / 1"
+                          className="w-14 shrink-0 rounded-xl border border-slate-100"
+                        />
                         <div className="min-w-0 flex-1">
                           <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
                           <p className="text-[11px] text-slate-500 truncate">{item.variant}</p>
@@ -164,7 +212,7 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
               {appliedCoupon ? (
                 <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5">
                   <span className="text-xs font-bold text-emerald-800">
-                    "{appliedCoupon.code}" applied — you saved ₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
+                    {'“'}{appliedCoupon.code}{'”'} applied — you saved ₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
                   </span>
                   <button onClick={clearCoupon} className="text-emerald-700 hover:text-emerald-900">
                     <HiXMark className="w-4 h-4" />
@@ -206,7 +254,7 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold">
-                    <span>Coupon Discount ('{appliedCoupon.code}')</span>
+                    <span>Coupon Discount ({appliedCoupon.code})</span>
                     <span>- ₹{discount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
@@ -227,9 +275,34 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
                 <span>GST Tax Invoice included for input tax credit claiming</span>
               </div>
 
+              {priceChangedItems.length > 0 && (
+                <p className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-800">
+                  {priceChangedItems.length === 1
+                    ? 'The price of one item changed since you added it. The total above is current.'
+                    : `Prices changed on ${priceChangedItems.length} items since you added them. The total above is current.`}
+                </p>
+              )}
+
+              {blockedItems.length > 0 && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700"
+                >
+                  <HiExclamationTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    {blockedItems.length === 1
+                      ? `"${blockedItems[0].name}" can no longer be ordered as-is.`
+                      : `${blockedItems.length} items can no longer be ordered as-is.`}{' '}
+                    <button type="button" onClick={onEditCart} className="font-bold underline">
+                      Review your cart
+                    </button>
+                  </span>
+                </div>
+              )}
+
               <button
-                onClick={() => onProceedToPayment({ total: finalTotal })}
-                disabled={cartItems.length === 0 || !selectedAddress}
+                onClick={() => navigate(USER_ROUTES.CHECKOUT_PAYMENT)}
+                disabled={cartItems.length === 0 || !selectedAddress || blockedItems.length > 0}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >
                 <span>Proceed to Payment</span>
@@ -241,7 +314,7 @@ export function OrderSummaryScreen({ onBack = () => {}, onEditCart = () => {}, o
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />
       </div>
     </div>

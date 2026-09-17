@@ -10,7 +10,11 @@ describe('product reviews are publicly readable (regression)', () => {
     const product = await createProduct();
     const res = await request(app).get('/user/reviews').query({ productId: product._id.toString() });
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.data)).toBe(true);
+    // `data` was a bare array before this endpoint was paginated; it is now
+    // the standard { items, total, summary } envelope. The point of the
+    // regression — that no token is required to read it — is unchanged.
+    expect(Array.isArray(res.body.data.items)).toBe(true);
+    expect(res.body.pagination).toMatchObject({ page: 1, limit: 10 });
   });
 
   it('still requires auth to submit or view "reviewable" items', async () => {

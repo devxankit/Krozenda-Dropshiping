@@ -3,16 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/images/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to
+         anything other than 0 inside an iOS WebView and on notched Android.
+         Without it the CSS below is inert and the app draws under the notch
+         and the home indicator. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <!-- Colours the Android status bar / iOS tab bar to match the app chrome
+         instead of leaving a white strip above a dark header. -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Krozenda — multi-vendor wholesale and dropshipping marketplace." />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Admin panel type. The buyer app stays on the system stack (see the
          fontFamily note in tailwind.config.js) — only `font-ui` / `font-num`
-         pull these in. -->
+         pull these in, so for a shopper this is a stylesheet they never use.
+         `media="print" onload` makes the browser fetch it without blocking
+         first paint, which is what kept it off the buyer app's critical path.
+         Four weights total, not the eight the audit warns about. -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      />
+    </noscript>
     <title>Krozenda</title>
   </head>
   <body>

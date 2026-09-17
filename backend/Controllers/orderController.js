@@ -12,6 +12,7 @@ const { evaluateCoupon, redeemCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
 const { getImageUrl } = require('../utils/imageHelper');
 const accounting = require('../services/accountingPosting');
+const { readPagination, buildPagination } = require('../utils/pagination');
 
 // Accounting is posted alongside the order, never in front of it. A ledger
 // write must never be able to fail a customer's checkout or a cancellation —
@@ -26,6 +27,17 @@ async function postAccounting(label, work) {
   } catch (err) {
     console.error(`Accounting posting failed (${label}), will be reconciled on next read:`, err.message);
   }
+}
+
+// Client-supplied, so it is length-capped and character-restricted before it
+// ever reaches an index — an unbounded string here would let a caller write
+// arbitrarily large keys into every order document.
+const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+function normaliseIdempotencyKey(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return IDEMPOTENCY_KEY_RE.test(trimmed) ? trimmed : null;
 }
 
 // The only shipping prices DeliveryOptionsScreen ever offers — anything else
@@ -59,6 +71,18 @@ function serializeOrder(o) {
   };
 }
 
+// checkout errors carry a machine-readable `code` (and sometimes per-item
+// details) so the cart/checkout UI can highlight the offending line rather
+// than showing one generic toast.
+function serializeCheckoutError(error) {
+  return {
+    success: false,
+    ...(error.code ? { code: error.code } : {}),
+    message: error.message,
+    ...(error.details ? { details: error.details } : {}),
+  };
+}
+
 // Shared by createRazorpayOrder (a price "quote" before payment) and
 // createOrder (the real purchase) so the two can never disagree about what
 // the cart actually costs — the only source of truth is the live DB state,
@@ -75,11 +99,57 @@ async function computeCheckoutTotals(user, { addressId, couponCode, shippingFee 
   }
 
   const cart = await Cart.findOne({ user: user._id }).populate('items.product');
-  // Drop entries whose product was hard-deleted OR deactivated since being
-  // added to the cart — never let a delisted product reach checkout.
-  const cartEntries = (cart?.items || []).filter((entry) => entry.product && entry.product.isActive);
-  if (cartEntries.length === 0) {
+  const allEntries = cart?.items || [];
+  if (allEntries.length === 0) {
     return { error: { status: 400, message: 'Your cart is empty' } };
+  }
+
+  // Entries whose product was hard-deleted OR deactivated since being added.
+  // These used to be filtered out silently, which meant a buyer who put three
+  // items in their cart could be charged for two without ever being told —
+  // the order just came out smaller than the summary they had agreed to.
+  // Now checkout stops and names them so the buyer decides.
+  const unavailable = allEntries.filter((entry) => !entry.product || !entry.product.isActive);
+  if (unavailable.length > 0) {
+    const names = unavailable.map((entry) => entry.product?.name).filter(Boolean);
+    return {
+      error: {
+        status: 409,
+        code: 'CART_ITEM_UNAVAILABLE',
+        message: names.length
+          ? `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} no longer available. Please remove ${names.length === 1 ? 'it' : 'them'} from your cart to continue.`
+          : 'Some items in your cart are no longer available. Please review your cart to continue.',
+        details: { productIds: unavailable.map((entry) => entry.product?._id?.toString()).filter(Boolean) },
+      },
+    };
+  }
+
+  const cartEntries = allEntries;
+
+  // Same reasoning for stock: reserveStock would reject the whole order at the
+  // very end anyway, so catching it here gives the buyer a specific message
+  // ("Only 2 left") before a payment is taken rather than after.
+  const short = cartEntries.filter((entry) => entry.product.stock < entry.quantity);
+  if (short.length > 0) {
+    const first = short[0];
+    return {
+      error: {
+        status: 409,
+        code: 'INSUFFICIENT_STOCK',
+        message:
+          first.product.stock > 0
+            ? `Only ${first.product.stock} of "${first.product.name}" ${first.product.stock === 1 ? 'is' : 'are'} left. Please reduce the quantity to continue.`
+            : `"${first.product.name}" just went out of stock. Please remove it from your cart to continue.`,
+        details: {
+          items: short.map((entry) => ({
+            productId: entry.product._id.toString(),
+            name: entry.product.name,
+            requested: entry.quantity,
+            available: entry.product.stock,
+          })),
+        },
+      },
+    };
   }
 
   const items = cartEntries.map((entry) => ({
@@ -200,7 +270,7 @@ async function createRazorpayOrder(req, res) {
 
   const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, shippingFee });
   if (checkout.error) {
-    return res.status(checkout.error.status).json({ success: false, message: checkout.error.message });
+    return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
   }
   if (checkout.total <= 0) {
     return res.status(400).json({ success: false, message: 'Nothing to pay for this order' });
@@ -241,9 +311,30 @@ async function createOrder(req, res) {
     return res.status(400).json({ success: false, message: 'Select a valid payment method' });
   }
 
+  // Accepted from either the standard header or the body so a WebView client
+  // that can't easily set headers still gets the protection.
+  const idempotencyKey = normaliseIdempotencyKey(
+    req.get('Idempotency-Key') || req.body.idempotencyKey
+  );
+
+  // Fast path: the retry arrives after the first call already committed. The
+  // unique index below is still the real guarantee (this read can lose a race
+  // with a request that hasn't committed yet) — this just avoids doing the
+  // whole payment/stock dance again in the common case.
+  if (idempotencyKey) {
+    const existing = await Order.findOne({ user: req.user._id, idempotencyKey });
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        message: 'Order already placed',
+        data: serializeOrder(existing),
+      });
+    }
+  }
+
   const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, shippingFee });
   if (checkout.error) {
-    return res.status(checkout.error.status).json({ success: false, message: checkout.error.message });
+    return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
   }
   const { address, items, subtotal, shipping, discountAmount, normalizedCouponCode, total, couponCartItems, isNewCustomer } = checkout;
 
@@ -341,6 +432,7 @@ async function createOrder(req, res) {
       paymentStatus,
       razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
       razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
+      idempotencyKey,
       status: 'PENDING',
     });
   } catch (err) {
@@ -349,7 +441,30 @@ async function createOrder(req, res) {
       await Customer.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
     }
     if (err.code === 11000) {
-      return res.status(409).json({ success: false, message: 'This payment has already been used for another order' });
+      // Lost the race against a concurrent identical submission (a double
+      // tap, or the same request retried after a timeout). Everything this
+      // call reserved has just been released above, and the winner's order is
+      // already committed — hand that one back so the buyer sees one order,
+      // not an error.
+      if (idempotencyKey) {
+        const winner = await Order.findOne({ user: req.user._id, idempotencyKey });
+        if (winner) {
+          return res.status(200).json({
+            success: true,
+            message: 'Order already placed',
+            data: serializeOrder(winner),
+          });
+        }
+      }
+      // A razorpayPaymentId collision with no matching idempotency key is
+      // NOT treated as a retry: the same captured payment being presented
+      // again under a different checkout attempt is exactly the replay this
+      // index exists to stop, so it stays a hard 409.
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_ORDER',
+        message: 'This payment has already been used for another order',
+      });
     }
     throw err;
   }
@@ -408,6 +523,31 @@ async function createOrder(req, res) {
   res.status(201).json({ success: true, message: 'Order placed successfully', data: serializeOrder(order) });
 }
 
+// A list row only needs enough to render the card — who it was, what it cost,
+// where it is, and a thumbnail strip. Sending the full serializeOrder payload
+// (every line item's snapshot, the whole shipping address, the complete status
+// history) for every order the buyer has ever placed made this endpoint grow
+// without bound; OrderDetailsScreen fetches the full document by id anyway.
+function serializeOrderSummary(o) {
+  return {
+    id: o._id.toString(),
+    itemCount: o.items.length,
+    // First three thumbnails is what the card shows; the rest is dead weight.
+    previewItems: o.items.slice(0, 3).map((item) => ({
+      productId: item.product.toString(),
+      name: item.name,
+      image: item.image,
+      quantity: item.quantity,
+    })),
+    total: o.total,
+    paymentMethod: o.paymentMethod,
+    paymentStatus: o.paymentStatus,
+    status: o.status,
+    deliveredAt: o.deliveredAt,
+    createdAt: o.createdAt,
+  };
+}
+
 async function listOrders(req, res) {
   const { status } = req.query;
   const filter = { user: req.user._id };
@@ -415,8 +555,18 @@ async function listOrders(req, res) {
     filter.status = status;
   }
 
-  const orders = await Order.find(filter).sort({ createdAt: -1 });
-  res.json({ success: true, data: { items: orders.map(serializeOrder) } });
+  const { page, limit, skip } = readPagination(req.query, { defaultLimit: 20, maxLimit: 50 });
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Order.countDocuments(filter),
+  ]);
+
+  res.json({
+    success: true,
+    data: { items: orders.map(serializeOrderSummary) },
+    pagination: buildPagination({ page, limit, total }),
+  });
 }
 
 async function getOrder(req, res) {
@@ -500,6 +650,7 @@ async function cancelOrder(req, res) {
 }
 
 module.exports = {
+  serializeOrderSummary,
   createRazorpayOrder,
   createOrder,
   listOrders,

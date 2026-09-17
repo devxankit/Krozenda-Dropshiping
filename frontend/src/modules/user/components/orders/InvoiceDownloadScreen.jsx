@@ -1,19 +1,25 @@
-import React from 'react'
 import { HiArrowLeft, HiArrowDownTray } from 'react-icons/hi2'
-import { useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { userPath } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrderController } from '../../controllers/useOrdersController'
 
-export function InvoiceDownloadScreen({ onBack = () => {}, onDownload = () => {} }) {
-  const location = useLocation()
-  const orderId = location.state?.orderId
+export function InvoiceDownloadScreen() {
+  const navigate = useNavigate()
+  const { orderId } = useParams()
   const { order, isLoading, isError } = useOrderController(orderId)
 
-  if (!orderId || isLoading) {
+  usePageMeta({ title: 'Invoice', noindex: true })
+
+  const onBack = () => navigate(-1)
+  const onDownload = (id) => navigate(userPath.orderInvoicePreview(id))
+
+  if (isLoading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50 flex items-center justify-center">
-        <span className="text-xs font-semibold text-slate-400">{isLoading ? 'Loading invoice...' : 'No order selected'}</span>
+      <div className="flex min-h-screen w-full items-center justify-center bg-slate-50">
+        <span className="text-xs font-semibold text-slate-400" role="status">Loading invoice…</span>
       </div>
     )
   }

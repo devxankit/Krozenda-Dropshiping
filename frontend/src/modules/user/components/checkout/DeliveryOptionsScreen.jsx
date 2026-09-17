@@ -1,28 +1,61 @@
-import React, { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HiArrowLeft, HiMapPin, HiTruck, HiChevronRight } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
-import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { SHIPPING_OPTIONS, useCheckoutStore } from '../../../../lib/checkoutStore'
 import { useAddressesController } from '../../controllers/useAddressesController'
+import { USER_ROUTES } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 
-export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () => {}, onNext = () => {} }) {
-  const [selectedOption, setSelectedOption] = useState('standard')
+// Presentation for the three shipping options. The FEES themselves come from
+// SHIPPING_OPTIONS, which mirrors the server's ALLOWED_SHIPPING_FEES — this
+// screen used to declare its own [0, 99, 199] inline, so a change on either
+// side would have silently quoted a price the order endpoint replaced with 0.
+const OPTION_COPY = {
+  standard: { tag: 'FREE', days: '3-5 Business Days', desc: 'Reliable Pan-India surface shipping' },
+  express: { days: '1-2 Business Days', desc: 'Priority air shipping with instant dispatch' },
+  priority: { days: 'Next business day', desc: 'Fastest dispatch where serviceable' },
+}
+
+export function DeliveryOptionsScreen() {
+  const navigate = useNavigate()
   const { addresses } = useAddressesController()
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
+  const shippingFee = useCheckoutStore((s) => s.shippingFee)
   const setShippingFee = useCheckoutStore((s) => s.setShippingFee)
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
-  const deliveryOptions = [
-    { id: 'standard', title: 'Standard Delivery', tag: 'FREE', days: '3-5 Business Days', price: 0, desc: 'Reliable Pan-India Surface shipping' },
-    { id: 'express', title: 'Express Air Delivery', days: '1-2 Business Days', price: 99, desc: 'Priority Air shipping with instant dispatch' },
-    { id: 'sameday', title: 'Same Day Metro Express', days: 'Within 6 Hours', price: 199, desc: 'Guaranteed same-day metro delivery' },
-  ]
+  usePageMeta({ title: 'Delivery Options', noindex: true })
 
-  const activeOption = deliveryOptions.find(d => d.id === selectedOption) || deliveryOptions[0]
+  // Seeded from the store rather than hardcoded to 'standard', so coming back
+  // to this step (or reloading it) shows the option the buyer actually chose.
+  const [selectedOption, setSelectedOption] = useState(
+    () => (SHIPPING_OPTIONS.find((o) => o.fee === shippingFee) || SHIPPING_OPTIONS[0]).id,
+  )
+
+  const onBack = () => navigate(USER_ROUTES.CHECKOUT_ADDRESS)
+  const onChangeAddress = () => navigate(USER_ROUTES.CHECKOUT_ADDRESS)
+
+  const deliveryOptions = SHIPPING_OPTIONS.map((option) => ({
+    id: option.id,
+    title: option.label,
+    price: option.fee,
+    ...OPTION_COPY[option.id],
+  }))
+
+  const activeOption = deliveryOptions.find((d) => d.id === selectedOption) || deliveryOptions[0]
+
+  // An address is required before this step means anything; arriving here
+  // without one (deep link, reload after the address was deleted) sends the
+  // buyer back rather than letting them pick a speed for nowhere.
+  useEffect(() => {
+    if (!selectedAddressId) navigate(USER_ROUTES.CHECKOUT_ADDRESS, { replace: true })
+  }, [selectedAddressId, navigate])
 
   const handleNext = () => {
     setShippingFee(activeOption.price)
-    onNext({ selectedOption })
+    navigate(USER_ROUTES.CHECKOUT_SUMMARY)
   }
 
   return (
@@ -166,7 +199,7 @@ export function DeliveryOptionsScreen({ onBack = () => {}, onChangeAddress = () 
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />
       </div>
     </div>

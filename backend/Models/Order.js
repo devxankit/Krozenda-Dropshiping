@@ -69,6 +69,13 @@ const orderSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'PENDING' },
     razorpayOrderId: { type: String, default: null },
     razorpayPaymentId: { type: String, default: null },
+    // Client-generated key for one checkout attempt. The unique index below
+    // is what actually stops a double-tapped "Place Order" (or a retry after
+    // a timeout) from minting a second order: the second insert loses on the
+    // index and createOrder returns the first order instead. The Razorpay
+    // path already had this property via razorpayPaymentId; COD and WALLET
+    // had nothing, so a double tap really did create two orders.
+    idempotencyKey: { type: String, default: null },
 
     status: { type: String, enum: STATUSES, default: 'PENDING' },
     deliveredAt: { type: Date, default: null },
@@ -114,6 +121,12 @@ orderSchema.index({ 'items.vendor': 1, createdAt: -1 });
 orderSchema.index(
   { razorpayPaymentId: 1 },
   { unique: true, partialFilterExpression: { razorpayPaymentId: { $type: 'string' } } }
+);
+// Scoped to the user so two buyers can never collide on a key, and partial so
+// the pre-existing orders that carry no key don't all clash on null.
+orderSchema.index(
+  { user: 1, idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }
 );
 
 const Order = mongoose.model('Order', orderSchema);

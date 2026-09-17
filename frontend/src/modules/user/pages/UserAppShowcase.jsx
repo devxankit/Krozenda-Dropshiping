@@ -11,8 +11,7 @@ import { SignupScreen2Otp } from '../../auth/components/signup/SignupScreen2Otp'
 import { SignupScreen3Password } from '../../auth/components/signup/SignupScreen3Password'
 import { SignupScreen4Email } from '../../auth/components/signup/SignupScreen4Email'
 import { SignupScreen5Success } from '../../auth/components/signup/SignupScreen5Success'
-import { SearchProductsScreen } from '../components/ecommerce/SearchProductsScreen'
-import { ProductListingScreen } from '../components/ecommerce/ProductListingScreen'
+import { CatalogBrowseScreen } from '../components/ecommerce/CatalogBrowseScreen'
 import { ProductDetailScreen } from '../components/ecommerce/ProductDetailScreen'
 import { CartPageScreen } from '../components/ecommerce/CartPageScreen'
 
@@ -34,8 +33,6 @@ import { WishlistScreen } from '../components/profile/WishlistScreen'
 import { CouponsOffersScreen } from '../components/profile/CouponsOffersScreen'
 import { NotificationCenterScreen } from '../components/profile/NotificationCenterScreen'
 
-import { SearchFiltersScreen } from '../components/ecommerce/SearchFiltersScreen'
-import { ProductFiltersScreen } from '../components/ecommerce/ProductFiltersScreen'
 import { HelpSupportScreen } from '../components/support/HelpSupportScreen'
 import { ReturnReplacementScreen } from '../components/support/ReturnReplacementScreen'
 import { InvoicePreviewScreen } from '../components/orders/InvoicePreviewScreen'
@@ -297,8 +294,8 @@ export function UserAppShowcase() {
                   <div className="w-full h-full rounded-[32px] overflow-hidden bg-white relative">
                     {activeFlow === 'support' ? (
                       <>
-                        {screen.id === 1 && <SearchFiltersScreen />}
-                        {screen.id === 2 && <ProductFiltersScreen />}
+                        {screen.id === 1 && <CatalogBrowseScreen mode="search" />}
+                        {screen.id === 2 && <CatalogBrowseScreen mode="listing" />}
                         {screen.id === 3 && <HelpSupportScreen />}
                         {screen.id === 4 && <ReturnReplacementScreen />}
                         {screen.id === 5 && <InvoicePreviewScreen />}
@@ -330,8 +327,8 @@ export function UserAppShowcase() {
                     ) : activeFlow === 'ecommerce' ? (
                       <>
                         {screen.id === 1 && <HomeScreen />}
-                        {screen.id === 2 && <SearchProductsScreen />}
-                        {screen.id === 3 && <ProductListingScreen />}
+                        {screen.id === 2 && <CatalogBrowseScreen mode="search" />}
+                        {screen.id === 3 && <CatalogBrowseScreen mode="listing" />}
                         {screen.id === 4 && <ProductDetailScreen />}
                         {screen.id === 5 && <CartPageScreen />}
                       </>
@@ -365,8 +362,8 @@ export function UserAppShowcase() {
             <div className="w-full h-full rounded-[40px] overflow-hidden bg-white relative">
               {activeFlow === 'support' ? (
                 <>
-                  {currentStep === 1 && <SearchFiltersScreen onOpenFilters={() => setCurrentStep(2)} />}
-                  {currentStep === 2 && <ProductFiltersScreen onBack={() => setCurrentStep(1)} onApplyFilters={() => setCurrentStep(1)} />}
+                  {currentStep === 1 && <CatalogBrowseScreen mode="search" />}
+                  {currentStep === 2 && <CatalogBrowseScreen mode="listing" />}
                   {currentStep === 3 && <HelpSupportScreen onBack={() => setCurrentStep(1)} />}
                   {currentStep === 4 && <ReturnReplacementScreen onBack={() => setCurrentStep(3)} onContinue={() => setCurrentStep(3)} />}
                   {currentStep === 5 && <InvoicePreviewScreen onBack={() => setCurrentStep(3)} onDownload={() => setCurrentStep(3)} />}
@@ -402,8 +399,8 @@ export function UserAppShowcase() {
               ) : activeFlow === 'ecommerce' ? (
                 <>
                   {currentStep === 1 && <HomeScreen />}
-                  {currentStep === 2 && <SearchProductsScreen onSelectSearch={() => setCurrentStep(3)} />}
-                  {currentStep === 3 && <ProductListingScreen onSelectProduct={() => setCurrentStep(4)} />}
+                  {currentStep === 2 && <CatalogBrowseScreen mode="search" />}
+                  {currentStep === 3 && <CatalogBrowseScreen mode="listing" />}
                   {currentStep === 4 && <ProductDetailScreen onAddToCart={() => setCurrentStep(5)} onBuyNow={() => setCurrentStep(5)} />}
                   {currentStep === 5 && <CartPageScreen />}
                 </>

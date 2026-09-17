@@ -1,7 +1,8 @@
 import React from 'react'
 import { HiArrowRight } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
-import { USER_ROUTES } from '../../../../config/routes'
+import { USER_ROUTES, userPath } from '../../../../config/routes'
+import { SmartImage } from '../../../../components/ui/SmartImage'
 
 export function CategorySection({ onSelectCategory }) {
   const navigate = useNavigate()
@@ -113,11 +114,11 @@ export function CategorySection({ onSelectCategory }) {
 
   const handleClick = (cat) => {
     if (cat.id === 'all') {
-      navigate(USER_ROUTES.ROOT + '/categories')
+      navigate(USER_ROUTES.CATEGORIES)
     } else if (onSelectCategory) {
       onSelectCategory(cat.id)
     } else {
-      navigate(USER_ROUTES.ROOT + '/listing', { state: { category: cat.name } })
+      navigate(userPath.listing({ category: cat.id || cat._id }))
     }
   }
 
@@ -140,7 +141,7 @@ export function CategorySection({ onSelectCategory }) {
         </div>
 
         <button
-          onClick={() => navigate(USER_ROUTES.ROOT + '/categories')}
+          onClick={() => navigate(USER_ROUTES.CATEGORIES)}
           className="self-start sm:self-auto bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-5 py-2.5 rounded-full shadow-xs hover:shadow transition-all flex items-center gap-1.5 shrink-0"
         >
           <span>View All Collections</span>
@@ -170,22 +171,26 @@ export function CategorySection({ onSelectCategory }) {
                     key={idx}
                     className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-white"
                   >
-                    <img
+                    <SmartImage
                       src={imgUrl}
-                      alt="Mini catalog thumbnail"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      alt=""
+                      sizes="80px"
+                      ratio="1 / 1"
+                      fit="cover"
+                      className="h-full w-full"
                     />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden my-1 bg-slate-100 flex items-center justify-center">
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                />
-              </div>
+              <SmartImage
+                src={cat.image}
+                alt={cat.name}
+                sizes="(min-width: 1024px) 20vw, 45vw"
+                ratio="4 / 3"
+                fit="cover"
+                className="my-1 w-full rounded-xl"
+              />
             )}
 
             {/* Offer Tag Pill below Image */}

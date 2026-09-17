@@ -1,5 +1,6 @@
 const Brand = require('../Models/Brand');
 const { getImageUrl } = require('../utils/imageHelper');
+const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -150,8 +151,29 @@ async function deleteBrand(req, res) {
 }
 
 async function listPublicBrands(req, res) {
-  const brands = await Brand.find({ isActive: true, approvalStatus: 'APPROVED' }).sort({ name: 1 }).lean();
-  res.json({ success: true, data: { items: brands.map(serializeBrand) } });
+  // Projected: the public list renders a name and a logo, so there is no
+  // reason to ship the moderation fields and timestamps that serializeBrand's
+  // admin callers need.
+  // $nin, not equality — same reason as categories: brands predating the
+  // approval workflow have no approvalStatus, and this endpoint was returning
+  // an empty list for all 30 brands in the catalog. See utils/publicVisibility.
+  const brands = await Brand.find({ isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER })
+    .select('name logo')
+    .sort({ name: 1 })
+    .lean();
+
+  res.json({
+    success: true,
+    message: 'Brands fetched successfully',
+    data: {
+      items: brands.map((brand) => ({
+        id: brand._id.toString(),
+        name: brand.name,
+        logo: brand.logo ? getImageUrl(brand.logo) : null,
+      })),
+      total: brands.length,
+    },
+  });
 }
 
 module.exports = {

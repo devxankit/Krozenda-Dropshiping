@@ -2,6 +2,7 @@ const express = require('express');
 const {
   requestOtp,
   verifyOtp,
+  refreshAccessToken,
   getMe,
   updateProfile,
   uploadProfileImage,
@@ -10,7 +11,7 @@ const {
 } = require('../Controllers/userAuthController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
 const { upload, processImage, handleUploadError } = require('../Middlewares/uploadMiddleware');
-const { otpRateLimiter } = require('../Middlewares/rateLimiter');
+const { otpRateLimiter, refreshRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.post('/send-otp', otpRateLimiter, requestOtp);
 router.post('/request-otp', otpRateLimiter, requestOtp);
 router.post('/verify-otp', otpRateLimiter, verifyOtp);
 router.post('/login-otp', otpRateLimiter, verifyOtp);
+router.post('/refresh-token', refreshRateLimiter, refreshAccessToken);
 router.get('/me', protectUser, getMe);
 router.put('/profile', protectUser, updateProfile);
 router.put('/change-password', protectUser, changePassword);

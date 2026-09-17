@@ -40,10 +40,10 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
 
   const tabs = [
     { id: 'home', label: 'Home', route: USER_ROUTES.DASHBOARD, ActiveIcon: HiHome, InactiveIcon: HiOutlineHome },
-    { id: 'categories', label: 'Categories', route: USER_ROUTES.ROOT + '/categories', ActiveIcon: HiSquares2X2, InactiveIcon: HiOutlineSquares2X2 },
-    { id: 'orders', label: 'Orders', route: USER_ROUTES.ROOT + '/orders', ActiveIcon: HiShoppingBag, InactiveIcon: HiOutlineShoppingBag },
-    { id: 'wishlist', label: 'Wishlist', route: USER_ROUTES.ROOT + '/wishlist', ActiveIcon: HiHeart, InactiveIcon: HiOutlineHeart },
-    { id: 'profile', label: 'Profile', route: USER_ROUTES.ROOT + '/profile', ActiveIcon: HiUser, InactiveIcon: HiOutlineUser },
+    { id: 'categories', label: 'Categories', route: USER_ROUTES.CATEGORIES, ActiveIcon: HiSquares2X2, InactiveIcon: HiOutlineSquares2X2 },
+    { id: 'orders', label: 'Orders', route: USER_ROUTES.ORDERS, ActiveIcon: HiShoppingBag, InactiveIcon: HiOutlineShoppingBag },
+    { id: 'wishlist', label: 'Wishlist', route: USER_ROUTES.WISHLIST, ActiveIcon: HiHeart, InactiveIcon: HiOutlineHeart },
+    { id: 'profile', label: 'Profile', route: USER_ROUTES.PROFILE, ActiveIcon: HiUser, InactiveIcon: HiOutlineUser },
   ]
 
   const activeIndex = tabs.findIndex((t) => t.id === currentActiveTab)
@@ -58,11 +58,18 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
   }
 
   return (
-    <nav className="w-full bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 shadow-2xl relative select-none">
+    <nav
+      aria-label="Primary"
+      // pb-[env(safe-area-inset-bottom)] is what keeps the labels above the
+      // iPhone home indicator and Android gesture bar instead of behind them.
+      // It resolves to 0 in a desktop browser, so nothing changes there.
+      className="relative w-full select-none border-t border-slate-200/90 bg-white/95 px-2 pt-1.5 shadow-2xl backdrop-blur-md pb-[calc(6px+env(safe-area-inset-bottom,0px))]"
+    >
       <div className="max-w-md mx-auto relative grid grid-cols-5 items-center">
         {/* Smooth Sliding Background Pill Indicator */}
         <div
-          className="absolute top-0.5 bottom-0.5 rounded-2xl bg-blue-600/10 border border-blue-500/20 shadow-2xs transition-all duration-300 ease-out pointer-events-none"
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0.5 top-0.5 rounded-2xl border border-blue-500/20 bg-blue-600/10 shadow-2xs transition-all duration-300 ease-out"
           style={{
             left: `${safeActiveIndex * 20}%`,
             width: '20%',
@@ -76,10 +83,16 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => handleTabClick(tab)}
-              className="relative z-10 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-colors duration-200 focus:outline-none"
+              // aria-current tells a screen reader which tab is active; the
+              // colour change alone conveyed nothing to one.
+              aria-current={isActive ? 'page' : undefined}
+              // min-h-12 gives a 48px target — the icon+label was ~36px.
+              className="relative z-10 flex min-h-12 flex-col items-center justify-center rounded-2xl px-1 py-1.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               <IconComponent
+                aria-hidden="true"
                 className={`w-5 h-5 transition-all duration-300 ${
                   isActive ? 'scale-110 -translate-y-0.5 text-blue-600' : 'scale-100 text-slate-500 hover:text-slate-800'
                 }`}

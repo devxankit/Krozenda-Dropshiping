@@ -189,10 +189,14 @@ async function listPublicBanners(req, res) {
     query.placement = placement;
   }
 
-  const banners = await Banner.find(query).sort({ createdAt: -1 }).lean();
+  // Bounded: the home page renders at most a handful per placement, and an
+  // unbounded banner list is an unbounded number of full-width images on the
+  // first paint of the storefront.
+  const banners = await Banner.find(query).sort({ createdAt: -1 }).limit(30).lean();
   res.json({
     success: true,
-    data: { items: banners.map(serializeBanner) },
+    message: 'Banners fetched successfully',
+    data: { items: banners.map(serializeBanner), total: banners.length },
   });
 }
 

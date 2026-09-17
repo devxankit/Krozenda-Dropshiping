@@ -1,5 +1,5 @@
 const Customer = require('../Models/Customer');
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken } = require('../utils/jwt');
 
 async function protectUser(req, res, next) {
   try {
@@ -10,7 +10,7 @@ async function protectUser(req, res, next) {
       return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    const decoded = verifyToken('user', token);
+    const decoded = verifyAccessToken('user', token);
     const user = await Customer.findById(decoded.id);
 
     if (!user || user.isDeleted) {
@@ -24,7 +24,15 @@ async function protectUser(req, res, next) {
     req.user = user;
     next();
   } catch (err) {
-    return res.status(401).json({ success: false, message: 'Not authorized, invalid token' });
+    // TOKEN_EXPIRED is what tells the client to try a silent refresh rather
+    // than bin the session — every other 401 here means the token is
+    // structurally bad and refreshing it would be pointless.
+    const expired = err.name === 'TokenExpiredError';
+    return res.status(401).json({
+      success: false,
+      code: expired ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN',
+      message: expired ? 'Your session has expired. Please sign in again.' : 'Not authorized, invalid token',
+    });
   }
 }
 

@@ -9,8 +9,14 @@ import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 
-export function SettingsScreen({ onBack = () => {} }) {
+export function SettingsScreen({ onBack }) {
+  // Falls back to real navigation when no callback is supplied. The
+  // router stopped passing one when every screen took ownership of its
+  // own navigation; the previous `= () => {}` default silently turned
+  // the back button into a no-op.
+
   const navigate = useNavigate()
+  const handleBack = onBack || (() => navigate(-1))
 
   const settingsOptions = [
     {
@@ -42,7 +48,7 @@ export function SettingsScreen({ onBack = () => {} }) {
         <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center space-x-3.5">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="p-2 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
               title="Back"
             >
@@ -84,7 +90,7 @@ export function SettingsScreen({ onBack = () => {} }) {
         </div>
       </main>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="profile" />
       </div>
     </div>

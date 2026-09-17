@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HiArrowLeft, HiShieldCheck, HiArrowPath, HiBanknotes, HiPlus, HiXMark, HiCheckCircle, HiClock, HiXCircle } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { USER_ROUTES } from '../../../../config/routes'
 import { useReturnsController } from '../../controllers/useReturnsController'
 
 const MAX_PHOTOS = 4
@@ -20,7 +22,12 @@ const STATUS_META = {
   REJECTED: { label: 'Rejected', color: 'bg-red-50 text-red-700 border-red-200', Icon: HiXCircle },
 }
 
-export function ReturnReplacementScreen({ onBack = () => {}, onContinue = () => {} }) {
+export function ReturnReplacementScreen({ onBack, onContinue }) {
+  // See the note on the other screens: a no-op default made both controls dead
+  // once the router stopped passing callbacks.
+  const navigateFallback = useNavigate()
+  const handleBack = onBack || (() => navigateFallback(-1))
+  const handleContinue = onContinue || (() => navigateFallback(USER_ROUTES.ORDERS))
   const { items, isLoading, submitReturnRequest, isSubmitting, error } = useReturnsController()
 
   const [selectedKey, setSelectedKey] = useState('')
@@ -83,7 +90,7 @@ export function ReturnReplacementScreen({ onBack = () => {}, onContinue = () => 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+            <button onClick={handleBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
             <div>

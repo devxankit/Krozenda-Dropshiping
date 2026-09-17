@@ -1,335 +1,207 @@
-import React from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { HomeScreen } from './components/onboarding'
-import { ProductListingScreen } from './components/ecommerce/ProductListingScreen'
+import { CatalogBrowseScreen } from './components/ecommerce/CatalogBrowseScreen'
 import { ProductDetailScreen } from './components/ecommerce/ProductDetailScreen'
 import { CartPageScreen } from './components/ecommerce/CartPageScreen'
 import { CategoryListScreen } from './components/ecommerce/CategoryListScreen'
 
-import { SelectAddressScreen } from './components/checkout/SelectAddressScreen'
-import { DeliveryOptionsScreen } from './components/checkout/DeliveryOptionsScreen'
-import { OrderSummaryScreen } from './components/checkout/OrderSummaryScreen'
-import { PaymentScreen } from './components/checkout/PaymentScreen'
-import { OrderPlacedScreen } from './components/checkout/OrderPlacedScreen'
-
-import { OrderListScreen } from './components/orders/OrderListScreen'
-import { OrderDetailsScreen } from './components/orders/OrderDetailsScreen'
-import { TrackShipmentScreen } from './components/orders/TrackShipmentScreen'
-import { InvoiceDownloadScreen } from './components/orders/InvoiceDownloadScreen'
-import { RateReviewScreen } from './components/orders/RateReviewScreen'
-
-import { ProfileDashboardScreen } from './components/profile/ProfileDashboardScreen'
-import { EditProfileScreen } from './components/profile/EditProfileScreen'
-import { MyAddressesScreen } from './components/profile/MyAddressesScreen'
-import { WishlistScreen } from './components/profile/WishlistScreen'
-import { CouponsOffersScreen } from './components/profile/CouponsOffersScreen'
-import { NotificationCenterScreen } from './components/profile/NotificationCenterScreen'
-import { SettingsScreen } from './components/profile/SettingsScreen'
-
-import { SearchFiltersScreen } from './components/ecommerce/SearchFiltersScreen'
-import { ProductFiltersScreen } from './components/ecommerce/ProductFiltersScreen'
-import { HelpSupportScreen } from './components/support/HelpSupportScreen'
-import { ReturnReplacementScreen } from './components/support/ReturnReplacementScreen'
-import { InvoicePreviewScreen } from './components/orders/InvoicePreviewScreen'
-
-import { UserAppShowcase } from './pages/UserAppShowcase'
 import { AiAssistantLauncher } from './components/ai'
 import { USER_ROUTES } from '../../config/routes'
 import { ProtectedRoute } from '../../routes/ProtectedRoute'
+import { ErrorBoundary } from '../../components/common/ErrorBoundary'
+import { NetworkBanner } from '../../components/common/NetworkBanner'
+import { ListSkeleton } from '../../components/ui/AsyncBoundary'
 
+// ---------------------------------------------------------------------------
+// Code splitting
+// ---------------------------------------------------------------------------
+// Eager above: the four screens on the shopping path — home, browse, product,
+// cart. A shopper hits at least one of them on every visit, so deferring them
+// only adds a round trip.
+//
+// Lazy below: everything a visitor reaches later or not at all. Checkout is
+// four screens most sessions never open; the invoice preview alone is one of
+// the heaviest components in the app; the showcase imports EVERY screen in the
+// buyer app and was previously a static import, so every shopper downloaded
+// the whole dev gallery to look at the home page.
+const SelectAddressScreen = lazy(() =>
+  import('./components/checkout/SelectAddressScreen').then((m) => ({ default: m.SelectAddressScreen })),
+)
+const DeliveryOptionsScreen = lazy(() =>
+  import('./components/checkout/DeliveryOptionsScreen').then((m) => ({ default: m.DeliveryOptionsScreen })),
+)
+const OrderSummaryScreen = lazy(() =>
+  import('./components/checkout/OrderSummaryScreen').then((m) => ({ default: m.OrderSummaryScreen })),
+)
+const PaymentScreen = lazy(() =>
+  import('./components/checkout/PaymentScreen').then((m) => ({ default: m.PaymentScreen })),
+)
+const OrderPlacedScreen = lazy(() =>
+  import('./components/checkout/OrderPlacedScreen').then((m) => ({ default: m.OrderPlacedScreen })),
+)
+
+const OrderListScreen = lazy(() =>
+  import('./components/orders/OrderListScreen').then((m) => ({ default: m.OrderListScreen })),
+)
+const OrderDetailsScreen = lazy(() =>
+  import('./components/orders/OrderDetailsScreen').then((m) => ({ default: m.OrderDetailsScreen })),
+)
+const TrackShipmentScreen = lazy(() =>
+  import('./components/orders/TrackShipmentScreen').then((m) => ({ default: m.TrackShipmentScreen })),
+)
+const InvoiceDownloadScreen = lazy(() =>
+  import('./components/orders/InvoiceDownloadScreen').then((m) => ({ default: m.InvoiceDownloadScreen })),
+)
+const InvoicePreviewScreen = lazy(() =>
+  import('./components/orders/InvoicePreviewScreen').then((m) => ({ default: m.InvoicePreviewScreen })),
+)
+const RateReviewScreen = lazy(() =>
+  import('./components/orders/RateReviewScreen').then((m) => ({ default: m.RateReviewScreen })),
+)
+
+const ProfileDashboardScreen = lazy(() =>
+  import('./components/profile/ProfileDashboardScreen').then((m) => ({ default: m.ProfileDashboardScreen })),
+)
+const EditProfileScreen = lazy(() =>
+  import('./components/profile/EditProfileScreen').then((m) => ({ default: m.EditProfileScreen })),
+)
+const MyAddressesScreen = lazy(() =>
+  import('./components/profile/MyAddressesScreen').then((m) => ({ default: m.MyAddressesScreen })),
+)
+const WishlistScreen = lazy(() =>
+  import('./components/profile/WishlistScreen').then((m) => ({ default: m.WishlistScreen })),
+)
+const CouponsOffersScreen = lazy(() =>
+  import('./components/profile/CouponsOffersScreen').then((m) => ({ default: m.CouponsOffersScreen })),
+)
+const NotificationCenterScreen = lazy(() =>
+  import('./components/profile/NotificationCenterScreen').then((m) => ({ default: m.NotificationCenterScreen })),
+)
+const SettingsScreen = lazy(() =>
+  import('./components/profile/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
+)
+
+const HelpSupportScreen = lazy(() =>
+  import('./components/support/HelpSupportScreen').then((m) => ({ default: m.HelpSupportScreen })),
+)
+const ReturnReplacementScreen = lazy(() =>
+  import('./components/support/ReturnReplacementScreen').then((m) => ({ default: m.ReturnReplacementScreen })),
+)
+
+const UserAppShowcase = lazy(() =>
+  import('./pages/UserAppShowcase').then((m) => ({ default: m.UserAppShowcase })),
+)
+
+// A skeleton, not a spinner and not a blank screen: a chunk fetched over a
+// slow connection should look like the page arriving, not like nothing
+// happening (§34).
+function ScreenFallback() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6">
+      <ListSkeleton count={4} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Route shape
+// ---------------------------------------------------------------------------
+// Every detail route now carries its id IN THE PATH. They used to be flat
+// paths that read the id from react-router `location.state`, which meant:
+//
+//   * a product could not be linked, shared or bookmarked
+//   * a push notification could not deep-link to an order (§126)
+//   * a WebView reload — which Android does whenever it reclaims memory, and
+//     which happens on every return from a UPI app — dropped the state and
+//     landed the user on "No product selected" (§110, §111)
+//   * the Android back button walked back through screens that then had no
+//     data to render
+//
+// The redirects below keep the OLD flat paths working, so anything already
+// linking to them (a previously sent notification, a bookmark) still lands
+// somewhere sensible rather than on a 404.
+// ---------------------------------------------------------------------------
 export default function UserRoutes() {
-  const navigate = useNavigate()
-
   return (
     <>
-    <Routes>
-      <Route index element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
+      <NetworkBanner />
+      {/* One crashing screen must not blank the whole app — inside a WebView a
+          white screen reads as "the app is broken" with no way back. */}
+      <ErrorBoundary>
+        <Suspense fallback={<ScreenFallback />}>
+          <Routes>
+            <Route index element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
 
-      {/* Main Home & Catalog */}
-      <Route
-        path="dashboard"
-        element={
-          <HomeScreen
-            onNavigateTab={(tab) => {
-              if (tab === 'categories') navigate(USER_ROUTES.ROOT + '/categories')
-              if (tab === 'orders') navigate(USER_ROUTES.ROOT + '/orders')
-              if (tab === 'wishlist') navigate(USER_ROUTES.ROOT + '/wishlist')
-              if (tab === 'profile') navigate(USER_ROUTES.ROOT + '/profile')
-            }}
-          />
-        }
-      />
+            {/* ---- Catalog (public) ---------------------------------------- */}
+            <Route path="dashboard" element={<HomeScreen />} />
+            <Route path="categories" element={<CategoryListScreen />} />
+            <Route path="listing" element={<CatalogBrowseScreen mode="listing" />} />
+            <Route path="search" element={<CatalogBrowseScreen mode="search" />} />
+            <Route path="product/:productId" element={<ProductDetailScreen />} />
 
-      {/* Step 1 in Flow: Category Selection Page */}
-      <Route
-        path="categories"
-        element={<CategoryListScreen />}
-      />
+            {/* The filters used to be a whole separate page; they are now a
+                sheet on the browse screen itself, so this only redirects. */}
+            <Route path="filters" element={<Navigate to={USER_ROUTES.LISTING} replace />} />
+            <Route path="search/results" element={<Navigate to={USER_ROUTES.SEARCH} replace />} />
+            <Route path="product" element={<Navigate to={USER_ROUTES.LISTING} replace />} />
 
-      {/* Step 2 in Flow: Product Listing Page (Category Results) */}
-      <Route
-        path="listing"
-        element={
-          <ProductListingScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/categories')}
-            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
-          />
-        }
-      />
+            <Route path="showcase" element={<UserAppShowcase />} />
 
-      {/* Direct Search Results (No Separate Intermediate Search Page) */}
-      <Route
-        path="search"
-        element={
-          <SearchFiltersScreen
-            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
-            onOpenFilters={() => navigate(USER_ROUTES.ROOT + '/filters')}
-            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
-          />
-        }
-      />
-      <Route
-        path="search/results"
-        element={
-          <SearchFiltersScreen
-            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
-            onOpenFilters={() => navigate(USER_ROUTES.ROOT + '/filters')}
-            onSelectProduct={() => navigate(USER_ROUTES.ROOT + '/product')}
-          />
-        }
-      />
+            {/* ---- Everything below needs a signed-in buyer ----------------- */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="cart" element={<CartPageScreen />} />
 
-      {/* Dedicated Filter Options Page */}
-      <Route
-        path="filters"
-        element={
-          <ProductFiltersScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/search')}
-            onApplyFilters={() => navigate(USER_ROUTES.ROOT + '/search')}
-          />
-        }
-      />
+              <Route path="checkout/address" element={<SelectAddressScreen />} />
+              <Route path="checkout/delivery" element={<DeliveryOptionsScreen />} />
+              <Route path="checkout/summary" element={<OrderSummaryScreen />} />
+              <Route path="checkout/payment" element={<PaymentScreen />} />
+              <Route path="checkout/success" element={<OrderPlacedScreen />} />
 
-      {/* Step 3 in Flow: Product Details Showcase */}
-      <Route
-        path="product"
-        element={
-          <ProductDetailScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/listing')}
-            onAddToCart={() => navigate(USER_ROUTES.ROOT + '/cart')}
-            onBuyNow={() => navigate(USER_ROUTES.ROOT + '/cart')}
-          />
-        }
-      />
+              <Route path="orders" element={<OrderListScreen />} />
+              <Route path="orders/:orderId" element={<OrderDetailsScreen />} />
+              <Route path="orders/:orderId/track" element={<TrackShipmentScreen />} />
+              <Route path="orders/:orderId/invoice" element={<InvoiceDownloadScreen />} />
+              <Route path="orders/:orderId/invoice/preview" element={<InvoicePreviewScreen />} />
+              <Route path="orders/:orderId/review" element={<RateReviewScreen />} />
+              {/* Reviewing without naming an order is still reachable — the
+                  screen offers a picker of everything delivered. */}
+              <Route path="reviews" element={<RateReviewScreen />} />
 
-      {/* Component & Flow Showcase (Public for development preview) */}
-      <Route path="showcase" element={<UserAppShowcase />} />
+              {/* Legacy flat paths. `orders/details` etc. carried their id in
+                  router state, which no longer exists — send them to the list
+                  rather than rendering an empty detail screen. */}
+              <Route path="orders/details" element={<Navigate to={USER_ROUTES.ORDERS} replace />} />
+              <Route path="orders/track" element={<Navigate to={USER_ROUTES.ORDERS} replace />} />
+              <Route path="orders/invoice" element={<Navigate to={USER_ROUTES.ORDERS} replace />} />
+              <Route path="orders/review" element={<Navigate to="/app/reviews" replace />} />
 
-      {/* ========================================================================= */}
-      {/* PROTECTED CUSTOMER ROUTES (Orders, Profile, Cart, Checkout, Wishlist, etc.) */}
-      {/* ========================================================================= */}
-      <Route element={<ProtectedRoute />}>
-        {/* Step 4 in Flow: Cart Page */}
-        <Route
-          path="cart"
-          element={
-            <CartPageScreen
-              onBack={() => navigate(USER_ROUTES.ROOT + '/product')}
-              onCheckout={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
-            />
-          }
-        />
+              <Route path="support" element={<HelpSupportScreen />} />
+              <Route path="returns" element={<ReturnReplacementScreen />} />
 
-      {/* Step 5-8 in Flow: Checkout Steps */}
-      <Route
-        path="checkout/address"
-        element={
-          <SelectAddressScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/cart')}
-            onSelectAddress={() => navigate(USER_ROUTES.ROOT + '/checkout/delivery')}
-          />
-        }
-      />
-      <Route
-        path="checkout/delivery"
-        element={
-          <DeliveryOptionsScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
-            onChangeAddress={() => navigate(USER_ROUTES.ROOT + '/checkout/address')}
-            onNext={() => navigate(USER_ROUTES.ROOT + '/checkout/summary')}
-          />
-        }
-      />
-      <Route
-        path="checkout/summary"
-        element={
-          <OrderSummaryScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/delivery')}
-            onEditCart={() => navigate(USER_ROUTES.ROOT + '/cart')}
-            onProceedToPayment={({ total }) =>
-              navigate(USER_ROUTES.ROOT + '/checkout/payment', { state: { total } })
-            }
-          />
-        }
-      />
-      <Route
-        path="checkout/payment"
-        element={
-          <PaymentScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/checkout/summary')}
-            onPaymentSuccess={(order) =>
-              navigate(USER_ROUTES.ROOT + '/checkout/success', { state: { order } })
-            }
-          />
-        }
-      />
-      <Route
-        path="checkout/success"
-        element={
-          <OrderPlacedScreen
-            onViewOrderDetails={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order?.id } })}
-            onContinueShopping={() => navigate(USER_ROUTES.DASHBOARD)}
-          />
-        }
-      />
+              <Route path="profile" element={<ProfileDashboardScreen />} />
+              <Route path="profile/addresses" element={<MyAddressesScreen />} />
+              <Route path="profile/edit" element={<EditProfileScreen />} />
+              <Route path="wishlist" element={<WishlistScreen />} />
+              <Route path="coupons" element={<CouponsOffersScreen />} />
+              <Route path="notifications" element={<NotificationCenterScreen />} />
+              <Route path="settings" element={<SettingsScreen />} />
+            </Route>
 
-      {/* Orders & Tracking Flow */}
-      <Route
-        path="orders"
-        element={
-          <OrderListScreen
-            onSelectOrder={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order.id } })}
-          />
-        }
-      />
-      <Route
-        path="orders/details"
-        element={
-          <OrderDetailsScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
-            onDownloadInvoice={(order) => navigate(USER_ROUTES.ROOT + '/orders/invoice', { state: { orderId: order.id } })}
-            onTrackShipment={(order) => navigate(USER_ROUTES.ROOT + '/orders/track', { state: { orderId: order.id } })}
-            onRequestReturn={() => navigate(USER_ROUTES.ROOT + '/returns')}
-          />
-        }
-      />
-      <Route
-        path="orders/track"
-        element={
-          <TrackShipmentScreen
-            onBack={() => navigate(-1)}
-            onViewDetails={(order) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId: order.id } })}
-          />
-        }
-      />
-      <Route
-        path="orders/invoice"
-        element={
-          <InvoiceDownloadScreen
-            onBack={() => navigate(-1)}
-            onDownload={(orderId) => navigate(USER_ROUTES.ROOT + '/orders/invoice/preview', { state: { orderId } })}
-          />
-        }
-      />
-      <Route
-        path="orders/invoice/preview"
-        element={
-          <InvoicePreviewScreen
-            onBack={() => navigate(-1)}
-            onDownload={(orderId) => navigate(USER_ROUTES.ROOT + '/orders/details', { state: { orderId } })}
-          />
-        }
-      />
-      <Route
-        path="orders/review"
-        element={
-          <RateReviewScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
-            onSubmitReview={() => navigate(USER_ROUTES.ROOT + '/orders')}
-          />
-        }
-      />
+            {/* Absolute path — a relative "dashboard" here re-resolves against
+                the already-unmatched URL on every render of an unmatched deep
+                link, appending itself indefinitely instead of landing on the
+                dashboard (observed as a "Maximum update depth exceeded" loop). */}
+            <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
 
-      {/* Support & Returns */}
-      <Route
-        path="support"
-        element={
-          <HelpSupportScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
-          />
-        }
-      />
-      <Route
-        path="returns"
-        element={
-          <ReturnReplacementScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/orders')}
-            onContinue={() => navigate(USER_ROUTES.ROOT + '/orders')}
-          />
-        }
-      />
-
-      {/* Profile & Account Settings */}
-      <Route
-        path="profile"
-        element={
-          <ProfileDashboardScreen />
-        }
-      />
-      <Route
-        path="profile/addresses"
-        element={<MyAddressesScreen onBack={() => navigate(USER_ROUTES.ROOT + '/profile')} />}
-      />
-      <Route
-        path="profile/edit"
-        element={<EditProfileScreen onBack={() => navigate(USER_ROUTES.ROOT + '/profile')} />}
-      />
-      <Route
-        path="wishlist"
-        element={
-          <WishlistScreen
-            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
-          />
-        }
-      />
-      <Route
-        path="coupons"
-        element={
-          <CouponsOffersScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
-          />
-        }
-      />
-      <Route
-        path="notifications"
-        element={
-          <NotificationCenterScreen
-            onBack={() => navigate(USER_ROUTES.DASHBOARD)}
-          />
-        }
-      />
-      <Route
-        path="settings"
-        element={
-          <SettingsScreen
-            onBack={() => navigate(USER_ROUTES.ROOT + '/profile')}
-          />
-        }
-      />
-      </Route>
-
-      {/* Absolute path — a relative "dashboard" here re-resolves against the
-          already-unmatched URL on every render of an unmatched deep link,
-          appending itself indefinitely instead of landing on the dashboard
-          (observed as a "Maximum update depth exceeded" infinite loop). */}
-      <Route path="*" element={<Navigate to={USER_ROUTES.DASHBOARD} replace />} />
-    </Routes>
-
-    {/* Mounted as a sibling of <Routes> rather than inside a screen, so the
-        floating button and any open chat persist across navigation instead of
-        unmounting (and losing the in-progress conversation) on every route
-        change. It renders nothing for signed-out visitors. */}
-    <AiAssistantLauncher />
+      {/* Mounted as a sibling of <Routes> rather than inside a screen, so the
+          floating button and any open chat persist across navigation instead of
+          unmounting (and losing the in-progress conversation) on every route
+          change. It renders nothing for signed-out visitors. */}
+      <AiAssistantLauncher />
     </>
   )
 }

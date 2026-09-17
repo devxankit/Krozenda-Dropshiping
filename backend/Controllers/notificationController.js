@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Notification = require('../Models/Notification');
+const { readPagination, buildPagination } = require('../utils/pagination');
 
 function serializeNotification(n) {
   return {
@@ -34,9 +35,27 @@ async function createNotification({ userId, vendorId, type = 'SYSTEM', title, me
   }
 }
 
+// Was a flat `.limit(100)` with no way to reach anything older, and no unread
+// count — so the header badge had to derive one from whichever 100 rows it
+// happened to receive.
 async function listNotifications(req, res) {
-  const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(100);
-  res.json({ success: true, data: { items: notifications.map(serializeNotification) } });
+  const { page, limit, skip } = readPagination(req.query, { defaultLimit: 20, maxLimit: 50 });
+
+  const filter = { user: req.user._id };
+  if (req.query.unread === 'true') filter.isRead = false;
+
+  const [notifications, total, unreadCount] = await Promise.all([
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Notification.countDocuments(filter),
+    Notification.countDocuments({ user: req.user._id, isRead: false }),
+  ]);
+
+  res.json({
+    success: true,
+    message: 'Notifications fetched successfully',
+    data: { items: notifications.map(serializeNotification), total, unreadCount },
+    pagination: buildPagination({ page, limit, total }),
+  });
 }
 
 async function markAsRead(req, res) {

@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
-const { getImageUrl } = require('../utils/imageHelper');
+const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
+const { readPagination, buildPagination } = require('../utils/pagination');
+const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -408,86 +410,267 @@ async function deleteProduct(req, res) {
   });
 }
 
+// A product card needs a name, a price, an image and a badge — not the full
+// description, not every image in the gallery, not the vendor/approval
+// bookkeeping. Listing rows are serialized through this instead of
+// serializeProduct so the payload stays proportional to what is rendered.
+function serializeProductCard(p) {
+  const salePrice = p.salePrice ?? null;
+  const effective = salePrice ?? p.price;
+  const discountPercent =
+    p.discountPercent ||
+    (p.price > effective && p.price > 0 ? Math.round(((p.price - effective) / p.price) * 100) : 0);
+
+  return {
+    id: p._id.toString(),
+    name: p.name,
+    sku: p.sku || '',
+    category:
+      p.category && p.category.name ? { id: p.category._id.toString(), name: p.category.name } : null,
+    brand: p.brand && p.brand.name ? { id: p.brand._id.toString(), name: p.brand.name } : null,
+    price: p.price,
+    salePrice,
+    discountPercent,
+    stock: p.stock,
+    // Just the card image. The gallery belongs to the detail endpoint.
+    image: p.images?.[0] ? getImageUrl(p.images[0]) : null,
+    // Responsive candidates for the same image, so a 400px tile downloads a
+    // 400px file instead of the 1000px canonical one. Null when the upload
+    // predates the derivative pipeline — the client then just uses `image`.
+    imageSrcSet: p.images?.[0] ? getImageVariants(p.images[0])?.srcSet ?? null : null,
+    isFlashsale: p.isFlashsale === true,
+    isTrending: p.isTrending === true,
+    rating: p.rating || 0,
+    reviewsCount: p.reviewsCount || 0,
+  };
+}
+
+// Only these fields ever leave the DB for a listing. `description` alone was
+// most of the old payload, and `images` pulled every gallery entry for every
+// card just to render one thumbnail.
+const CARD_PROJECTION =
+  'name sku category brand price salePrice discountPercent stock images isFlashsale isTrending rating reviewsCount createdAt';
+
+const SORT_OPTIONS = {
+  newest: { createdAt: -1 },
+  price_asc: { effectivePrice: 1, _id: 1 },
+  price_desc: { effectivePrice: -1, _id: 1 },
+  rating: { rating: -1, reviewsCount: -1 },
+  discount: { discountPercent: -1 },
+  popular: { reviewsCount: -1, rating: -1 },
+};
+
+// `?category=not-an-id` used to reach Mongoose verbatim and come back as an
+// unhandled CastError — a 500 on a URL a user can type or share. An id that
+// isn't an id now simply matches nothing.
+function objectIdFilter(value) {
+  const values = (Array.isArray(value) ? value : String(value).split(','))
+    .map((v) => String(v).trim())
+    .filter((v) => mongoose.isValidObjectId(v));
+  if (values.length === 0) return null; // present but entirely invalid -> match nothing
+  return values.length === 1 ? values[0] : { $in: values };
+}
+
 async function listPublicProducts(req, res) {
-  const { flashSale, trending, category, brand, search, minPrice, maxPrice, rating, limit = 20, page } = req.query;
+  const {
+    flashSale,
+    trending,
+    category,
+    brand,
+    vendor,
+    search,
+    minPrice,
+    maxPrice,
+    rating,
+    inStock,
+    minDiscount,
+    sort,
+  } = req.query;
 
-  const query = { isActive: true };
+  const { page, limit, skip } = readPagination(req.query, { defaultLimit: 20, maxLimit: 50 });
 
-  if (flashSale === 'true' || flashSale === true) {
-    query.isFlashsale = true;
-  }
+  const emptyPage = () =>
+    res.json({
+      success: true,
+      message: 'Products fetched successfully',
+      data: { items: [], total: 0 },
+      pagination: buildPagination({ page, limit, total: 0 }),
+    });
 
-  if (trending === 'true' || trending === true) {
-    query.isTrending = true;
-  }
+  // approvalStatus is in the filter on purpose: a vendor-submitted product
+  // sitting in PENDING (or one an admin REJECTED) is not part of the public
+  // catalog, and this listing previously showed both.
+  //
+  // It is a $nin rather than an equality check because documents predating the
+  // approval workflow carry no approvalStatus at all — see utils/publicVisibility.
+  const query = { isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER };
 
-  if (category) {
-    query.category = category;
-  }
+  if (flashSale === 'true' || flashSale === true) query.isFlashsale = true;
+  if (trending === 'true' || trending === true) query.isTrending = true;
 
-  if (brand) {
-    query.brand = brand;
+  for (const [field, raw] of [['category', category], ['brand', brand], ['vendor', vendor]]) {
+    if (raw === undefined || raw === '') continue;
+    const filter = objectIdFilter(raw);
+    // Caller asked for ids that cannot exist — answer honestly with an empty
+    // page rather than dropping the filter and returning the whole catalog.
+    if (filter === null) return emptyPage();
+    query[field] = filter;
   }
 
   if (search && String(search).trim()) {
     // Escaped before building a RegExp so user input can't inject regex
     // metacharacters (ReDoS / unexpected matches via unescaped `.`, `*`, ...).
     const escaped = String(search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    query.name = new RegExp(escaped, 'i');
+    const re = new RegExp(escaped, 'i');
+    // SKU is searched too: buyers paste product/SKU codes into search far more
+    // often than a name-only match allowed for.
+    query.$or = [{ name: re }, { sku: re }];
   }
 
-  const min = Number(minPrice);
-  const max = Number(maxPrice);
-  if (Number.isFinite(min) || Number.isFinite(max)) {
-    // Filter on the price the buyer actually sees (salePrice when set,
-    // else price) rather than the base price alone.
-    const bounds = [];
-    if (Number.isFinite(min)) bounds.push({ $gte: [{ $ifNull: ['$salePrice', '$price'] }, min] });
-    if (Number.isFinite(max)) bounds.push({ $lte: [{ $ifNull: ['$salePrice', '$price'] }, max] });
-    query.$expr = { $and: bounds };
+  if (inStock === 'true' || inStock === true) query.stock = { $gt: 0 };
+
+  const minDiscountNum = Number(minDiscount);
+  if (Number.isFinite(minDiscountNum) && minDiscountNum > 0) {
+    query.discountPercent = { $gte: minDiscountNum };
   }
 
   const minRating = Number(rating);
-  if (Number.isFinite(minRating)) {
-    query.rating = { $gte: minRating };
+  if (Number.isFinite(minRating) && minRating > 0) query.rating = { $gte: minRating };
+
+  const min = Number(minPrice);
+  const max = Number(maxPrice);
+  const hasPriceFilter = Number.isFinite(min) || Number.isFinite(max);
+  // min > max is a filter that can never match anything; saying so costs one
+  // round trip instead of a pointless scan.
+  if (hasPriceFilter && Number.isFinite(min) && Number.isFinite(max) && min > max) return emptyPage();
+
+  const sortSpec = SORT_OPTIONS[sort] || SORT_OPTIONS.newest;
+  const needsEffectivePrice = hasPriceFilter || sort === 'price_asc' || sort === 'price_desc';
+
+  let rows;
+  let total;
+
+  if (needsEffectivePrice) {
+    // Price filtering and price sorting both have to run on the price the
+    // buyer actually pays (salePrice when set, else price), which is a
+    // computed value and so needs a pipeline. The computation is deliberately
+    // placed AFTER the cheap indexed $match, so it only ever runs over the
+    // already-narrowed set rather than the whole collection.
+    const priceBounds = {};
+    if (Number.isFinite(min)) priceBounds.$gte = min;
+    if (Number.isFinite(max)) priceBounds.$lte = max;
+
+    const basePipeline = [
+      { $match: query },
+      { $addFields: { effectivePrice: { $ifNull: ['$salePrice', '$price'] } } },
+      ...(hasPriceFilter ? [{ $match: { effectivePrice: priceBounds } }] : []),
+    ];
+
+    const [pageRows, countRows] = await Promise.all([
+      Product.aggregate([
+        ...basePipeline,
+        { $sort: sortSpec },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'category',
+            pipeline: [{ $project: { name: 1 } }],
+          },
+        },
+        {
+          $lookup: {
+            from: 'brands',
+            localField: 'brand',
+            foreignField: '_id',
+            as: 'brand',
+            pipeline: [{ $project: { name: 1 } }],
+          },
+        },
+        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
+      ]),
+      Product.aggregate([...basePipeline, { $count: 'total' }]),
+    ]);
+
+    rows = pageRows;
+    total = countRows[0]?.total || 0;
+  } else {
+    // The common path: a plain indexed find with a projection, and a populate
+    // narrowed to the one label field each card shows.
+    //
+    // Note on N+1: Mongoose's populate already batches (one extra query per
+    // populated path, not per document), so this was never N+1 — the win here
+    // is payload size and index usage, not query count. The `select` is what
+    // stops every card dragging the full description and gallery along with
+    // it, and the compound index on { isActive, approvalStatus, ... } is what
+    // lets the sort be served by the index instead of sorted in memory.
+    const [pageRows, count] = await Promise.all([
+      Product.find(query)
+        .select(CARD_PROJECTION)
+        .populate('category', 'name')
+        .populate('brand', 'name')
+        .sort(sortSpec)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Product.countDocuments(query),
+    ]);
+    rows = pageRows;
+    total = count;
   }
 
-  // No `page` param: unchanged legacy behavior (up to 200 items, `total` is
-  // just the returned count) for existing callers that still filter/paginate
-  // client-side. With `page`, this becomes real server-side pagination —
-  // `total` is the true match count via countDocuments, and `skip` moves
-  // through the full result set instead of being capped at 200.
-  const pageSize = Math.min(200, Math.max(1, Number(limit) || 20));
-  const pageNum = Math.max(1, Number(page) || 1);
-  const usingPagination = page !== undefined;
-
-  let products = await Product.find(query)
-    .populate('category', 'name')
-    .populate('brand', 'name logo')
-    .sort({ createdAt: -1 })
-    .skip(usingPagination ? (pageNum - 1) * pageSize : 0)
-    .limit(pageSize)
-    .lean();
-
-  if (products.length === 0 && !usingPagination && (query.isFlashsale || query.isTrending)) {
-    products = await Product.find({ isActive: true })
-      .populate('category', 'name')
-      .populate('brand', 'name logo')
-      .sort({ createdAt: -1 })
-      .limit(pageSize)
-      .lean();
-  }
-
-  const total = usingPagination ? await Product.countDocuments(query) : products.length;
-
+  // NOTE: there used to be a fallback here that, when a flash-sale/trending
+  // query matched nothing, quietly returned the newest products instead. That
+  // put ordinary catalog items under a "Flash Sale — ends at midnight" header
+  // at their normal price. An empty promotion is now reported as empty and the
+  // storefront hides the rail.
   res.json({
     success: true,
+    message: 'Products fetched successfully',
     data: {
-      items: products.map(serializeProduct),
+      items: rows.map(serializeProductCard),
+      // Kept for callers already reading `data.total`; `pagination` is the
+      // shape new code should use.
       total,
-      ...(usingPagination ? { page: pageNum, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) } : {}),
     },
+    pagination: buildPagination({ page, limit, total }),
   });
+}
+
+// The buyer-facing shape of one product. Deliberately NOT serializeProduct:
+// that one is the admin/vendor serializer and carries `vendor` (an internal
+// id), `approvalStatus` and `rejectionReason` — moderation bookkeeping that a
+// shopper has no business receiving (see audit §57, vendor private data).
+function serializePublicProduct(p) {
+  return {
+    id: p._id.toString(),
+    name: p.name,
+    sku: p.sku || '',
+    category:
+      p.category && p.category.name ? { id: p.category._id.toString(), name: p.category.name } : null,
+    brand:
+      p.brand && p.brand.name
+        ? { id: p.brand._id.toString(), name: p.brand.name, logo: p.brand.logo ? getImageUrl(p.brand.logo) : null }
+        : null,
+    price: p.price,
+    salePrice: p.salePrice ?? null,
+    discountPercent: p.discountPercent || 0,
+    stock: p.stock,
+    weight: p.weight ?? null,
+    images: (p.images || []).map((img) => getImageUrl(img)),
+    // Parallel to `images`, index for index.
+    imageSrcSets: (p.images || []).map((img) => getImageVariants(img)?.srcSet ?? null),
+    description: p.description || '',
+    isFlashsale: p.isFlashsale === true,
+    isTrending: p.isTrending === true,
+    rating: p.rating || 0,
+    reviewsCount: p.reviewsCount || 0,
+    createdAt: p.createdAt,
+  };
 }
 
 async function getPublicProduct(req, res) {
@@ -497,7 +680,7 @@ async function getPublicProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 
-  const product = await Product.findOne({ _id: id, isActive: true })
+  const product = await Product.findOne({ _id: id, isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER })
     .populate('category', 'name')
     .populate('brand', 'name logo')
     .lean();
@@ -506,13 +689,77 @@ async function getPublicProduct(req, res) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  res.json({ success: true, data: serializeProduct(product) });
+  res.json({ success: true, message: 'Product fetched successfully', data: serializePublicProduct(product) });
+}
+
+// GET /catalog/products/:id/related — a separate call on purpose so the detail
+// page can paint price/stock/Add-to-Cart first and fill this rail in after
+// (audit §12: critical content first, secondary content progressively).
+async function listRelatedProducts(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findById(id).select('category brand').lean();
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const { limit } = readPagination(req.query, { defaultLimit: 10, maxLimit: 20 });
+
+  // `_id: { $ne: id }` is the whole point of this filter: the product being
+  // viewed must never appear in its own "similar products" rail (audit §56).
+  const base = {
+    _id: { $ne: product._id },
+    isActive: true,
+    approvalStatus: PUBLIC_APPROVAL_FILTER,
+    stock: { $gt: 0 },
+  };
+
+  // Same category first, then same brand to top up when the category is thin —
+  // rather than one $or query, which would rank brand matches above category
+  // matches at random.
+  const primary = await Product.find({ ...base, category: product.category })
+    .select(CARD_PROJECTION)
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .sort({ reviewsCount: -1, createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  let items = primary;
+
+  if (items.length < limit && product.brand) {
+    const seen = new Set(items.map((p) => p._id.toString()));
+    const topUp = await Product.find({
+      ...base,
+      brand: product.brand,
+      _id: { $nin: [product._id, ...items.map((p) => p._id)] },
+    })
+      .select(CARD_PROJECTION)
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .sort({ reviewsCount: -1, createdAt: -1 })
+      .limit(limit - items.length)
+      .lean();
+    items = [...items, ...topUp.filter((p) => !seen.has(p._id.toString()))];
+  }
+
+  res.json({
+    success: true,
+    message: 'Related products fetched successfully',
+    data: { items: items.map(serializeProductCard), total: items.length },
+  });
 }
 
 module.exports = {
   listProducts,
   listPublicProducts,
+  serializeProductCard,
   getPublicProduct,
+  listRelatedProducts,
   createProduct,
   updateProduct,
   updateProductStatus,

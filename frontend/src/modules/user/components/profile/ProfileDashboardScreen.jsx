@@ -21,6 +21,7 @@ import {
   HiTrash,
 } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
+import { SmartImage } from '../../../../components/ui/SmartImage'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
@@ -187,21 +188,21 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
   }
 
   const orderShortcuts = [
-    { label: 'All Orders', Icon: HiShoppingBag, route: USER_ROUTES.ROOT + '/orders' },
-    { label: 'Processing', Icon: HiArrowPath, route: USER_ROUTES.ROOT + '/orders' },
-    { label: 'Shipped', Icon: HiTruck, route: USER_ROUTES.ROOT + '/orders' },
-    { label: 'Delivered', Icon: HiCheckCircle, route: USER_ROUTES.ROOT + '/orders' },
-    { label: 'Cancelled', Icon: HiXCircle, route: USER_ROUTES.ROOT + '/orders' },
+    { label: 'All Orders', Icon: HiShoppingBag, route: USER_ROUTES.ORDERS },
+    { label: 'Processing', Icon: HiArrowPath, route: USER_ROUTES.ORDERS },
+    { label: 'Shipped', Icon: HiTruck, route: USER_ROUTES.ORDERS },
+    { label: 'Delivered', Icon: HiCheckCircle, route: USER_ROUTES.ORDERS },
+    { label: 'Cancelled', Icon: HiXCircle, route: USER_ROUTES.ORDERS },
   ]
 
   const menuItems = [
     { label: 'Edit Profile', Icon: HiPencilSquare, route: USER_ROUTES.PROFILE_EDIT },
-    { label: 'My Addresses', Icon: HiMapPin, route: USER_ROUTES.ROOT + '/profile/addresses' },
-    { label: 'Wishlist', Icon: HiHeart, route: USER_ROUTES.ROOT + '/wishlist' },
-    { label: 'Coupons & Offers', Icon: HiTag, route: USER_ROUTES.ROOT + '/coupons' },
-    { label: 'My Reviews', Icon: HiStar, route: USER_ROUTES.ROOT + '/orders/review' },
-    { label: 'Support Center', Icon: HiQuestionMarkCircle, route: USER_ROUTES.ROOT + '/support' },
-    { label: 'Settings', Icon: HiCog6Tooth, route: USER_ROUTES.ROOT + '/settings' },
+    { label: 'My Addresses', Icon: HiMapPin, route: USER_ROUTES.ADDRESSES },
+    { label: 'Wishlist', Icon: HiHeart, route: USER_ROUTES.WISHLIST },
+    { label: 'Coupons & Offers', Icon: HiTag, route: USER_ROUTES.COUPONS },
+    { label: 'My Reviews', Icon: HiStar, route: '/app/reviews' },
+    { label: 'Support Center', Icon: HiQuestionMarkCircle, route: USER_ROUTES.SUPPORT },
+    { label: 'Settings', Icon: HiCog6Tooth, route: USER_ROUTES.SETTINGS },
     { label: 'Logout', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },
     { label: 'Delete Account', Icon: HiTrash, isDelete: true },
   ]
@@ -222,13 +223,13 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
           <h2 className="text-base font-bold text-slate-900">My Profile</h2>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => navigate(USER_ROUTES.ROOT + '/notifications')}
+              onClick={() => navigate(USER_ROUTES.NOTIFICATIONS)}
               className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
             >
               <HiBell className="w-5 h-5" />
             </button>
             <button
-              onClick={() => navigate(USER_ROUTES.ROOT + '/settings')}
+              onClick={() => navigate(USER_ROUTES.SETTINGS)}
               className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors"
             >
               <HiCog6Tooth className="w-5 h-5" />
@@ -243,7 +244,14 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full bg-white text-blue-900 font-black text-2xl flex items-center justify-center border-4 border-white/20 shadow-md overflow-hidden">
                 {user.image ? (
-                  <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                  <SmartImage
+                    src={user.image}
+                    alt={`${user.name || 'Your'} profile photo`}
+                    sizes="80px"
+                    ratio="1 / 1"
+                    fit="cover"
+                    className="h-full w-full"
+                  />
                 ) : (
                   user.name.charAt(0).toUpperCase()
                 )}
@@ -285,7 +293,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
                 My Orders
               </h3>
               <button
-                onClick={() => navigate(USER_ROUTES.ROOT + '/orders')}
+                onClick={() => navigate(USER_ROUTES.ORDERS)}
                 className="text-xs font-bold text-blue-600 hover:underline"
               >
                 View All →
@@ -374,7 +382,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
       />
 
       {/* MOBILE BOTTOM NAVBAR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="profile" />
       </div>
     </div>

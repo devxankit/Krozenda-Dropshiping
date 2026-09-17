@@ -19,6 +19,14 @@ function pageItems(page, totalPages) {
   return items
 }
 
+// `size` is additive so the admin panel keeps its 32px density while the
+// buyer app — where every one of these is tapped with a thumb — gets 40px
+// targets. Below ~40px these were genuinely hard to hit on a phone.
+const SIZE_CLASSES = Object.freeze({
+  compact: { button: 'h-8 w-8', page: 'h-8 min-w-8 px-2 text-xs' },
+  touch: { button: 'h-10 w-10', page: 'h-10 min-w-10 px-3 text-sm' },
+})
+
 export function Pagination({
   page,
   totalPages,
@@ -27,8 +35,10 @@ export function Pagination({
   rowsPerPage,
   onRowsPerPageChange,
   itemLabel = 'results',
+  size = 'compact',
   className = '',
 }) {
+  const sizing = SIZE_CLASSES[size] || SIZE_CLASSES.compact
   const canPrev = page > 1
   const canNext = page < totalPages
   const from = rowsPerPage ? (page - 1) * rowsPerPage + 1 : null
@@ -77,7 +87,7 @@ export function Pagination({
             disabled={!canPrev}
             onClick={() => onPageChange(page - 1)}
             aria-label="Previous page"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40"
+            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40`}
           >
             <Icon name="chevronLeft" className="h-4 w-4" />
           </button>
@@ -93,7 +103,7 @@ export function Pagination({
                 type="button"
                 onClick={() => onPageChange(item)}
                 aria-current={item === page ? 'page' : undefined}
-                className={`tabular flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs transition-colors ${
+                className={`tabular flex ${sizing.page} items-center justify-center rounded-md transition-colors ${
                   item === page
                     ? 'bg-brand-600 font-semibold text-white'
                     : 'text-ink-muted hover:bg-surface-muted'
@@ -109,7 +119,7 @@ export function Pagination({
             disabled={!canNext}
             onClick={() => onPageChange(page + 1)}
             aria-label="Next page"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40"
+            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40`}
           >
             <Icon name="chevronRight" className="h-4 w-4" />
           </button>

@@ -1,10 +1,18 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HiArrowLeft, HiPlus, HiPencil, HiTrash, HiCheckCircle } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { AddressFormModal } from './AddressFormModal'
 
-export function MyAddressesScreen({ onBack = () => {} }) {
+export function MyAddressesScreen({ onBack }) {
+  // Falls back to real navigation when no callback is supplied. The
+  // router stopped passing one when every screen took ownership of its
+  // own navigation; the previous `= () => {}` default silently turned
+  // the back button into a no-op.
+  const goBackFallback = useNavigate()
+  const handleBack = onBack || (() => goBackFallback(-1))
+
   const {
     addresses,
     isLoading,
@@ -37,7 +45,7 @@ export function MyAddressesScreen({ onBack = () => {} }) {
         {/* Header */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+            <button onClick={handleBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
               <HiArrowLeft className="w-5 h-5" />
             </button>
             <div>

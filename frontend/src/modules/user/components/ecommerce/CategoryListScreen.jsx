@@ -15,7 +15,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
-import { USER_ROUTES } from '../../../../config/routes'
+import { SmartImage } from '../../../../components/ui/SmartImage'
+import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { api } from '../../../../lib/axios'
 import { useCartCount } from '../../../../lib/cartStore'
 
@@ -74,9 +75,9 @@ export function CategoryListScreen() {
   })
 
   const handleCategoryClick = (cat) => {
-    navigate(USER_ROUTES.ROOT + '/listing', {
-      state: { category: cat.name, categoryId: cat.id || cat._id },
-    })
+    // In the URL, so the filtered listing is shareable, survives a reload
+    // and comes back intact on the Android back button.
+    navigate(userPath.listing({ category: cat.id || cat._id }))
   }
 
   return (
@@ -153,7 +154,7 @@ export function CategoryListScreen() {
 
               {/* Cart Button */}
               <button
-                onClick={() => navigate(USER_ROUTES.ROOT + '/cart')}
+                onClick={() => navigate(USER_ROUTES.CART)}
                 className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 relative shrink-0 transition-colors border border-slate-200/80"
               >
                 <HiOutlineShoppingBag className="w-5 h-5" />
@@ -186,7 +187,7 @@ export function CategoryListScreen() {
 
         {/* Featured Banner */}
         <div
-          onClick={() => navigate(USER_ROUTES.ROOT + '/listing')}
+          onClick={() => navigate(USER_ROUTES.LISTING)}
           className="w-full relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 md:p-8 text-white shadow-lg cursor-pointer group border border-slate-800"
         >
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -256,16 +257,18 @@ export function CategoryListScreen() {
                   )}
 
                   {/* Product Image Area - Fitted edge-to-edge to card */}
-                  <div className="w-full aspect-[4/3] relative rounded-xl overflow-hidden my-1 bg-slate-100 flex items-center justify-center">
-                    <img
-                      src={cat.image || '/uploads/categories/cat_electronics_gadgets.webp'}
-                      alt={cat.name}
-                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                      onError={(e) => {
-                        e.currentTarget.src = '/uploads/categories/cat_electronics_gadgets.webp'
-                      }}
-                    />
-                  </div>
+                  {/* A category with no image on file used to borrow the
+                      Electronics photo, so several unrelated categories showed
+                      the same picture. SmartImage draws a neutral placeholder
+                      in a fixed-ratio box instead. */}
+                  <SmartImage
+                    src={cat.image}
+                    alt={cat.name}
+                    sizes="(min-width: 1024px) 20vw, 45vw"
+                    ratio="4 / 3"
+                    fit="cover"
+                    className="my-1 w-full rounded-xl"
+                  />
 
                   {/* Offer Tag Pill below Image */}
                   {cat.maxDiscountPercent > 0 && (
@@ -307,16 +310,13 @@ export function CategoryListScreen() {
                   onClick={() => handleCategoryClick(cat)}
                   className="bg-white rounded-3xl border border-slate-200/90 p-4 flex items-center space-x-4 shadow-xs hover:shadow-lg hover:border-blue-400 transition-all cursor-pointer group"
                 >
-                  <div className="w-24 h-24 rounded-2xl bg-slate-50 p-2 flex items-center justify-center border border-slate-100 shrink-0 group-hover:scale-105 transition-transform">
-                    <img
-                      src={cat.image || '/uploads/categories/cat_electronics_gadgets.webp'}
-                      alt={cat.name}
-                      className="max-h-full max-w-full object-contain drop-shadow-xs"
-                      onError={(e) => {
-                        e.currentTarget.src = '/uploads/categories/cat_electronics_gadgets.webp'
-                      }}
-                    />
-                  </div>
+                  <SmartImage
+                    src={cat.image}
+                    alt={cat.name}
+                    sizes="96px"
+                    ratio="1 / 1"
+                    className="w-24 shrink-0 rounded-2xl border border-slate-100"
+                  />
 
                   <div className="flex-1 space-y-1 min-w-0 text-left">
                     <div className="flex items-center space-x-2">
@@ -357,7 +357,7 @@ export function CategoryListScreen() {
           </div>
 
           <button
-            onClick={() => navigate(USER_ROUTES.ROOT + '/support')}
+            onClick={() => navigate(USER_ROUTES.SUPPORT)}
             className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition-colors shadow-sm"
           >
             Contact B2B Team
@@ -366,7 +366,7 @@ export function CategoryListScreen() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="categories" />
       </div>
     </div>

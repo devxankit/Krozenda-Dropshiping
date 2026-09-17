@@ -38,10 +38,30 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-productSchema.index({ name: 1 });
 productSchema.index({ sku: 1 }, { unique: true, sparse: true });
-productSchema.index({ category: 1 });
-productSchema.index({ isFlashsale: 1 });
-productSchema.index({ isTrending: 1 });
+
+// Index set derived from what listPublicProducts actually issues, not from
+// "one index per field" — every storefront query starts with the same
+// { isActive, approvalStatus } pair, so that pair leads each compound index
+// and the remaining keys cover the filter and the sort together. A sort the
+// index can serve is the difference between a scan-and-sort and a range read.
+//
+// Deliberately NOT indexed: isFlashsale/isTrending on their own (both are
+// boolean and hugely non-selective; they only ever appear alongside the
+// isActive+approvalStatus prefix, which the compound indexes below cover).
+productSchema.index({ isActive: 1, approvalStatus: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, approvalStatus: 1, category: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, approvalStatus: 1, brand: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, approvalStatus: 1, isFlashsale: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, approvalStatus: 1, isTrending: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, approvalStatus: 1, rating: -1, reviewsCount: -1 });
+
+// Search. A text index is what keeps `?search=` off a collection-wide regex
+// scan as the catalog grows; the regex path stays as the fallback for partial
+// and mid-word matches, which $text cannot do.
+productSchema.index({ name: 'text', sku: 'text' }, { weights: { name: 10, sku: 4 }, name: 'product_text' });
+// Plain prefix index on name, still used by the regex path and by
+// admin-side name lookups.
+productSchema.index({ name: 1 });
 
 module.exports = mongoose.model('Product', productSchema);

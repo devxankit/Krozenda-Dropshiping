@@ -12,11 +12,70 @@ export const AUTH_ROUTES = Object.freeze({
   FORGOT_PASSWORD: '/auth/forgot-password',
 })
 
+// Buyer app.
+//
+// The detail routes below carry their id IN THE PATH. They used to be flat
+// paths (`/app/product`, `/app/orders/details`) that read the id out of
+// react-router `location.state`, which meant: no shareable product link, no
+// deep link from a push notification, and a WebView reload or an Android back
+// press landed on a "No product selected" screen. Patterns are built with
+// `userPath.*` below — never by concatenating strings at the call site.
 export const USER_ROUTES = Object.freeze({
   ROOT: '/app',
   DASHBOARD: '/app/dashboard',
   SHOWCASE: '/app/showcase',
+  CATEGORIES: '/app/categories',
+  LISTING: '/app/listing',
+  SEARCH: '/app/search',
+  CART: '/app/cart',
+  WISHLIST: '/app/wishlist',
+  ORDERS: '/app/orders',
+  NOTIFICATIONS: '/app/notifications',
+  COUPONS: '/app/coupons',
+  SUPPORT: '/app/support',
+  RETURNS: '/app/returns',
+  SETTINGS: '/app/settings',
+  PROFILE: '/app/profile',
   PROFILE_EDIT: '/app/profile/edit',
+  ADDRESSES: '/app/profile/addresses',
+
+  CHECKOUT_ADDRESS: '/app/checkout/address',
+  CHECKOUT_DELIVERY: '/app/checkout/delivery',
+  CHECKOUT_SUMMARY: '/app/checkout/summary',
+  CHECKOUT_PAYMENT: '/app/checkout/payment',
+  CHECKOUT_SUCCESS: '/app/checkout/success',
+
+  // ---- patterns (use userPath.* to build a concrete URL) ------------------
+  PRODUCT_DETAIL: '/app/product/:productId',
+  ORDER_DETAIL: '/app/orders/:orderId',
+  ORDER_TRACK: '/app/orders/:orderId/track',
+  ORDER_INVOICE: '/app/orders/:orderId/invoice',
+  ORDER_INVOICE_PREVIEW: '/app/orders/:orderId/invoice/preview',
+  ORDER_REVIEW: '/app/orders/:orderId/review',
+})
+
+// Concrete-URL builders. Query strings are built by the screens themselves via
+// useCatalogParams, so these only fill path parameters.
+export const userPath = Object.freeze({
+  product: (productId) => `/app/product/${productId}`,
+  order: (orderId) => `/app/orders/${orderId}`,
+  orderTrack: (orderId) => `/app/orders/${orderId}/track`,
+  orderInvoice: (orderId) => `/app/orders/${orderId}/invoice`,
+  orderInvoicePreview: (orderId) => `/app/orders/${orderId}/invoice/preview`,
+  orderReview: (orderId) => `/app/orders/${orderId}/review`,
+  // Catalog links carry their filters in the query string so they are
+  // shareable and survive a refresh.
+  listing: (params = {}) => {
+    const qs = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '' && value !== false) {
+        qs.set(key, String(value))
+      }
+    }
+    const query = qs.toString()
+    return query ? `/app/listing?${query}` : '/app/listing'
+  },
+  search: (query) => `/app/search${query ? `?q=${encodeURIComponent(query)}` : ''}`,
 })
 
 export const SELLER_ROUTES = Object.freeze({

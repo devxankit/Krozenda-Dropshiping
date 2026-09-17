@@ -39,438 +39,240 @@ const FALLBACK_CONTENT = {
     title: 'Terms & Conditions',
     version: 'v4.0',
     updatedAt: '17 Sep 2026',
-    updatedBy: 'Legal Compliance Team',
+    updatedBy: 'Legal Compliance Division',
     requiresAcceptance: true,
     content: `KROZENDA TERMS AND CONDITIONS
 
 Last updated: 17 September 2026
+Version: v4.0
+Published by: Legal & Compliance Division
 
-These Terms and Conditions ("Terms") are a legally binding agreement between you and KroZenda Technologies Private Limited ("KroZenda", "we", "us") and govern your use of the KroZenda website and mobile applications (the "Platform").
+These Terms and Conditions ("Terms") constitute a legally binding agreement between you ("User", "Customer", "Buyer", or "Drop-shipper") and KroZenda Technologies Private Limited ("KroZenda", "we", "our", or "us"), governing your access to and use of the KroZenda website, mobile application, and related services (collectively, the "Platform").
 
-By creating an account, placing an order, or otherwise using the Platform, you confirm that you have read and accepted these Terms. If you do not agree with them, please do not use the Platform.
+By registering an account, browsing our catalog, or placing an order, you confirm that you have read, understood, and agreed to these Terms. If you do not accept these Terms in full, please refrain from using the Platform.
 
 
-1. WHO WE ARE AND WHAT KROZENDA IS
+1. PLATFORM ROLE & MULTI-VENDOR MARKETPLACE
 
-KroZenda operates an online marketplace that connects buyers with independent third-party sellers.
+KroZenda operates an electronic B2B and B2C commerce and drop-shipping ecosystem connecting buyers, resellers, and independent third-party vendors and manufacturers:
 
-For most products listed on the Platform, KroZenda acts as an intermediary. This means:
+   •  Intermediary Function: For products listed by independent suppliers, KroZenda acts as an electronic intermediary under Section 79 of the Information Technology Act, 2000.
+   •  Contract of Sale: The commercial contract for the sale of goods is concluded directly between you and the respective seller. The seller is solely responsible for product specifications, manufacturing quality, packaging, and issuing statutory tax invoices.
+   •  Direct KroZenda Sales: For select items sold directly by KroZenda, the product listing and tax invoice will explicitly designate KroZenda as the seller.
+   •  Platform Services: KroZenda provides catalog display, payment routing, order synchronization, customer assistance, and automated fulfillment tracking.
 
-   •  The contract of sale for such products is formed directly between you and the seller of that product.
-   •  The seller is responsible for the product, its description, its quality, its packaging, its dispatch, and for issuing the tax invoice.
-   •  KroZenda provides the technology, the payment collection and settlement, the customer support channel and the dispute redressal process.
 
-Some products are sold by KroZenda directly. Where that is the case, the product page and your invoice will identify KroZenda as the seller, and our obligations as a seller apply to that order.
+2. USER ELIGIBILITY & ACCOUNT INTEGRITY
 
-The seller of every item is shown on the product page and on your order details before you pay.
+To access our commerce features and place orders, you must satisfy basic eligibility criteria:
 
+   •  Age Competence: You must be at least 18 years of age and legally competent to enter into binding contracts under the Indian Contract Act, 1872. Minors may use the Platform only under parental or legal guardian supervision.
+   •  Authentication via OTP: Accounts are created and secured using your registered 10-digit Indian mobile number and dynamic One-Time Passwords (OTPs). You are solely responsible for maintaining the confidentiality of your credentials.
+   •  No Credential Sharing: KroZenda representatives will never contact you requesting your OTP, banking passwords, or UPI PIN. Never disclose these credentials to anyone.
+   •  Accurate Contact Information: You agree to provide genuine, up-to-date delivery addresses and phone numbers. KroZenda cannot be held liable for failed or delayed shipments resulting from inaccurate user inputs.
 
-2. ELIGIBILITY
 
-To use the Platform you must be at least 18 years of age and capable of entering into a legally binding contract under the Indian Contract Act, 1872. If you are under 18, you may use the Platform only under the supervision of a parent or legal guardian who accepts these Terms on your behalf.
+3. PRODUCT CATALOG, PRICING & INVENTORY
 
+We maintain rigorous standards for product listings, pricing accuracy, and inventory management:
 
-3. YOUR ACCOUNT
+   •  Currency & Taxes: All wholesale, drop-shipping, and retail prices are quoted in Indian Rupees (INR) and are inclusive of applicable Goods and Services Tax (GST) unless indicated otherwise.
+   •  Live Server Price Calculation: Catalog prices and promotional discounts are validated on KroZenda’s secure servers at checkout. Any local cache or device-side display discrepancies will be overridden by live server pricing.
+   •  Visual Representations: Product photographs and descriptions are provided by manufacturers and vendors. While we aim for visual fidelity, slight color variations may occur depending on screen displays and photography lighting.
+   •  Inventory Synchronization: Listing an item does not constitute a perpetual guarantee of stock availability. If an ordered item is out of stock, KroZenda will cancel the unavailable item and issue an immediate full refund.
 
-3.1  Accounts are created and accessed using your mobile number and a one-time password (OTP) sent to that number. By entering a mobile number you confirm you are its authorised subscriber.
 
-3.2  You are responsible for everything that happens through your account. Do not share your OTP with anyone. KroZenda will never ask you for your OTP by phone, email, SMS or chat. Anyone who asks you for it is attempting fraud.
+4. ORDER CONFIRMATION & CONTRACT FORMATION
 
-3.3  You agree to keep your account details, including your delivery addresses and contact number, accurate and up to date. We are not responsible for a delivery that fails because the address or phone number you gave us was wrong or out of date.
+Placing an order initiates a formal procurement workflow:
 
-3.4  You may hold only one account per mobile number. We may suspend duplicate accounts created to abuse offers or coupons.
+   •  Order Offer: Submitting an order constitutes an offer to purchase the selected items. An order is confirmed and legally binding only when KroZenda issues an Order Confirmation with an assigned Order Reference ID.
+   •  Order Rejection or Cancellation: KroZenda or the merchant reserves the right to cancel an order prior to dispatch in cases of stock shortages, obvious pricing errors, delivery unserviceability, or suspected coupon manipulation.
+   •  Multi-Vendor Split Dispatches: When an order contains merchandise from multiple independent vendors, items will be packaged and dispatched separately, each carrying its individual courier tracking number.
 
 
-4. PRODUCT LISTINGS, PRICES AND AVAILABILITY
+5. PAYMENT METHODS, WALLET & CASH ON DELIVERY (COD)
 
-4.1  Product descriptions, images and specifications are supplied by the seller. We take reasonable steps to review listings but we do not independently verify every claim made by a seller.
+We offer versatile, secure payment options to accommodate buyers and drop-shippers:
 
-4.2  Product colours may appear different on your screen than in reality.
+   •  Online Payments: Supported via Razorpay including UPI, Credit Cards, Debit Cards, and Net Banking. All transactions adhere to stringent RBI security directives.
+   •  KroZenda Wallet: Registered users can utilize instant wallet credits resulting from order cancellations, returns, or promotional allowances to make purchases across the Platform.
+   •  Cash on Delivery (COD): COD is accessible for eligible delivery pin codes and qualifying basket amounts. Consignees must have exact cash ready upon delivery agent arrival.
+   •  COD Fair Usage: Repeated refusal or deliberate non-acceptance of valid COD consignments without justifiable cause may result in permanent suspension of COD payment privileges.
 
-4.3  Prices are shown in Indian Rupees and include applicable taxes unless stated otherwise. Delivery charges, where they apply, are shown separately at checkout before you pay.
 
-4.4  Prices and offers can change at any time before you place an order. The price that applies to your order is the price shown on the order summary at the moment you confirm it.
+6. PAN-INDIA SHIPPING, LOGISTICS & FULFILLMENT
 
-4.5  Listing a product does not guarantee its availability. If an item becomes unavailable after you order it, we will cancel that item and refund you in full.
+Logistics are managed through integrated national courier networks covering 26,000+ Indian postal PIN codes:
 
+   •  Integrated Carriers: Shipments are routed through premier logistics partners including Delhivery, Bluedart, Xpressbees, Shadowfax, and Shiprocket.
+   •  Delivery Estimates: Estimated transit durations are 2 to 4 business days for Metros, 4 to 7 business days for Tier 2/3 cities, and 7 to 10 business days for remote regions. These timelines are estimates and subject to transit conditions.
+   •  Live Tracking: Tracking numbers and carrier names are published to your Orders Dashboard upon parcel pickup by the carrier.
+   •  Transfer of Title: Risk and responsibility in the purchased goods transfer to the buyer upon physical delivery and verification at the specified address.
 
-5. PLACING AN ORDER
 
-5.1  Your order is an offer to buy. A contract is formed only when we confirm the order and it appears in your Orders list with an order reference.
+7. CANCELLATION, RETURN, REPLACEMENT & REFUND POLICY
 
-5.2  We or the seller may decline or cancel an order, before or after confirmation, where:
+We provide a streamlined dispute redressal and refund framework:
 
-   •  the item is out of stock;
-   •  there was a pricing or listing error;
-   •  the delivery address is outside our serviceable area;
-   •  we reasonably suspect fraud, coupon abuse, or resale in breach of these Terms;
-   •  we are unable to verify the details you provided.
+   •  Order Cancellations: You may cancel an order directly from your account dashboard while it is marked "Pending" or "Processing". Once marked "Shipped", orders cannot be cancelled and must be processed as returns.
+   •  7-Day Return Window: Return or replacement requests for eligible physical goods may be initiated within 7 calendar days from confirmed delivery.
+   •  Condition of Returned Goods: Returned products must be unused, unaltered, unwashed, and accompanied by original packaging, brand tags, warranty cards, and accessories.
+   •  Non-Returnable Goods: Customized goods, perishable products, personal hygiene merchandise, and unsealed consumables are non-returnable unless received damaged or defective.
+   •  Refund Processing: Approved refunds are credited to your KroZenda Wallet within 24 hours, or refunded to the original payment source within 5 to 7 business days depending on banking clearing cycles.
 
-If we cancel a prepaid order for any of these reasons, you will be refunded in full.
 
-5.3  The order total, any discount applied and the final payable amount are always calculated by KroZenda's servers from live prices at the time of checkout. Any amount displayed or submitted by your device is treated as indicative only.
+8. ACCEPTABLE PLATFORM USE & PROHIBITED CONDUCT
 
+Users agree to utilize the Platform strictly for authorized, lawful commercial activities:
 
-6. PAYMENT
+   •  No Automated Scraping: You may not use automated spiders, bots, crawlers, or scrapers to extract product catalogs, pricing databases, or customer feedback.
+   •  Account Integrity & Promo Abuse: Creating multiple fake accounts, circulating unauthorized voucher codes, or exploiting system errors to obtain unauthorized discounts is strictly prohibited.
+   •  System Security: You must not attempt to circumvent authentication protocols, inject malicious code, overload server infrastructures, or probe system vulnerabilities.
+   •  Enforcement: KroZenda reserves the right to immediately suspend or terminate accounts found violating these provisions and initiate appropriate legal action under the IT Act, 2000.
 
-6.1  We currently accept:
 
-   •  Cash on Delivery (COD), where available for your pincode and order value;
-   •  KroZenda Wallet balance;
-   •  Online payment (cards, UPI, net banking and wallets) through our payment gateway partner, Razorpay.
+9. INTELLECTUAL PROPERTY & PROPRIETARY RIGHTS
 
-6.2  Online payments are processed by Razorpay. Your full card number, CVV and UPI credentials are entered on the gateway and are never received or stored by KroZenda. We store only a payment reference so we can match a payment to your order and process refunds.
+All proprietary rights on the Platform are rigorously protected:
 
-6.3  For COD orders, payment is collected by the delivery agent at the time of delivery. Please keep the exact amount ready. The agent may refuse to hand over the parcel if payment cannot be collected.
+   •  KroZenda IP: The KroZenda trademark, logo, design system, source code, workflows, algorithms, and website layouts are the exclusive intellectual property of KroZenda Technologies Private Limited.
+   •  Third-Party Trademarks: Merchant brand names, trade dress, product imagery, and logos displayed on listings remain the property of their respective trademark holders.
+   •  User-Generated Content: By posting reviews, ratings, or feedback on the Platform, you grant KroZenda an unrestricted, royalty-free, perpetual license to host, display, and publish this content across our digital channels.
 
-6.4  If money leaves your account but your order is not confirmed, the amount is normally reversed by your bank or the gateway within 5 to 7 working days. If it is not, contact us with the payment reference and we will pursue it with the gateway on your behalf.
 
+10. LIMITATION OF LIABILITY, GOVERNING LAW & GRIEVANCE REDRESSAL
 
-7. KROZENDA WALLET
+Our liability limits, governing jurisdiction, and grievance redressal mechanisms are defined below:
 
-7.1  The Wallet holds a rupee balance that can be used towards purchases on the Platform.
-
-7.2  Balance can arise from refunds processed to the Wallet, and from amounts you add yourself where that option is available.
-
-7.3  Wallet balance is not a deposit, earns no interest, and cannot be transferred to another user or withdrawn as cash except where required by law.
-
-7.4  Every credit and debit is recorded in your Wallet transaction history with the reason and the resulting balance.
-
-
-8. COUPONS AND PROMOTIONAL OFFERS
-
-8.1  Coupons are subject to the conditions published with them, which may include a minimum order value, a validity window, specific products or categories, a per-user usage limit, and a total usage limit.
-
-8.2  A coupon has no cash value and cannot be exchanged for cash or Wallet balance.
-
-8.3  We may withdraw a coupon, or reverse a discount, where we reasonably believe it has been obtained or used through duplicate accounts, automated tools, or any other abuse.
-
-8.4  If an order on which a coupon was used is cancelled or returned, the coupon may or may not be restored to you depending on the terms of that specific offer.
-
-
-9. DELIVERY
-
-9.1  Delivery timelines shown on the Platform are estimates provided by the seller and are not guaranteed.
-
-9.2  Orders containing items from more than one seller may be dispatched separately and arrive at different times. Each item shows its own status.
-
-9.3  Where a seller has shared a courier name and tracking number, these appear on your order. Please note that KroZenda does not currently operate an automated courier integration, so tracking information is only as current as the seller has provided, and an estimated delivery date is not available for every order.
-
-9.4  Risk in the products passes to you on delivery. Please check the parcel at the time of delivery where possible and raise any damage or shortage promptly.
-
-9.5  If delivery fails because nobody was available at the address, or the address or phone number was incorrect, re-delivery may be attempted or the order may be returned to the seller.
-
-
-10. CANCELLATION
-
-10.1  You may cancel an order yourself from your Orders screen while it is still Pending or Processing. Once an order has been marked Shipped, it can no longer be cancelled from the app and must be handled as a return.
-
-10.2  Where a cancelled order was paid for, the amount is refunded to your KroZenda Wallet.
-
-10.3  KroZenda or the seller may cancel an order in the circumstances set out in clause 5.2.
-
-
-11. RETURNS, REPLACEMENTS AND REFUNDS
-
-11.1  You may raise a return or replacement request from your order details, within the return window stated on the product page. Some products are marked non-returnable, for example items that are perishable, made to order, or sealed for hygiene reasons once opened.
-
-11.2  A return request must be approved before it takes effect. We or the seller may ask you for photographs or other information to assess the request.
-
-11.3  Products must be returned unused, in their original condition, with all tags, accessories, free items and original packaging intact.
-
-11.4  Where a return is approved and the refund is due, the amount is credited to your KroZenda Wallet. Where a refund to the original payment method is required by law or agreed with you, timelines will depend on your bank or the payment gateway.
-
-11.5  A refund covers the price you paid for the product. Delivery charges are refunded where the return arises from a defect, damage, or an incorrect item being sent.
-
-11.6  If a return is rejected because the product was found to be used, damaged by you, or not the product that was sent, the item may be sent back to you and no refund will be due.
-
-
-12. REVIEWS AND CONTENT YOU POST
-
-12.1  You may review only products you have actually purchased through your account.
-
-12.2  You are responsible for what you post. Do not post anything unlawful, defamatory, obscene, misleading, infringing, or containing another person's personal information.
-
-12.3  By posting a review, photograph or other content, you grant KroZenda a non-exclusive, royalty-free, worldwide licence to host, display and reproduce it on the Platform and in connection with the Platform.
-
-12.4  We may remove content that breaches these Terms, without notice.
-
-
-13. AI ASSISTANT
-
-13.1  The Platform offers an AI assistant that answers questions about your own account, such as your orders, their status, your Wallet balance and your purchase history.
-
-13.2  The assistant reads only data belonging to the account you are signed in to. It cannot access any other customer's information.
-
-13.3  The assistant is provided for convenience. It can make mistakes and its answers are not a substitute for your order details, your invoice, or a response from our support team. Where the assistant and your order details disagree, your order details are authoritative.
-
-13.4  The assistant cannot place, change or cancel orders, and cannot move money.
-
-13.5  Your messages and the relevant account information are processed by a third-party AI provider. See our Privacy Policy for what is shared and what is not.
-
-13.6  Please do not enter payment card details, passwords, OTPs or other sensitive information into the chat. We will never ask for them there.
-
-
-14. HOW YOU MAY AND MAY NOT USE THE PLATFORM
-
-You agree not to:
-
-   •  use the Platform for any unlawful purpose or in breach of any applicable law;
-   •  resell, scrape, copy, mirror or systematically extract listings, prices, images or other content;
-   •  use bots, scripts or automated means to access the Platform, place orders, or claim offers;
-   •  interfere with the Platform's operation or security, or attempt to gain unauthorised access to any account, server or data;
-   •  impersonate another person, or provide false information;
-   •  place orders you do not intend to accept, or repeatedly refuse COD deliveries.
-
-We may suspend or close an account that breaches this clause.
-
-
-15. INTELLECTUAL PROPERTY
-
-The KroZenda name, logo, software, design and compilation of content on the Platform belong to KroZenda or its licensors. Product images, brand names and trademarks belong to the respective sellers or brand owners. Nothing on the Platform grants you any licence to use them except as necessary to use the Platform as an ordinary customer.
-
-
-16. OUR RESPONSIBILITY AND ITS LIMITS
-
-16.1  Nothing in these Terms limits any liability that cannot be limited under applicable law, including liability for death or personal injury caused by negligence, or for fraud.
-
-16.2  Subject to clause 16.1, and to the extent permitted by law, KroZenda is not liable for indirect or consequential loss, loss of profit, loss of business, or loss of opportunity.
-
-16.3  Subject to clause 16.1, and to the extent permitted by law, our total liability in connection with an order is limited to the amount you paid for that order.
-
-16.4  For products sold by third-party sellers, the seller is responsible for the product itself. We will help you pursue a claim against the seller through our grievance process.
-
-16.5  The Platform is provided on an "as is" basis. We do not warrant that it will be uninterrupted or error-free.
-
-
-17. SUSPENSION AND CLOSURE OF ACCOUNTS
-
-17.1  You may ask us to close your account at any time by contacting support. Certain records must be retained after closure, as explained in our Privacy Policy.
-
-17.2  We may suspend or close your account where you have breached these Terms, where we are required to by law, or where we reasonably suspect fraud or abuse. Where we do so, we will tell you the reason unless we are legally prevented from doing so.
-
-
-18. CHANGES TO THESE TERMS
-
-We may update these Terms from time to time. The version and date at the top of this page tell you when it was last changed. Material changes will be notified to you in the app or by message. Continuing to use the Platform after a change means you accept the updated Terms. The Terms that apply to an order are those in force when you placed it.
-
-
-19. GOVERNING LAW AND DISPUTES
-
-19.1  These Terms are governed by the laws of India.
-
-19.2  Please contact our grievance officer first. Most issues are resolved at that stage.
-
-19.3  Subject to clause 19.2, the courts at Bengaluru, Karnataka shall have exclusive jurisdiction, without prejudice to any right you may have to approach a consumer forum at your place of residence under the Consumer Protection Act, 2019.
-
-
-20. GRIEVANCE REDRESSAL
-
-In accordance with the Consumer Protection (E-Commerce) Rules, 2020 and the Information Technology Act, 2000, our grievance officer can be contacted at:
-
-   Grievance Officer
-   KroZenda Technologies Private Limited
-   Email: compliance@krozenda.com
-
-We will acknowledge your complaint within 48 hours and aim to resolve it within one month of receipt.
-
-For questions about these Terms, write to compliance@krozenda.com.`,
+   •  Liability Limitation: To the maximum extent permitted by applicable law, KroZenda’s aggregate liability for any claim arising from an order or Platform usage shall not exceed the actual amount paid by you for that specific order.
+   •  Indirect Damages: KroZenda shall not be liable for indirect, punitive, special, or consequential damages, loss of anticipated business profits, or commercial interruption.
+   •  Governing Law & Jurisdiction: These Terms are governed by and construed in accordance with the laws of India. Subject to amicable resolution, the courts of Bengaluru, Karnataka possess exclusive jurisdiction.
+   •  Grievance Officer: In adherence with the Consumer Protection (E-Commerce) Rules, 2020:
+
+      Grievance Officer
+      KroZenda Technologies Private Limited
+      Email: compliance@krozenda.com
+      Customer Helpline: +91 1800-KROZENDA
+      Complaints will be acknowledged within 48 hours and resolved within one month of formal submission.`,
   },
   'privacy-policy': {
     title: 'Privacy Policy',
-    version: 'v2.0',
+    version: 'v2.5',
     updatedAt: '17 Sep 2026',
-    updatedBy: 'Data Protection Officer',
+    updatedBy: 'Legal Compliance Division',
     requiresAcceptance: true,
     content: `KROZENDA PRIVACY POLICY
 
 Last updated: 17 September 2026
+Version: v2.5
+Published by: Legal & Compliance Division
 
-This policy explains what personal data KroZenda Technologies Private Limited ("KroZenda", "we", "us") collects when you use our website or apps, why we collect it, who we share it with, and the choices and rights you have.
+This Privacy Policy explains how KroZenda Technologies Private Limited ("KroZenda", "we", "our", "us") collects, uses, stores, processes, and protects your personal and transactional information across our web platform, mobile applications, and connected services.
 
-It is written for customers of the Platform. Sellers are covered by a separate seller agreement.
+We operate in compliance with the Digital Personal Data Protection Act, 2023 (DPDP Act), the Information Technology Act, 2000, and the Consumer Protection (E-Commerce) Rules, 2020.
 
 
-1. THE SHORT VERSION
+1. INFORMATION WE COLLECT
 
-   •  We collect what we need to run your account, take your orders, deliver them and support you.
-   •  We do not sell your personal data to anyone.
-   •  We never see or store your full card number, CVV or UPI PIN. Those go straight to our payment gateway.
-   •  We share your delivery details with the seller of what you bought, because they are the ones shipping it.
-   •  The AI assistant sends only a small, relevant slice of your own data to a third-party AI provider, and never another customer's.
-   •  You can ask to see, correct or delete your data.
+We collect personal and transactional data necessary to operate your account, process orders, and facilitate pan-India deliveries:
 
+   •  Contact & Identification: Mobile phone number (mandatory primary identifier for OTP verification), full name, email address, and profile photo.
+   •  Delivery Addresses: Recipient name, complete shipping address, landmark, city, state, postal PIN code, and contact phone number.
+   •  B2B & Vendor Verification Data: Business entity name, GSTIN certificate, PAN card details, warehouse address, and bank account details for settlement disbursements.
+   •  Usage & Technical Metrics: IP address, device model, operating system, browser specifications, access timestamps, and device push notification tokens.
 
-2. THE DATA WE COLLECT
 
-2.1  Information you give us
+2. HOW WE USE YOUR INFORMATION
 
-   •  Mobile number. Required, this is how you sign in.
-   •  Name, email address, gender and date of birth, if you choose to add them to your profile.
-   •  Profile photograph, if you upload one.
-   •  Delivery addresses, including the recipient's name, phone number, street address, city, state and PIN code.
-   •  The contents of support tickets you raise, and any photographs you attach to a return request.
-   •  Product reviews and ratings you post.
-   •  Messages you type into the AI assistant.
+Your information is processed strictly for legitimate operational purposes:
 
-2.2  Information generated by your use of the Platform
+   •  Account Management: Generating secure session tokens and authenticating sign-ins via dynamic One-Time Passwords (OTPs).
+   •  Order Processing: Routing multi-vendor drop-shipping orders, generating automated invoices, and calculating live shipping distances.
+   •  Logistics & Fulfillment: Sharing recipient dispatch details with verified courier partners and suppliers for packaging and pan-India delivery.
+   •  Customer Care & Dispute Resolution: Managing customer inquiries, tracking order status, and resolving returns, cancellations, or refund claims.
+   •  Regulatory & Tax Compliance: Maintaining audited sales records and tax registers in accordance with Indian statutory requirements.
 
-   •  Your orders: items, quantities, prices, amounts paid, payment method, order and delivery status.
-   •  Your cart and wishlist.
-   •  Your Wallet balance and the history of credits and debits.
-   •  Coupons you have used and the discount each one gave.
-   •  Return and replacement requests and their outcome.
 
-2.3  Technical information
+3. PAYMENT PROCESSING & FINANCIAL DATA SECURITY
 
-   •  A device push token, if you allow notifications, so we can send you order updates.
-   •  IP address, browser or app version, and the time of your requests, recorded in our server logs.
-   •  A session token stored on your device to keep you signed in.
+We treat your payment and financial information with bank-grade security:
 
-2.4  What we deliberately do not collect
+   •  Zero Storage of Sensitive Card Credentials: We never receive, process, or store your complete debit/credit card numbers, CVV, expiry dates, net-banking credentials, or UPI PINs.
+   •  PCI-DSS Certified Gateway: All online payments are handled directly by Razorpay, a certified PCI-DSS Level 1 payment aggregator.
+   •  Encrypted Payment References: KroZenda stores only unique alphanumeric transaction IDs, payment status flags, and masked card identifiers (e.g. card network and last 4 digits) for verification and refund processing.
 
-   •  Your full card number, expiry, CVV or UPI PIN. These are entered on the payment gateway's own screens. We receive only a reference for the transaction and, where applicable, the last few digits and card network so you can recognise the payment.
-   •  Your bank account credentials or net banking password.
-   •  GSTIN or PAN. These are collected from sellers, not from customers.
 
+4. DATA SHARING WITH LOGISTICS & THIRD-PARTY SUPPLIERS
 
-3. WHY WE USE YOUR DATA
+We share only the minimum information required to complete your orders:
 
-   •  To create and secure your account, and to sign you in using an OTP.
-   •  To process your orders, collect payment, and pass the delivery details to the seller who is shipping to you.
-   •  To handle cancellations, returns, replacements and refunds.
-   •  To operate the KroZenda Wallet and keep an accurate transaction record.
-   •  To validate coupon eligibility and enforce usage limits.
-   •  To send you transactional messages about your orders, such as confirmation, dispatch and delivery updates.
-   •  To answer your questions through support or the AI assistant.
-   •  To detect and prevent fraud, coupon abuse and misuse of the Platform.
-   •  To meet our legal, tax and accounting obligations.
-   •  To understand, in aggregate, how the Platform is used so that we can improve it.
+   •  Drop-shipping Vendors & Manufacturers: Independent sellers receive only the recipient name, delivery address, contact phone number, and items purchased to pack and dispatch your parcel. Vendors do not receive your email address, billing records, or browsing history.
+   •  Logistics Partners: Verified shipping aggregators and courier networks (including Delhivery, Bluedart, Xpressbees, Shadowfax, and Shiprocket) receive shipment delivery coordinates to perform doorstep deliveries and collect COD payments.
+   •  Strict No-Sale Policy: We do not sell, rent, monetize, or trade your personal details to third-party data brokers or marketing agencies.
 
-We rely on your consent for optional processing such as push notifications and marketing messages, and on the necessity of performing our contract with you, and on our legal obligations, for the rest.
 
+5. KROZENDA WALLET & TRANSACTION INTEGRITY
 
-4. WHO WE SHARE YOUR DATA WITH
+All financial interactions within the KroZenda internal wallet are safeguarded:
 
-We share only what is necessary, and only with:
+   •  Transaction Records: Every wallet credit, debit, instant refund, or promotional credit is recorded with an immutable timestamp, order reference, and balance ledger.
+   •  Fraud Detection: Automated security algorithms monitor wallet usage and multiple account creations to prevent promo abuse and unauthorized transfers.
+   •  Non-Transferable Balance: In accordance with RBI guidelines on closed-loop marketplace wallets, wallet balances cannot be transferred to third-party accounts or redeemed for physical currency except where mandated by law.
 
-4.1  The seller of what you bought
-     Your name, delivery address and contact number, and the items in that order, so they can pack and ship it. A seller sees only the orders placed with them.
 
-4.2  Razorpay, our payment gateway
-     To take payment and to process refunds. Razorpay receives your payment details directly from you and processes them under its own privacy policy.
+6. AI ASSISTANT & CONVERSATIONAL PRIVACY
 
-4.3  Google Firebase Cloud Messaging
-     To deliver push notifications to your device, if you have allowed them.
+Our integrated AI Assistant provides real-time account insights under strict privacy constraints:
 
-4.4  Our SMS gateway
-     To deliver the OTP to your mobile number at sign-in. Only the mobile number and the message are shared.
+   •  Restricted Account Scope: The AI Assistant can query only records belonging to your currently signed-in session (e.g., active orders, shipping milestones, wallet balance, and recent tickets). It cannot access any other customer's or seller's records.
+   •  Data Minimization: Queries sent to our enterprise AI engine (Google Gemini API) contain only the specific question and relevant sanitized order metadata.
+   •  Masking of Sensitive Details: Street addresses, payment tokens, and authentication credentials are systematically excluded from AI prompts. Chat histories can be cleared from your account settings at any time.
 
-4.5  Google (Gemini API)
-     Only when you use the AI assistant, and only as described in section 5.
 
-4.6  Government authorities, courts or regulators
-     Where we are required by law to disclose information, or where disclosure is necessary to establish, exercise or defend a legal claim, or to prevent fraud or harm.
+7. COOKIES, LOCAL STORAGE & PUSH NOTIFICATIONS
 
-4.7  A buyer of our business
-     If KroZenda is merged with or acquired by another company, your data may transfer as part of that transaction. You will be told if that happens and this policy will continue to apply until replaced.
+We use standard client-side storage technologies transparently:
 
-We do not sell, rent or trade your personal data.
+   •  Essential Session Storage: Browser local storage and session tokens are used exclusively to maintain your active login session, cart contents, and interface preferences.
+   •  Push Notification Tokens: Device tokens (Firebase Cloud Messaging) are utilized exclusively to broadcast real-time dispatch updates, delivery alerts, and critical security notices.
+   •  No Third-Party Tracking Pixels: We do not use cross-site behavioral tracking cookies or third-party ad profiling trackers. You can disable notifications at any time through your browser or device settings.
 
 
-5. THE AI ASSISTANT
+8. DATA RETENTION & ARCHIVAL RULES
 
-When you send a message to the AI assistant, your message is sent to our servers, not to the AI provider directly.
+We retain personal information only as long as necessary to fulfill contractual and legal obligations:
 
-Our server then looks up only the information needed to answer that particular question from your own account, and sends your message along with that information to Google's Gemini API to produce a reply.
+   •  Account Information: Retained for the duration of your active platform membership.
+   •  Tax & Accounting Archives: Invoices, order ledgers, payment proofs, and wallet transactions are preserved for up to 8 years as required under Indian GST laws and the Companies Act, 2013.
+   •  Customer Support Logs: Support tickets and return inspection records are stored for 3 years to resolve potential disputes or warranty claims.
+   •  Account Deletion: When you request account deletion, non-statutory data is permanently removed or irreversibly anonymized within 30 days.
 
-What is sent:
 
-   •  Your message, and a limited number of recent messages from that conversation for context.
-   •  A small, purpose-built extract of your own data relevant to the question, for example your order count, the status of your latest order, or your Wallet balance.
+9. SECURITY PROTOCOLS & ENCRYPTION MEASURES
 
-What is never sent:
+We implement comprehensive technical and organizational safeguards:
 
-   •  Any other customer's data. The assistant can only ever read data belonging to the account you are signed in to.
-   •  Your password, session token, or any API key.
-   •  Your full card number, CVV or bank details. We do not hold these in the first place.
-   •  Internal notes written by our staff on your support tickets.
-   •  Your full street address. Where location is relevant, only the city, state and PIN code are used.
+   •  Encryption in Transit: All data transferred between your browser or mobile app and our cloud servers is protected using TLS 1.3 encryption (HTTPS).
+   •  Encryption at Rest: Sensitive database records and backups are protected using industry-standard 256-bit AES encryption.
+   •  Access Controls: Production databases are restricted behind virtual private networks (VPN), strict IP allowlisting, and role-based administrative credentials.
+   •  Rate Limiting: Dynamic rate limiting protects login endpoints and OTP requests against automated brute-force attacks.
 
-Your chat history is stored against your account so you can reopen past conversations. You can delete a conversation from the chat history screen at any time.
 
-Please do not type payment details, passwords or OTPs into the chat.
+10. USER RIGHTS, GRIEVANCE REDRESSAL & CONTACT
 
+Under applicable data protection laws, including the DPDP Act, 2023, you retain key rights regarding your personal information:
 
-6. SECURITY
-
-We take reasonable technical and organisational measures to protect your data, including:
-
-   •  Traffic between your device and our servers is encrypted in transit using HTTPS.
-   •  Passwords, where you have set one, are stored only as a salted one-way hash and are never readable by us or recoverable in plain text.
-   •  Access to production systems is limited to staff who need it for their role, and staff permissions are role-based.
-   •  Sign-in is protected by OTP, and OTP requests are rate limited to resist brute-force and enumeration attempts.
-   •  Payment credentials never reach our servers.
-
-No system can be guaranteed completely secure. If we become aware of a breach affecting your personal data, we will notify you and the relevant authority as required by law.
-
-
-7. HOW LONG WE KEEP YOUR DATA
-
-   •  Account details are kept while your account is open.
-   •  Orders, invoices, payment references and Wallet transactions are retained for as long as required under Indian tax and accounting law, which is currently up to eight years, even after your account is closed.
-   •  Support tickets and return requests are retained so that we have a record of how a dispute was handled.
-   •  Server logs are retained for a limited period for security and troubleshooting.
-   •  AI conversations are retained until you delete them, and thereafter in our records for a limited period for abuse investigation.
-
-When you ask us to delete your account, we deactivate it and remove or anonymise what we are not legally required to keep.
-
-
-8. YOUR RIGHTS
-
-Subject to applicable law, including the Digital Personal Data Protection Act, 2023, you have the right to:
-
-   •  Access the personal data we hold about you.
-   •  Correct information that is inaccurate or incomplete. Most of this you can do yourself from your profile and address book.
-   •  Ask us to delete your account and personal data, subject to the retention periods in section 7.
-   •  Withdraw a consent you previously gave, such as for push notifications or marketing messages.
-   •  Nominate another person to exercise your rights in the event of your death or incapacity.
-   •  Complain to us, and to the relevant data protection authority, if you believe your data has been mishandled.
-
-To exercise any of these, write to privacy@krozenda.com from the email address on your account, or raise a support ticket from within the app. We may need to verify your identity before acting on a request. We will respond within the timelines set by applicable law.
-
-
-9. MARKETING AND NOTIFICATIONS
-
-   •  Transactional messages about your orders are part of the service and are sent regardless of marketing preferences.
-   •  Promotional push notifications and messages are sent only where you have allowed them, and you can turn them off at any time in your device settings or from the Settings screen in the app.
-
-
-10. COOKIES AND LOCAL STORAGE
-
-We use your browser's local storage to keep you signed in and to remember preferences such as your cart. We do not use third-party advertising cookies. Firebase may set identifiers necessary to deliver push notifications where you have enabled them. Clearing your browser data will sign you out.
-
-
-11. CHILDREN
-
-The Platform is not intended for children under 18. We do not knowingly collect personal data from a child. If you believe a child has given us personal data, contact us and we will delete it.
-
-
-12. CHANGES TO THIS POLICY
-
-We may update this policy. The version and date at the top of this page show when it last changed. Where a change is material, we will notify you in the app or by message before it takes effect.
-
-
-13. HOW TO CONTACT US
-
-   Data Protection Officer
-   KroZenda Technologies Private Limited
-   Email: privacy@krozenda.com
-
-   Grievance Officer
-   Email: compliance@krozenda.com
-
-We acknowledge privacy requests and complaints within 48 hours and aim to resolve them within one month.`,
+   •  Right to Access & Correction: You may review, verify, or correct your personal information directly through the profile settings in your KroZenda account.
+   •  Right to Consent Withdrawal: You can withdraw consent for promotional communications or push notifications at any time.
+   •  Grievance Officer: In accordance with the Consumer Protection (E-Commerce) Rules, 2020 and the Information Technology Act, 2000, our designated Grievance and Data Protection Officer can be reached at:
+
+      Grievance & Data Protection Officer
+      KroZenda Technologies Private Limited
+      Email: compliance@krozenda.com
+      Alternative Support: privacy@krozenda.com
+      Customer Helpline: +91 1800-KROZENDA
+      Response SLA: Acknowledgement within 48 hours; resolution within 30 calendar days.`,
   },
 }
 

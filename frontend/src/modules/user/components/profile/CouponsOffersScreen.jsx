@@ -1,9 +1,17 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HiArrowLeft, HiTag } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { useUsedCouponsController } from '../../controllers/useCouponsController'
 
-export function CouponsOffersScreen({ onBack = () => {} }) {
+export function CouponsOffersScreen({ onBack }) {
+  // Falls back to real navigation when no callback is supplied. The
+  // router stopped passing one when every screen took ownership of its
+  // own navigation; the previous `= () => {}` default silently turned
+  // the back button into a no-op.
+  const goBackFallback = useNavigate()
+  const handleBack = onBack || (() => goBackFallback(-1))
+
   const { usedCoupons, isLoading: loadingUsed } = useUsedCouponsController()
 
   return (
@@ -13,7 +21,7 @@ export function CouponsOffersScreen({ onBack = () => {} }) {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-8">
         {/* Header */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center space-x-4">
-          <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+          <button onClick={handleBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
             <HiArrowLeft className="w-5 h-5" />
           </button>
           <div>

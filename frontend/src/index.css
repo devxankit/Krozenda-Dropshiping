@@ -10,6 +10,77 @@
     color: #0f172a;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* ---------------------------------------------------------------------
+     Flutter WebView behaviour
+     ---------------------------------------------------------------------
+     These are the rules that make the same build behave inside an Android /
+     iOS WebView rather than only in a desktop browser. */
+
+  html {
+    /* Stops the whole page rubber-banding vertically when a scroll gesture
+       reaches the end of a nested scroller — the effect that makes a WebView
+       feel like a web page rather than an app (§96). */
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    /* Horizontal overflow ANYWHERE turns into a page that can be dragged
+       sideways, which inside a WebView looks like a broken layout with no way
+       to get back. This is the backstop; individual screens still have to not
+       overflow (§38, §128). */
+    overflow-x: hidden;
+    /* Keeps momentum scrolling on older iOS WebViews. */
+    -webkit-overflow-scrolling: touch;
+    /* Text must never be silently resized by the WebView when the device is
+       rotated — it reflows the whole layout mid-session. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Fixed elements sit inside the safe area rather than under the notch, the
+     Dynamic Island or the home indicator. Zero on every normal browser, so
+     desktop gains no stray padding (§98, §99). */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* A focus ring that is visible for keyboard users and absent for mouse/touch
+     users, instead of the blanket `focus:outline-none` several screens had. */
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* Every interactive control gets a real touch target. 16px icon buttons
+     were genuinely hard to hit on a phone (§93). Opt out with `.touch-auto-target`
+     where a control is deliberately inline (e.g. inside a sentence). */
+  @media (pointer: coarse) {
+    button:not(.touch-auto-target),
+    [role='button']:not(.touch-auto-target),
+    a[role='button']:not(.touch-auto-target) {
+      min-height: 40px;
+      min-width: 40px;
+    }
+  }
+
+  /* An input smaller than 16px makes iOS zoom the whole page on focus, and it
+     does not zoom back out — the classic "the app is stuck zoomed in after I
+     typed in the search box" WebView bug (§100). */
+  @media (max-width: 767px) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
 /* Custom Scrollbar for mobile containers */
@@ -115,13 +186,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Reduced motion, honoured app-wide rather than only in the admin panel.
+   Carousels and auto-scrollers also check this in JavaScript so their timers
+   never start at all (§117). */
 @media (prefers-reduced-motion: reduce) {
-  .admin-root *,
-  .admin-root *::before,
-  .admin-root *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* A scroll container that should not hand its gesture up to the page when it
+   reaches its end — used by filter sheets, modals and horizontal rails. */
+.scroll-contain {
+  overscroll-behavior: contain;
 }

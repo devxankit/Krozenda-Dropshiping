@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   HiQuestionMarkCircle,
   HiChatBubbleLeftRight,
@@ -101,7 +102,14 @@ const TICKET_FILTER_TABS = [
   { id: 'closed', label: 'Closed' },
 ]
 
-export function HelpSupportScreen({ onBack = () => {} }) {
+export function HelpSupportScreen({ onBack }) {
+  // Falls back to real navigation when no callback is supplied. The
+  // router stopped passing one when every screen took ownership of its
+  // own navigation; the previous `= () => {}` default silently turned
+  // the back button into a no-op.
+  const goBackFallback = useNavigate()
+  const handleBack = onBack || (() => goBackFallback(-1))
+
   // Navigation tabs: 'faqs' | 'tickets'
   const [activeTab, setActiveTab] = useState('faqs')
 

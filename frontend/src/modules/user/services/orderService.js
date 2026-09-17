@@ -11,8 +11,14 @@ export async function createRazorpayOrder({ addressId, couponCode, shippingFee }
   return razorpayOrderSchema.parse(response.data.data)
 }
 
-export async function createOrder(payload) {
-  const response = await api.post('/user/orders', payload)
+// `idempotencyKey` is required, not optional: it is what makes a double-tapped
+// "Place Order", or a retry after a timeout, resolve to ONE order instead of
+// two. The backend keys on (user, idempotencyKey) and returns the original
+// order for a repeat (see orderController.createOrder).
+export async function createOrder({ idempotencyKey, ...payload }) {
+  const response = await api.post('/user/orders', payload, {
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  })
   return orderSchema.parse(response.data.data)
 }
 
@@ -33,13 +39,19 @@ export async function fetchUserOrders() {
   }
 }
 
-export async function fetchOrders(status) {
-  const response = await api.get('/user/orders', { params: status ? { status } : undefined })
-  return orderListSchema.parse(response.data.data.items)
+export async function fetchOrders({ status, page = 1, limit = 20 } = {}, { signal } = {}) {
+  const response = await api.get('/user/orders', {
+    params: { ...(status ? { status } : {}), page, limit },
+    signal,
+  })
+  return {
+    items: orderListSchema.parse(response.data.data.items),
+    pagination: response.data.pagination ?? null,
+  }
 }
 
-export async function fetchOrder(id) {
-  const response = await api.get(`/user/orders/${id}`)
+export async function fetchOrder(id, { signal } = {}) {
+  const response = await api.get(`/user/orders/${id}`, { signal })
   return orderSchema.parse(response.data.data)
 }
 

@@ -3,6 +3,7 @@ const Review = require('../Models/Review');
 const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const { getImageUrl } = require('../utils/imageHelper');
+const { readPagination, buildPagination } = require('../utils/pagination');
 
 function serializeReview(review, { productName, author }) {
   return {
@@ -22,7 +23,14 @@ function serializeReview(review, { productName, author }) {
 // whether they've already reviewed it and the product's live review count —
 // this is what powers the dropdown on the Orders > Review screen.
 async function getReviewableItems(req, res) {
-  const orders = await Order.find({ user: req.user._id, status: 'DELIVERED' }).sort({ deliveredAt: -1 });
+  // Bounded: without a limit this walked every delivered order the buyer had
+  // ever placed just to build a dropdown. The most recent 50 deliveries is far
+  // more than the "leave a review" picker ever shows.
+  const orders = await Order.find({ user: req.user._id, status: 'DELIVERED' })
+    .select('items deliveredAt')
+    .sort({ deliveredAt: -1 })
+    .limit(50)
+    .lean();
 
   const byProduct = new Map();
   for (const order of orders) {
@@ -139,9 +147,24 @@ async function listProductReviews(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 
-  const [product, reviews] = await Promise.all([
-    Product.findById(productId).select('name'),
-    Review.find({ product: productId }).populate('user', 'name').sort({ createdAt: -1 }),
+  const { page, limit, skip } = readPagination(req.query, { defaultLimit: 10, maxLimit: 50 });
+
+  // Was unbounded: a product with a few thousand reviews sent every one of
+  // them, with every review photo URL, on the first paint of the detail page.
+  const [product, reviews, total, breakdown] = await Promise.all([
+    Product.findById(productId).select('name rating reviewsCount').lean(),
+    Review.find({ product: productId })
+      .populate('user', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Review.countDocuments({ product: productId }),
+    // The 5-4-3-2-1 histogram under the rating summary. One grouped pass
+    // rather than five counts.
+    Review.aggregate([
+      { $match: { product: new mongoose.Types.ObjectId(productId) } },
+      { $group: { _id: '$rating', count: { $sum: 1 } } },
+    ]),
   ]);
 
   const items = reviews.map((review) =>
@@ -151,7 +174,29 @@ async function listProductReviews(req, res) {
     })
   );
 
-  res.json({ success: true, data: items });
+  const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const row of breakdown) {
+    if (ratingCounts[row._id] !== undefined) ratingCounts[row._id] = row.count;
+  }
+
+  res.json({
+    success: true,
+    message: 'Reviews fetched successfully',
+    // BREAKING (documented in the audit report): this used to return `data`
+    // as a bare array. It is now the standard { items, ... } envelope every
+    // other list endpoint uses, so it can carry pagination and the rating
+    // histogram. reviewService.fetchProductReviews is updated to match.
+    data: {
+      items,
+      total,
+      summary: {
+        average: product?.rating || 0,
+        count: product?.reviewsCount || total,
+        ratingCounts,
+      },
+    },
+    pagination: buildPagination({ page, limit, total }),
+  });
 }
 
 module.exports = { getReviewableItems, upsertReview, listProductReviews };

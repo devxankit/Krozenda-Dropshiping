@@ -43,7 +43,35 @@ export const orderSchema = z.object({
   createdAt: z.string(),
 })
 
-export const orderListSchema = z.array(orderSchema)
+// ---------------------------------------------------------------------------
+// LIST ROW — mirrors backend serializeOrderSummary().
+//
+// A different, much smaller shape from `orderSchema` on purpose: GET
+// /user/orders now returns summaries (id, total, status, a 3-thumbnail
+// preview) and is paginated, because it previously returned every order the
+// buyer had ever placed with every line item's full snapshot. The detail
+// screen fetches the full document by id.
+// ---------------------------------------------------------------------------
+export const orderPreviewItemSchema = z.object({
+  productId: z.string(),
+  name: z.string(),
+  image: z.string().nullable(),
+  quantity: z.number(),
+})
+
+export const orderSummarySchema = z.object({
+  id: z.string(),
+  itemCount: z.number(),
+  previewItems: z.array(orderPreviewItemSchema),
+  total: z.number(),
+  paymentMethod: z.enum(['COD', 'WALLET', 'RAZORPAY']),
+  paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
+  status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  deliveredAt: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export const orderListSchema = z.array(orderSummarySchema)
 
 // POST /user/orders/razorpay-order response — the Razorpay order to open the
 // checkout widget against for online payment.

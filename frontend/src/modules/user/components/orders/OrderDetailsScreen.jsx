@@ -1,8 +1,11 @@
-import React from 'react'
 import { HiArrowLeft, HiArrowDownTray, HiTruck, HiMapPin, HiCreditCard, HiArrowPath } from 'react-icons/hi2'
-import { useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { SmartImage } from '../../../../components/ui/SmartImage'
+import { ErrorState } from '../../../../components/ui/AsyncBoundary'
+import { USER_ROUTES, userPath } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrderController } from '../../controllers/useOrdersController'
 
 const STATUS_META = {
@@ -15,37 +18,58 @@ const STATUS_META = {
 
 const PAYMENT_METHOD_LABEL = { COD: 'Cash on Delivery', WALLET: 'Krozenda Wallet', RAZORPAY: 'Online (Razorpay)' }
 
-export function OrderDetailsScreen({ onBack = () => {}, onDownloadInvoice = () => {}, onTrackShipment = () => {}, onRequestReturn = () => {} }) {
-  const location = useLocation()
-  const orderId = location.state?.orderId
-  const { order, isLoading, isError } = useOrderController(orderId)
+export function OrderDetailsScreen() {
+  const navigate = useNavigate()
+  // From the path. This is what lets a push notification deep-link straight to
+  // an order, and what lets the screen survive a WebView reload — both
+  // impossible while the id lived in router state (§110, §126).
+  //
+  // Authorization is NOT a client concern: the API scopes every order lookup
+  // to the authenticated buyer, so pasting somebody else's order id here
+  // returns 404, not their order.
+  const { orderId } = useParams()
+  const { order, isLoading, isError, error, refetch } = useOrderController(orderId)
 
-  if (!orderId) {
-    return (
-      <div className="w-full min-h-screen bg-slate-50 flex flex-col items-center justify-center text-center px-6 space-y-4">
-        <h2 className="text-base font-bold text-slate-900">No order selected</h2>
-        <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl">
-          Back to Orders
-        </button>
-      </div>
-    )
-  }
+  usePageMeta({ title: order ? `Order #${order.id.slice(-8).toUpperCase()}` : 'Order', noindex: true })
+
+  const onBack = () => navigate(USER_ROUTES.ORDERS)
+  const onDownloadInvoice = (o) => navigate(userPath.orderInvoice(o.id))
+  const onTrackShipment = (o) => navigate(userPath.orderTrack(o.id))
+  const onRequestReturn = () => navigate(USER_ROUTES.RETURNS)
 
   if (isLoading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50 flex items-center justify-center">
-        <span className="text-xs font-semibold text-slate-400">Loading order...</span>
+      <div className="flex min-h-screen w-full flex-col bg-slate-50">
+        <div className="hidden md:block"><WebHeader /></div>
+        <main className="mx-auto w-full max-w-4xl flex-1 space-y-3 p-6" aria-busy="true" aria-label="Loading order">
+          <div className="h-28 animate-pulse rounded-3xl bg-slate-200" />
+          <div className="h-48 animate-pulse rounded-3xl bg-slate-200" />
+          <div className="h-32 animate-pulse rounded-3xl bg-slate-200" />
+        </main>
       </div>
     )
   }
 
+  // "Order not found" and "the request failed" are different situations, and
+  // telling someone with a dropped connection that their order does not exist
+  // is both wrong and alarming.
   if (isError || !order) {
+    const notFound = error?.status === 404
     return (
-      <div className="w-full min-h-screen bg-slate-50 flex flex-col items-center justify-center text-center px-6 space-y-4">
-        <h2 className="text-base font-bold text-slate-900">Order not found</h2>
-        <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl">
-          Back to Orders
-        </button>
+      <div className="flex min-h-screen w-full flex-col bg-slate-50">
+        <div className="hidden md:block"><WebHeader /></div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+          <ErrorState
+            error={error}
+            title={notFound ? 'Order not found' : undefined}
+            description={notFound ? 'This order does not exist, or it is not yours.' : undefined}
+            onRetry={notFound ? undefined : refetch}
+            className="w-full max-w-md"
+          />
+          <button onClick={onBack} className="text-xs font-bold text-blue-600 hover:underline">
+            Back to my orders
+          </button>
+        </div>
       </div>
     )
   }
@@ -123,7 +147,13 @@ export function OrderDetailsScreen({ onBack = () => {}, onDownloadInvoice = () =
                   <div key={idx} className="py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
                       <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-50 rounded-2xl p-1 shrink-0 border border-slate-100 flex items-center justify-center">
-                        <img src={item.image || '/images/placeholder.png'} alt={item.name} className="w-full h-full object-contain" />
+                        <SmartImage
+                          src={item.image}
+                          alt={item.name}
+                          sizes="64px"
+                          ratio="1 / 1"
+                          className="h-full w-full"
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{item.name}</h4>
@@ -205,7 +235,7 @@ export function OrderDetailsScreen({ onBack = () => {}, onDownloadInvoice = () =
         </div>
       </main>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />
       </div>
     </div>

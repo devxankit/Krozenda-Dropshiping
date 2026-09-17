@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Customer = require('../Models/Customer');
 const OtpRequest = require('../Models/OtpRequest');
-const { signToken } = require('../utils/jwt');
+const { signToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
 const { sendOtpSms } = require('../utils/smsService');
 
@@ -69,6 +69,21 @@ function serializeCustomer(user) {
     image: user.image ? getImageUrl(user.image) : null,
     walletBalance: user.walletBalance || 0,
     createdAt: user.createdAt,
+  };
+}
+
+// Both the OTP login and the refresh endpoint mint tokens the same way, so
+// the pair can never drift (e.g. a refresh handing back a token with a
+// different payload shape than login did).
+function issueTokens(user) {
+  const payload = {
+    id: user._id.toString(),
+    role: 'customer',
+    mobileNumber: user.mobileNumber,
+  };
+  return {
+    accessToken: signToken('user', payload),
+    refreshToken: signRefreshToken('user', payload),
   };
 }
 
@@ -216,11 +231,7 @@ async function verifyOtp(req, res) {
     }
   }
 
-  const token = signToken('user', {
-    id: user._id.toString(),
-    role: 'customer',
-    mobileNumber: user.mobileNumber,
-  });
+  const { accessToken, refreshToken } = issueTokens(user);
 
   res.json({
     success: true,
@@ -230,9 +241,48 @@ async function verifyOtp(req, res) {
     isNewUser,
     data: {
       user: serializeCustomer(user),
-      accessToken: token,
+      accessToken,
+      refreshToken,
     },
   });
+}
+
+// POST /auth/refresh-token — trades a valid refresh token for a fresh access
+// token (and a rotated refresh token). The account is re-checked on every
+// call, so deactivating or deleting a customer kills their sessions at the
+// next refresh rather than leaving a 30-day token live.
+//
+// Deliberately NOT behind protectUser: the whole point is that it is reachable
+// when the access token has already expired.
+async function refreshAccessToken(req, res) {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken || typeof refreshToken !== 'string') {
+    return res.status(400).json({ success: false, code: 'NO_REFRESH_TOKEN', message: 'Refresh token is required' });
+  }
+
+  let decoded;
+  try {
+    decoded = verifyRefreshToken('user', refreshToken);
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      code: 'INVALID_REFRESH_TOKEN',
+      message: 'Your session has expired. Please sign in again.',
+    });
+  }
+
+  const user = await Customer.findById(decoded.id);
+  if (!user || user.isDeleted || !user.isActive) {
+    return res.status(401).json({
+      success: false,
+      code: 'INVALID_REFRESH_TOKEN',
+      message: 'Your session is no longer valid. Please sign in again.',
+    });
+  }
+
+  const tokens = issueTokens(user);
+  res.json({ success: true, data: { ...tokens, user: serializeCustomer(user) } });
 }
 
 // GET /auth/me
@@ -357,6 +407,7 @@ async function deleteAccount(req, res) {
 module.exports = {
   requestOtp,
   verifyOtp,
+  refreshAccessToken,
   getMe,
   updateProfile,
   uploadProfileImage,

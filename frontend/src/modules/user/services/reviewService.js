@@ -20,9 +20,20 @@ export async function submitReview({ productId, orderId, rating, reviewText, pho
 
 // Lets any signed-in buyer load reviews (and review photos) left by other
 // buyers on a product — the visibility half of the upload feature.
-export async function fetchProductReviews(productId) {
-  const response = await api.get('/user/reviews', { params: { productId } })
-  return reviewListSchema.parse(response.data.data)
+// BREAKING (documented in the audit report): `data` used to be a bare array.
+// It is now the standard { items, total, summary } envelope so the endpoint
+// can be paginated and carry the rating histogram.
+export async function fetchProductReviews(productId, { page = 1, limit = 10 } = {}, { signal } = {}) {
+  const response = await api.get('/user/reviews', {
+    params: { productId, page, limit },
+    signal,
+  })
+  return {
+    items: reviewListSchema.parse(response.data.data.items),
+    total: response.data.data.total ?? 0,
+    summary: response.data.data.summary ?? null,
+    pagination: response.data.pagination ?? null,
+  }
 }
 
 // Delivered-but-maybe-not-yet-reviewed products for this buyer — powers the

@@ -1,29 +1,60 @@
-import React, { useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { HiArrowLeft, HiShieldCheck, HiCreditCard, HiWallet, HiTruck, HiChevronRight } from 'react-icons/hi2'
+import { useEffect, useState } from 'react'
+import { HiArrowLeft, HiChevronRight, HiCreditCard, HiShieldCheck, HiTruck, HiWallet } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { Toast } from '../../../../components/ui'
+import { USER_ROUTES } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
 import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useCheckoutController } from '../../controllers/useCheckoutController'
 import { useWalletController } from '../../controllers/useWalletController'
 import { useProfileController } from '../../controllers/useProfileController'
 
-export function PaymentScreen({ onBack = () => {}, onPaymentSuccess = () => {} }) {
-  const location = useLocation()
-  const amount = location.state?.total ?? 0
+export function PaymentScreen() {
+  const navigate = useNavigate()
 
   const { profile } = useProfileController()
   const { balance: walletBalance } = useWalletController()
-  const clearCart = useCartStore((s) => s.clearCart)
+
+  const cartItems = useCartStore((s) => s.items)
+  const cartSummary = useCartStore((s) => s.summary)
+  const hydrateCart = useCartStore((s) => s.hydrate)
+
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
   const shippingFee = useCheckoutStore((s) => s.shippingFee)
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const resetCheckout = useCheckoutStore((s) => s.reset)
-  const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
 
+  const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
   const [selectedMethod, setSelectedMethod] = useState('RAZORPAY')
+
+  usePageMeta({ title: 'Payment', noindex: true })
+
+  // The amount used to come from `location.state.total`, which meant a WebView
+  // reload — routine on Android, and guaranteed on the way back from a UPI app
+  // — produced a ₹0 total and a permanently disabled "Pay" button with no way
+  // forward. It is now derived from the cart and the persisted checkout
+  // selections, so it survives a reload, a background/foreground cycle and a
+  // deep link (§111, §112).
+  const subtotal = cartSummary?.subtotal ?? cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
+  const discount = appliedCoupon?.discountAmount || 0
+  const amount = Math.max(0, subtotal - discount + shippingFee)
+
+  useEffect(() => {
+    hydrateCart()
+  }, [hydrateCart])
+
+  // Nothing to pay for: send the buyer back to the step that is actually
+  // missing rather than showing a dead screen.
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      navigate(USER_ROUTES.CART, { replace: true })
+    } else if (!selectedAddressId) {
+      navigate(USER_ROUTES.CHECKOUT_ADDRESS, { replace: true })
+    }
+  }, [cartItems.length, selectedAddressId, navigate])
 
   const paymentMethods = [
     { id: 'RAZORPAY', name: 'Pay Online (Card / UPI / Netbanking)', icon: HiCreditCard, badge: 'RECOMMENDED' },
@@ -33,163 +64,248 @@ export function PaymentScreen({ onBack = () => {}, onPaymentSuccess = () => {} }
       icon: HiWallet,
       tag: `Balance: ₹${walletBalance.toLocaleString('en-IN')}`,
       disabled: walletBalance < amount,
+      disabledReason: 'Insufficient wallet balance',
     },
     { id: 'COD', name: 'Cash on Delivery', icon: HiTruck },
   ]
 
   const handlePay = async () => {
+    // Frontend guard only — the real protection is the idempotency key the
+    // controller sends, which the backend keys on so a double submission
+    // resolves to one order (§59: frontend-only protection is insufficient).
+    if (isPlacingOrder) return
+
     try {
       const order = await payAndPlaceOrder({
         addressId: selectedAddressId,
         paymentMethod: selectedMethod,
         couponCode: appliedCoupon?.code || undefined,
         shippingFee,
-        total: amount,
         prefill: { name: profile?.name, email: profile?.email, contact: profile?.mobileNumber },
       })
 
-      clearCart()
+      // `undefined` means the call was swallowed as a duplicate of one already
+      // in flight — the first one will navigate.
+      if (!order) return
+
+      // The cart is emptied server-side by the order endpoint; clearing here
+      // keeps the local view in step without a second round trip.
+      useCartStore.setState({ items: [], summary: null })
       resetCheckout()
-      onPaymentSuccess(order)
-    } catch {
-      // error state below already surfaces the failure
+      navigate(USER_ROUTES.CHECKOUT_SUCCESS, { state: { order }, replace: true })
+    } catch (err) {
+      // A stock/availability failure at this point means the cart moved under
+      // the buyer; re-read it so the cart screen can explain what changed.
+      if (err?.code === 'INSUFFICIENT_STOCK' || err?.code === 'CART_ITEM_UNAVAILABLE') {
+        hydrateCart()
+      }
+      // Everything else is surfaced by the Toast below.
     }
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+    <div className="flex min-h-screen w-full flex-col justify-between bg-slate-50 font-sans text-slate-800">
+      <div className="hidden md:block">
+        <WebHeader />
+      </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
-        {/* Responsive Stepper */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          {/* Mobile Stepper */}
-          <div className="sm:hidden flex items-center justify-between text-xs font-bold text-slate-700">
-            <span className="text-blue-700 font-black">Step 4 of 4: Payment</span>
-            <span className="text-emerald-600 font-bold">Final Step</span>
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-4 pb-28 sm:px-6 md:py-8 md:pb-12 lg:px-8">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm sm:p-5">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 sm:hidden">
+            <span className="font-black text-blue-700">Step 4 of 4: Payment</span>
+            <span className="font-bold text-emerald-600">Final Step</span>
           </div>
 
-          {/* Desktop Stepper */}
-          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto text-xs font-bold">
-            <div className="flex items-center space-x-2 text-emerald-600">
-              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px]">✓</span>
-              <span>Address</span>
-            </div>
-            <div className="h-0.5 bg-emerald-600 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-emerald-600">
-              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px]">✓</span>
-              <span>Delivery</span>
-            </div>
-            <div className="h-0.5 bg-emerald-600 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-emerald-600">
-              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px]">✓</span>
-              <span>Summary</span>
-            </div>
-            <div className="h-0.5 bg-blue-600 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-blue-700">
-              <span className="w-6 h-6 rounded-full bg-blue-700 text-white flex items-center justify-center text-[11px]">4</span>
+          <div className="mx-auto hidden max-w-3xl items-center justify-between text-xs font-bold sm:flex">
+            {['Address', 'Delivery', 'Summary'].map((label) => (
+              <div key={label} className="flex items-center gap-2 text-emerald-600">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[11px] text-emerald-700">
+                  {'✓'}
+                </span>
+                <span>{label}</span>
+                <div className="mx-3 h-0.5 w-8 bg-emerald-600 lg:w-16" />
+              </div>
+            ))}
+            <div className="flex items-center gap-2 text-blue-700">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-[11px] text-white">
+                4
+              </span>
               <span className="font-black">Payment</span>
             </div>
           </div>
         </div>
 
-        {/* 2 Column Split Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center space-x-3">
-                <button onClick={onBack} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700">
-                  <HiArrowLeft className="w-5 h-5" />
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="space-y-4 lg:col-span-2">
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(USER_ROUTES.CHECKOUT_SUMMARY)}
+                  aria-label="Back to order summary"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"
+                >
+                  <HiArrowLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-base sm:text-xl font-black text-slate-900">Select Payment Method</h1>
+                <h1 className="text-base font-black text-slate-900 sm:text-xl">
+                  Select Payment Method
+                </h1>
               </div>
             </div>
 
-            <div className="space-y-3">
+            {/* A radiogroup, not a list of divs — this is a single choice, and
+                it has to be reachable and operable by keyboard and screen
+                reader, not just by tap. */}
+            <div role="radiogroup" aria-label="Payment method" className="space-y-3">
               {paymentMethods.map((method) => {
                 const IconComponent = method.icon
                 const isSelected = selectedMethod === method.id
                 return (
-                  <div
+                  <button
                     key={method.id}
-                    onClick={() => !method.disabled && setSelectedMethod(method.id)}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={method.disabled}
+                    onClick={() => setSelectedMethod(method.id)}
+                    className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
                       method.disabled
-                        ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed'
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
                         : isSelected
-                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-md cursor-pointer'
-                          : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer'
+                          ? 'border-blue-600 bg-blue-50/40 shadow-md ring-2 ring-blue-500/20'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center space-x-3 min-w-0 flex-1">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                          <IconComponent className="w-5 h-5" />
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <IconComponent className="h-5 w-5" aria-hidden="true" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-900">{method.name}</h4>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <h2 className="text-xs font-bold text-slate-900 sm:text-sm">
+                              {method.name}
+                            </h2>
                             {method.badge && (
-                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-extrabold text-[9px] uppercase rounded-full">
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold uppercase text-amber-800">
                                 {method.badge}
                               </span>
                             )}
                           </div>
                           {method.tag && (
-                            <p className={`text-xs font-semibold mt-0.5 ${method.disabled ? 'text-red-500' : 'text-emerald-600'}`}>
-                              {method.disabled ? 'Insufficient wallet balance' : method.tag}
+                            <p
+                              className={`mt-0.5 text-xs font-semibold ${
+                                method.disabled ? 'text-red-500' : 'text-emerald-600'
+                              }`}
+                            >
+                              {method.disabled ? method.disabledReason : method.tag}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
-                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
-                      </div>
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
+                        }`}
+                      >
+                        {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </span>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
+
+            {selectedMethod === 'RAZORPAY' && (
+              <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-medium text-slate-500">
+                You may be taken to your bank or UPI app to complete the payment. Come back to this
+                app afterwards — your order is only confirmed once we have verified the payment with
+                the gateway.
+              </p>
+            )}
           </div>
 
-          {/* Right Column Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-md space-y-5 lg:sticky lg:top-24">
-              <h3 className="text-sm sm:text-base font-black text-slate-900 border-b border-slate-100 pb-3">
+            <div className="space-y-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-md sm:p-6 lg:sticky lg:top-24">
+              <h2 className="border-b border-slate-100 pb-3 text-sm font-black text-slate-900 sm:text-base">
                 Payment Summary
-              </h3>
+              </h2>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-2">
-                <div className="flex justify-between text-xs font-bold text-slate-700">
-                  <span>Grand Total</span>
-                  <span className="text-sm font-black text-blue-700">₹{amount.toLocaleString('en-IN')}</span>
+              <dl className="space-y-2 rounded-2xl border border-slate-200/60 bg-slate-50 p-4 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <dt>Subtotal</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {'₹'}
+                    {subtotal.toLocaleString('en-IN')}
+                  </dd>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium">Inclusive of all taxes & GST invoice</p>
+                {discount > 0 && (
+                  <div className="flex justify-between font-semibold text-emerald-600">
+                    <dt>Coupon ({appliedCoupon.code})</dt>
+                    <dd>
+                      - {'₹'}
+                      {discount.toLocaleString('en-IN')}
+                    </dd>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-600">
+                  <dt>Shipping</dt>
+                  <dd className={shippingFee === 0 ? 'font-bold text-emerald-600' : 'font-semibold text-slate-900'}>
+                    {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                  </dd>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2 text-xs font-bold text-slate-700">
+                  <dt>Grand Total</dt>
+                  <dd className="text-sm font-black text-blue-700">
+                    {'₹'}
+                    {amount.toLocaleString('en-IN')}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-[11px] font-medium text-slate-500">
+                Inclusive of all taxes. The final amount is recalculated and verified by our servers
+                before your order is created.
+              </p>
+
+              <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-3.5 text-[11px] font-semibold text-emerald-800">
+                <HiShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+                <span>Payments are encrypted and verified server-side before confirmation.</span>
               </div>
 
-              <div className="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100 flex items-center space-x-2 text-[11px] font-semibold text-emerald-800">
-                <HiShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>256-Bit SSL Encrypted 100% Safe Payment Gateway</span>
-              </div>
-
-              {error && <Toast tone="danger" message={error?.message || 'Payment failed. Please try again.'} />}
+              {error && (
+                <Toast
+                  tone="danger"
+                  message={error?.message || 'Payment could not be completed. Please try again.'}
+                />
+              )}
 
               <button
+                type="button"
                 onClick={handlePay}
                 disabled={isPlacingOrder || amount <= 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-4 text-xs font-bold tracking-wide text-white shadow-md transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60"
               >
-                <span>{isPlacingOrder ? 'Processing...' : `Pay ₹${amount.toLocaleString('en-IN')} Now`}</span>
-                {!isPlacingOrder && <HiChevronRight className="w-4 h-4" />}
+                <span>
+                  {isPlacingOrder
+                    ? 'Processing…'
+                    : selectedMethod === 'COD'
+                      ? `Place Order • ₹${amount.toLocaleString('en-IN')}`
+                      : `Pay ₹${amount.toLocaleString('en-IN')}`}
+                </span>
+                {!isPlacingOrder && <HiChevronRight className="h-4 w-4" aria-hidden="true" />}
               </button>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />
       </div>
     </div>

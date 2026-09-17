@@ -39,6 +39,15 @@ export const useAuthStore = create((set) => ({
     })
   },
 
+  // Kept separate from setSession so a profile update (PUT /auth/profile)
+  // can refresh the cached user without having to re-supply tokens it does
+  // not have.
+  setUser: (user) => {
+    if (!user) return
+    storage.setUserData(user)
+    set({ user })
+  },
+
   clearSession: () => {
     storage.clearTokens()
     set({ user: null, roles: [], capabilities: [], permissions: [], isAuthenticated: false })

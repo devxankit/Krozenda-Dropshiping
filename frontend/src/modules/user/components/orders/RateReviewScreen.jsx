@@ -1,60 +1,127 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HiArrowLeft, HiStar, HiPlus, HiXMark, HiChatBubbleLeftRight } from 'react-icons/hi2'
+import { useNavigate, useParams } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Toast } from '../../../../components/ui'
+import { USER_ROUTES } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useSubmitReviewController } from '../../controllers/useSubmitReviewController'
 import { useReviewableItemsController } from '../../controllers/useReviewableItemsController'
 
 const MAX_PHOTOS = 4
+// Matches the backend's multer limit. Checked here so an oversized photo is
+// rejected before it is uploaded rather than after a slow failed request.
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024
+const ACCEPTED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']
 
-export function RateReviewScreen({ onBack = () => {}, onSubmitReview = () => {} }) {
+export function RateReviewScreen() {
+  const navigate = useNavigate()
+  // Optional: /app/orders/:orderId/review pre-selects that order's item,
+  // /app/reviews shows the full picker.
+  const { orderId: orderIdFromPath } = useParams()
   const { items, isLoading } = useReviewableItemsController()
+
+  usePageMeta({ title: 'Write a Review', noindex: true })
+
+  const onBack = () => navigate(USER_ROUTES.ORDERS)
+  const onSubmitReview = () => navigate(USER_ROUTES.ORDERS)
   const { submitReview, isSubmitting, isError, error } = useSubmitReviewController()
 
   const [selectedProductId, setSelectedProductId] = useState(null)
   const [rating, setRating] = useState(5)
   const [reviewText, setReviewText] = useState('')
   const [photos, setPhotos] = useState([]) // [{ file, previewUrl }]
+  const [photoError, setPhotoError] = useState(null)
   const fileInputRef = useRef(null)
 
-  // Default to the first not-yet-reviewed item once the list loads.
-  useEffect(() => {
-    if (!selectedProductId && items.length > 0) {
-      const firstUnreviewed = items.find((i) => !i.alreadyReviewed) || items[0]
-      setSelectedProductId(firstUnreviewed.productId)
-    }
-  }, [items, selectedProductId])
+  // Default to the item from the order in the URL when there is one, otherwise
+  // the first not-yet-reviewed item. Done as a render-phase adjustment rather
+  // than an effect so the form paints once, already populated, instead of
+  // rendering empty and then re-rendering.
+  const resolvedProductId = (() => {
+    if (selectedProductId || items.length === 0) return selectedProductId
+    const fromOrder = orderIdFromPath && items.find((i) => i.orderId === orderIdFromPath)
+    const firstUnreviewed = items.find((i) => !i.alreadyReviewed) || items[0]
+    return (fromOrder || firstUnreviewed).productId
+  })()
 
-  const selectedItem = items.find((i) => i.productId === selectedProductId) || null
+  if (resolvedProductId !== selectedProductId && resolvedProductId) {
+    setSelectedProductId(resolvedProductId)
+  }
 
-  // Loads the picked product's existing review into the form (edit mode), or
-  // resets to defaults for a fresh review.
-  useEffect(() => {
-    if (!selectedItem) return
-    if (selectedItem.myReview) {
-      setRating(selectedItem.myReview.rating)
-      setReviewText(selectedItem.myReview.reviewText)
-    } else {
-      setRating(5)
-      setReviewText('')
-    }
-    setPhotos([])
-  }, [selectedItem])
+  const selectedItem = items.find((i) => i.productId === resolvedProductId) || null
+
+  // Load the picked product's existing review into the form (edit mode), or
+  // reset to defaults for a fresh review. Keyed on the product id so switching
+  // products re-seeds the form, while typing in it does not.
+  const [formSeededFor, setFormSeededFor] = useState(null)
+  if (selectedItem && formSeededFor !== selectedItem.productId) {
+    setFormSeededFor(selectedItem.productId)
+    setRating(selectedItem.myReview?.rating ?? 5)
+    setReviewText(selectedItem.myReview?.reviewText ?? '')
+    setPhotos((prev) => {
+      prev.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+      return []
+    })
+    setPhotoError(null)
+  }
 
   const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
 
+  // Object URLs are revoked on unmount only. Watching `photos` would revoke
+  // the URL of a photo that is still on screen every time the array changed —
+  // removing one photo would blank the previews of the others.
+  const photosRef = useRef(photos)
   useEffect(() => {
-    return () => {
-      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
-    }
+    photosRef.current = photos
   }, [photos])
+  useEffect(
+    () => () => {
+      photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+    },
+    [],
+  )
 
+  // File picking has more failure modes than the happy path, and inside a
+  // WebView every one of them is reachable: the user cancels the picker, the
+  // gallery hands back a HEIC the server will not take, or a 4K photo blows
+  // the upload limit. Each is caught here, with a message, rather than
+  // surfacing as a failed request several seconds later (§104).
   const handlePickPhotos = (event) => {
-    const files = Array.from(event.target.files ?? []).slice(0, MAX_PHOTOS - photos.length)
-    const next = files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
-    setPhotos((prev) => [...prev, ...next])
+    const picked = Array.from(event.target.files ?? [])
+    // Always clear the input, even on the cancel path, or picking the same
+    // file twice in a row fires no change event at all.
     event.target.value = ''
+    setPhotoError(null)
+
+    if (picked.length === 0) return // user cancelled — not an error
+
+    const room = MAX_PHOTOS - photos.length
+    if (room <= 0) {
+      setPhotoError(`You can attach up to ${MAX_PHOTOS} photos.`)
+      return
+    }
+
+    const rejected = []
+    const accepted = []
+
+    for (const file of picked.slice(0, room)) {
+      if (file.size > MAX_PHOTO_BYTES) {
+        rejected.push(`${file.name} is larger than 10MB`)
+      } else if (file.type && !ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+        rejected.push(`${file.name} is not a supported image`)
+      } else {
+        accepted.push({ file, previewUrl: URL.createObjectURL(file) })
+      }
+    }
+
+    if (picked.length > room) {
+      rejected.push(`only ${room} more photo${room === 1 ? '' : 's'} can be added`)
+    }
+
+    if (accepted.length > 0) setPhotos((prev) => [...prev, ...accepted])
+    if (rejected.length > 0) setPhotoError(`Some photos were not added: ${rejected.join(', ')}.`)
   }
 
   const handleRemovePhoto = (index) => {
@@ -62,10 +129,13 @@ export function RateReviewScreen({ onBack = () => {}, onSubmitReview = () => {} 
       URL.revokeObjectURL(prev[index].previewUrl)
       return prev.filter((_, i) => i !== index)
     })
+    setPhotoError(null)
   }
 
   const handleSubmit = async () => {
-    if (!selectedItem) return
+    // Guarded against a double tap: the submit button is disabled while the
+    // mutation is pending, but a second tap can land before React re-renders.
+    if (!selectedItem || isSubmitting) return
     const review = await submitReview({
       productId: selectedItem.productId,
       orderId: selectedItem.orderId,
@@ -101,7 +171,7 @@ export function RateReviewScreen({ onBack = () => {}, onSubmitReview = () => {} 
             <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center space-y-2">
               <HiChatBubbleLeftRight className="w-8 h-8 text-slate-300 mx-auto" />
               <p className="text-sm font-bold text-slate-900">No delivered products to review yet</p>
-              <p className="text-xs text-slate-500">Once an order is delivered, it'll show up here for review.</p>
+              <p className="text-xs text-slate-500">Once an order is delivered, it{'’'}ll show up here for review.</p>
             </div>
           ) : (
             <>
@@ -109,7 +179,7 @@ export function RateReviewScreen({ onBack = () => {}, onSubmitReview = () => {} 
               <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-2">
                 <label className="text-[11px] font-bold text-slate-500 block">Select a delivered product</label>
                 <select
-                  value={selectedProductId || ''}
+                  value={resolvedProductId || ''}
                   onChange={(e) => setSelectedProductId(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                 >
@@ -241,7 +311,7 @@ export function RateReviewScreen({ onBack = () => {}, onSubmitReview = () => {} 
         </div>
       </div>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="orders" />
       </div>
     </div>

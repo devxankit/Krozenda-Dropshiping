@@ -1,25 +1,41 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HiArrowLeft, HiPlus, HiCheck, HiShieldCheck, HiChevronRight } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { AddressFormModal } from '../profile/AddressFormModal'
 import { useCheckoutStore } from '../../../../lib/checkoutStore'
+import { USER_ROUTES } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 
-export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () => {} }) {
+export function SelectAddressScreen() {
+  const navigate = useNavigate()
   const { addresses, isLoading, createAddress, isCreating } = useAddressesController()
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
   const setSelectedAddressId = useCheckoutStore((s) => s.setSelectedAddressId)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  // Default to the buyer's default address the first time this screen sees
-  // a real address list (e.g. arriving fresh from the cart).
+  usePageMeta({ title: 'Delivery Address', noindex: true })
+
+  const onBack = () => navigate(USER_ROUTES.CART)
+  const onSelectAddress = () => navigate(USER_ROUTES.CHECKOUT_DELIVERY)
+
+  // Default to the buyer's default address the first time this screen sees a
+  // real address list (e.g. arriving fresh from the cart).
+  //
+  // The second branch matters just as much: the id is persisted across a
+  // WebView reload, so it can point at an address the buyer has since deleted
+  // from another screen. Left alone, checkout would then send an id the server
+  // rejects with "Delivery address not found" and no way to see why.
   useEffect(() => {
-    if (!selectedAddressId && addresses.length > 0) {
+    if (isLoading || addresses.length === 0) return
+    const stillExists = addresses.some((a) => a.id === selectedAddressId)
+    if (!selectedAddressId || !stillExists) {
       const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0]
       setSelectedAddressId(defaultAddress.id)
     }
-  }, [addresses, selectedAddressId, setSelectedAddressId])
+  }, [addresses, isLoading, selectedAddressId, setSelectedAddressId])
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0]
 
@@ -196,7 +212,7 @@ export function SelectAddressScreen({ onBack = () => {}, onSelectAddress = () =>
       />
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />
       </div>
     </div>

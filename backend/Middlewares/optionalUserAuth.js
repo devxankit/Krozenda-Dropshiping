@@ -1,5 +1,5 @@
 const Customer = require('../Models/Customer');
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken } = require('../utils/jwt');
 
 async function optionalUserAuth(req, res, next) {
   try {
@@ -11,7 +11,7 @@ async function optionalUserAuth(req, res, next) {
       return next();
     }
 
-    const decoded = verifyToken('user', token);
+    const decoded = verifyAccessToken('user', token);
     const user = await Customer.findById(decoded.id);
 
     if (user && !user.isDeleted && user.isActive) {

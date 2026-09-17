@@ -28,4 +28,72 @@ const globalRateLimiter = rateLimit({
   message: { success: false, message: 'Too many requests. Please slow down.' },
 });
 
-module.exports = { otpRateLimiter, globalRateLimiter };
+// Refresh is cheap but must not become a free JWT-minting oracle for a
+// stolen refresh token, and a client stuck in a retry loop shouldn't be able
+// to hammer it. Generous enough that a normal 1h-access-token session (a
+// handful of refreshes a day) never notices.
+const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many refresh attempts. Please sign in again.' },
+});
+
+// Order creation and payment verification. Tight because each call can move
+// money and reserve stock; a real buyer places one order per checkout, so 20
+// per 15 minutes leaves plenty of room for retries after a failed payment.
+const orderRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many order attempts. Please wait a moment and try again.' },
+});
+
+// Coupon validation is the one buyer endpoint that invites brute forcing —
+// without a limit, the whole coupon namespace can be enumerated for a
+// working code.
+const couponRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many coupon attempts. Please try again in a few minutes.' },
+});
+
+// Review/return submissions carry image uploads, so the cost per request is
+// far higher than a plain write.
+const writeRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many submissions. Please try again shortly.' },
+});
+
+// Catalog search/browse. Loose enough for real shopping (a filter-heavy
+// session easily makes a few hundred calls) but it stops a scraper from
+// pulling the whole catalog at full speed.
+const catalogRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many requests. Please slow down.' },
+});
+
+module.exports = {
+  otpRateLimiter,
+  globalRateLimiter,
+  refreshRateLimiter,
+  orderRateLimiter,
+  couponRateLimiter,
+  writeRateLimiter,
+  catalogRateLimiter,
+};

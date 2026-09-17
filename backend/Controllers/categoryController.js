@@ -1,6 +1,7 @@
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
 const { getImageUrl } = require('../utils/imageHelper');
+const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -29,13 +30,21 @@ function serializeCategory(cat) {
 // instead of hand-authored copy. Only APPROVED categories are ever public —
 // a seller-proposed one stays invisible here until admin approves it.
 async function listPublicCategories(req, res) {
-  const categories = await Category.find({ isActive: true, approvalStatus: 'APPROVED' })
+  // $nin, not equality: categories created before the approval workflow have no
+  // approvalStatus field, and an equality check matched none of them — this
+  // endpoint was returning an empty list for a catalog with 12 real categories.
+  // See utils/publicVisibility.
+  const categories = await Category.find({ isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER })
     .sort({ isTopCategory: -1, name: 1 })
     .select('name image isTopCategory')
     .lean();
 
+  // approvalStatus is in the match on purpose: without it a category's
+  // "1,240 Products" badge counted products still awaiting approval (and
+  // rejected ones), so the count on the card never matched the number of
+  // products the listing page then showed.
   const productStats = await Product.aggregate([
-    { $match: { isActive: true } },
+    { $match: { isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER } },
     {
       $group: {
         _id: '$category',

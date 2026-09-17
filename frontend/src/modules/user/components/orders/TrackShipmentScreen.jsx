@@ -1,8 +1,10 @@
-import React from 'react'
 import { HiArrowLeft, HiCheck, HiTruck, HiXCircle } from 'react-icons/hi2'
-import { useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { ErrorState } from '../../../../components/ui/AsyncBoundary'
+import { USER_ROUTES, userPath } from '../../../../config/routes'
+import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrderController } from '../../controllers/useOrdersController'
 
 const FLOW = [
@@ -16,20 +18,48 @@ function formatTime(iso) {
   return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export function TrackShipmentScreen({ onBack = () => {}, onViewDetails = () => {} }) {
-  const location = useLocation()
-  const orderId = location.state?.orderId
-  const { order, isLoading } = useOrderController(orderId)
+export function TrackShipmentScreen() {
+  const navigate = useNavigate()
+  const { orderId } = useParams()
+  const { order, isLoading, isError, error, refetch } = useOrderController(orderId)
 
-  if (!orderId || isLoading || !order) {
+  usePageMeta({ title: 'Track Shipment', noindex: true })
+
+  const onBack = () => navigate(-1)
+  const onViewDetails = (o) => navigate(userPath.order(o.id))
+
+  if (isLoading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50 flex flex-col items-center justify-center text-center px-6 space-y-4">
-        <h2 className="text-base font-bold text-slate-900">{isLoading ? 'Loading shipment...' : 'No order selected'}</h2>
-        {!isLoading && (
-          <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl">
-            Back to Orders
+      <div className="flex min-h-screen w-full flex-col bg-slate-50">
+        <div className="hidden md:block"><WebHeader /></div>
+        <main className="mx-auto w-full max-w-3xl flex-1 space-y-3 p-6" aria-busy="true" aria-label="Loading shipment">
+          <div className="h-24 animate-pulse rounded-3xl bg-slate-200" />
+          <div className="h-64 animate-pulse rounded-3xl bg-slate-200" />
+        </main>
+      </div>
+    )
+  }
+
+  // "Loading" and "this failed" used to be the same screen, which told a buyer
+  // with a dropped connection that they had no order.
+  if (isError || !order) {
+    return (
+      <div className="flex min-h-screen w-full flex-col bg-slate-50">
+        <div className="hidden md:block"><WebHeader /></div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <ErrorState
+            error={error}
+            title={error?.status === 404 ? 'Order not found' : undefined}
+            description={error?.status === 404 ? 'This order does not exist, or it is not yours.' : undefined}
+            onRetry={error?.status === 404 ? undefined : refetch}
+            className="max-w-md"
+          />
+        </div>
+        <div className="p-6 text-center">
+          <button onClick={() => navigate(USER_ROUTES.ORDERS)} className="text-xs font-bold text-blue-600 hover:underline">
+            Back to my orders
           </button>
-        )}
+        </div>
       </div>
     )
   }
@@ -130,7 +160,7 @@ export function TrackShipmentScreen({ onBack = () => {}, onViewDetails = () => {
         </div>
       </div>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="orders" />
       </div>
     </div>
