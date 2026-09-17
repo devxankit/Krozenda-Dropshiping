@@ -116,6 +116,9 @@ function serializeShipment(shipment, { includeInternal = false } = {}) {
           carrierOrderId: shipment.shiprocketOrderId,
           carrierShipmentId: shipment.shiprocketShipmentId,
           carrierShippingCost: shipment.carrierShippingCost,
+          // Higher than package.chargeableWeightKg means the courier measured
+          // the parcel bigger than it was declared, and will bill for it.
+          carrierAppliedWeightKg: shipment.carrierAppliedWeightKg,
           customerShippingCharge: shipment.customerShippingCharge,
           platformShippingMargin: shipment.platformShippingMargin,
           retryCount: shipment.retryCount,

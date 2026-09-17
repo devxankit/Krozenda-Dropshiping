@@ -141,6 +141,10 @@ const shipmentSchema = new mongoose.Schema(
     collectableAmount: { type: Number, default: 0, min: 0 },
     // Declared value of the goods.
     declaredValue: { type: Number, default: 0, min: 0 },
+    // The weight the carrier says it is billing on, from the AWB response.
+    // Compare against package.chargeableWeightKg: if this is higher, the
+    // parcel measured bigger than declared and the invoice will reflect that.
+    carrierAppliedWeightKg: { type: Number, default: null },
     // What the BUYER was charged for shipping, apportioned to this shipment.
     customerShippingCharge: { type: Number, default: 0, min: 0 },
     // What the CARRIER actually charged. Only known once rated/shipped.

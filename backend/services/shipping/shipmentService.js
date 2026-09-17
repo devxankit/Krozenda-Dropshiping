@@ -505,6 +505,7 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
   // Pick a courier when the caller did not. MANUAL strategy means the caller
   // MUST choose — we never silently pick on their behalf.
   let chosenCourierId = courierId;
+  let quotedRate = null;
   if (!chosenCourierId) {
     const rates = await serviceabilityService.checkLane({
       vendorId: doc.vendor,
@@ -519,6 +520,12 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
 
     if (rates.ok && rates.recommended) {
       chosenCourierId = rates.recommended.courierId;
+      // The AWB response carries no price (confirmed against the official
+      // collection's "Generate AWB for Shipment" sample), so the quote we were
+      // just given for this courier is the only figure available at booking
+      // time. It is an ESTIMATE: Shiprocket re-bills after it weighs the
+      // parcel, and that correction arrives in the billing statement, not here.
+      quotedRate = Number.isFinite(rates.recommended.rate) ? rates.recommended.rate : null;
     } else if (rates.ok && !rates.serviceable) {
       return fail('NOT_SERVICEABLE', 'No courier currently serves this route.');
     } else if (rates.ok && !rates.recommended) {
@@ -553,11 +560,27 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
     doc.awbCode = String(awb);
     doc.courierId = Number(data.courier_company_id ?? chosenCourierId) || null;
     doc.courierName = data.courier_name || '';
-    // What the carrier actually charges. Kept separate from what the buyer was
-    // charged, so margin stays visible (task §20).
-    const carrierCost = Number(data.freight_charge ?? data.rate);
+
+    // The weight the carrier says it will bill on. This is the one number in
+    // the AWB response that touches money, and it is worth keeping: when it
+    // exceeds the weight we declared, the invoice will too.
+    const appliedWeight = Number(data.applied_weight);
+    if (Number.isFinite(appliedWeight) && appliedWeight > 0) {
+      doc.carrierAppliedWeightKg = appliedWeight;
+    }
+
+    // What shipping costs us. The AWB response has no price field at all, so
+    // this comes from the rate quoted for the chosen courier moments earlier.
+    // Left null when we have no quote — a fabricated cost would silently
+    // corrupt the margin figure, and null at least reads as "unknown".
+    const carrierCost = Number.isFinite(Number(data.freight_charge ?? data.rate))
+      ? Number(data.freight_charge ?? data.rate)
+      : quotedRate;
+
     if (Number.isFinite(carrierCost)) {
       doc.carrierShippingCost = carrierCost;
+      // Kept separate from what the buyer paid, so margin stays visible
+      // (task §20). Both are snapshots at booking time.
       doc.platformShippingMargin =
         Math.round((doc.customerShippingCharge - carrierCost) * 100) / 100;
     }
