@@ -755,52 +755,83 @@ async function getOrderTracking(req, res) {
 
 // POST /user/orders/shipping-quote
 //
-// What shipping will cost, before anything is placed. The checkout screen
-// calls this when the buyer picks a payment method, because COD and prepaid
-// are different prices and the buyer should see which they are choosing.
+// What shipping costs for this cart — for EVERY payment method, in one call.
 //
-// It runs the SAME computeCheckoutTotals the order will run, so the number on
-// screen is the number that gets charged — not a second implementation that
-// can drift from it.
+// Quoting only the selected method meant a buyer had to click COD to discover
+// it costs more, which is exactly the moment they should have been able to
+// compare. Two computations cover all three methods: Wallet is prepaid, so it
+// shares Razorpay's number.
+//
+// It runs the SAME computeCheckoutTotals the order will run, so what is shown
+// is what gets charged — not a second implementation that can drift.
 async function getShippingQuote(req, res) {
   const { addressId, paymentMethod, couponCode } = req.body;
 
-  if (!Order.PAYMENT_METHODS.includes(paymentMethod)) {
-    return res.status(400).json({ success: false, message: 'Select a valid payment method' });
+  const selected = Order.PAYMENT_METHODS.includes(paymentMethod) ? paymentMethod : 'RAZORPAY';
+
+  // The carrier is asked about one lane; the second call answers from
+  // serviceabilityService's 5-minute lane cache, so this is not twice the cost.
+  const [prepaid, cod] = await Promise.all([
+    computeCheckoutTotals(req.user, { addressId, couponCode, paymentMethod: 'RAZORPAY' }),
+    computeCheckoutTotals(req.user, { addressId, couponCode, paymentMethod: 'COD' }),
+  ]);
+
+  // A failure that is not about COD (empty cart, bad address, unserviceable
+  // lane) fails the whole request — there is nothing to show.
+  if (prepaid.error) {
+    return res.status(prepaid.error.status).json(serializeCheckoutError(prepaid.error));
   }
 
-  const checkout = await computeCheckoutTotals(req.user, { addressId, couponCode, paymentMethod });
-  if (checkout.error) {
-    return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
-  }
+  const describe = (result) => {
+    if (!result || result.error) {
+      // COD specifically can be unavailable while prepaid is fine — it is
+      // switched off, or no courier does COD on this lane. That is a real
+      // answer for that row, not a failure of the screen.
+      return { available: false, reason: result?.error?.code || 'UNAVAILABLE', message: result?.error?.message || '' };
+    }
+    return {
+      available: true,
+      shippingFee: result.shipping,
+      total: result.total,
+      isFree: result.shipping === 0,
+      // What the marketplace absorbs on a free order — worth showing, because
+      // "FREE" with no context reads as a gimmick.
+      carrierCost: result.quote?.carrierCost ?? result.shipping,
+      estimatedDeliveryDays: result.quote?.estimatedDeliveryDays ?? null,
+    };
+  };
 
-  const { quote, subtotal, shipping, discountAmount, total } = checkout;
+  const prepaidView = describe(prepaid);
+  const codView = describe(cod);
+
+  // Wallet is prepaid money, so it ships at the prepaid rate.
+  const byMethod = { RAZORPAY: prepaidView, WALLET: prepaidView, COD: codView };
+  const chosen = byMethod[selected] || prepaidView;
 
   res.json({
     success: true,
     message: 'Shipping quote',
     data: {
-      paymentMethod,
-      subtotal,
-      shippingFee: shipping,
-      discountAmount,
-      total,
+      paymentMethod: selected,
+      subtotal: prepaid.subtotal,
+      discountAmount: prepaid.discountAmount,
 
-      // Why it is what it is. A buyer told "free" without being told why has
-      // no reason to trust the number, and one told "₹166" without being told
-      // it is the COD fee will just think the site is expensive.
-      isFree: shipping === 0,
-      freeReason: quote?.freeReason ?? null,
-      freeShippingThreshold: quote?.freeShippingThreshold ?? 0,
-      amountToFreeShipping: quote?.amountToFreeShipping ?? 0,
-      // What the marketplace absorbs when the order ships free.
-      carrierCost: quote?.carrierCost ?? shipping,
+      // The selected method's numbers, kept at the top level so a screen that
+      // only cares about the current choice does not have to look them up.
+      shippingFee: chosen.available ? chosen.shippingFee : 0,
+      total: chosen.available ? chosen.total : prepaid.total,
+      isFree: Boolean(chosen.available && chosen.isFree),
+      carrierCost: chosen.available ? chosen.carrierCost : 0,
+      estimatedDeliveryDays: chosen.available ? chosen.estimatedDeliveryDays : null,
 
-      // A multi-vendor cart genuinely arrives in several boxes, and the total
-      // is the sum of them. Saying so is better than an unexplained bigger
-      // number.
-      parcelCount: quote?.parcelCount ?? 1,
-      estimatedDeliveryDays: quote?.estimatedDeliveryDays ?? null,
+      // Every method, so the buyer can compare before choosing rather than
+      // after.
+      methods: byMethod,
+
+      freeReason: prepaid.quote?.freeReason ?? null,
+      freeShippingThreshold: prepaid.quote?.freeShippingThreshold ?? 0,
+      amountToFreeShipping: prepaid.quote?.amountToFreeShipping ?? 0,
+      parcelCount: prepaid.quote?.parcelCount ?? 1,
     },
   });
 }

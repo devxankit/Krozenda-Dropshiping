@@ -32,7 +32,6 @@ export const PAYMENT_METHODS = [
     id: 'RAZORPAY',
     label: 'Pay Online',
     description: 'Card, UPI or Netbanking',
-    badge: 'CHEAPER DELIVERY',
   },
   {
     id: 'WALLET',

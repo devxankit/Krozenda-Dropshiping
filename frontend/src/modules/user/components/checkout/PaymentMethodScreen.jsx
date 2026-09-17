@@ -97,14 +97,34 @@ export function PaymentMethodScreen() {
             {PAYMENT_METHODS.map((method) => {
               const Icon = ICONS[method.id] || HiCreditCard
               const selected = paymentMethod === method.id
+              const row = quote?.methods?.[method.id] ?? null
+              // Cheapest available option, so every other row can say how much
+              // more it costs.
+              const cheapest = Math.min(
+                ...Object.values(quote?.methods ?? {})
+                  .filter((m) => m.available)
+                  .map((m) => m.shippingFee)
+                  .concat(Number.POSITIVE_INFINITY)
+              )
+              const extra =
+                row?.available && Number.isFinite(cheapest)
+                  ? Math.round((row.shippingFee - cheapest) * 100) / 100
+                  : 0
+              const isCheapest = row?.available && extra === 0
+              // Only a badge when there is genuinely money in it — if every
+              // method ships free, none of them is "cheaper".
+              const savesMoney = Object.values(quote?.methods ?? {}).some(
+                (m) => m.available && m.shippingFee > cheapest
+              )
               return (
                 <button
                   key={method.id}
                   type="button"
-                  onClick={() => setPaymentMethod(method.id)}
+                  onClick={() => row?.available !== false && setPaymentMethod(method.id)}
+                  disabled={row?.available === false}
                   className={`flex w-full items-center gap-3 rounded-2xl border-2 bg-white p-4 text-left transition-colors ${
                     selected ? 'border-blue-600 ring-1 ring-blue-600/20' : 'border-slate-200 hover:border-slate-300'
-                  }`}
+                  } ${row?.available === false ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   <span
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
@@ -117,36 +137,45 @@ export function PaymentMethodScreen() {
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-bold text-slate-900">{method.label}</span>
-                      {method.badge && (
+                      {/* Earned, not hardcoded. It used to say "CHEAPER
+                          DELIVERY" on the online option even when every
+                          method shipped free — a claim the prices did not
+                          support. */}
+                      {isCheapest && savesMoney && (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-emerald-700">
-                          {method.badge}
+                          CHEAPER DELIVERY
                         </span>
                       )}
                     </span>
                     <span className="block text-[11px] text-slate-500">{method.description}</span>
                   </span>
 
-                  {/* The delivery charge for THIS method, only on the selected
-                      one — quoting all three would mean three carrier calls
-                      for a choice the buyer makes once. */}
-                  {selected && (
-                    <span className="shrink-0 text-right">
-                      {isLoading ? (
-                        <span className="text-[11px] font-semibold text-slate-400">Checking…</span>
-                      ) : quote ? (
-                        <>
-                          <span
-                            className={`block text-sm font-extrabold ${quote.isFree ? 'text-emerald-600' : 'text-slate-900'}`}
-                          >
-                            {quote.isFree ? 'FREE' : money(quote.shippingFee)}
-                          </span>
-                          <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-400">
-                            delivery
-                          </span>
-                        </>
-                      ) : null}
-                    </span>
-                  )}
+                  {/* EVERY row shows its own delivery charge, not just the
+                      selected one. Making a buyer click COD to discover it
+                      costs more is exactly the wrong moment to tell them. */}
+                  <span className="shrink-0 text-right">
+                    {isLoading ? (
+                      <span className="text-[11px] font-semibold text-slate-400">…</span>
+                    ) : !row ? null : row.available === false ? (
+                      <span className="text-[11px] font-semibold text-slate-400">Not available</span>
+                    ) : (
+                      <>
+                        <span
+                          className={`block text-sm font-extrabold ${row.isFree ? 'text-emerald-600' : 'text-slate-900'}`}
+                        >
+                          {row.isFree ? 'FREE' : money(row.shippingFee)}
+                        </span>
+                        <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                          delivery
+                        </span>
+                        {/* The difference against the cheapest option, so
+                            "₹165.72" reads as a choice rather than a price. */}
+                        {extra > 0 && (
+                          <span className="block text-[9px] font-bold text-amber-600">+{money(extra)} vs online</span>
+                        )}
+                      </>
+                    )}
+                  </span>
                 </button>
               )
             })}

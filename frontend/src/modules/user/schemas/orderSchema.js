@@ -122,20 +122,42 @@ export const orderTrackingSchema = z.object({
 // What checkout will actually charge. Every number here is the SERVER's — the
 // client no longer adds up its own total, because the server's arithmetic is
 // the one that gets billed and two implementations drift.
+
+// One payment method's delivery price. `available: false` is a real answer for
+// a row — COD can be switched off, or unsupported on this lane — and is not
+// the same as the quote having failed.
+const quotedMethodSchema = z.union([
+  z.object({
+    available: z.literal(true),
+    shippingFee: z.number(),
+    total: z.number(),
+    isFree: z.boolean(),
+    carrierCost: z.number(),
+    estimatedDeliveryDays: z.number().nullable(),
+  }),
+  z.object({
+    available: z.literal(false),
+    reason: z.string(),
+    message: z.string(),
+  }),
+])
+
 export const shippingQuoteSchema = z.object({
   paymentMethod: z.string(),
   subtotal: z.number(),
-  shippingFee: z.number(),
   discountAmount: z.number(),
-  total: z.number(),
 
+  shippingFee: z.number(),
+  total: z.number(),
   isFree: z.boolean(),
+  carrierCost: z.number(),
+  estimatedDeliveryDays: z.number().nullable(),
+
+  // Keyed by payment method id, so a row can show its own price.
+  methods: z.record(z.string(), quotedMethodSchema),
+
   freeReason: z.string().nullable(),
   freeShippingThreshold: z.number(),
   amountToFreeShipping: z.number(),
-  // What the marketplace absorbs when an order ships free.
-  carrierCost: z.number(),
-
   parcelCount: z.number().int(),
-  estimatedDeliveryDays: z.number().nullable(),
 })
