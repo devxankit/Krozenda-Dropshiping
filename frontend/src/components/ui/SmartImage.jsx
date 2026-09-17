@@ -94,7 +94,14 @@ export function SmartImage({
           loading={priority ? 'eager' : 'lazy'}
           // fetchpriority is the other half of "this is the LCP image"; without
           // it the browser still queues an eager image behind other requests.
-          fetchPriority={priority ? 'high' : 'auto'}
+          //
+          // Spelled lowercase deliberately. React only learned the camelCase
+          // `fetchPriority` in 19; on the 18.x this app runs, that spelling is
+          // an unknown prop — React warns and drops it, so the attribute never
+          // reaches the DOM and the hint does nothing. Lowercase passes
+          // straight through as a plain attribute, which is what the browser
+          // reads anyway.
+          fetchpriority={priority ? 'high' : 'auto'}
           decoding={priority ? 'sync' : 'async'}
           onLoad={() => setStatus('loaded')}
           onError={() => setStatus('error')}
