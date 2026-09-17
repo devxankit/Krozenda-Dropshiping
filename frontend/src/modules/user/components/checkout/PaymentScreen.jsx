@@ -12,6 +12,7 @@ import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useCheckoutController } from '../../controllers/useCheckoutController'
 import { useWalletController } from '../../controllers/useWalletController'
 import { useProfileController } from '../../controllers/useProfileController'
+import { CheckoutStepper } from './CheckoutStepper'
 
 export function PaymentScreen() {
   const navigate = useNavigate()
@@ -25,15 +26,14 @@ export function PaymentScreen() {
 
   const selectedAddressId = useCheckoutStore((s) => s.selectedAddressId)
   const chosenMethod = useCheckoutStore((s) => s.paymentMethod)
+  const setPaymentMethod = useCheckoutStore((s) => s.setPaymentMethod)
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const resetCheckout = useCheckoutStore((s) => s.reset)
 
   const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
-  // Chosen back at step 2, where its delivery cost was shown. Changing it
-  // here would change the shipping price after the buyer agreed to a total.
   const [selectedMethod, setSelectedMethod] = useState(chosenMethod || 'RAZORPAY')
 
-  usePageMeta({ title: 'Payment', noindex: true })
+  usePageMeta({ title: 'Payment - Checkout', noindex: true })
 
   // The amount used to come from `location.state.total`, which meant a WebView
   // reload — routine on Android, and guaranteed on the way back from a UPI app
@@ -118,30 +118,7 @@ export function PaymentScreen() {
       </div>
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-4 pb-28 sm:px-6 md:py-8 md:pb-12 lg:px-8">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm sm:p-5">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-700 sm:hidden">
-            <span className="font-black text-blue-700">Step 4 of 4: Payment</span>
-            <span className="font-bold text-emerald-600">Final Step</span>
-          </div>
-
-          <div className="mx-auto hidden max-w-3xl items-center justify-between text-xs font-bold sm:flex">
-            {['Address', 'Delivery', 'Summary'].map((label) => (
-              <div key={label} className="flex items-center gap-2 text-emerald-600">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[11px] text-emerald-700">
-                  {'✓'}
-                </span>
-                <span>{label}</span>
-                <div className="mx-3 h-0.5 w-8 bg-emerald-600 lg:w-16" />
-              </div>
-            ))}
-            <div className="flex items-center gap-2 text-blue-700">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-[11px] text-white">
-                4
-              </span>
-              <span className="font-black">Payment</span>
-            </div>
-          </div>
-        </div>
+        <CheckoutStepper current={3} />
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3 lg:gap-8">
           <div className="space-y-4 lg:col-span-2">
@@ -151,13 +128,16 @@ export function PaymentScreen() {
                   type="button"
                   onClick={() => navigate(USER_ROUTES.CHECKOUT_SUMMARY)}
                   aria-label="Back to order summary"
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <HiArrowLeft className="h-5 w-5" />
                 </button>
-                <h1 className="text-base font-black text-slate-900 sm:text-xl">
-                  Select Payment Method
-                </h1>
+                <div>
+                  <h1 className="text-base font-black text-slate-900 sm:text-xl">
+                    Select Payment Method
+                  </h1>
+                  <p className="text-xs text-slate-500">Choose your payment mode to complete the order</p>
+                </div>
               </div>
             </div>
 
@@ -168,6 +148,8 @@ export function PaymentScreen() {
               {paymentMethods.map((method) => {
                 const IconComponent = method.icon
                 const isSelected = selectedMethod === method.id
+                const methodRow = quote?.methods?.[method.id] ?? null
+
                 return (
                   <button
                     key={method.id}
@@ -175,7 +157,10 @@ export function PaymentScreen() {
                     role="radio"
                     aria-checked={isSelected}
                     disabled={method.disabled}
-                    onClick={() => setSelectedMethod(method.id)}
+                    onClick={() => {
+                      setSelectedMethod(method.id)
+                      setPaymentMethod(method.id)
+                    }}
                     className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
                       method.disabled
                         ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
@@ -187,8 +172,8 @@ export function PaymentScreen() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 flex-1 items-center gap-3">
                         <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                            isSelected ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'
                           }`}
                         >
                           <IconComponent className="h-5 w-5" aria-hidden="true" />
@@ -216,9 +201,26 @@ export function PaymentScreen() {
                         </div>
                       </div>
 
+                      {methodRow && (
+                        <div className="text-right shrink-0">
+                          {methodRow.isFree ? (
+                            <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60">
+                              FREE Delivery
+                            </span>
+                          ) : (
+                            <div className="text-right">
+                              <span className="block text-xs sm:text-sm font-black text-slate-900">
+                                ₹{Number(methodRow.shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                              </span>
+                              <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-tight">Delivery</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <span
                         aria-hidden="true"
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                           isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
                         }`}
                       >
@@ -265,14 +267,14 @@ export function PaymentScreen() {
                 <div className="flex justify-between text-slate-600">
                   <dt>Shipping</dt>
                   <dd className={shippingFee === 0 ? 'font-bold text-emerald-600' : 'font-semibold text-slate-900'}>
-                    {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                    {shippingFee === 0 ? 'FREE' : `₹${Number(shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                   </dd>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-2 text-xs font-bold text-slate-700">
                   <dt>Grand Total</dt>
                   <dd className="text-sm font-black text-blue-700">
                     {'₹'}
-                    {amount.toLocaleString('en-IN')}
+                    {Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </dd>
                 </div>
               </dl>
@@ -303,8 +305,8 @@ export function PaymentScreen() {
                   {isPlacingOrder
                     ? 'Processing…'
                     : selectedMethod === 'COD'
-                      ? `Place Order • ₹${amount.toLocaleString('en-IN')}`
-                      : `Pay ₹${amount.toLocaleString('en-IN')}`}
+                      ? `Place Order • ₹${Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+                      : `Pay ₹${Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                 </span>
                 {!isPlacingOrder && <HiChevronRight className="h-4 w-4" aria-hidden="true" />}
               </button>

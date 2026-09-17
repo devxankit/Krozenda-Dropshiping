@@ -76,6 +76,7 @@ function serializeSettings(settings) {
     },
 
     codEnabled: settings.codEnabled,
+    freeShippingThreshold: settings.freeShippingThreshold ?? 0,
 
     trackingPollEnabled: settings.trackingPollEnabled,
     trackingPollCron: settings.trackingPollCron,
@@ -197,6 +198,15 @@ async function updateSettings(req, res) {
   settings.volumetricDivisor = readBounded(body, 'volumetricDivisor', settings.volumetricDivisor, errors);
   settings.trackingStaleAfterMinutes = readBounded(body, 'trackingStaleAfterMinutes', settings.trackingStaleAfterMinutes, errors);
   settings.trackingPollBatchSize = readBounded(body, 'trackingPollBatchSize', settings.trackingPollBatchSize, errors);
+
+  if (body.freeShippingThreshold !== undefined) {
+    const threshold = Number(body.freeShippingThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0) {
+      errors.push('freeShippingThreshold must be a number greater than or equal to 0');
+    } else {
+      settings.freeShippingThreshold = threshold;
+    }
+  }
 
   if (body.trackingPollCron !== undefined) {
     // Validated with the same library the scheduler uses, so a value accepted

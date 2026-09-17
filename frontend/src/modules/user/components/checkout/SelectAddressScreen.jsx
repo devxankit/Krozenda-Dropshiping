@@ -8,6 +8,7 @@ import { AddressFormModal } from '../profile/AddressFormModal'
 import { useCheckoutStore } from '../../../../lib/checkoutStore'
 import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
+import { CheckoutStepper } from './CheckoutStepper'
 
 export function SelectAddressScreen() {
   const navigate = useNavigate()
@@ -16,10 +17,10 @@ export function SelectAddressScreen() {
   const setSelectedAddressId = useCheckoutStore((s) => s.setSelectedAddressId)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  usePageMeta({ title: 'Delivery Address', noindex: true })
+  usePageMeta({ title: 'Delivery Address - Checkout', noindex: true })
 
   const onBack = () => navigate(USER_ROUTES.CART)
-  const onSelectAddress = () => navigate(USER_ROUTES.CHECKOUT_DELIVERY)
+  const onSelectAddress = () => navigate(USER_ROUTES.CHECKOUT_SUMMARY)
 
   // Default to the buyer's default address the first time this screen sees a
   // real address list (e.g. arriving fresh from the cart).
@@ -49,37 +50,7 @@ export function SelectAddressScreen() {
       <div className="hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
-        {/* Responsive Checkout Stepper */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          {/* Mobile Stepper */}
-          <div className="sm:hidden flex items-center justify-between text-xs font-bold text-slate-700">
-            <span className="text-blue-700 font-black">Step 1 of 4: Address</span>
-            <span className="text-slate-400">Next: Delivery</span>
-          </div>
-
-          {/* Desktop Stepper */}
-          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto text-xs font-bold">
-            <div className="flex items-center space-x-2 text-blue-700">
-              <span className="w-6 h-6 rounded-full bg-blue-700 text-white flex items-center justify-center text-[11px]">1</span>
-              <span className="font-black">Address</span>
-            </div>
-            <div className="h-0.5 bg-slate-200 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-slate-400">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px]">2</span>
-              <span>Delivery</span>
-            </div>
-            <div className="h-0.5 bg-slate-200 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-slate-400">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px]">3</span>
-              <span>Summary</span>
-            </div>
-            <div className="h-0.5 bg-slate-200 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-slate-400">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px]">4</span>
-              <span>Payment</span>
-            </div>
-          </div>
-        </div>
+        <CheckoutStepper current={1} />
 
         {/* 2-Column Split Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">

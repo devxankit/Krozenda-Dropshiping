@@ -70,6 +70,18 @@ export function LogisticsSettingsPage() {
                 label="Cash on delivery"
                 description="Allows COD parcels where the courier supports it on that lane."
               />
+              <div className="pt-2 max-w-xs">
+                <Input
+                  id="freeShippingThreshold"
+                  label="Free shipping threshold (₹)"
+                  type="number"
+                  min="0"
+                  size="control"
+                  value={settings.freeShippingThreshold ?? 0}
+                  onChange={(e) => controller.update('freeShippingThreshold', Math.max(0, Number(e.target.value)))}
+                  description="Orders at or above this subtotal ship free. Set to 0 to charge customers the real courier delivery fee."
+                />
+              </div>
             </FormSection>
 
             <FormSection

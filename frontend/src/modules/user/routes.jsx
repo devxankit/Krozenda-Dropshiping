@@ -153,7 +153,7 @@ export default function UserRoutes() {
               <Route path="cart" element={<CartPageScreen />} />
 
               <Route path="checkout/address" element={<SelectAddressScreen />} />
-              <Route path="checkout/delivery" element={<PaymentMethodScreen />} />
+              <Route path="checkout/delivery" element={<Navigate to={USER_ROUTES.CHECKOUT_SUMMARY} replace />} />
               <Route path="checkout/summary" element={<OrderSummaryScreen />} />
               <Route path="checkout/payment" element={<PaymentScreen />} />
               <Route path="checkout/success" element={<OrderPlacedScreen />} />

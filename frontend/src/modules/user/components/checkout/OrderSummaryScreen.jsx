@@ -11,6 +11,7 @@ import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { useApplyCouponController } from '../../controllers/useCouponsController'
+import { CheckoutStepper } from './CheckoutStepper'
 
 export function OrderSummaryScreen() {
   const navigate = useNavigate()
@@ -27,7 +28,7 @@ export function OrderSummaryScreen() {
   const { applyCoupon, isApplying, error: couponError, reset: resetCouponError } = useApplyCouponController()
   const [couponInput, setCouponInput] = useState('')
 
-  usePageMeta({ title: 'Order Summary', noindex: true })
+  usePageMeta({ title: 'Order Summary - Checkout', noindex: true })
 
   // Last stop before payment: re-read the cart so a price change, a stock drop
   // or a delisting that happened while the buyer was picking an address is
@@ -36,7 +37,7 @@ export function OrderSummaryScreen() {
     hydrateCart()
   }, [hydrateCart])
 
-  const onBack = () => navigate(USER_ROUTES.CHECKOUT_DELIVERY)
+  const onBack = () => navigate(USER_ROUTES.CHECKOUT_ADDRESS)
   const onEditCart = () => navigate(USER_ROUTES.CART)
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
@@ -93,37 +94,7 @@ export function OrderSummaryScreen() {
       <div className="hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
-        {/* Responsive Stepper */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          {/* Mobile Stepper */}
-          <div className="sm:hidden flex items-center justify-between text-xs font-bold text-slate-700">
-            <span className="text-blue-700 font-black">Step 3 of 4: Order Summary</span>
-            <span className="text-slate-400">Next: Payment</span>
-          </div>
-
-          {/* Desktop Stepper */}
-          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto text-xs font-bold">
-            <div className="flex items-center space-x-2 text-emerald-600">
-              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px]">✓</span>
-              <span>Address</span>
-            </div>
-            <div className="h-0.5 bg-emerald-600 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-emerald-600">
-              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[11px]">✓</span>
-              <span>Delivery</span>
-            </div>
-            <div className="h-0.5 bg-blue-600 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-blue-700">
-              <span className="w-6 h-6 rounded-full bg-blue-700 text-white flex items-center justify-center text-[11px]">3</span>
-              <span className="font-black">Summary</span>
-            </div>
-            <div className="h-0.5 bg-slate-200 flex-1 mx-3" />
-            <div className="flex items-center space-x-2 text-slate-400">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px]">4</span>
-              <span>Payment</span>
-            </div>
-          </div>
-        </div>
+        <CheckoutStepper current={2} />
 
         {/* 2 Column Split Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
@@ -280,12 +251,12 @@ export function OrderSummaryScreen() {
                 <div className="flex justify-between text-slate-600">
                   <span>Shipping Fee</span>
                   <span className={shippingFee === 0 ? 'font-bold text-emerald-600' : 'font-semibold text-slate-900'}>
-                    {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                    {shippingFee === 0 ? 'FREE' : `₹${Number(shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex justify-between text-sm font-black text-slate-900">
                   <span>Total Amount Payable</span>
-                  <span className="text-base text-blue-700">₹{finalTotal.toLocaleString('en-IN')}</span>
+                  <span className="text-base text-blue-700">₹{Number(finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 

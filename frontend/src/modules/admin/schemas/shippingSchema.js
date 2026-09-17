@@ -61,6 +61,7 @@ export const shippingPolicySchema = z.object({
   }),
 
   codEnabled: z.boolean(),
+  freeShippingThreshold: z.number().nonnegative().optional().default(0),
 
   trackingPollEnabled: z.boolean(),
   trackingPollCron: z.string(),
