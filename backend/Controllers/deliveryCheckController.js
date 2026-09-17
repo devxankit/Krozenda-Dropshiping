@@ -58,6 +58,30 @@ async function checkProductDelivery(req, res) {
   const { id } = req.params;
   const pincode = String(req.query.pincode || '').trim();
 
+  // A live carrier quote must not sit in a browser cache. Two reasons, and
+  // both have bitten:
+  //
+  //   1. A cached rate is a stale price. Couriers change them, and a shopper
+  //      shown yesterday's figure is being told something untrue.
+  //   2. Express adds an ETag to every JSON response, so the browser
+  //      revalidates and the server answers 304 with an EMPTY body. Axios
+  //      treats 304 as a failure (its default validateStatus is 2xx only), so
+  //      the check fails for a response that was technically fine.
+  //
+  // Repeat lookups are still cheap: serviceabilityService keeps its own
+  // 5-minute per-lane cache on the server, which is where a shared cache
+  // belongs.
+  res.set('Cache-Control', 'no-store');
+
+  // no-store alone is NOT enough, which is the part that actually bit.
+  // Express computes the ETag inside res.send(), after this handler has run,
+  // and its freshness check compares the request's If-None-Match against it
+  // without consulting Cache-Control at all — so it would still answer 304
+  // with an empty body. Dropping the conditional header means the response
+  // can never be considered fresh, so a full body is always sent.
+  delete req.headers['if-none-match'];
+  delete req.headers['if-modified-since'];
+
   if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
