@@ -49,8 +49,13 @@ export const useAuthStore = create((set) => ({
   },
 
   clearSession: () => {
-    storage.clearTokens()
+    // Order matters. cartStore and wishlistStore subscribe to the
+    // authenticated -> signed-out transition and, being zustand/persist
+    // stores, synchronously write their emptied copies back to localStorage.
+    // Clearing storage first (as this used to) meant those writes landed
+    // after the wipe and left `krozenda.cart` / `krozenda.wishlist` behind.
     set({ user: null, roles: [], capabilities: [], permissions: [], isAuthenticated: false })
+    storage.clearAll()
   },
 }))
 

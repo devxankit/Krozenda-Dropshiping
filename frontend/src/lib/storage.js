@@ -28,11 +28,17 @@ function set(key, value) {
   }
 }
 
-function remove(key) {
+// Sign-out wipes the whole origin, not just the four auth keys above.
+// Everything this app persists — the guest cart and wishlist copies, the
+// local ticket-id list, the admin sidebar preference — belongs to whoever was
+// signed in, and the next person on the device must not inherit it. Removing
+// a hand-listed set of keys leaked every key added after this file was
+// written, which is exactly what happened.
+function clearAll() {
   try {
-    localStorage.removeItem(key)
+    localStorage.clear()
   } catch {
-    // no-op
+    // Storage unavailable — nothing was persisted to begin with.
   }
 }
 
@@ -61,10 +67,5 @@ export const storage = Object.freeze({
     }
   },
   setGrants: (grants) => set(KEYS.GRANTS, grants),
-  clearTokens: () => {
-    remove(KEYS.ACCESS_TOKEN)
-    remove(KEYS.REFRESH_TOKEN)
-    remove(KEYS.USER_DATA)
-    remove(KEYS.GRANTS)
-  },
+  clearAll,
 })
