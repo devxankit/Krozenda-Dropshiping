@@ -278,6 +278,19 @@ export const NAV_TREE = Object.freeze([
         legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
       },
       {
+        label: 'Carrier shipments',
+        to: ADMIN_ROUTES.CARRIER_SHIPMENTS,
+        icon: 'truck',
+        permission: ADMIN_PERMISSIONS.ORDERS_SHIPMENTS,
+        legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
+      },
+      {
+        label: 'Carrier accounts',
+        to: ADMIN_ROUTES.CARRIER_ACCOUNTS,
+        icon: 'integrations',
+        permission: ADMIN_PERMISSIONS.SETTINGS_VIEW,
+      },
+      {
         label: 'Returns & RTO',
         to: ADMIN_ROUTES.RETURNS,
         icon: 'returns',

@@ -105,6 +105,14 @@ app.use('/admin/system/backups', require('./Router/adminBackupRoutes'));
 app.use('/admin/finance', require('./Router/adminFinanceRoutes'));
 app.use('/admin/accounting', require('./Router/adminAccountingRoutes'));
 app.use('/admin', require('./Router/adminFulfilmentRoutes'));
+// Carrier-backed shipments live under /admin/shipping, NOT /admin/shipments.
+// That path is already taken: adminFulfilmentRoutes above declares GET
+// /shipments, and because it is mounted on the bare '/admin' prefix it matches
+// first and would shadow anything mounted at /admin/shipments afterwards.
+// The older screen derives pseudo-shipments from Order.items[].trackingNumber
+// — the manual flow that predates this integration — and it keeps working.
+app.use('/admin/shipping/shipments', require('./Router/adminShipmentRoutes'));
+app.use('/admin/shipping', require('./Router/adminShippingRoutes'));
 
 app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
 app.use('/vendor', require('./Router/vendorDashboardRoutes'));
@@ -123,6 +131,7 @@ app.use('/vendor/analytics', require('./Router/vendorAnalyticsRoutes'));
 app.use('/vendor/settings', require('./Router/vendorSettingsRoutes'));
 app.use('/vendor/catalog', require('./Router/vendorCatalogRoutes'));
 app.use('/vendor/shipping', require('./Router/vendorShippingRoutes'));
+app.use('/vendor/shipments', require('./Router/vendorShipmentRoutes'));
 
 app.use('/catalog/categories', require('./Router/publicCategoryRoutes'));
 app.use('/catalog/products', require('./Router/publicProductRoutes'));
@@ -147,6 +156,15 @@ app.use('/user/tickets', require('./Router/ticketRoutes'));
 // Gemini-backed customer assistant. Scoped to /user like every other
 // buyer-facing surface, and authenticated inside the router itself.
 app.use('/user/ai', require('./Router/aiRoutes'));
+// Carrier webhooks. Mounted OUTSIDE every auth router on purpose: the carrier
+// has no account with us and cannot present a bearer token. The endpoint
+// authenticates itself with a shared secret — see shipmentWebhookController.
+//
+// Singular and provider-less because the carrier's own setup screen rejects
+// URLs containing its name. Behind the production proxy (which strips /api)
+// this is reachable at https://<host>/api/webhook.
+app.use('/webhook', require('./Router/webhookRoutes'));
+
 app.get('/health', async (req, res) => {
   const readyState = mongoose.connection.readyState; // 0 disconnected, 1 connected, 2 connecting, 3 disconnecting
   let db = 'disconnected';

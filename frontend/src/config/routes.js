@@ -138,6 +138,11 @@ export const ADMIN_ROUTES = Object.freeze({
   SUB_ORDERS: '/admin/orders/sub-orders',
   SUB_ORDER_DETAIL: '/admin/orders/sub-orders/:subOrderId',
   SHIPMENTS: '/admin/orders/shipments',
+  // Carrier-backed parcels, distinct from SHIPMENTS above — that screen lists
+  // tracking numbers typed onto order items by hand, which is still a valid
+  // flow for sellers with no courier account connected.
+  CARRIER_SHIPMENTS: '/admin/orders/carrier-shipments',
+  CARRIER_ACCOUNTS: '/admin/orders/carrier-accounts',
   RTO: '/admin/orders/rto',
   RETURNS: '/admin/orders/returns',
   RETURN_DETAIL: '/admin/orders/returns/:returnId',

@@ -86,8 +86,12 @@ shippingIntegrationSchema.methods.toSafeJSON = function toSafeJSON() {
     provider: this.provider,
     accountType: this.accountType,
     status: this.status,
-    // Identifier only — and masked, because an exact seller email on an admin
-    // screen is more PII than the screen needs.
+    // Identifier only, in full. This shape is for the account's OWNER — a
+    // seller looking at their own connection needs to see which address they
+    // connected. It is NOT the admin shape: task §18 says an admin screen
+    // shows "Seller Own Account", not the seller's email, so
+    // adminShippingController masks it with secretBox.maskEmail() rather than
+    // reusing this method.
     email: this.credentials?.email || '',
     isActive: this.isActive,
     lastTestedAt: this.lastTestedAt,

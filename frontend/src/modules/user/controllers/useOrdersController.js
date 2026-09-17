@@ -2,7 +2,7 @@
 // and are the ONLY thing components are allowed to call into.
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchOrders, fetchOrder, cancelOrder } from '../services/orderService'
+import { fetchOrders, fetchOrder, fetchOrderTracking, cancelOrder } from '../services/orderService'
 
 // OrderListScreen. Server-paginated: this previously fetched every order the
 // buyer had ever placed, in full, on every visit to the Orders tab.
@@ -24,6 +24,25 @@ export function useOrdersController({ status, page = 1, limit = 20 } = {}) {
 }
 
 // OrderDetailsScreen / TrackShipmentScreen / Invoice screens.
+// The parcels for one order. Separate from useOrderController because an order
+// can exist for days before any parcel does, and the two load independently.
+export function useOrderTrackingController(orderId) {
+  const query = useQuery({
+    queryKey: ['user', 'order', orderId, 'tracking'],
+    queryFn: ({ signal }) => fetchOrderTracking(orderId, { signal }),
+    enabled: Boolean(orderId),
+  })
+  return {
+    tracking: query.data,
+    parcels: query.data?.parcels ?? [],
+    hasShipments: query.data?.hasShipments ?? false,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
+
 export function useOrderController(orderId) {
   const query = useQuery({
     queryKey: ['user', 'order', orderId],

@@ -15,6 +15,12 @@ export function SettingsShell({
   changed = [],
   saveNote = 'Saving writes an entry to the audit log',
   actions,
+  // A page that can actually persist supplies these. The nine fixture-backed
+  // settings screens do not, and keep their existing inert save bar rather
+  // than silently pretending to save.
+  onSave,
+  onDiscard,
+  isSaving = false,
   children,
 }) {
   const { pathname } = useLocation()
@@ -65,10 +71,17 @@ export function SettingsShell({
           status={<UnsavedIndicator count={changed.length} fields={changed} />}
           note={saveNote}
         >
-          <Button variant="quiet" size="control">
+          <Button variant="quiet" size="control" onClick={onDiscard} disabled={isSaving || !onDiscard}>
             Discard
           </Button>
-          <Button size="control">Save changes</Button>
+          <Button
+            size="control"
+            onClick={onSave ? () => onSave() : undefined}
+            isLoading={isSaving}
+            disabled={!onSave}
+          >
+            Save changes
+          </Button>
         </FormActions>
       )}
     </PageBody>

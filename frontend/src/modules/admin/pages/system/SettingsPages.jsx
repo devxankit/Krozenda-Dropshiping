@@ -167,21 +167,8 @@ export function PaymentSettingsPage() {
   )
 }
 
-export function LogisticsSettingsPage() {
-  return (
-    <IntegrationSettings
-      title="Logistics"
-      description="Shiprocket credentials, per-vendor pickup locations and courier allocation rules."
-      ids={['shiprocket']}
-      note={
-        <InlineAlert tone="info" title="Pickup locations are client-owned setup">
-          Each vendor needs a pickup location registered in the Shiprocket account before an AWB
-          can be generated for them.
-        </InlineAlert>
-      }
-    />
-  )
-}
+// Logistics moved to its own file when it stopped being a fixture-backed
+// placeholder and became a real form: see ./LogisticsSettingsPage.jsx.
 
 export function NotificationSettingsPage() {
   return (

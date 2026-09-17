@@ -26,16 +26,26 @@ const { withAuth } = require('./shiprocketAuthService');
 //   GET  /v1/external/courier/track/awb/{awb}
 //   POST /v1/external/orders/address/update
 //
-// NOT VERIFIED — paths appear in third-party SDKs but I could not confirm them
-// against official documentation (apidocs.shiprocket.in is a JS-rendered SPA).
-// Per task §52 these are NOT implemented. Each throws a typed, actionable error
-// instead of guessing at a path and silently doing the wrong thing:
+//   POST /v1/external/orders/cancel                 {ids:[orderId]}
+//   POST /v1/external/orders/cancel/shipment/awbs   {awbs:[awb]}  -> 204
+//   POST /v1/external/orders/create/return
+//   POST /v1/external/settings/company/addpickup
+//   GET  /v1/external/settings/company/pickup
+//   GET  /v1/external/courier/track/shipment/{shipment_id}
+//   GET  /v1/external/courier/track?order_id&channel_id
+//   GET  /v1/external/ndr/all
+//   GET  /v1/external/ndr/{awb}
+//   POST /v1/external/ndr/{awb}/action
 //
-//   pickup location add/list · order cancel · return order create
-//   tracking by shipment-id / order-id · NDR actions · shipments list
+// The second group was verified later, from Shiprocket's OFFICIAL Postman
+// collection (owner 8407119, published id SzYW1zB2 - the same collection that
+// backs apidocs.shiprocket.in, fetched as JSON because that page is a
+// JS-rendered SPA). Paths, methods, request bodies and response shapes below
+// come from that collection, not from a third-party SDK (task 52).
 //
-// To enable them: confirm each against the official Shiprocket Postman
-// collection, then replace the corresponding notImplemented() body.
+// Re-verifying: the collection JSON is at
+//   https://documenter.gw.postman.com/api/collections/8407119/SzYW1zB2
+// All nine endpoints in the first group were re-checked against it and match.
 
 // A capability that exists in Shiprocket but whose exact contract has not been
 // confirmed. Deliberately a hard, typed failure — never a fake success and
@@ -217,43 +227,190 @@ async function updateDeliveryAddress(integration, payload, opts = {}) {
   );
 }
 
-// --- unverified capabilities ------------------------------------------------
-// Each throws rather than guessing. The signatures are settled so callers can
-// be written against them now and the bodies filled in once verified.
+// --- operations verified from the official Postman collection ---------------
 
-async function addPickupLocation() {
-  throw notImplemented(
-    'Pickup location registration',
-    'Shiprocket requires pickup locations to be registered against the account before create/adhoc will accept them. Until the endpoint is verified, register the location manually in the Shiprocket panel and record its exact nickname on the PickupLocation.'
+// Cancel whole ORDERS, by Shiprocket order id.
+//
+// Distinct from cancelShipment below, and the distinction matters: before an
+// AWB exists there is no shipment to cancel, only the order. Calling the wrong
+// one leaves a live parcel the seller believes is cancelled.
+async function cancelOrder(integration, { orderIds }, opts = {}) {
+  const ids = (Array.isArray(orderIds) ? orderIds : [orderIds]).filter(Boolean);
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'POST',
+        path: '/v1/external/orders/cancel',
+        token,
+        body: { ids },
+        // Never auto-retried: like every POST here, the caller decides.
+        idempotent: false,
+        onLog: opts.onLog,
+      }),
+    opts
   );
 }
 
-async function listPickupLocations() {
-  throw notImplemented('Pickup location listing');
+// Cancel SHIPMENTS by AWB, once one has been assigned.
+//
+// The collection documents this as answering 204 WITH a body ("Bulk Shipment
+// cancellation is in progress"), i.e. the cancellation is ASYNCHRONOUS. A 2xx
+// here means "accepted", not "cancelled at the carrier" - the real outcome
+// arrives by webhook, which is why shipmentService moves the shipment to
+// CANCEL_REQUESTED rather than straight to CANCELLED.
+async function cancelShipment(integration, { awbs }, opts = {}) {
+  const list = (Array.isArray(awbs) ? awbs : [awbs]).filter(Boolean);
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'POST',
+        path: '/v1/external/orders/cancel/shipment/awbs',
+        token,
+        body: { awbs: list },
+        idempotent: false,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function cancelShipment() {
-  throw notImplemented('Shipment cancellation');
+// Create a RETURN order: the buyer's address becomes the pickup, the seller's
+// becomes the delivery. Shiprocket answers with its own order_id/shipment_id,
+// which we store on a separate RETURN shipment document rather than
+// overwriting the forward one (task 22).
+async function createReturn(integration, payload, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'POST',
+        path: '/v1/external/orders/create/return',
+        token,
+        body: payload,
+        idempotent: false,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function createReturn() {
-  throw notImplemented('Return shipment creation');
+// Register a pickup address with the carrier. `pickup_location` is the
+// nickname every later create/adhoc call refers to, and Shiprocket requires it
+// to be unique within the account - which is why PickupLocation stores the
+// carrier-side name separately from our own.
+async function addPickupLocation(integration, payload, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'POST',
+        path: '/v1/external/settings/company/addpickup',
+        token,
+        body: payload,
+        idempotent: false,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function trackByShipmentId() {
-  throw notImplemented('Tracking by shipment id', 'Use trackByAwb, whose path is verified.');
+async function listPickupLocations(integration, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'GET',
+        path: '/v1/external/settings/company/pickup',
+        token,
+        idempotent: true,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function trackByOrderId() {
-  throw notImplemented('Tracking by order id', 'Use trackByAwb, whose path is verified.');
+async function trackByShipmentId(integration, shipmentId, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'GET',
+        path: `/v1/external/courier/track/shipment/${encodeURIComponent(shipmentId)}`,
+        token,
+        idempotent: true,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function getNdrShipments() {
-  throw notImplemented('NDR listing');
+// Tracking by OUR order reference. Answers an ARRAY, unlike the by-AWB and
+// by-shipment variants which answer an object - trackingService.extractScans
+// already handles both shapes.
+async function trackByOrderId(integration, { orderId, channelId }, opts = {}) {
+  const query = new URLSearchParams({ order_id: String(orderId) });
+  if (channelId) query.set('channel_id', String(channelId));
+
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'GET',
+        path: `/v1/external/courier/track?${query.toString()}`,
+        token,
+        idempotent: true,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
-async function actOnNdr() {
-  throw notImplemented('NDR action');
+// --- NDR: parcels a courier could not deliver -------------------------------
+
+async function getNdrShipments(integration, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({ method: 'GET', path: '/v1/external/ndr/all', token, idempotent: true, onLog: opts.onLog }),
+    opts
+  );
+}
+
+async function getNdrByAwb(integration, awbCode, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'GET',
+        path: `/v1/external/ndr/${encodeURIComponent(awbCode)}`,
+        token,
+        idempotent: true,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
+}
+
+// Tell the courier what to do with an undelivered parcel. `action` is
+// Shiprocket's own vocabulary; it is passed through rather than mapped,
+// because guessing at a carrier's action names is how a parcel gets returned
+// when the seller asked for a re-attempt.
+async function actOnNdr(integration, { awbCode, action, comments = '' }, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'POST',
+        path: `/v1/external/ndr/${encodeURIComponent(awbCode)}/action`,
+        token,
+        body: { action, comments },
+        idempotent: false,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
 }
 
 // Which capabilities are live. Read by the admin settings screen so the UI can
@@ -269,13 +426,14 @@ const CAPABILITIES = Object.freeze({
   trackByAwb: true,
   updateDeliveryAddress: true,
 
-  addPickupLocation: false,
-  listPickupLocations: false,
-  cancelShipment: false,
-  createReturn: false,
-  trackByShipmentId: false,
-  trackByOrderId: false,
-  ndr: false,
+  addPickupLocation: true,
+  listPickupLocations: true,
+  cancelOrder: true,
+  cancelShipment: true,
+  createReturn: true,
+  trackByShipmentId: true,
+  trackByOrderId: true,
+  ndr: true,
 });
 
 module.exports = {
@@ -299,5 +457,7 @@ module.exports = {
   actOnNdr,
 
   CAPABILITIES,
+  cancelOrder,
+  getNdrByAwb,
   notImplemented,
 };

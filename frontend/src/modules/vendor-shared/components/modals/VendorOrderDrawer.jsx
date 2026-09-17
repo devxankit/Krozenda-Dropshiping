@@ -4,12 +4,18 @@ import { Badge, Button, Input } from '../../../../components/ui'
 import { MoneyCell, StatusPill } from '../../../admin/components/display/cells'
 import { VENDOR_ORDER_STATUS_TONE } from '../../constants'
 import { toast } from '../../../admin/stores/toastStore'
+import { useOrderShipmentsController, useShippingIntegrationController } from '../../controllers/useShippingController'
+import { shipmentStatusPresentation } from '../../../../lib/shipping/presentation'
 
 const NEXT_STATUS = { PENDING: 'PROCESSING', PROCESSING: 'SHIPPED', SHIPPED: 'DELIVERED' }
 const NEXT_LABEL = { PROCESSING: 'Start Processing', SHIPPED: 'Mark Shipped', DELIVERED: 'Mark Delivered' }
 
-export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus }) {
+export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus, onCreateShipment, onOpenShipment }) {
   const [tracking, setTracking] = useState({})
+  // Hooks must run unconditionally, so these are called before the early
+  // return below; both are disabled when there is no order.
+  const account = useShippingIntegrationController()
+  const orderShipments = useOrderShipmentsController(order?.orderId || order?.id)
 
   if (!order) return null
 
@@ -53,6 +59,13 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus }
             </div>
           </div>
         </div>
+
+        <CourierSection
+          account={account}
+          orderShipments={orderShipments}
+          onCreateShipment={onCreateShipment ? () => onCreateShipment(order) : null}
+          onOpenShipment={onOpenShipment}
+        />
 
         <div className="flex flex-col gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Your Items</h3>
@@ -112,5 +125,60 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus }
         </div>
       </div>
     </Drawer>
+  )
+}
+
+// Booking with a courier, alongside the manual tracking-number path below.
+//
+// The manual path is deliberately NOT removed: a seller with no courier
+// account connected, or one shipping through a channel we do not integrate
+// with, still needs to record an AWB by hand. This section is the better path
+// when it is available, not the only one.
+function CourierSection({ account, orderShipments, onCreateShipment, onOpenShipment }) {
+  const canBook = ['SELLER', 'PLATFORM'].includes(account.effectiveAccount) && !account.isUnhealthy
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Courier</h3>
+        {canBook && onCreateShipment && (
+          <Button size="xs" onClick={onCreateShipment}>
+            {orderShipments.hasShipments ? 'Book another parcel' : 'Create shipment'}
+          </Button>
+        )}
+      </div>
+
+      {orderShipments.hasShipments ? (
+        <div className="flex flex-col gap-2">
+          {orderShipments.shipments.map((shipment) => {
+            const presentation = shipmentStatusPresentation(shipment.status)
+            return (
+              <button
+                key={shipment.id}
+                type="button"
+                onClick={() => onOpenShipment?.(shipment.id)}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-xs transition-colors hover:bg-surface-muted"
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="font-mono font-semibold text-slate-900">{shipment.id.slice(-8).toUpperCase()}</span>
+                  <span className="text-2xs text-ink-subtle">
+                    {shipment.awbCode ? `${shipment.courierName || 'Courier'} · ${shipment.awbCode}` : 'No AWB yet'}
+                  </span>
+                </div>
+                <Badge tone={presentation.tone} size="sm" dot>
+                  {presentation.label}
+                </Badge>
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-border p-3 text-2xs text-ink-subtle">
+          {canBook
+            ? 'No parcel booked yet. Create a shipment to get an AWB and tracking automatically, or enter a tracking number by hand below.'
+            : 'No courier account is available, so parcels cannot be booked automatically. Enter a tracking number by hand below.'}
+        </p>
+      )}
+    </div>
   )
 }

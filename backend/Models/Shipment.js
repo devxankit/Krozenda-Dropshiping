@@ -212,6 +212,12 @@ const shipmentSchema = new mongoose.Schema(
     // A SAFE message. Never the carrier's raw error, never credentials.
     errorMessage: { type: String, default: '' },
 
+    // Why a parcel was stopped or sent back. Written by whoever asked for it
+    // (seller, admin or buyer) and kept for support — a cancellation with no
+    // recorded reason is unanswerable three weeks later.
+    cancellationReason: { type: String, default: '', trim: true, maxlength: 500 },
+    returnReason: { type: String, default: '', trim: true, maxlength: 500 },
+
     metadata: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true }
@@ -255,15 +261,21 @@ shipmentSchema.index({ internalStatus: 1, lastTrackingSyncAt: 1 });
 // Every status write goes through this, which is what makes duplicate and
 // out-of-order webhooks safe: a repeat of the current status is a no-op, and a
 // stale earlier status is rejected rather than applied (task §49).
-shipmentSchema.methods.applyStatus = function applyStatus(next, { source = 'SYSTEM', note = '' } = {}) {
+// `at` is WHEN THE EVENT HAPPENED, not when we heard about it. A carrier scan
+// carries its own timestamp, and a webhook can arrive hours late or be replayed
+// during a backfill — stamping `pickedUpAt` with the clock would then tell a
+// buyer their parcel shipped today when the scan says yesterday. Callers that
+// are themselves the event (a seller scheduling a pickup) pass nothing and get
+// the current time, which is correct for them.
+shipmentSchema.methods.applyStatus = function applyStatus(next, { source = 'SYSTEM', note = '', at = null } = {}) {
   if (!canTransitionTo(this.internalStatus, next)) return false;
 
-  this.internalStatus = next;
-  this.statusHistory.push({ status: next, at: new Date(), source, note });
+  const now = at instanceof Date && !Number.isNaN(at.getTime()) ? at : new Date();
 
+  this.internalStatus = next;
+  this.statusHistory.push({ status: next, at: now, source, note });
   // Lifecycle timestamps are set here rather than by each caller, so they can
   // never disagree with the status that set them.
-  const now = new Date();
   if (next === 'PICKUP_SCHEDULED' && !this.pickupScheduledAt) this.pickupScheduledAt = now;
   if (next === 'PICKED_UP' && !this.pickedUpAt) this.pickedUpAt = now;
   if (next === 'DELIVERED' && !this.deliveredAt) this.deliveredAt = now;

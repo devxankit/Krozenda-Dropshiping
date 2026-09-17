@@ -5,6 +5,8 @@ const ShippingSettings = require('../Models/ShippingSettings');
 const { encrypt, isConfigured, maskEmail } = require('../utils/secretBox');
 const authService = require('../services/shipping/shiprocketAuthService');
 const shiprocketService = require('../services/shipping/shiprocketService');
+const serviceabilityService = require('../services/shipping/serviceabilityService');
+const pickupLocationService = require('../services/shipping/pickupLocationService');
 
 // Seller-facing shipping settings: their carrier account, and their warehouses.
 //
@@ -280,12 +282,18 @@ async function createPickupLocation(req, res) {
       locationId: String(location._id),
     });
 
+    // Register it with the carrier immediately, because a location the courier
+    // has never heard of cannot ship anything. Deliberately NOT allowed to
+    // fail the create: a carrier rejection is recorded on the row with a
+    // reason the seller can act on, rather than throwing away their typing.
+    const registration = await pickupLocationService.registerLocation(location, { actor: 'SELLER' });
+
     res.status(201).json({
       success: true,
-      message: shiprocketService.CAPABILITIES.addPickupLocation
-        ? 'Pickup location added'
-        : 'Pickup location saved. Register it in your Shiprocket panel with the same nickname before shipping from it.',
-      data: serializePickupLocation(location),
+      message: registration.ok
+        ? 'Pickup location added and registered with the courier'
+        : `Pickup location saved, but the courier did not accept it: ${registration.message}`,
+      data: serializePickupLocation(registration.location || location),
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -293,6 +301,35 @@ async function createPickupLocation(req, res) {
     }
     throw err;
   }
+}
+
+// POST /vendor/shipping/pickup-locations/:id/register
+//
+// The explicit retry. Separate from create because a seller whose first
+// attempt was rejected fixes the address and tries again, and because a
+// location registered into the platform account has to be re-registered after
+// they connect their own.
+async function registerPickupLocation(req, res) {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid pickup location id' });
+  }
+
+  const location = await PickupLocation.findOne({ _id: req.params.id, vendor: req.vendor._id });
+  if (!location) {
+    return res.status(404).json({ success: false, message: 'Pickup location not found' });
+  }
+
+  const result = await pickupLocationService.registerLocation(location, { actor: 'SELLER' });
+
+  res.status(result.ok ? 200 : 502).json({
+    success: result.ok,
+    message: result.ok
+      ? result.alreadyRegistered
+        ? 'This address is already registered with the courier'
+        : 'Pickup location registered with the courier'
+      : result.message,
+    data: serializePickupLocation(result.location || location),
+  });
 }
 
 // PUT /vendor/shipping/pickup-locations/:id
@@ -417,6 +454,155 @@ async function deactivatePickupLocation(req, res) {
   res.json({ success: true, message: 'Pickup location removed', data: { id: location._id.toString() } });
 }
 
+// ---------------------------------------------------------------------------
+// Serviceability & rates
+// ---------------------------------------------------------------------------
+
+// Couriers are returned without their `raw` carrier payload: that is kept
+// server-side for diagnostics and is not something a seller UI needs (or
+// should be coupled to).
+function serializeCourier(courier) {
+  if (!courier) return null;
+  const { raw, ...safe } = courier;
+  return safe;
+}
+
+function serializeServiceability(result) {
+  return {
+    serviceable: result.serviceable,
+    couriers: result.couriers.map(serializeCourier),
+    recommended: serializeCourier(result.recommended),
+    codAvailable: result.codAvailable,
+    strategy: result.strategy,
+    // Which account answered — useful to a seller who has just switched from
+    // the platform account to their own and wants to know it took effect.
+    accountType: result.accountType,
+    lane: result.lane,
+    ...(result.package ? { package: result.package } : {}),
+    ...(result.pickupLocation ? { pickupLocation: result.pickupLocation } : {}),
+    ...(result.cod ? { cod: result.cod } : {}),
+    ...(result.declaredValue !== undefined ? { declaredValue: result.declaredValue } : {}),
+  };
+}
+
+// Maps a service-layer failure onto an HTTP status. A lane with no courier is
+// NOT an error — it is a 200 with serviceable: false, because the question was
+// answered. These are the cases where the question could not be asked.
+const SERVICEABILITY_STATUS = {
+  ORDER_NOT_FOUND: 404,
+  NO_ITEMS_FOR_VENDOR: 403,
+  INVALID_PICKUP_PINCODE: 400,
+  INVALID_DELIVERY_PINCODE: 400,
+  INVALID_WEIGHT: 400,
+  INVALID_PACKAGE: 400,
+  CARRIER_ERROR: 502,
+};
+
+// POST /vendor/shipping/serviceability
+//
+// Two modes:
+//   { orderId, pickupLocationId?, package? }  -> the real check for an order
+//   { pickupPincode, deliveryPincode, weightKg, cod? } -> a raw lane check
+//
+// In order mode nothing that decides the price comes from the request: weight,
+// declared value and the COD amount are all read from the database.
+async function checkServiceability(req, res) {
+  const { orderId, pickupLocationId, package: confirmedPackage } = req.body;
+
+  const result = orderId
+    ? await serviceabilityService.checkForOrder({
+        orderId,
+        // From the token, never the body (task §17).
+        vendorId: req.vendor._id,
+        pickupLocationId,
+        confirmedPackage,
+        onLog: logShipping,
+      })
+    : await serviceabilityService.checkLane({
+        vendorId: req.vendor._id,
+        pickupPincode: req.body.pickupPincode,
+        deliveryPincode: req.body.deliveryPincode,
+        weightKg: req.body.weightKg,
+        cod: Boolean(req.body.cod),
+        declaredValue: Number(req.body.declaredValue) || 0,
+        onLog: logShipping,
+      });
+
+  if (!result.ok) {
+    const status = SERVICEABILITY_STATUS[result.reason] || 400;
+    return res.status(status).json({
+      success: false,
+      code: result.reason,
+      message: result.message,
+      ...(result.errors ? { data: { errors: result.errors } } : {}),
+    });
+  }
+
+  res.json({
+    success: true,
+    message: result.serviceable
+      ? 'Shipping rates fetched successfully'
+      : 'No courier currently serves this route',
+    data: serializeServiceability(result),
+  });
+}
+
+// POST /vendor/shipping/package/suggest
+//
+// The "Verify Package" step's starting point: what the system thinks the box
+// is, before the seller corrects it. Returns `isEstimate` so the UI can say
+// the numbers need checking rather than presenting a guess as fact.
+async function suggestPackageForOrder(req, res) {
+  const { orderId } = req.body;
+  if (!mongoose.isValidObjectId(orderId)) {
+    return res.status(400).json({ success: false, message: 'Invalid order id' });
+  }
+
+  const Order = require('../Models/Order');
+  const Product = require('../Models/Product');
+  const Vendor = require('../Models/Vendor');
+  const { suggestPackage } = require('../utils/packaging');
+
+  const order = await Order.findById(orderId).select('items');
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Order not found' });
+  }
+
+  const myItems = order.items.filter((item) => String(item.vendor || '') === String(req.vendor._id));
+  if (myItems.length === 0) {
+    return res.status(403).json({ success: false, message: 'This order has no items belonging to you.' });
+  }
+
+  const [settings, products, vendor] = await Promise.all([
+    ShippingSettings.getSettings(),
+    Product.find({ _id: { $in: myItems.map((i) => i.product) } }).select('weight dimensions').lean(),
+    Vendor.findById(req.vendor._id).select('defaultPackage').lean(),
+  ]);
+
+  const productById = new Map(products.map((p) => [String(p._id), p]));
+  const pkg = await suggestPackage(
+    myItems.map((item) => ({
+      quantity: item.quantity,
+      product: productById.get(String(item.product)) || {},
+    })),
+    { settings, vendorDefault: vendor?.defaultPackage || null }
+  );
+
+  res.json({
+    success: true,
+    message: 'Package suggestion generated',
+    data: {
+      package: pkg,
+      items: myItems.map((item) => ({
+        productId: item.product.toString(),
+        name: item.name,
+        quantity: item.quantity,
+        hasDimensions: Boolean(productById.get(String(item.product))?.dimensions?.lengthCm),
+      })),
+    },
+  });
+}
+
 // Structured shipping log line. Kept to one function so the event names stay
 // consistent and so nothing credential-shaped can be passed by accident —
 // callers pass ids and masked identifiers only (task §34).
@@ -426,6 +612,9 @@ function logShipping(entry) {
 }
 
 module.exports = {
+  registerPickupLocation,
+  checkServiceability,
+  suggestPackageForOrder,
   getMyIntegration,
   testConnection,
   disconnectIntegration,

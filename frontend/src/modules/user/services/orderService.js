@@ -1,7 +1,7 @@
 // Layer rule: services/ is the ONLY place that imports the axios instance.
 
 import { api } from '../../../lib/axios'
-import { orderSchema, orderListSchema, razorpayOrderSchema } from '../schemas/orderSchema'
+import { orderSchema, orderListSchema, orderTrackingSchema, razorpayOrderSchema } from '../schemas/orderSchema'
 
 // The backend computes the amount itself from the caller's own cart/address/
 // coupon — it never trusts a client-supplied total (see orderController.js's
@@ -55,3 +55,10 @@ export async function fetchOrder(id, { signal } = {}) {
   return orderSchema.parse(response.data.data)
 }
 
+// Where this order's parcels are. Reads the stored timeline only — it never
+// calls the courier, so refreshing this screen cannot spend the seller's
+// carrier rate limit.
+export async function fetchOrderTracking(id, { signal } = {}) {
+  const response = await api.get(`/user/orders/${id}/tracking`, { signal })
+  return orderTrackingSchema.parse(response.data.data)
+}

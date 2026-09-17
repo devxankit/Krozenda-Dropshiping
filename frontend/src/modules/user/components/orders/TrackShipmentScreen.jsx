@@ -5,7 +5,7 @@ import { WebHeader } from '../../../../components/layout/WebHeader'
 import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
-import { useOrderController } from '../../controllers/useOrdersController'
+import { useOrderController, useOrderTrackingController } from '../../controllers/useOrdersController'
 
 const FLOW = [
   { status: 'PENDING', title: 'Order Confirmed' },
@@ -22,6 +22,9 @@ export function TrackShipmentScreen() {
   const navigate = useNavigate()
   const { orderId } = useParams()
   const { order, isLoading, isError, error, refetch } = useOrderController(orderId)
+  // Loaded separately: an order exists for a while before any parcel does, and
+  // a failure to load tracking must not hide the order itself.
+  const { parcels, hasShipments } = useOrderTrackingController(orderId)
 
   usePageMeta({ title: 'Track Shipment', noindex: true })
 
@@ -98,6 +101,13 @@ export function TrackShipmentScreen() {
             </div>
           </div>
 
+          {/* Real courier scans, when there are any. The order-level flow below
+              stays for the window before a parcel exists — and for sellers
+              shipping by hand, who have no carrier scans at all. */}
+          {hasShipments && parcels.map((parcel, index) => (
+            <ParcelCard key={parcel.id} parcel={parcel} index={index} total={parcels.length} />
+          ))}
+
           {order.status === 'CANCELLED' ? (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-5 flex items-center space-x-3">
               <HiXCircle className="w-8 h-8 text-red-500 shrink-0" />
@@ -163,6 +173,95 @@ export function TrackShipmentScreen() {
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar activeTab="orders" />
       </div>
+    </div>
+  )
+}
+
+// One parcel, with the courier's own scans.
+//
+// A multi-vendor order genuinely arrives in pieces, so each parcel is its own
+// card with its own progress — collapsing them into one tracker would make a
+// partial delivery look like a lost order.
+function ParcelCard({ parcel, index, total }) {
+  const isDelivered = parcel.status === 'DELIVERED'
+  const isCancelled = parcel.status === 'CANCELLED'
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            {total > 1 ? `Parcel ${index + 1} of ${total}` : 'Your parcel'}
+          </h3>
+          <p className="text-[11px] text-slate-600 mt-0.5">
+            {parcel.items.map((item) => `${item.name} × ${item.quantity}`).join(', ')}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+            isDelivered ? 'bg-emerald-100 text-emerald-700' : isCancelled ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {parcel.status}
+        </span>
+      </div>
+
+      {parcel.awbCode && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2">
+          <span className="text-[11px] font-semibold text-slate-900">{parcel.courierName || 'Courier'}</span>
+          <span className="font-mono text-[10px] text-slate-500">{parcel.awbCode}</span>
+          {parcel.trackingUrl && (
+            <a
+              href={parcel.trackingUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-[11px] font-bold text-blue-600 hover:underline"
+            >
+              Track on courier site
+            </a>
+          )}
+        </div>
+      )}
+
+      {parcel.estimatedDeliveryAt && !isDelivered && (
+        <p className="text-[11px] text-slate-600">Expected by {formatTime(parcel.estimatedDeliveryAt)}</p>
+      )}
+
+      {parcel.events.length === 0 ? (
+        <p className="text-[11px] text-slate-500">
+          No courier updates yet. The first one usually appears once the parcel is collected.
+        </p>
+      ) : (
+        <ol className="relative space-y-4 pl-6 pt-1">
+          <div className="absolute top-2 bottom-2 left-2.5 w-0.5 bg-slate-200 -translate-x-1/2" />
+          {/* Newest first: where the parcel is now is what a buyer opened this
+              screen to find out. */}
+          {[...parcel.events].reverse().map((event, idx) => (
+            <li key={`${event.occurredAt}-${idx}`} className="relative flex items-start space-x-3">
+              <div className="absolute -left-6 top-0.5">
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shadow-xs ${
+                    idx === 0 ? 'bg-emerald-600 text-white ring-4 ring-emerald-100' : 'bg-white border-2 border-slate-300'
+                  }`}
+                >
+                  {idx === 0 && <HiTruck className="w-3 h-3" />}
+                </div>
+              </div>
+              <div className="flex-1">
+                {/* The courier's own wording — it is what a buyer recognises
+                    from their SMS. `event.status` is ours and may be null. */}
+                <h4 className={`text-xs font-bold ${idx === 0 ? 'text-slate-900' : 'text-slate-600'}`}>
+                  {event.carrierStatus}
+                </h4>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  {formatTime(event.occurredAt)}
+                  {event.location ? ` · ${event.location}` : ''}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }

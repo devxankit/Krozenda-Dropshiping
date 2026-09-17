@@ -2,6 +2,8 @@ import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { RoleGuard } from '../../routes/RoleGuard'
 import { useAuthStore } from '../../lib/authStore'
+import { LogisticsSettingsPage } from './pages/system/LogisticsSettingsPage'
+import { CarrierAccountsPage, CarrierShipmentsPage } from './pages/fulfilment/CarrierShipmentsPage'
 import { ADMIN_ROUTES } from '../../config/routes'
 import { ADMIN_PERMISSIONS } from './constants'
 import { AdminLayout } from './components/shell'
@@ -91,7 +93,6 @@ import {
   TaxSettingsPage,
   PoliciesPage,
   PaymentSettingsPage,
-  LogisticsSettingsPage,
   NotificationSettingsPage,
   IntegrationHealthPage,
   SecuritySettingsPage,
@@ -249,6 +250,8 @@ export default function AdminRoutes() {
             <Route path={rel(ADMIN_ROUTES.SUB_ORDERS)} element={<SubOrdersPage />} />
             <Route path={rel(ADMIN_ROUTES.SUB_ORDER_DETAIL)} element={<SubOrderDetailPage />} />
             <Route path={rel(ADMIN_ROUTES.SHIPMENTS)} element={<ShipmentsPage />} />
+            <Route path={rel(ADMIN_ROUTES.CARRIER_SHIPMENTS)} element={<CarrierShipmentsPage />} />
+            <Route path={rel(ADMIN_ROUTES.CARRIER_ACCOUNTS)} element={<CarrierAccountsPage />} />
             <Route path={rel(ADMIN_ROUTES.RTO)} element={<RtoPage />} />
             <Route path={rel(ADMIN_ROUTES.RETURNS)} element={<ReturnsPage />} />
             <Route path={rel(ADMIN_ROUTES.RETURN_DETAIL)} element={<ReturnDetailPage />} />

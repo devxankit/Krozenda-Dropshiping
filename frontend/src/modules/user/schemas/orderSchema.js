@@ -81,3 +81,40 @@ export const razorpayOrderSchema = z.object({
   currency: z.string(),
   keyId: z.string(),
 })
+
+// Buyer-facing tracking. Deliberately narrower than the seller's view: there
+// is no seller identity, no carrier account, no cost and no internal status
+// here, because /user/orders/:id/tracking does not return any of it.
+export const buyerTrackingEventSchema = z.object({
+  // Our mapped status, or null when the carrier sent wording we do not
+  // recognise. Null is never guessed into a real status.
+  status: z.string().nullable(),
+  carrierStatus: z.string(),
+  location: z.string(),
+  description: z.string(),
+  occurredAt: z.string(),
+})
+
+export const buyerParcelSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  // Collapsed to the five states a buyer understands, not the 22 internal ones.
+  status: z.string(),
+  courierName: z.string(),
+  awbCode: z.string().nullable(),
+  trackingUrl: z.string().nullable(),
+  estimatedDeliveryAt: z.string().nullable(),
+  shippedAt: z.string().nullable(),
+  deliveredAt: z.string().nullable(),
+  items: z.array(z.object({ productId: z.string(), name: z.string(), quantity: z.number().int() })),
+  events: z.array(buyerTrackingEventSchema),
+})
+
+export const orderTrackingSchema = z.object({
+  orderId: z.string(),
+  orderStatus: z.string(),
+  // False is not an error: the order simply has not been handed to a courier
+  // yet, and the screen says "preparing" rather than showing an empty tracker.
+  hasShipments: z.boolean(),
+  parcels: z.array(buyerParcelSchema),
+})

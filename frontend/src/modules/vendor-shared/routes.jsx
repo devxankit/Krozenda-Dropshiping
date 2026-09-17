@@ -7,6 +7,7 @@ import { CategoriesPage } from './pages/CategoriesPage'
 import { BrandsPage } from './pages/BrandsPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ShippingPage } from './pages/ShipmentsPage'
+import { ShippingSettingsPage } from './pages/ShippingSettingsPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CouponsPage } from './pages/CouponsPage'
 import { ReturnsPage } from './pages/ReturnsPage'
@@ -28,6 +29,7 @@ export const vendorSharedRoutes = (
     <Route path="brands" element={<BrandsPage />} />
     <Route path="orders" element={<OrdersPage />} />
     <Route path="shipping" element={<ShippingPage />} />
+    <Route path="shipping/settings" element={<ShippingSettingsPage />} />
     <Route path="customers" element={<CustomersPage />} />
     <Route path="coupons" element={<CouponsPage />} />
     <Route path="returns" element={<ReturnsPage />} />

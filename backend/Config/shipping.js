@@ -56,6 +56,48 @@ const TERMINAL_STATUSES = [
   'FAILED',
 ];
 
+// The 22 internal statuses are the right vocabulary for the state machine and
+// the wrong one for a screen: nobody filters a list by SERVICEABILITY_CHECKED.
+// These groups are what the seller and admin shipment lists actually offer as
+// tabs, defined once here so the two panels cannot drift apart. Every status
+// belongs to exactly one group — asserted below.
+const SHIPMENT_GROUPS = Object.freeze({
+  // Still ours to act on: nothing has physically moved yet.
+  TO_SHIP: [
+    'PENDING',
+    'READY_TO_SHIP',
+    'SERVICEABILITY_CHECKED',
+    'CREATING',
+    'SHIPMENT_CREATED',
+    'COURIER_ASSIGNED',
+    'AWB_ASSIGNED',
+    'PICKUP_SCHEDULED',
+  ],
+  // In the carrier's hands.
+  IN_TRANSIT: ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'],
+  DELIVERED: ['DELIVERED'],
+  // Needs a human: a failed delivery, a parcel coming back, a create that
+  // timed out. This is the tab that should never be quietly empty.
+  ATTENTION: ['NDR', 'RTO_INITIATED', 'RTO_IN_TRANSIT', 'RTO_DELIVERED', 'FAILED', 'RECONCILIATION_REQUIRED'],
+  RETURNS: ['RETURN_REQUESTED', 'RETURN_PICKUP_SCHEDULED', 'RETURN_IN_TRANSIT', 'RETURN_DELIVERED'],
+  CANCELLED: ['CANCEL_REQUESTED', 'CANCELLED'],
+});
+
+// A status added to the lifecycle but not to a group would silently vanish
+// from every list screen. Failing at require time is far cheaper than a seller
+// wondering where their parcel went.
+{
+  const grouped = Object.values(SHIPMENT_GROUPS).flat();
+  const missing = SHIPMENT_STATUSES.filter((s) => !grouped.includes(s));
+  const duplicated = grouped.filter((s, i) => grouped.indexOf(s) !== i);
+  if (missing.length || duplicated.length) {
+    throw new Error(
+      `SHIPMENT_GROUPS must partition SHIPMENT_STATUSES exactly. ` +
+        `Ungrouped: [${missing.join(', ')}]. In more than one group: [${duplicated.join(', ')}].`
+    );
+  }
+}
+
 // States worth polling when webhooks are quiet. Deliberately NOT every
 // non-terminal state: a shipment sitting in PENDING has nothing at the carrier
 // to ask about.
@@ -254,6 +296,7 @@ module.exports = {
   SHIPMENT_STATUSES,
   TERMINAL_STATUSES,
   POLLABLE_STATUSES,
+  SHIPMENT_GROUPS,
   STATUS_RANK,
   BRANCH_ENTRY_STATUSES,
   canTransitionTo,

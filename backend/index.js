@@ -8,6 +8,7 @@ const app = require('./app');
 const connectDB = require('./Config/db');
 const registerSocketHandlers = require('./Router/socketHandler');
 const scheduleNightlyBackup = require('./Jobs/backupScheduler');
+const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
@@ -30,6 +31,8 @@ async function start() {
   // hydrate a User/Vendor holding a legacy string token. No-op once applied.
   await migrateFcmTokens();
   scheduleNightlyBackup();
+  // Fallback for lost carrier webhooks; no-op when shipping is disabled.
+  await scheduleTrackingPoller();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

@@ -10,6 +10,9 @@ const Coupon = require('../Models/Coupon');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { evaluateCoupon, redeemCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
+const Shipment = require('../Models/Shipment');
+const trackingService = require('../services/shipping/trackingService');
+const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
 const { getImageUrl } = require('../utils/imageHelper');
 const accounting = require('../services/accountingPosting');
 const { readPagination, buildPagination } = require('../utils/pagination');
@@ -649,6 +652,70 @@ async function cancelOrder(req, res) {
   res.json({ success: true, message: 'Order cancelled successfully' });
 }
 
+// GET /user/orders/:id/tracking
+//
+// The buyer's view of where their parcels are. Deliberately narrow, because
+// the buyer is the least-privileged reader in the system:
+//
+//   * scoped to `req.user._id`, so someone else's order id returns 404
+//   * NO carrier call — it reads the stored timeline, same as the seller's
+//     tracking read. A buyer refreshing a page must never spend the seller's
+//     carrier rate limit
+//   * no seller identity, no carrier account, no costs, no internal status
+//     codes. The 22-state machine is collapsed to the five states a buyer
+//     understands, via BUYER_FACING_ORDER_STATUS
+async function getOrderTracking(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid order id' });
+  }
+
+  const order = await Order.findOne({ _id: id, user: req.user._id }).select('_id status createdAt');
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Order not found' });
+  }
+
+  const shipments = await Shipment.find({ order: order._id }).sort({ createdAt: 1 });
+
+  const parcels = await Promise.all(
+    shipments.map(async (shipment) => ({
+      id: shipment._id.toString(),
+      // "Parcel 1 of 2" — a multi-vendor order genuinely arrives in pieces,
+      // and hiding that makes a partial delivery look like a lost order.
+      type: shipment.shipmentType,
+      status: BUYER_FACING_ORDER_STATUS[shipment.internalStatus] || 'PROCESSING',
+      // The courier's name and AWB are what a buyer needs to chase a parcel
+      // themselves; both are already printed on the package.
+      courierName: shipment.courierName || '',
+      awbCode: shipment.awbCode || null,
+      trackingUrl: shipment.trackingUrl || null,
+      estimatedDeliveryAt: shipment.estimatedDeliveryAt,
+      shippedAt: shipment.pickedUpAt,
+      deliveredAt: shipment.deliveredAt,
+      items: shipment.items.map((item) => ({
+        productId: item.product.toString(),
+        name: item.name,
+        quantity: item.quantity,
+      })),
+      events: await trackingService.getTimeline(shipment),
+    }))
+  );
+
+  res.json({
+    success: true,
+    message: 'Tracking fetched successfully',
+    data: {
+      orderId: order._id.toString(),
+      orderStatus: order.status,
+      // An order with no shipment yet is not an error — it simply has not been
+      // handed to a courier. The client shows "Preparing your order", not an
+      // empty tracking screen.
+      hasShipments: parcels.length > 0,
+      parcels,
+    },
+  });
+}
+
 module.exports = {
   serializeOrderSummary,
   createRazorpayOrder,
@@ -656,6 +723,7 @@ module.exports = {
   listOrders,
   getOrder,
   cancelOrder,
+  getOrderTracking,
   serializeOrder,
   releaseStock,
   reserveStock,
