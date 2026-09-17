@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const os = require('os');
 
 async function connectDB() {
   try {
@@ -10,6 +11,7 @@ async function connectDB() {
       heartbeatFrequencyMS: 10000,
       retryWrites: true,
       w: 'majority',
+      runtimeAdapters: { os },
     });
     console.log('MongoDB connected');
   } catch (err) {

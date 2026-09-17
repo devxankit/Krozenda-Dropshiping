@@ -7,9 +7,13 @@ const Product = require('../Models/Product');
 const Address = require('../Models/Address');
 const Vendor = require('../Models/Vendor');
 
+const os = require('os');
+
 async function connectTestDb() {
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URL);
+    await mongoose.connect(process.env.MONGODB_URL, {
+      runtimeAdapters: { os }
+    });
   }
 }
 

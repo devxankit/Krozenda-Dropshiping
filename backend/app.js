@@ -122,6 +122,7 @@ app.use('/vendor/earnings', require('./Router/vendorEarningsRoutes'));
 app.use('/vendor/analytics', require('./Router/vendorAnalyticsRoutes'));
 app.use('/vendor/settings', require('./Router/vendorSettingsRoutes'));
 app.use('/vendor/catalog', require('./Router/vendorCatalogRoutes'));
+app.use('/vendor/shipping', require('./Router/vendorShippingRoutes'));
 
 app.use('/catalog/categories', require('./Router/publicCategoryRoutes'));
 app.use('/catalog/products', require('./Router/publicProductRoutes'));

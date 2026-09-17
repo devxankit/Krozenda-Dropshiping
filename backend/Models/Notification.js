@@ -26,11 +26,10 @@ notificationSchema.index({ user: 1, isRead: 1 });
 notificationSchema.index({ vendor: 1, createdAt: -1 });
 notificationSchema.index({ vendor: 1, isRead: 1 });
 
-notificationSchema.pre('validate', function guardOwner(next) {
+notificationSchema.pre('validate', function guardOwner() {
   if (Boolean(this.user) === Boolean(this.vendor)) {
-    return next(new Error('Notification must belong to exactly one of user or vendor'));
+    throw new Error('Notification must belong to exactly one of user or vendor');
   }
-  next();
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);

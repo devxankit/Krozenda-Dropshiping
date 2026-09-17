@@ -38,10 +38,9 @@ userSchema.index({ role: 1, isDeleted: 1 });
 // is already uniquely indexed by its field definition.
 userSchema.index({ email: 1, isDeleted: 1 });
 
-userSchema.pre('save', async function hashPassword(next) {
-  if (!this.password || !this.isModified('password')) return next();
+userSchema.pre('save', async function hashPassword() {
+  if (!this.password || !this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidate) {

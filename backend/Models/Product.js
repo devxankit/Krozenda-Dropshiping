@@ -24,7 +24,24 @@ const productSchema = new mongoose.Schema(
     salePrice: { type: Number, default: null, min: 0 },
     discountPercent: { type: Number, default: 0, min: 0, max: 100 },
     stock: { type: Number, required: true, default: 0, min: 0 },
+    // Shipping weight in KILOGRAMS. Nullable, and stays nullable: Decision B
+    // makes dimensions optional and falls back to a vendor default, then a
+    // platform default, then the seller's own "Verify Package" measurement.
     weight: { type: Number, default: null, min: 0 },
+    // Shipping dimensions in CENTIMETRES. All three or none — a partial set
+    // cannot produce a volumetric weight, so utils/packaging treats it as
+    // absent (see hasDimensions).
+    dimensions: {
+      type: new mongoose.Schema(
+        {
+          lengthCm: { type: Number, default: null, min: 0 },
+          breadthCm: { type: Number, default: null, min: 0 },
+          heightCm: { type: Number, default: null, min: 0 },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     images: { type: [String], default: [] },
     description: { type: String, default: '', trim: true },
     isActive: { type: Boolean, default: true },

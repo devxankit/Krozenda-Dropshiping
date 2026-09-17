@@ -46,11 +46,10 @@ const couponSchema = new mongoose.Schema(
 couponSchema.index({ code: 1 }, { unique: true });
 couponSchema.index({ isActive: 1, startDate: 1, endDate: 1 });
 
-couponSchema.pre('validate', function guardDateRange(next) {
+couponSchema.pre('validate', function guardDateRange() {
   if (this.startDate && this.endDate && this.endDate <= this.startDate) {
-    return next(new Error('End date must be after start date'));
+    throw new Error('End date must be after start date');
   }
-  next();
 });
 
 // Pure function (not just a document method) so listing/serialization can

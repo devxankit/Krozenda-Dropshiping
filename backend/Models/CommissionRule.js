@@ -65,21 +65,20 @@ const TARGET_FOR_SCOPE = Object.freeze({
   GLOBAL: null,
 });
 
-commissionRuleSchema.pre('validate', function checkScopeTarget(next) {
+commissionRuleSchema.pre('validate', function checkScopeTarget() {
   const required = TARGET_FOR_SCOPE[this.scope];
   const targets = ['product', 'vendor', 'category'];
 
   if (required && !this[required]) {
-    return next(new Error(`A ${this.scope.toLowerCase()} rule must name a ${required}`));
+    throw new Error(`A ${this.scope.toLowerCase()} rule must name a ${required}`);
   }
   const strays = targets.filter((field) => field !== required && this[field]);
   if (strays.length > 0) {
-    return next(new Error(`A ${this.scope.toLowerCase()} rule cannot also target ${strays.join(', ')}`));
+    throw new Error(`A ${this.scope.toLowerCase()} rule cannot also target ${strays.join(', ')}`);
   }
   if (this.startDate && this.endDate && this.endDate <= this.startDate) {
-    return next(new Error('The rule must end after it starts'));
+    throw new Error('The rule must end after it starts');
   }
-  next();
 });
 
 // Is this rule in force at `at`? An inactive rule, one that has not started

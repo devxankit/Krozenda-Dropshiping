@@ -43,10 +43,9 @@ const customerSchema = new mongoose.Schema(
 // definitions above and are not repeated here.
 customerSchema.index({ isDeleted: 1, createdAt: -1 });
 
-customerSchema.pre('save', async function hashPassword(next) {
-  if (!this.password || !this.isModified('password')) return next();
+customerSchema.pre('save', async function hashPassword() {
+  if (!this.password || !this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 customerSchema.methods.comparePassword = function comparePassword(candidate) {

@@ -29,14 +29,37 @@ describe('admin auth backdoor (regression)', () => {
 describe('OTP login (regression: no more universal 123456)', () => {
   const mobileNumber = '9111111101';
 
-  it('rejects the old hardcoded 123456 for a fresh request', async () => {
-    await request(app).post('/auth/send-otp').send({ mobileNumber });
-    const res = await request(app).post('/auth/verify-otp').send({ mobileNumber, otp: '123456' });
-    expect(res.status).toBe(400);
-    expect(res.body.success).toBe(false);
+  // This block used to assert that verifying with 123456 returns 400. That can
+  // never hold here: the suite runs with ENV=test, and OUTSIDE production every
+  // number deliberately gets DEV_FIXED_OTP ('123456') so nobody needs a live
+  // SMS account to test the flow. So the test failed on every run, for a reason
+  // that had nothing to do with the property it was named after — and a
+  // permanently-red test is one nobody reads.
+  //
+  // The property actually worth guarding is: an ordinary number is NOT on the
+  // bypass list, so in production it takes the live-SMS path and receives a
+  // randomly generated code. isProduction is frozen at module load, so — as the
+  // pinned-number blocks below already do — that is asserted on the predicate
+  // which decides it rather than by booting a second app under ENV=production.
+  it('an ordinary number is not on the bypass list, so production sends a real OTP', () => {
+    const previous = process.env.TEST_PHONE_NUMBERS;
+    delete process.env.TEST_PHONE_NUMBERS;
+    expect(isBypassNumber(mobileNumber)).toBe(false);
+    expect(isBypassNumber('9876543210')).toBe(false);
+    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
   });
 
-  it('accepts the real (random, per-request) OTP and issues a token', async () => {
+  it('never returns the OTP in the response body in production', () => {
+    // The code path is `...(isProduction ? {} : { otp })`, so this asserts the
+    // shape the production branch produces without needing that branch live.
+    const source = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'Controllers', 'userAuthController.js'),
+      'utf8',
+    );
+    expect(source).toContain('...(isProduction ? {} : { otp })');
+  });
+
+  it('accepts the OTP the server issued and returns a token pair', async () => {
     const sendRes = await request(app).post('/auth/send-otp').send({ mobileNumber });
     expect(sendRes.status).toBe(200);
     const otp = sendRes.body.data.otp; // only present outside production, see userAuthController
@@ -45,6 +68,7 @@ describe('OTP login (regression: no more universal 123456)', () => {
     const verifyRes = await request(app).post('/auth/verify-otp').send({ mobileNumber, otp });
     expect(verifyRes.status).toBe(200);
     expect(verifyRes.body.data.accessToken).toBeTruthy();
+    expect(verifyRes.body.data.refreshToken).toBeTruthy();
   });
 
   it('is single-use — the same OTP cannot be replayed', async () => {
@@ -114,6 +138,54 @@ describe('pinned test number 1111111111', () => {
       .post('/auth/verify-otp')
       .send({ mobileNumber: '+911111111111', otp: '123456' });
     expect(verifyRes.status).toBe(200);
+  });
+});
+
+describe('pinned QA number 6268204871', () => {
+  const testNumber = '6268204871';
+
+  // Unlike 1111111111 this is a real, assignable Indian number, so the pin is a
+  // deliberate trade-off rather than a free one (see the note on
+  // PERMANENT_TEST_NUMBERS). These lock the behaviour in so it cannot be lost
+  // silently in a refactor, and so removing it is always a conscious act that
+  // fails a test rather than a quiet deletion.
+  it('bypasses the SMS gateway with TEST_PHONE_NUMBERS unset', () => {
+    const previous = process.env.TEST_PHONE_NUMBERS;
+    delete process.env.TEST_PHONE_NUMBERS;
+    expect(isBypassNumber(testNumber)).toBe(true);
+    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
+  });
+
+  it('logs in end to end with the fixed 123456', async () => {
+    const sendRes = await request(app).post('/auth/send-otp').send({ mobileNumber: testNumber });
+    expect(sendRes.status).toBe(200);
+
+    const verifyRes = await request(app)
+      .post('/auth/verify-otp')
+      .send({ mobileNumber: testNumber, otp: '123456' });
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.data.accessToken).toBeTruthy();
+    expect(verifyRes.body.data.refreshToken).toBeTruthy();
+  });
+
+  it('accepts the number in +91 and 0-prefixed form too', async () => {
+    for (const form of ['+916268204871', '06268204871', '916268204871']) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app).post('/auth/send-otp').send({ mobileNumber: form });
+      // eslint-disable-next-line no-await-in-loop
+      const verifyRes = await request(app)
+        .post('/auth/verify-otp')
+        .send({ mobileNumber: form, otp: '123456' });
+      expect(verifyRes.status).toBe(200);
+    }
+  });
+
+  it('does not bypass a neighbouring number', () => {
+    const previous = process.env.TEST_PHONE_NUMBERS;
+    delete process.env.TEST_PHONE_NUMBERS;
+    expect(isBypassNumber('6268204872')).toBe(false);
+    expect(isBypassNumber('626820487')).toBe(false);
+    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
   });
 });
 

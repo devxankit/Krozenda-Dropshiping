@@ -123,17 +123,14 @@ accountingTransactionSchema.index({ createdAt: -1 });
 // means even a future caller that reaches for findOneAndUpdate cannot quietly
 // restate history (task §15 Rule 2) — it has to post a reversal instead.
 const FROZEN_PATHS = ['credit', 'debit', 'amount', 'type', 'direction', 'vendor', 'order', 'eventKey'];
-accountingTransactionSchema.pre('save', function freezeAmounts(next) {
-  if (this.isNew) return next();
+accountingTransactionSchema.pre('save', function freezeAmounts() {
+  if (this.isNew) return;
   const changed = FROZEN_PATHS.filter((path) => this.isModified(path));
   if (changed.length > 0) {
-    return next(
-      new Error(
-        `Accounting transactions are immutable — post a reversal instead of editing ${changed.join(', ')}`
-      )
+    throw new Error(
+      `Accounting transactions are immutable — post a reversal instead of editing ${changed.join(', ')}`
     );
   }
-  next();
 });
 
 const AccountingTransaction = mongoose.model('AccountingTransaction', accountingTransactionSchema);

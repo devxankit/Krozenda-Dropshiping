@@ -97,6 +97,23 @@ const vendorSchema = new mongoose.Schema(
     // Platform commission taken off each delivered item's line total —
     // admin-set, read-only from the vendor side (see vendorEarningsController).
     commissionRatePercent: { type: Number, default: 10, min: 0, max: 100 },
+
+    // Tier 2 of the package-measurement fallback chain (product dimensions ->
+    // THIS -> platform default -> seller's Verify Package override). A seller
+    // who ships one standard carton size sets it once here instead of
+    // measuring every parcel. Null means "no default, use the platform's".
+    defaultPackage: {
+      type: new mongoose.Schema(
+        {
+          lengthCm: { type: Number, default: null, min: 0 },
+          breadthCm: { type: Number, default: null, min: 0 },
+          heightCm: { type: Number, default: null, min: 0 },
+          weightKg: { type: Number, default: null, min: 0 },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     notificationPrefs: {
       type: {
         orderUpdates: { type: Boolean, default: true },
@@ -111,10 +128,9 @@ const vendorSchema = new mongoose.Schema(
 
 vendorSchema.index({ vendorType: 1, verificationStatus: 1 });
 
-vendorSchema.pre('save', async function hashPassword(next) {
-  if (!this.isModified('password')) return next();
+vendorSchema.pre('save', async function hashPassword() {
+  if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 vendorSchema.methods.comparePassword = function comparePassword(candidate) {
