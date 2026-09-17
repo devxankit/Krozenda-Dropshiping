@@ -23,7 +23,21 @@ const DEV_FIXED_OTP = '123456';
 // wire an env var on each server. Pinning it is safe: Indian mobile numbers
 // start with 6-9, so 1111111111 can never be issued to a real buyer and no
 // real account is reachable through this bypass.
-const PERMANENT_TEST_NUMBERS = ['1111111111'];
+//
+// 6268204871 is DIFFERENT and the difference matters. It is a real, assignable
+// Indian number, so it does reach a real buyer account — and because this list
+// lives in source control, anyone who can read this repository can sign in to
+// that account in production with the fixed code above. That is an accepted,
+// deliberate trade-off for a known QA/demo handset, not an oversight. Two
+// things follow from it:
+//
+//   * the account behind this number must never be given staff/admin rights,
+//     and should hold nothing that matters if it is read by a stranger;
+//   * to revoke it you must edit this file and deploy. If you would rather be
+//     able to revoke without a deploy, move the number to the TEST_PHONE_NUMBERS
+//     env var below instead and drop it from this array — isBypassNumber reads
+//     both, so nothing else has to change.
+const PERMANENT_TEST_NUMBERS = ['1111111111', '6268204871'];
 
 // Extra numbers, comma separated in .env; unset or empty just leaves the
 // permanent list above in force.
