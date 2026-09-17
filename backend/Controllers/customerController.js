@@ -1,4 +1,4 @@
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Order = require('../Models/Order');
 const { getImageUrl } = require('../utils/imageHelper');
 
@@ -26,7 +26,7 @@ async function listCustomers(req, res) {
   const rowsPerPage = Math.max(1, parseInt(req.query.rowsPerPage, 10) || 10);
   const tab = req.query.tab || 'all';
 
-  const customers = await User.find({ role: 'customer', isDeleted: false }).sort({ createdAt: -1 });
+  const customers = await Customer.find({ isDeleted: false }).sort({ createdAt: -1 });
 
   const stats = await Order.aggregate([
     { $match: { status: { $ne: 'CANCELLED' } } },
@@ -39,9 +39,9 @@ async function listCustomers(req, res) {
       },
     },
   ]);
-  const statsByUser = new Map(stats.map((s) => [s._id.toString(), s]));
+  const statsByCustomer = new Map(stats.map((s) => [s._id.toString(), s]));
 
-  const allItems = customers.map((c) => serializeCustomer(c, statsByUser.get(c._id.toString())));
+  const allItems = customers.map((c) => serializeCustomer(c, statsByCustomer.get(c._id.toString())));
   const blockedItems = allItems.filter((c) => c.status === 'blocked');
   // Top spenders — ranked by lifetime value, not just insertion order.
   const topItems = [...allItems].sort((a, b) => b.lifetimeValue - a.lifetimeValue).slice(0, 10);
@@ -77,14 +77,13 @@ async function createCustomer(req, res) {
   }
 
   try {
-    const customer = await User.create({
+    const customer = await Customer.create({
       name: name || undefined,
       email: email ? email.toLowerCase().trim() : undefined,
       mobileNumber,
       dob: dob || undefined,
       image: req.file?.url || null,
       isActive: isActive !== undefined ? isActive === 'true' || isActive === true : true,
-      role: 'customer',
       createdBy: req.admin._id,
     });
 
@@ -103,8 +102,8 @@ async function updateCustomerStatus(req, res) {
     return res.status(400).json({ success: false, message: 'isActive (boolean) is required' });
   }
 
-  const customer = await User.findOneAndUpdate(
-    { _id: req.params.id, role: 'customer', isDeleted: false },
+  const customer = await Customer.findOneAndUpdate(
+    { _id: req.params.id, isDeleted: false },
     { isActive },
     { new: true }
   );

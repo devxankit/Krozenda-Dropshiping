@@ -1,4 +1,5 @@
 const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Vendor = require('../Models/Vendor');
 const { DEVICE_TYPES } = require('../Models/fcmTokenSchema');
 
@@ -45,6 +46,7 @@ async function registerFcmToken(req, res) {
 
   await Promise.all([
     User.updateMany({ 'fcmTokens.token': token }, { $pull: { fcmTokens: { token } } }),
+    Customer.updateMany({ 'fcmTokens.token': token }, { $pull: { fcmTokens: { token } } }),
     Vendor.updateMany({ 'fcmTokens.token': token }, { $pull: { fcmTokens: { token } } }),
   ]);
   await model.updateOne({ _id: doc._id }, { $push: { fcmTokens: { token, deviceType } } });

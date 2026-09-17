@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 // loser hits the unique index instead of silently creating a duplicate.
 const couponUserUsageSchema = new mongoose.Schema({
   couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   count: { type: Number, default: 0, min: 0 },
 });
 

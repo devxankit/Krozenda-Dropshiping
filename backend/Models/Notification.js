@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema(
     // Exactly one of user/vendor is set — see the pre-validate guard below.
     // vendor notifications reuse this same collection/shape rather than a
     // separate model, since listing/read/unread logic is identical.
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
     type: { type: String, enum: TYPES, default: 'SYSTEM' },
     title: { type: String, required: true, trim: true },

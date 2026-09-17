@@ -5,7 +5,7 @@ const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
 
 const returnRequestSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     productName: { type: String, required: true },

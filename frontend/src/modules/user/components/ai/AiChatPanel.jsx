@@ -4,20 +4,20 @@ import {
   HiOutlineClock,
   HiOutlinePaperAirplane,
   HiOutlinePlus,
-  HiOutlineSparkles,
   HiXMark,
 } from 'react-icons/hi2'
+import { AiSparkIcon } from './AiSparkIcon'
 import { AiChatHistory } from './AiChatHistory'
 
 // Shown on an empty thread. Phrased as the customer would ask, and every one
 // of them is answerable from the tools the backend exposes.
 const SUGGESTED_QUESTIONS = [
-  'How many orders have I placed?',
+  'Tell me everything about my account',
+  'How much balance is in my wallet?',
   'Where is my latest order?',
-  "What's the status of my order?",
-  'Show my order history',
-  'How many orders were delivered?',
-  'Tell me about my recent purchases',
+  'How many orders have I placed?',
+  "What's in my cart and wishlist?",
+  'Show my support tickets and returns',
 ]
 
 const MAX_MESSAGE_LENGTH = 2000
@@ -159,8 +159,8 @@ export function AiChatPanel({ assistant, onClose = () => {} }) {
         {/* Header */}
         <div className="relative z-10 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
           <div className="relative shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xs">
-              <HiOutlineSparkles className="h-5 w-5 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-sm">
+              <AiSparkIcon className="h-5 w-5 text-white" accent="#FBBF24" />
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
           </div>
@@ -203,8 +203,9 @@ export function AiChatPanel({ assistant, onClose = () => {} }) {
         <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {isEmpty && (
             <div className="flex h-full flex-col items-center justify-center px-2 text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xs">
-                <HiOutlineSparkles className="h-7 w-7 text-white" />
+              <div className="relative mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-[0_8px_20px_-6px_rgba(37,99,235,0.55)]">
+                <span className="pointer-events-none absolute inset-x-2 top-1 h-3.5 rounded-full bg-white/25 blur-[6px]" />
+                <AiSparkIcon className="relative h-8 w-8 text-white" accent="#FBBF24" />
               </div>
               <h3 className="text-base font-extrabold text-slate-900">Hi! How can I help?</h3>
               <p className="mt-1 max-w-[16rem] text-xs font-medium text-slate-500">

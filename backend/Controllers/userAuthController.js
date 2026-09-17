@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const OtpRequest = require('../Models/OtpRequest');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
@@ -65,7 +65,7 @@ function serializeCustomer(user) {
     email: user.email || '',
     gender: user.gender || null,
     dob: user.dob || null,
-    role: user.role || 'customer',
+    role: 'customer',
     image: user.image ? getImageUrl(user.image) : null,
     walletBalance: user.walletBalance || 0,
     createdAt: user.createdAt,
@@ -84,7 +84,7 @@ async function requestOtp(req, res) {
     });
   }
 
-  const existingUser = await User.findOne({
+  const existingCustomer = await Customer.findOne({
     mobileNumber: cleanNumber,
     isDeleted: false,
   });
@@ -125,7 +125,7 @@ async function requestOtp(req, res) {
       // Only ever present outside production — in production the OTP only
       // ever reaches the buyer's phone via the SMS gateway above.
       ...(isProduction ? {} : { otp }),
-      isRegistered: Boolean(existingUser),
+      isRegistered: Boolean(existingCustomer),
     },
   });
 }
@@ -173,7 +173,7 @@ async function verifyOtp(req, res) {
   // OTP is single-use — consume it before any further processing.
   await otpRequest.deleteOne();
 
-  let user = await User.findOne({
+  let user = await Customer.findOne({
     mobileNumber: cleanNumber,
     isDeleted: false,
   });
@@ -184,10 +184,9 @@ async function verifyOtp(req, res) {
     // New customer auto-registration
     isNewUser = true;
     try {
-      user = await User.create({
+      user = await Customer.create({
         name: name?.trim() || `Customer ${cleanNumber.slice(-4)}`,
         mobileNumber: cleanNumber,
-        role: 'customer',
         isActive: true,
       });
     } catch (err) {
@@ -196,7 +195,7 @@ async function verifyOtp(req, res) {
       // loser into a duplicate-key error instead of a duplicate account.
       if (err.code === 11000) {
         isNewUser = false;
-        user = await User.findOne({ mobileNumber: cleanNumber, isDeleted: false });
+        user = await Customer.findOne({ mobileNumber: cleanNumber, isDeleted: false });
       } else {
         throw err;
       }
@@ -219,7 +218,7 @@ async function verifyOtp(req, res) {
 
   const token = signToken('user', {
     id: user._id.toString(),
-    role: user.role || 'customer',
+    role: 'customer',
     mobileNumber: user.mobileNumber,
   });
 
@@ -258,7 +257,7 @@ async function updateProfile(req, res) {
     if (!EMAIL_RE.test(String(email).trim())) {
       return res.status(400).json({ success: false, message: 'Enter a valid email address' });
     }
-    const existing = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user._id } });
+    const existing = await Customer.findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user._id } });
     if (existing) {
       return res.status(400).json({ success: false, message: 'This email is already in use' });
     }
@@ -273,7 +272,7 @@ async function updateProfile(req, res) {
       if (cleanNumber.length !== 10) {
         return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
       }
-      const existing = await User.findOne({ mobileNumber: cleanNumber, _id: { $ne: req.user._id } });
+      const existing = await Customer.findOne({ mobileNumber: cleanNumber, _id: { $ne: req.user._id } });
       if (existing) {
         return res.status(400).json({ success: false, message: 'This mobile number is already in use' });
       }
@@ -319,7 +318,7 @@ async function changePassword(req, res) {
     return res.status(400).json({ success: false, message: 'Passwords do not match' });
   }
 
-  const user = await User.findById(req.user._id).select('+password');
+  const user = await Customer.findById(req.user._id).select('+password');
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
   }
@@ -343,7 +342,7 @@ async function changePassword(req, res) {
 
 // DELETE /auth/account
 async function deleteAccount(req, res) {
-  const user = await User.findById(req.user._id);
+  const user = await Customer.findById(req.user._id);
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
   }

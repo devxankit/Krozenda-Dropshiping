@@ -815,7 +815,8 @@ describe('authorization', () => {
   it('lets a read-only auditor read but not move money', async () => {
     const Role = require('../Models/Role');
     const { signToken } = require('../utils/jwt');
-    const User = require('../Models/User');
+    const Customer = require('../Models/Customer');
+const User = require('../Models/User');
 
     const role = await Role.create({
       name: `auditor-${uniqueSuffix()}`,

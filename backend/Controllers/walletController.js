@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const razorpay = require('../Config/razorpay');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { createNotification } = require('./notificationController');
 
@@ -96,7 +96,7 @@ async function verifyTopup(req, res) {
   const creditAmount = payment.amount / 100;
 
   try {
-    const user = await User.findByIdAndUpdate(
+    const user = await Customer.findByIdAndUpdate(
       req.user._id,
       { $inc: { walletBalance: creditAmount } },
       { new: true }
@@ -129,7 +129,7 @@ async function verifyTopup(req, res) {
   } catch (err) {
     if (err.code === 11000) {
       // Already credited by an earlier call for this exact payment.
-      const user = await User.findById(req.user._id);
+      const user = await Customer.findById(req.user._id);
       return res.json({ success: true, message: 'Wallet already topped up', data: { balance: user.walletBalance } });
     }
     throw err;

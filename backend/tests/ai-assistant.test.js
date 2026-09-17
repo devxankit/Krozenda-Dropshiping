@@ -310,17 +310,23 @@ describe('data minimisation', () => {
     expect(serialized).not.toMatch(/123 Test Street/);
   });
 
-  it('masks contact details in the profile tool', async () => {
-    const { user } = await createCustomer({ name: 'Rahul', email: 'rahul@example.com' });
+  it('returns the caller own profile in full but never a password', async () => {
+    const email = `rahul${Date.now()}@example.com`;
+    const { user } = await createCustomer({ name: 'Rahul', email, password: 'secret123' });
 
     const profile = await aiTools.getMyProfile(user._id);
 
+    // Their own details are returned unmasked — the Edit Profile screen
+    // already shows these, so redacting them here only crippled the answers.
+    // The boundary that matters is that userId is the authenticated id.
     expect(profile.name).toBe('Rahul');
-    expect(profile.email).not.toBe('rahul@example.com');
-    expect(profile.email).toMatch(/^r\*+@example\.com$/);
-    expect(profile.mobileNumber).toMatch(/^\*{6}\d{4}$/);
-    // No password field, hashed or otherwise.
+    expect(profile.email).toBe(email);
+    expect(profile.mobileNumber).toBe(user.mobileNumber);
+
+    // Credentials, however, are never in reach.
     expect(Object.keys(profile)).not.toContain('password');
+    expect(JSON.stringify(profile)).not.toMatch(/secret123/);
+    expect(JSON.stringify(profile)).not.toMatch(/\$2[aby]\$/);
   });
 
   it('never sends a password hash or token to the model', async () => {

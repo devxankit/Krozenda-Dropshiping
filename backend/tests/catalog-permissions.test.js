@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../app');
 const { connectTestDb, disconnectTestDb, uniqueSuffix } = require('./helpers');
 const { signToken } = require('../utils/jwt');
+const Customer = require('../Models/Customer');
 const User = require('../Models/User');
 const Role = require('../Models/Role');
 

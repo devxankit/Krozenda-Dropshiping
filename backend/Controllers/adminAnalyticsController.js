@@ -4,6 +4,7 @@ const Product = require('../Models/Product');
 const ReturnRequest = require('../Models/ReturnRequest');
 const Ticket = require('../Models/Ticket');
 const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Vendor = require('../Models/Vendor');
 const { isFirebaseConfigured } = require('../Config/firebase');
 const { toPaise } = require('../utils/money');
@@ -627,7 +628,7 @@ async function getDashboardSummary(req, res) {
   const startOfToday = new Date(today.end.getTime() - 24 * 60 * 60 * 1000);
 
   const [totalUsers, totalSellers, pendingApprovals, ordersToday] = await Promise.all([
-    User.countDocuments({ role: 'customer', isDeleted: false }),
+    Customer.countDocuments({ isDeleted: false }),
     Vendor.countDocuments({}),
     Vendor.countDocuments({ verificationStatus: { $in: ['PENDING', 'UNDER_REVIEW'] } }),
     Order.countDocuments({ createdAt: { $gte: startOfToday, $lt: today.end } }),

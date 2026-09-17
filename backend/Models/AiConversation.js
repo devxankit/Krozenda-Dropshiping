@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // controller always writes req.user._id, resolved from the verified JWT.
 const aiConversationSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     // Seeded from the first user message (see aiAssistantController.deriveTitle)
     // and never rewritten afterwards, so a thread keeps a stable name in the
     // history list.

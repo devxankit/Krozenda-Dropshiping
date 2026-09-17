@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../Models/Order');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Product = require('../Models/Product');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { serializeOrder, releaseStock, reserveStock, notifyVendorsOfNewOrder } = require('./orderController');
@@ -148,7 +148,7 @@ async function createOrder(req, res) {
     return res.status(400).json({ success: false, message: 'Fill in the full delivery address' });
   }
 
-  const user = await User.findById(userId);
+  const user = await Customer.findById(userId);
   if (!user) {
     return res.status(404).json({ success: false, message: 'Customer not found' });
   }
@@ -265,7 +265,7 @@ async function updateOrderStatus(req, res) {
   if (status === 'CANCELLED') {
     await releaseStock(order.items);
     if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
-      const refundedUser = await User.findOneAndUpdate(
+      const refundedCustomer = await Customer.findOneAndUpdate(
         { _id: order.user },
         { $inc: { walletBalance: order.total } },
         { new: true }
@@ -274,7 +274,7 @@ async function updateOrderStatus(req, res) {
         user: order.user,
         type: 'CREDIT',
         amount: order.total,
-        balanceAfter: refundedUser.walletBalance,
+        balanceAfter: refundedCustomer.walletBalance,
         source: 'ORDER_REFUND',
         orderId: order._id,
         status: 'SUCCESS',

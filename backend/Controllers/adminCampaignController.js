@@ -1,4 +1,5 @@
 const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Vendor = require('../Models/Vendor');
 const NotificationCampaign = require('../Models/NotificationCampaign');
 const { sendToTokens } = require('../utils/pushHelper');
@@ -71,7 +72,7 @@ async function tokensForAudience(audience) {
 
   const [customers, sellers] = await Promise.all([
     wantsCustomers
-      ? User.find({ role: 'customer', isDeleted: false, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens')
+      ? Customer.find({ isDeleted: false, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens')
       : [],
     wantsSellers
       ? Vendor.find({ isActive: true, fcmTokens: { $ne: [] } }).select('fcmTokens')
@@ -89,6 +90,7 @@ async function pruneStaleTokens(staleTokens) {
   if (!staleTokens.length) return;
   await Promise.all([
     User.updateMany({}, { $pull: { fcmTokens: { token: { $in: staleTokens } } } }),
+    Customer.updateMany({}, { $pull: { fcmTokens: { token: { $in: staleTokens } } } }),
     Vendor.updateMany({}, { $pull: { fcmTokens: { token: { $in: staleTokens } } } }),
   ]);
 }

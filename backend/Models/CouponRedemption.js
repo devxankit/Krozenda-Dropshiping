@@ -5,7 +5,7 @@ const STATUSES = ['PENDING', 'SUCCESS', 'FAILED', 'CANCELLED'];
 const couponRedemptionSchema = new mongoose.Schema(
   {
     couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     // Not populated yet — no Order model exists in this backend so far.
     orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
     discountAmount: { type: Number, required: true, min: 0 },

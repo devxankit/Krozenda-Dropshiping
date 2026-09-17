@@ -9,7 +9,7 @@ const ROLES = ['user', 'assistant'];
 const aiMessageSchema = new mongoose.Schema(
   {
     conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'AiConversation', required: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     role: { type: String, enum: ROLES, required: true },
     message: { type: String, required: true, trim: true, maxlength: 8000 },
     // Non-sensitive diagnostics only — which tools ran, the model id, latency.

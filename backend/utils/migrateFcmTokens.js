@@ -13,7 +13,7 @@ const mongoose = require('mongoose');
 // Every pre-existing token came from the browser (web push was the only
 // client before the apps), so 'web' is the correct backfill.
 async function migrateFcmTokens() {
-  const collections = ['users', 'vendors'];
+  const collections = ['users', 'customers', 'vendors'];
   let migrated = 0;
 
   for (const name of collections) {

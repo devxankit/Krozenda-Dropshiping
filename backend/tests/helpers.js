@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { signToken } = require('../utils/jwt');
 const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
 const Address = require('../Models/Address');
@@ -24,14 +25,13 @@ function uniqueSuffix() {
 
 async function createCustomer(overrides = {}) {
   const suffix = uniqueSuffix().slice(-9);
-  const user = await User.create({
+  const user = await Customer.create({
     name: 'Test Customer',
     mobileNumber: `9${suffix.padStart(9, '0')}`.slice(0, 10),
-    role: 'customer',
     isActive: true,
     ...overrides,
   });
-  const token = signToken('user', { id: user._id.toString(), role: user.role, mobileNumber: user.mobileNumber });
+  const token = signToken('user', { id: user._id.toString(), role: 'customer', mobileNumber: user.mobileNumber });
   return { user, token };
 }
 

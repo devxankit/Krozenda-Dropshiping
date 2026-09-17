@@ -28,7 +28,7 @@ const couponSchema = new mongoose.Schema(
     vendorIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }],
 
     customerEligibility: { type: String, enum: CUSTOMER_ELIGIBILITY, default: 'ALL' },
-    customerIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    customerIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }],
 
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

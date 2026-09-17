@@ -1,4 +1,4 @@
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const { verifyToken } = require('../utils/jwt');
 
 async function protectUser(req, res, next) {
@@ -11,7 +11,7 @@ async function protectUser(req, res, next) {
     }
 
     const decoded = verifyToken('user', token);
-    const user = await User.findById(decoded.id);
+    const user = await Customer.findById(decoded.id);
 
     if (!user || user.isDeleted) {
       return res.status(401).json({ success: false, message: 'Account not found' });

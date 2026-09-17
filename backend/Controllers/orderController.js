@@ -5,7 +5,7 @@ const Order = require('../Models/Order');
 const Address = require('../Models/Address');
 const Cart = require('../Models/Cart');
 const Product = require('../Models/Product');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Coupon = require('../Models/Coupon');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { evaluateCoupon, redeemCoupon } = require('./couponController');
@@ -305,12 +305,12 @@ async function createOrder(req, res) {
   }
 
   if (paymentMethod === 'WALLET') {
-    const updatedUser = await User.findOneAndUpdate(
+    const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.user._id, walletBalance: { $gte: total } },
       { $inc: { walletBalance: -total } },
       { new: true }
     );
-    if (!updatedUser) {
+    if (!updatedCustomer) {
       await releaseStock(items);
       return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
     }
@@ -346,7 +346,7 @@ async function createOrder(req, res) {
   } catch (err) {
     await releaseStock(items);
     if (paymentMethod === 'WALLET') {
-      await User.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
+      await Customer.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
     }
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'This payment has already been used for another order' });
@@ -355,12 +355,12 @@ async function createOrder(req, res) {
   }
 
   if (paymentMethod === 'WALLET') {
-    const freshUser = await User.findById(req.user._id);
+    const freshCustomer = await Customer.findById(req.user._id);
     await WalletTransaction.create({
       user: req.user._id,
       type: 'DEBIT',
       amount: total,
-      balanceAfter: freshUser.walletBalance,
+      balanceAfter: freshCustomer.walletBalance,
       source: 'ORDER_PAYMENT',
       orderId: order._id,
       status: 'SUCCESS',
@@ -463,7 +463,7 @@ async function cancelOrder(req, res) {
   await releaseStock(order.items);
 
   if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
-    const refundedUser = await User.findOneAndUpdate(
+    const refundedCustomer = await Customer.findOneAndUpdate(
       { _id: req.user._id },
       { $inc: { walletBalance: order.total } },
       { new: true }
@@ -472,7 +472,7 @@ async function cancelOrder(req, res) {
       user: req.user._id,
       type: 'CREDIT',
       amount: order.total,
-      balanceAfter: refundedUser.walletBalance,
+      balanceAfter: refundedCustomer.walletBalance,
       source: 'ORDER_REFUND',
       orderId: order._id,
       status: 'SUCCESS',

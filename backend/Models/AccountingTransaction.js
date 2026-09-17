@@ -57,7 +57,7 @@ const accountingTransactionSchema = new mongoose.Schema(
     // product id because Order.items has no _id of its own (see Order.js).
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
 
     settlement: { type: mongoose.Schema.Types.ObjectId, ref: 'Settlement', default: null, index: true },
     payout: { type: mongoose.Schema.Types.ObjectId, ref: 'Payout', default: null },

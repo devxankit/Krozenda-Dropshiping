@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const ReturnRequest = require('../Models/ReturnRequest');
 const Product = require('../Models/Product');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { createNotification } = require('./notificationController');
 const { getImageUrl } = require('../utils/imageHelper');
@@ -147,7 +147,7 @@ async function decideReturnRequest(req, res) {
   }
 
   if (normalizedDecision === 'APPROVED' && request.requestType === 'REFUND') {
-    const user = await User.findByIdAndUpdate(request.user._id, { $inc: { walletBalance: request.refundAmount } }, { new: true });
+    const user = await Customer.findByIdAndUpdate(request.user._id, { $inc: { walletBalance: request.refundAmount } }, { new: true });
     await WalletTransaction.create({
       user: request.user._id,
       type: 'CREDIT',

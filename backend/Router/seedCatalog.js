@@ -7,7 +7,7 @@ const Brand = require('../Models/Brand');
 const Product = require('../Models/Product');
 const Banner = require('../Models/Banner');
 const Vendor = require('../Models/Vendor');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const Address = require('../Models/Address');
 const Coupon = require('../Models/Coupon');
 const Order = require('../Models/Order');
@@ -209,7 +209,7 @@ async function seedCatalog() {
     const userPasswordHash = await bcrypt.hash('Customer@123', 10);
     const userMap = {};
     for (const u of SEED_USERS) {
-      const doc = await User.findOneAndUpdate(
+      const doc = await Customer.findOneAndUpdate(
         { email: u.email.toLowerCase() },
         {
           $set: {
@@ -220,7 +220,6 @@ async function seedCatalog() {
             gender: u.gender,
             dob: u.dob,
             walletBalance: u.walletBalance,
-            role: u.role || 'customer',
             isActive: u.isActive,
             isDeleted: false,
           },

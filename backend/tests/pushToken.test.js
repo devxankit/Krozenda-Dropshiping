@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const request = require('supertest');
 const app = require('../app');
+const Customer = require('../Models/Customer');
 const User = require('../Models/User');
 const Vendor = require('../Models/Vendor');
 const migrateFcmTokens = require('../utils/migrateFcmTokens');
@@ -19,7 +20,7 @@ describe('fcm token registration', () => {
       .send({ token: 'tok-app-1', deviceType: 'app' });
 
     expect(res.status).toBe(200);
-    const fresh = await User.findById(user._id);
+    const fresh = await Customer.findById(user._id);
     expect(fresh.fcmTokens.map((t) => ({ token: t.token, deviceType: t.deviceType }))).toEqual([
       { token: 'tok-app-1', deviceType: 'app' },
     ]);
@@ -37,7 +38,7 @@ describe('fcm token registration', () => {
     await post({ token: 'tok-dup', deviceType: 'web' });
     await post({ token: 'tok-dup', deviceType: 'app' });
 
-    const fresh = await User.findById(user._id);
+    const fresh = await Customer.findById(user._id);
     expect(fresh.fcmTokens).toHaveLength(1);
     expect(fresh.fcmTokens[0].deviceType).toBe('app');
   });
@@ -80,8 +81,8 @@ describe('fcm token registration', () => {
       .set('Authorization', `Bearer ${second.token}`)
       .send({ token: 'shared-device', deviceType: 'app' });
 
-    expect((await User.findById(first.user._id)).fcmTokens).toHaveLength(0);
-    expect((await User.findById(second.user._id)).fcmTokens).toHaveLength(1);
+    expect((await Customer.findById(first.user._id)).fcmTokens).toHaveLength(0);
+    expect((await Customer.findById(second.user._id)).fcmTokens).toHaveLength(1);
   });
 
   it('files a vendor token against the vendor, not the buyer collection', async () => {
@@ -121,7 +122,7 @@ describe('fcm token registration', () => {
     await post(buyer.token);
     await post(seller.token);
 
-    expect((await User.findById(buyer.user._id)).fcmTokens).toHaveLength(0);
+    expect((await Customer.findById(buyer.user._id)).fcmTokens).toHaveLength(0);
     expect((await Vendor.findById(seller.vendor._id)).fcmTokens).toHaveLength(1);
   });
 
@@ -143,7 +144,7 @@ describe('fcm token registration', () => {
       .send({ token: 'tok-bye' });
 
     expect(res.status).toBe(200);
-    expect((await User.findById(user._id)).fcmTokens).toHaveLength(0);
+    expect((await Customer.findById(user._id)).fcmTokens).toHaveLength(0);
   });
 });
 
@@ -154,12 +155,12 @@ describe('legacy fcmTokens migration', () => {
     // Write the pre-migration shape straight through the driver, the way an
     // existing production document looks.
     await mongoose.connection
-      .collection('users')
+      .collection('customers')
       .updateOne({ _id: user._id }, { $set: { fcmTokens: ['legacy-a', 'legacy-b'] } });
 
     await migrateFcmTokens();
 
-    const fresh = await User.findById(user._id);
+    const fresh = await Customer.findById(user._id);
     expect(fresh.fcmTokens.map((t) => [t.token, t.deviceType])).toEqual([
       ['legacy-a', 'web'],
       ['legacy-b', 'web'],
@@ -167,7 +168,7 @@ describe('legacy fcmTokens migration', () => {
 
     // Second run is a no-op, not a double-wrap.
     await migrateFcmTokens();
-    const again = await User.findById(user._id);
+    const again = await Customer.findById(user._id);
     expect(again.fcmTokens.map((t) => [t.token, t.deviceType])).toEqual([
       ['legacy-a', 'web'],
       ['legacy-b', 'web'],

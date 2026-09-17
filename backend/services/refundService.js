@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const ReturnRequest = require('../Models/ReturnRequest');
 const Order = require('../Models/Order');
-const User = require('../Models/User');
+const Customer = require('../Models/Customer');
 const WalletTransaction = require('../Models/WalletTransaction');
 const AccountingTransaction = require('../Models/AccountingTransaction');
 const { createNotification } = require('../Controllers/notificationController');
@@ -57,7 +57,7 @@ async function decideReturnRefund({ requestId, decision, reason = '', admin = nu
   let posted = { posted: 0 };
 
   if (decision === 'APPROVED') {
-    const user = await User.findByIdAndUpdate(
+    const user = await Customer.findByIdAndUpdate(
       request.user._id,
       { $inc: { walletBalance: request.refundAmount } },
       { new: true }

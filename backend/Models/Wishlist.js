@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 // (user, product) pair and avoids a compound-unique-index dance.
 const wishlistSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, unique: true },
     items: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },

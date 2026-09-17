@@ -338,14 +338,14 @@ async function resolveCancellationRefund(req, res) {
     return res.json({ success: true, message: 'Nothing to refund', data: serializeCancellation(order) });
   }
 
-  const User = require('../Models/User');
+  const Customer = require('../Models/Customer');
   const WalletTransaction = require('../Models/WalletTransaction');
-  const refundedUser = await User.findByIdAndUpdate(order.user._id, { $inc: { walletBalance: order.total } }, { new: true });
+  const refundedCustomer = await Customer.findByIdAndUpdate(order.user._id, { $inc: { walletBalance: order.total } }, { new: true });
   await WalletTransaction.create({
     user: order.user._id,
     type: 'CREDIT',
     amount: order.total,
-    balanceAfter: refundedUser.walletBalance,
+    balanceAfter: refundedCustomer.walletBalance,
     source: 'ORDER_REFUND',
     orderId: order._id,
     status: 'SUCCESS',

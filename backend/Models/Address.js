@@ -4,7 +4,7 @@ const TYPES = ['home', 'office', 'other'];
 
 const addressSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     type: { type: String, enum: TYPES, default: 'home' },
     fullName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },

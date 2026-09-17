@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { HiOutlineSparkles } from 'react-icons/hi2'
 import { useAuthStore } from '../../../../lib/authStore'
 import { AUTH_ROUTES } from '../../../../config/routes'
 import { useAiAssistantController } from '../../controllers/useAiAssistantController'
+import { AiSparkIcon } from './AiSparkIcon'
 import { AiChatPanel } from './AiChatPanel'
 
 /**
@@ -54,14 +54,20 @@ export function AiAssistantLauncher() {
           // bottom-[76px] clears it with room to spare, and the md breakpoint
           // drops the button back down once the navbar is gone. z-40 keeps it
           // under the navbar's z-50 and well under the chat panel's z-60.
-          className="group fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-600/30 ring-1 ring-white/40 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-blue-600/40 active:scale-95 md:bottom-6 md:right-6"
+          className="group fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-[0_8px_24px_-6px_rgba(37,99,235,0.6)] ring-1 ring-white/50 transition-all duration-200 hover:scale-105 hover:shadow-[0_10px_28px_-6px_rgba(37,99,235,0.7)] active:scale-95 md:bottom-6 md:right-6"
         >
           {/* Soft halo — decorative only, so it must not swallow the tap. */}
           <span className="pointer-events-none absolute inset-0 animate-pulse-glow rounded-full bg-blue-500/30" />
 
-          <HiOutlineSparkles className="relative h-6 w-6 text-white" />
+          {/* Top-edge sheen. Without it a flat gradient circle reads as a
+              sticker; this is what makes it look like a raised object. */}
+          <span className="pointer-events-none absolute inset-x-2 top-1 h-4 rounded-full bg-white/25 blur-[6px]" />
 
-          <span className="absolute -right-0.5 -top-0.5 rounded-full border-2 border-white bg-amber-400 px-1.5 py-px text-[9px] font-black leading-tight tracking-tight text-slate-900 shadow-2xs">
+          <AiSparkIcon className="relative h-7 w-7 text-white drop-shadow-sm" accent="#FBBF24" />
+
+          {/* Badge sits ON the rim rather than floating clear of it, so the
+              button still reads as one object. */}
+          <span className="absolute -right-1 -top-1 rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-[1.35] tracking-wide text-slate-900 shadow-sm ring-2 ring-white">
             AI
           </span>
         </button>
