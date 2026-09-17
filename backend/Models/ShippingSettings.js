@@ -70,6 +70,11 @@ const shippingSettingsSchema = new mongoose.Schema(
       default: () => ({}),
     },
 
+    // Where the marketplace ships from when a seller has no registered
+    // warehouse of its own. Without it the product page cannot quote a
+    // delivery rate at all, because there is no lane to price.
+    defaultOriginPincode: { type: String, default: '', trim: true },
+
     // --- COD ---------------------------------------------------------------
     codEnabled: { type: Boolean, default: true },
 

@@ -4,7 +4,6 @@ import {
   HiArrowPath,
   HiCheck,
   HiHeart,
-  HiMapPin,
   HiOutlineHeart,
   HiOutlineShoppingBag,
   HiShare,
@@ -18,6 +17,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
+import { DeliveryCheckCard } from './DeliveryCheckCard'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
@@ -45,8 +45,6 @@ export function ProductDetailScreen() {
   const { product, isLoading, isError, error, refetch } = useProductController(productId)
 
   const [activeImageIndex, setActiveImageIndex] = useState(0)
-  const [pincode, setPincode] = useState('')
-  const [pincodeStatus, setPincodeStatus] = useState(null)
   const [activeTab, setActiveTab] = useState('description')
   const [addState, setAddState] = useState('idle') // idle | adding | added
 
@@ -175,25 +173,10 @@ export function ProductDetailScreen() {
       }
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url)
-        setPincodeStatus(null)
       }
     } catch {
       // User dismissed the share sheet, or the API is unavailable. Not an error.
     }
-  }
-
-  const checkPincode = () => {
-    // Honest about what this can and cannot say: there is no serviceability
-    // API behind it, so it validates the format and says so, rather than
-    // fabricating "Delivery available at 560001" for any six digits typed.
-    if (!/^\d{6}$/.test(pincode)) {
-      setPincodeStatus({ ok: false, message: 'Enter a valid 6-digit PIN code.' })
-      return
-    }
-    setPincodeStatus({
-      ok: true,
-      message: 'We deliver across India. Exact delivery dates are confirmed at checkout.',
-    })
   }
 
   const breadcrumbs = [
@@ -484,52 +467,7 @@ export function ProductDetailScreen() {
             </div>
 
             {/* Delivery check */}
-            <div className="space-y-2 border-t border-slate-100 pt-2">
-              <label
-                htmlFor="pincode"
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-900"
-              >
-                <HiMapPin className="h-4 w-4 text-blue-600" aria-hidden="true" />
-                <span>Delivery &amp; service availability</span>
-              </label>
-
-              <div className="flex items-center gap-2">
-                <input
-                  id="pincode"
-                  // type/inputMode/autoComplete together are what make the
-                  // WebView open a numeric keypad and offer the saved PIN code
-                  // (§101, §102).
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete="postal-code"
-                  maxLength={6}
-                  value={pincode}
-                  onChange={(e) => {
-                    setPincode(e.target.value.replace(/\D/g, ''))
-                    setPincodeStatus(null)
-                  }}
-                  placeholder="6-digit PIN code"
-                  className="w-44 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-                <button
-                  type="button"
-                  onClick={checkPincode}
-                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
-                >
-                  Check
-                </button>
-              </div>
-
-              {pincodeStatus && (
-                <p
-                  role="status"
-                  className={`pt-1 text-xs font-bold ${pincodeStatus.ok ? 'text-emerald-600' : 'text-red-600'}`}
-                >
-                  {pincodeStatus.message}
-                </p>
-              )}
-            </div>
+            <DeliveryCheckCard productId={product.id} />
 
             <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
               <button

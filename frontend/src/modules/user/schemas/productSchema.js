@@ -95,3 +95,20 @@ export const brandSchema = z.object({
 })
 
 export const brandListSchema = z.array(brandSchema)
+
+// "Do you deliver to my PIN code?"
+//
+// `available: false` means we could not answer (shipping off, no warehouse,
+// carrier unreachable) — which is NOT the same as "we do not deliver there".
+// The screen has to say different things for the two, so they are different
+// fields rather than one overloaded boolean.
+export const deliveryCheckSchema = z.object({
+  available: z.boolean(),
+  pincode: z.string().optional(),
+  reason: z.string().optional(),
+  serviceable: z.boolean().optional(),
+  prepaid: z.object({ available: z.boolean(), charge: z.number().nullable() }).optional(),
+  cod: z.object({ available: z.boolean(), charge: z.number().nullable() }).optional(),
+  estimatedDays: z.number().nullable().optional(),
+  estimatedDeliveryDate: z.string().nullable().optional(),
+})

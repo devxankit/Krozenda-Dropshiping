@@ -88,7 +88,21 @@ const catalogRateLimiter = rateLimit({
   message: { success: false, message: 'Too many requests. Please slow down.' },
 });
 
+// The product page's delivery check. Tighter than the catalog limiter because
+// a cache miss costs a real call against the carrier's own rate limit, and
+// looser than the OTP limiter because a shopper legitimately checks a few PIN
+// codes while deciding.
+const deliveryCheckRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many delivery checks. Please wait a moment.' },
+});
+
 module.exports = {
+  deliveryCheckRateLimiter,
   otpRateLimiter,
   globalRateLimiter,
   refreshRateLimiter,

@@ -7,6 +7,7 @@ import {
   productCardListSchema,
   categoryListSchema,
   brandListSchema,
+  deliveryCheckSchema,
 } from '../schemas/productSchema'
 
 // `signal` is threaded through to axios so a superseded search (or a screen
@@ -41,4 +42,13 @@ export async function fetchCategories({ signal } = {}) {
 export async function fetchBrands({ signal } = {}) {
   const response = await api.get('/catalog/brands', { signal })
   return brandListSchema.parse(response.data.data.items)
+}
+
+// Delivery availability and price for one product at one PIN code.
+//
+// Hits the carrier behind a 5-minute lane cache, and is rate limited, so it is
+// only ever called from an explicit check — never on render.
+export async function checkProductDelivery(id, pincode, { signal } = {}) {
+  const response = await api.get(`/catalog/products/${id}/delivery`, { params: { pincode }, signal })
+  return deliveryCheckSchema.parse(response.data.data)
 }

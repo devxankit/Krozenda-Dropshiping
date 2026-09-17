@@ -14,9 +14,12 @@ const QUERY_KEY = ['user', 'addresses']
 
 // Shared by MyAddressesScreen (full CRUD) and SelectAddressScreen (checkout
 // step 1, read + add-new only) so both stay in sync via the same query key.
-export function useAddressesController() {
+// `enabled: false` is for callers that render for signed-out visitors too —
+// the product page's delivery check. A guest has no addresses, and asking for
+// them would just be a 401 on every product view.
+export function useAddressesController({ enabled = true } = {}) {
   const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: QUERY_KEY, queryFn: fetchAddresses })
+  const query = useQuery({ queryKey: QUERY_KEY, queryFn: fetchAddresses, enabled })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY })
 
