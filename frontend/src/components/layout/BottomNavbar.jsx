@@ -1,4 +1,5 @@
 import React from 'react'
+import { useKeyboardOpen } from '../../lib/useKeyboardOpen'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   HiHome,
@@ -57,13 +58,19 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
     }
   }
 
+  // A bottom bar dragged on top of the keyboard is the single worst thing a
+  // fixed element does on a phone. Nothing here is useful mid-keystroke, so it
+  // steps out of the way instead of fighting the viewport.
+  const keyboardOpen = useKeyboardOpen()
+  if (keyboardOpen) return null
+
   return (
     <nav
       aria-label="Primary"
       // pb-[env(safe-area-inset-bottom)] is what keeps the labels above the
       // iPhone home indicator and Android gesture bar instead of behind them.
       // It resolves to 0 in a desktop browser, so nothing changes there.
-      className="fixed inset-x-0 bottom-0 z-50 md:hidden w-full select-none border-t border-slate-200/90 bg-white/95 px-2 pt-1.5 shadow-2xl backdrop-blur-md pb-[calc(6px+env(safe-area-inset-bottom,0px))] transform-gpu fixed-bottom-nav"
+      className="fixed inset-x-0 bottom-0 z-50 md:hidden w-full select-none border-t border-slate-200/90 bg-white/95 px-2 pt-1.5 shadow-2xl backdrop-blur-md pb-[calc(6px+env(safe-area-inset-bottom,0px))] fixed-bottom-nav"
     >
       <div className="max-w-md mx-auto relative grid grid-cols-5 items-center">
         {/* Smooth Sliding Background Pill Indicator */}

@@ -18,6 +18,7 @@ import { SmartImage } from '../../../../components/ui/SmartImage'
 import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
 import { DeliveryCheckCard } from './DeliveryCheckCard'
+import { CartQuantityStepper } from './CartQuantityStepper'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
@@ -51,6 +52,9 @@ export function ProductDetailScreen() {
   const isWishlisted = useWishlistStore((state) => state.items.some((item) => item.id === productId))
   const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
   const addToCart = useCartStore((state) => state.addItem)
+  // How many of THIS product are already in the cart. Selected narrowly so the
+  // screen re-renders when this line changes, not on every cart change.
+  const cartQuantity = useCartStore((state) => state.items.find((i) => i.id === productId)?.quantity ?? 0)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const images = product?.images?.length ? product.images : []
@@ -470,24 +474,30 @@ export function ProductDetailScreen() {
             <DeliveryCheckCard productId={product.id} />
 
             <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!inStock || addState === 'adding'}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-blue-700 bg-white px-4 py-4 text-xs font-extrabold tracking-wide text-blue-700 shadow-sm transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {addState === 'added' ? (
-                  <>
-                    <HiCheck className="h-5 w-5" aria-hidden="true" />
-                    <span>Added</span>
-                  </>
-                ) : (
-                  <>
-                    <HiOutlineShoppingBag className="h-5 w-5" aria-hidden="true" />
-                    <span>{addState === 'adding' ? 'Adding…' : 'Add to Cart'}</span>
-                  </>
-                )}
-              </button>
+              {/* Once it is in the cart, "Add to Cart" has nothing left to say —
+                  the useful control is how many. */}
+              {cartQuantity > 0 ? (
+                <CartQuantityStepper productId={product.id} stock={product.stock} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!inStock || addState === 'adding'}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-blue-700 bg-white px-4 py-4 text-xs font-extrabold tracking-wide text-blue-700 shadow-sm transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {addState === 'added' ? (
+                    <>
+                      <HiCheck className="h-5 w-5" aria-hidden="true" />
+                      <span>Added</span>
+                    </>
+                  ) : (
+                    <>
+                      <HiOutlineShoppingBag className="h-5 w-5" aria-hidden="true" />
+                      <span>{addState === 'adding' ? 'Adding…' : 'Add to Cart'}</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <button
                 type="button"

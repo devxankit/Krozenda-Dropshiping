@@ -20,6 +20,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from './axios'
 import { useAuthStore } from './authStore'
+import { keyedDebounce } from './debounce'
 
 const MONGO_ID_RE = /^[0-9a-fA-F]{24}$/
 
@@ -161,6 +162,45 @@ export const useCartStore = create(
         )
       },
 
+      // Set an absolute quantity, with the network call debounced.
+      //
+      // A stepper is tapped in bursts: +,+,+,- is four taps in under a second.
+      // Sending four requests for that wastes the round trips and, worse, they
+      // can land out of order. So the local number moves immediately — the
+      // badge, the cart page and the stepper all update on the tap — and only
+      // the last value in the burst is sent.
+      //
+      // Safe to debounce precisely because the API is a PUT of an absolute
+      // quantity: whatever arrives last is the truth, and a dropped
+      // intermediate value changes nothing. A fire-and-forget increment could
+      // not be collapsed this way.
+      setQuantity: (id, quantity) => {
+        const current = get().items.find((item) => item.id === id);
+        if (!current) return { ok: false };
+
+        const wanted = Math.round(Number(quantity));
+        if (!Number.isFinite(wanted)) return { ok: false };
+
+        // Zero means remove, and that is NOT debounced: it is a deliberate,
+        // visible act and the user should see it happen.
+        if (wanted < 1) return get().removeItem(id);
+
+        const capped = Math.min(MAX_LINE_QUANTITY, wanted);
+        if (capped === current.quantity) return { ok: true };
+
+        // Optimistic, always — including for a guest, whose cart is local
+        // anyway.
+        set((state) => ({
+          items: state.items.map((item) => (item.id === id ? { ...item, quantity: capped } : item)),
+        }));
+
+        if (get().isAuthed() && isRealProductId(id)) {
+          pushQuantity(id, { set, get, variant: current.variant });
+        }
+
+        return { ok: true };
+      },
+
       removeItem: async (id) => {
         if (!get().isAuthed() || !isRealProductId(id)) {
           set((state) => ({ items: state.items.filter((item) => item.id !== id) }))
@@ -250,6 +290,19 @@ export const useCartStore = create(
 
 // Runs a cart mutation, adopts the server's message, and re-reads the cart so
 // local state can never drift from it.
+// One timer per product, so a burst on one line never cancels a pending call
+// for another. The quantity is read from the store when the timer fires rather
+// than captured at tap time — that way the request carries where the stepper
+// actually ended up, not where it was three taps ago.
+const pushQuantity = keyedDebounce((id, { set, get, variant }) => {
+  const line = get().items.find((item) => item.id === id);
+  if (!line) return; // removed while the timer was pending
+
+  runCartMutation(set, get, () =>
+    api.put(`/user/cart/items/${id}`, { quantity: line.quantity, variant })
+  );
+}, 450);
+
 async function runCartMutation(set, get, request) {
   set({ isSyncing: true })
   try {

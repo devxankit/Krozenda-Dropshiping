@@ -13,7 +13,13 @@
     touch-action: pan-x pan-y;
   }
 
-  /* Stabilizes bottom navbar to stay firmly pinned at the bottom across mobile viewports */
+  /* Pins the bottom navbar across mobile viewports.
+     `translateZ(0)` puts it on its own compositor layer so it is not
+     re-rasterised on every scroll frame — that repaint is the visible jitter.
+     `will-change: transform` is deliberately NOT set: it was, and on WebViews
+     that honour it the permanently-hinted layer jittered rather than settling.
+     The transform alone promotes the layer without the standing hint.
+     The keyboard case is handled in JS, not here — see useKeyboardOpen. */
   .fixed-bottom-nav {
     position: fixed !important;
     bottom: 0 !important;
@@ -21,7 +27,8 @@
     right: 0 !important;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
-    will-change: transform;
+    /* Never let a scroll gesture that started on the bar chain to the page. */
+    overscroll-behavior: contain;
   }
 
   /* ---------------------------------------------------------------------
