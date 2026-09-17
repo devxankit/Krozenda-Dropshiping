@@ -7,7 +7,6 @@ const {
   deleteConversation,
 } = require('../Controllers/aiAssistantController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
-const { aiChatRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -21,8 +20,12 @@ router.post('/conversations', createConversation);
 router.get('/conversations/:conversationId', getConversation);
 router.delete('/conversations/:conversationId', deleteConversation);
 
-// Only the Gemini-backed endpoint carries the tighter per-user limit; reading
-// your own history is cheap and stays on the global limiter.
-router.post('/chat', aiChatRateLimiter, chat);
+// No per-user limit here by choice. This endpoint still sits behind the
+// app-wide globalRateLimiter (600 requests / 15 min, see app.js), and the
+// controller caps message length and replayed history, so a single turn stays
+// bounded — but nothing now caps how MANY turns one account can run, and every
+// turn is a paid Gemini call. Reinstate aiChatRateLimiter if spend becomes a
+// concern.
+router.post('/chat', chat);
 
 module.exports = router;
