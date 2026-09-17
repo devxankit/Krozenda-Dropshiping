@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "seed": "node seed.js",
     "test": "jest --runInBand",
-    "migrate:customers": "node migrate-customers.js"
+    "migrate:customers": "node migrate-customers.js",
+    "purge:customers": "node purge-customers.js"
   },
   "jest": {
     "preset": "@shelf/jest-mongodb",
