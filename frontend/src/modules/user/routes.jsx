@@ -12,6 +12,7 @@ import { ProtectedRoute } from '../../routes/ProtectedRoute'
 import { ErrorBoundary } from '../../components/common/ErrorBoundary'
 import { NetworkBanner } from '../../components/common/NetworkBanner'
 import { ListSkeleton } from '../../components/ui/AsyncBoundary'
+import { TranslationProvider } from '../../lib/i18n'
 
 // ---------------------------------------------------------------------------
 // Code splitting
@@ -124,7 +125,12 @@ function ScreenFallback() {
 // ---------------------------------------------------------------------------
 export default function UserRoutes() {
   return (
-    <>
+    // Wraps the ENTIRE buyer app, including the assistant launcher and every
+    // portalled modal and toast. Screens below need no changes to be
+    // translatable: the provider walks the rendered DOM, so API-supplied copy
+    // — product names, category titles, order statuses — is covered too.
+    // See lib/i18n/autoTranslate.js.
+    <TranslationProvider>
       <NetworkBanner />
       {/* One crashing screen must not blank the whole app — inside a WebView a
           white screen reads as "the app is broken" with no way back. */}
@@ -202,6 +208,6 @@ export default function UserRoutes() {
           unmounting (and losing the in-progress conversation) on every route
           change. It renders nothing for signed-out visitors. */}
       <AiAssistantLauncher />
-    </>
+    </TranslationProvider>
   )
 }

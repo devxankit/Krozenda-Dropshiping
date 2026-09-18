@@ -16,6 +16,7 @@ import { useCartCount } from '../../lib/cartStore'
 import { useWishlistCount } from '../../lib/wishlistStore'
 import { useUnreadNotificationCount } from '../../lib/notificationStore'
 import { useCategoriesController } from '../../modules/user/controllers/useProductsController'
+import { LanguageSwitcher } from '../common/LanguageSwitcher'
 
 // REMOVED: FALLBACK_NAV_CATEGORIES — four invented categories ("Smartwatches",
 // "Home & Kitchen") with ids that matched nothing in the catalog, shown
@@ -112,6 +113,10 @@ export function WebHeader() {
 
         {/* Right Actions */}
         <div className="flex items-center space-x-3 md:space-x-5 text-slate-700 font-semibold text-xs">
+          {/* Language. First in the cluster because a buyer who cannot read
+              this header needs to find it before anything else here. */}
+          <LanguageSwitcher variant="compact" />
+
           {/* Notifications */}
           <button
             type="button"

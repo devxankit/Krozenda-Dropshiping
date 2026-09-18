@@ -5,11 +5,13 @@ import { useVendorProductsController } from '../controllers/useVendorController'
 import { VENDOR_PRODUCT_COLUMNS, VENDOR_PRODUCT_TABS } from '../tableColumns/vendorColumns'
 import { AddVendorProductModal } from '../components/modals/AddVendorProductModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
+import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
 
 export function VendorProductsPage() {
   const list = useVendorProductsController()
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [scanOpen, setScanOpen] = useState(false)
 
   return (
     <>
@@ -19,6 +21,9 @@ export function VendorProductsPage() {
         actions={
           <>
             <ExportMenu onExport={() => {}} />
+            <Button size="control" icon="search" variant="secondary" onClick={() => setScanOpen(true)}>
+              Scan barcode
+            </Button>
             <Button size="control" icon="add" onClick={() => setAddModalOpen(true)}>
               Add product
             </Button>
@@ -46,6 +51,19 @@ export function VendorProductsPage() {
         isOpen={Boolean(selectedProduct)}
         onClose={() => setSelectedProduct(null)}
         onUpdateStock={list.updateStock}
+      />
+
+      {/* Scoped to this seller's own catalog server-side — see
+          Controllers/vendorProductController.js — so a scan can never
+          resolve to, or leak the existence of, another seller's product. */}
+      <ScanBarcodeModal
+        isOpen={scanOpen}
+        onClose={() => setScanOpen(false)}
+        lookupPath={(code) => `/vendor/products/barcode/${code}`}
+        onFound={(product) => {
+          setScanOpen(false)
+          setSelectedProduct(product)
+        }}
       />
     </>
   )

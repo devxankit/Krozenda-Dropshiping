@@ -29,6 +29,7 @@ export async function requestAdminLogin(body) {
       name: admin.name || 'Admin',
       email: admin.email,
       roleLabel: isAdmin ? 'Super Admin' : 'Staff',
+      language: admin.language ?? null,
     },
     roles: [admin.role],
     // Admin bypasses every permission check backend-side regardless of

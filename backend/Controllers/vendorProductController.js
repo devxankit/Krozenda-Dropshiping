@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
+const { isValidEan13, renderBarcodePng } = require('../utils/barcode');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -25,6 +27,7 @@ function serializeProduct(p) {
     id: p._id.toString(),
     name: p.name,
     sku: p.sku || '',
+    barcode: p.barcode || '',
     category:
       p.category && p.category.name
         ? { id: p.category._id.toString(), name: p.category.name }
@@ -112,6 +115,49 @@ async function listMyProducts(req, res) {
   });
 }
 
+// GET /vendor/products/barcode/:code
+//
+// Scoped to `vendor: req.vendor._id` — a seller's warehouse scan can only
+// ever resolve to something IN THEIR OWN catalog. The barcode itself is
+// globally unique, so nothing stops the query from finding another seller's
+// product; this is what stops the RESPONSE from ever showing it to them.
+async function getMyProductByBarcode(req, res) {
+  const { code } = req.params;
+
+  if (!isValidEan13(code)) {
+    return res.status(400).json({ success: false, message: 'Not a valid barcode' });
+  }
+
+  const product = await Product.findOne({ barcode: code, vendor: req.vendor._id })
+    .populate('category', 'name')
+    .populate('brand', 'name');
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'No product in your catalog carries this barcode' });
+  }
+
+  res.json({ success: true, message: 'Product found', data: serializeProduct(product) });
+}
+
+// GET /vendor/products/:id/barcode.png — see productController's twin for
+// why this is rendered on request rather than cached on disk.
+async function getMyProductBarcodeImage(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findOne({ _id: id, vendor: req.vendor._id }).select('barcode').lean();
+  if (!product || !product.barcode) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const png = await renderBarcodePng(product.barcode);
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(png);
+}
+
 async function getMyProduct(req, res) {
   const { id } = req.params;
   const product = await Product.findOne({ _id: id, vendor: req.vendor._id })
@@ -156,6 +202,8 @@ async function createMyProduct(req, res) {
 
   const images = (req.files || []).map((file) => file.url);
 
+  const { autoApprovalEnabled } = await CatalogSettings.getSettings();
+
   const product = await Product.create({
     name: name.trim(),
     ...(sku && sku.trim() ? { sku: sku.trim() } : {}),
@@ -169,15 +217,15 @@ async function createMyProduct(req, res) {
     weight: toNumber(weight),
     images,
     description: description || '',
-    isActive: false,
-    approvalStatus: 'PENDING',
+    isActive: autoApprovalEnabled,
+    approvalStatus: autoApprovalEnabled ? 'APPROVED' : 'PENDING',
   });
 
   await product.populate([{ path: 'category', select: 'name' }, { path: 'brand', select: 'name' }]);
 
   res.status(201).json({
     success: true,
-    message: 'Product submitted for admin approval',
+    message: autoApprovalEnabled ? 'Product created and live' : 'Product submitted for admin approval',
     data: serializeProduct(product),
   });
 }
@@ -260,4 +308,13 @@ async function deleteMyProduct(req, res) {
   res.json({ success: true, message: 'Product deleted successfully', data: { id: product._id.toString() } });
 }
 
-module.exports = { listMyProducts, getMyProduct, createMyProduct, updateMyProduct, deleteMyProduct, serializeProduct };
+module.exports = {
+  listMyProducts,
+  getMyProduct,
+  getMyProductByBarcode,
+  getMyProductBarcodeImage,
+  createMyProduct,
+  updateMyProduct,
+  deleteMyProduct,
+  serializeProduct,
+};

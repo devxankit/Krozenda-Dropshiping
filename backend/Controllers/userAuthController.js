@@ -5,6 +5,7 @@ const OtpRequest = require('../Models/OtpRequest');
 const { signToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
 const { sendOtpSms } = require('../utils/smsService');
+const { updateLanguageFor } = require('./languageController');
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -82,6 +83,11 @@ function serializeCustomer(user) {
     role: 'customer',
     image: user.image ? getImageUrl(user.image) : null,
     walletBalance: user.walletBalance || 0,
+    // Drives the UI language on whatever device this session opens on.
+    // Null is passed through deliberately — the client reads it as "this
+    // account has never chosen", and adopts whatever the visitor had picked
+    // before signing in rather than resetting them to English.
+    language: user.language || null,
     createdAt: user.createdAt,
   };
 }
@@ -418,8 +424,13 @@ async function deleteAccount(req, res) {
   res.json({ success: true, message: 'Account deleted successfully' });
 }
 
+// PUT /auth/language — see Controllers/languageController.js; the admin and
+// vendor panels mount the same implementation against their own collections.
+const updateLanguage = updateLanguageFor(Customer, (req) => req.user._id);
+
 module.exports = {
   requestOtp,
+  updateLanguage,
   verifyOtp,
   refreshAccessToken,
   getMe,

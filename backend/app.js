@@ -38,7 +38,15 @@ app.use(
 // it carries a whole screen's worth of UI strings in one array, which clears
 // 10kb on the larger admin tables, and it writes nothing, so a bigger body
 // costs a parse and nothing else. Its own limiter caps the array length.
-const jsonParser = express.json({ limit: '10kb' });
+// verify() stashes the raw bytes on req.rawBody before express.json() parses
+// them — the only way to HMAC-verify a webhook body (Razorpay signs the raw
+// JSON, not our re-serialization of it, which can differ in key order/spacing).
+const jsonParser = express.json({
+  limit: '10kb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+});
 const translateJsonParser = express.json({ limit: '128kb' });
 app.use((req, res, next) => (req.path.startsWith('/translate') ? translateJsonParser : jsonParser)(req, res, next));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
@@ -120,6 +128,7 @@ app.use('/admin', require('./Router/adminFulfilmentRoutes'));
 // — the manual flow that predates this integration — and it keeps working.
 app.use('/admin/shipping/shipments', require('./Router/adminShipmentRoutes'));
 app.use('/admin/shipping', require('./Router/adminShippingRoutes'));
+app.use('/admin/payments', require('./Router/adminPaymentSettingsRoutes'));
 
 app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
 app.use('/vendor', require('./Router/vendorDashboardRoutes'));

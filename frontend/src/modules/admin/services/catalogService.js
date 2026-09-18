@@ -35,6 +35,16 @@ export function fetchApprovalQueue(query = {}) {
   })
 }
 
+export async function fetchApprovalSettings() {
+  const { data } = await api.get('/admin/catalog/approvals/settings')
+  return data.data
+}
+
+export async function updateApprovalSettings({ autoApprovalEnabled }) {
+  const { data } = await api.put('/admin/catalog/approvals/settings', { autoApprovalEnabled })
+  return data.data
+}
+
 export async function fetchCategoryTree() {
   const { data } = await api.get('/admin/catalog/categories')
   return data.data

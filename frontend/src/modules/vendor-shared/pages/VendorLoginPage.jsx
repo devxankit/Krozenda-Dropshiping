@@ -59,6 +59,7 @@ function SellerLoginPage() {
           email: vendor.email,
           storeName: vendor.business?.businessName || vendor.name,
           entityType: vendor.vendorType === 'B2B' ? 'Registered Business' : 'Individual Seller',
+          language: vendor.language ?? null,
         },
         roles: ['seller', vendor.vendorType === 'B2B' ? 'b2b_seller' : 'b2c_seller'],
         permissions: ['seller.access', 'vendor.access'],

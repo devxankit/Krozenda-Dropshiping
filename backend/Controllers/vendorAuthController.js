@@ -4,6 +4,7 @@ const Vendor = require('../Models/Vendor');
 const VendorPasswordReset = require('../Models/VendorPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
+const { updateLanguageFor } = require('./languageController');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
@@ -30,6 +31,8 @@ function serializeVendor(vendor) {
     verificationStatus: vendor.verificationStatus,
     rejectionReason: vendor.rejectionReason || '',
     isActive: vendor.isActive,
+    // Null means the account has never chosen; see languageController.
+    language: vendor.language || null,
     createdAt: vendor.createdAt,
     updatedAt: vendor.updatedAt,
   };
@@ -283,7 +286,12 @@ async function submitForVerification(req, res) {
   });
 }
 
+// PUT /vendor/auth/language — shared by the seller and partner panels, which
+// are two front-ends over the same Vendor account.
+const updateLanguage = updateLanguageFor(Vendor, (req) => req.vendor._id);
+
 module.exports = {
+  updateLanguage,
   register,
   login,
   forgotPassword,

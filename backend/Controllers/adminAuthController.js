@@ -1,5 +1,6 @@
 const User = require('../Models/User');
 const { signToken } = require('../utils/jwt');
+const { updateLanguageFor } = require('./languageController');
 
 async function login(req, res) {
   const { email, password } = req.body;
@@ -42,6 +43,10 @@ async function login(req, res) {
         roleId: user.roleId?._id || null,
         roleName: user.roleId?.name || null,
         permissions,
+        // Null is passed through deliberately — the client reads it as "this
+        // account has never chosen" and keeps whatever this machine was
+        // already showing, rather than resetting it to English.
+        language: user.language || null,
       },
     },
   });
@@ -57,4 +62,7 @@ async function me(req, res) {
   });
 }
 
-module.exports = { login, me };
+// PUT /admin/auth/language
+const updateLanguage = updateLanguageFor(User, (req) => req.admin._id);
+
+module.exports = { login, me, updateLanguage };

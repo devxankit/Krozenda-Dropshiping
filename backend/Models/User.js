@@ -26,6 +26,14 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ['admin', 'staff'], default: 'staff' },
     roleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    // The panel's UI language. On the ACCOUNT rather than the device, so it
+    // follows this person to another machine and only ever changes when they
+    // change it. Null means "never chosen", which is NOT the same as English.
+    // Not validated against an enum here: the supported list lives in
+    // services/translationService.js and is checked at the endpoint, so
+    // trimming that list later cannot make existing documents fail validation
+    // on an unrelated save.
+    language: { type: String, default: null, lowercase: true, trim: true },
     isActive: { type: Boolean, default: true },
     isDeleted: { type: Boolean, default: false },
   },

@@ -21,6 +21,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
+import { LanguageSwitcher } from '../../../../components/common/LanguageSwitcher'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useCartCount } from '../../../../lib/cartStore'
 import { useUnreadNotificationCount } from '../../../../lib/notificationStore'
@@ -483,6 +484,10 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               <img src="/images/logo.png" alt="Krozenda Logo" className="h-9 w-auto object-contain" />
             </Link>
             <div className="flex items-center space-x-3">
+              {/* The desktop header carries this too, but the mobile header is
+                  a different component — and mobile is where most buyers who
+                  need another language actually are. */}
+              <LanguageSwitcher variant="compact" />
               <button
                 onClick={() => navigate(USER_ROUTES.NOTIFICATIONS)}
                 className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-700"

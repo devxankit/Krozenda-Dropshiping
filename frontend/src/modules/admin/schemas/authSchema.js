@@ -40,6 +40,9 @@ export const adminSessionSchema = z.object({
     name: z.string(),
     email: z.string(),
     roleLabel: z.string(),
+    // Null means this account has never chosen a UI language — see
+    // lib/i18n/languageStore.js, which treats that differently from English.
+    language: z.string().nullable().default(null),
   }),
   roles: z.array(z.string()),
   permissions: z.array(z.string()),

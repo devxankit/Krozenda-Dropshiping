@@ -1,7 +1,31 @@
 const Category = require('../Models/Category');
 const Brand = require('../Models/Brand');
 const Product = require('../Models/Product');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { createNotification } = require('./notificationController');
+
+// GET /admin/catalog/approvals/settings — current auto-approval policy.
+async function getApprovalSettings(req, res) {
+  const settings = await CatalogSettings.getSettings();
+  res.json({ success: true, data: { autoApprovalEnabled: settings.autoApprovalEnabled } });
+}
+
+// PUT /admin/catalog/approvals/settings — flip the auto-approval switch.
+// On: sellers' new categories/brands/products go live immediately instead of
+// queuing here. Off: everything a seller submits waits for a manual decision.
+async function updateApprovalSettings(req, res) {
+  const { autoApprovalEnabled } = req.body;
+  if (typeof autoApprovalEnabled !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'autoApprovalEnabled must be true or false' });
+  }
+
+  const settings = await CatalogSettings.getSettings();
+  settings.autoApprovalEnabled = autoApprovalEnabled;
+  settings.updatedBy = req.admin?._id || null;
+  await settings.save();
+
+  res.json({ success: true, message: 'Approval settings updated', data: { autoApprovalEnabled: settings.autoApprovalEnabled } });
+}
 
 // Unified admin approval queue across the three things a seller can propose:
 // categories, brands and products (see Category/Brand.createdByVendor and
@@ -114,4 +138,4 @@ async function decide(req, res, decision) {
 const approveQueueItem = (req, res) => decide(req, res, 'APPROVED');
 const rejectQueueItem = (req, res) => decide(req, res, 'REJECTED');
 
-module.exports = { listApprovalQueue, approveQueueItem, rejectQueueItem };
+module.exports = { listApprovalQueue, approveQueueItem, rejectQueueItem, getApprovalSettings, updateApprovalSettings };

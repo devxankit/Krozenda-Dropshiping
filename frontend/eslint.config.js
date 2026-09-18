@@ -76,5 +76,17 @@ export default [
     },
   },
 
+  // ---------------------------------------------------------------------
+  // __checks__/ are node scripts, not browser code: they run under `node`
+  // with jsdom supplying the DOM, so they need node's globals rather than
+  // the browser's.
+  // ---------------------------------------------------------------------
+  {
+    files: ['src/**/__checks__/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+
   prettierConfig,
 ]
