@@ -251,19 +251,21 @@ export function ProductDetailScreen() {
             <span>Back</span>
           </button>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleToggleWishlist}
-              aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-              aria-pressed={isWishlisted}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
-            >
-              {isWishlisted ? (
-                <HiHeart className="h-4 w-4 fill-red-500 text-red-500" />
-              ) : (
-                <HiOutlineHeart className="h-4 w-4" />
-              )}
-            </button>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handleToggleWishlist}
+                aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                aria-pressed={isWishlisted}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
+              >
+                {isWishlisted ? (
+                  <HiHeart className="h-4 w-4 fill-red-500 text-red-500" />
+                ) : (
+                  <HiOutlineHeart className="h-4 w-4" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleShare}
@@ -280,19 +282,21 @@ export function ProductDetailScreen() {
           <div className="space-y-6 lg:sticky lg:top-24">
             <div className="relative rounded-3xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-6">
               <div className="absolute right-4 top-4 z-20 hidden flex-col gap-2 md:flex">
-                <button
-                  type="button"
-                  onClick={handleToggleWishlist}
-                  aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                  aria-pressed={isWishlisted}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:bg-white"
-                >
-                  {isWishlisted ? (
-                    <HiHeart className="h-5 w-5 fill-red-500 text-red-500" />
-                  ) : (
-                    <HiOutlineHeart className="h-5 w-5" />
-                  )}
-                </button>
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={handleToggleWishlist}
+                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    aria-pressed={isWishlisted}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:bg-white"
+                  >
+                    {isWishlisted ? (
+                      <HiHeart className="h-5 w-5 fill-red-500 text-red-500" />
+                    ) : (
+                      <HiOutlineHeart className="h-5 w-5" />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleShare}

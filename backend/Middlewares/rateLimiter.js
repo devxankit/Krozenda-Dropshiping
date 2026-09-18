@@ -101,8 +101,23 @@ const deliveryCheckRateLimiter = rateLimit({
   message: { success: false, message: 'Too many delivery checks. Please wait a moment.' },
 });
 
+// UI translation. A warm page is answered entirely from cache and costs
+// almost nothing, so the limit is set for the cold case: a visitor walking
+// through unseen screens in a new language. Loose enough that real browsing
+// never trips it, tight enough that nobody can use the endpoint as a free
+// translation proxy — each miss is a real call against Google's own limits.
+const translateRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  message: { success: false, message: 'Too many translation requests. Please slow down.' },
+});
+
 module.exports = {
   deliveryCheckRateLimiter,
+  translateRateLimiter,
   otpRateLimiter,
   globalRateLimiter,
   refreshRateLimiter,

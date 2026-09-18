@@ -33,7 +33,14 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '10kb' }));
+// 10kb is the right ceiling for every write in this API — an order, a review,
+// a product edit — and it stays the default. /translate is the one exception:
+// it carries a whole screen's worth of UI strings in one array, which clears
+// 10kb on the larger admin tables, and it writes nothing, so a bigger body
+// costs a parse and nothing else. Its own limiter caps the array length.
+const jsonParser = express.json({ limit: '10kb' });
+const translateJsonParser = express.json({ limit: '128kb' });
+app.use((req, res, next) => (req.path.startsWith('/translate') ? translateJsonParser : jsonParser)(req, res, next));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(globalRateLimiter);
 
@@ -140,6 +147,9 @@ app.use('/catalog/banners', require('./Router/publicBannerRoutes'));
 app.use('/catalog/coupons', require('./Router/publicCouponRoutes'));
 app.get('/public/cms/:slug', require('./Controllers/cmsController').getPublicCmsPage);
 app.use('/faq', require('./Router/publicFaqRoutes'));
+// Runtime UI translation. Unauthenticated like /catalog/*, because the
+// language switcher has to work before anyone signs in.
+app.use('/translate', require('./Router/translateRoutes'));
 
 // Customer / Buyer mobile OTP authentication
 app.use('/auth', require('./Router/userAuthRoutes'));

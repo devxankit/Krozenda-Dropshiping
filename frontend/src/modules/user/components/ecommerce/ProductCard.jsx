@@ -2,6 +2,7 @@ import { HiHeart, HiOutlineHeart, HiStar } from 'react-icons/hi2'
 import { Link } from 'react-router-dom'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { USER_ROUTES } from '../../../../config/routes'
+import { useAuthStore } from '../../../../lib/authStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
 
 // The one product card for the whole buyer app.
@@ -37,6 +38,7 @@ const AVAILABILITY_NOTE = {
 }
 
 export function ProductCard({ product, layout = 'grid', priority = false, className = '' }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isWishlisted = useWishlistStore((state) => state.items.some((item) => item.id === product.id))
   const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
 
@@ -71,7 +73,7 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
     })
   }
 
-  const wishlistButton = (
+  const wishlistButton = isAuthenticated ? (
     <button
       type="button"
       onClick={handleWishlist}
@@ -92,7 +94,7 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
         <HiOutlineHeart className="h-4 w-4" />
       )}
     </button>
-  )
+  ) : null
 
   const priceBlock = (
     <div className="space-y-0.5 pt-1">

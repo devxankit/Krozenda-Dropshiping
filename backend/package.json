@@ -26,6 +26,7 @@
     "express": "^5.0.1",
     "express-rate-limit": "^8.7.0",
     "firebase-admin": "^14.4.0",
+    "google-translate-api-x": "^10.7.3",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.10.1",
