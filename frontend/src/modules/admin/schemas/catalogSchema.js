@@ -16,6 +16,35 @@ export const productNodeSchema = z.object({
   discountPercent: z.number().optional(),
   stock: z.number(),
   weight: z.number().nullable().optional(),
+  dimensions: z
+    .object({
+      lengthCm: z.number().nullable(),
+      breadthCm: z.number().nullable(),
+      heightCm: z.number().nullable(),
+    })
+    .nullable()
+    .optional(),
+  hsnCode: z.string().optional(),
+  gstRate: z.number().nullable().optional(),
+  moq: z.number().int().optional(),
+  priceTiers: z.array(z.object({ minQty: z.number().int(), price: z.number() })).optional(),
+  variants: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        attributes: z.record(z.string(), z.string()).optional(),
+        sku: z.string().optional(),
+        barcode: z.string().optional(),
+        price: z.number().nullable(),
+        salePrice: z.number().nullable(),
+        stock: z.number().int(),
+        image: z.string().nullable(),
+        isActive: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  variantStock: z.number().int().optional(),
   images: z.array(z.string()).optional(),
   description: z.string().optional(),
   isActive: z.boolean(),

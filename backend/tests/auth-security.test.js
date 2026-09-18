@@ -141,22 +141,36 @@ describe('pinned test number 1111111111', () => {
   });
 });
 
-describe('pinned QA number 6268204871', () => {
+describe('QA number via TEST_PHONE_NUMBERS (env-only, not pinned in source)', () => {
   const testNumber = '6268204871';
 
-  // Unlike 1111111111 this is a real, assignable Indian number, so the pin is a
-  // deliberate trade-off rather than a free one (see the note on
-  // PERMANENT_TEST_NUMBERS). These lock the behaviour in so it cannot be lost
-  // silently in a refactor, and so removing it is always a conscious act that
-  // fails a test rather than a quiet deletion.
-  it('bypasses the SMS gateway with TEST_PHONE_NUMBERS unset', () => {
-    const previous = process.env.TEST_PHONE_NUMBERS;
-    delete process.env.TEST_PHONE_NUMBERS;
-    expect(isBypassNumber(testNumber)).toBe(true);
-    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
+  // This used to be pinned in PERMANENT_TEST_NUMBERS (a real, assignable
+  // Indian number hardcoded in source — anyone with repo read access could
+  // sign in to that live account). A security review moved it to the
+  // TEST_PHONE_NUMBERS env var instead, so it is revocable without a code
+  // change and isn't sitting in git history going forward. These tests now
+  // assert the opposite of before: it must NOT bypass unless the env var
+  // names it.
+  let previous;
+  beforeEach(() => {
+    previous = process.env.TEST_PHONE_NUMBERS;
+    process.env.TEST_PHONE_NUMBERS = testNumber;
+  });
+  afterEach(() => {
+    if (previous === undefined) delete process.env.TEST_PHONE_NUMBERS;
+    else process.env.TEST_PHONE_NUMBERS = previous;
   });
 
-  it('logs in end to end with the fixed 123456', async () => {
+  it('does NOT bypass the SMS gateway when TEST_PHONE_NUMBERS is unset', () => {
+    delete process.env.TEST_PHONE_NUMBERS;
+    expect(isBypassNumber(testNumber)).toBe(false);
+  });
+
+  it('bypasses the SMS gateway when named in TEST_PHONE_NUMBERS', () => {
+    expect(isBypassNumber(testNumber)).toBe(true);
+  });
+
+  it('logs in end to end with the fixed 123456 when named in TEST_PHONE_NUMBERS', async () => {
     const sendRes = await request(app).post('/auth/send-otp').send({ mobileNumber: testNumber });
     expect(sendRes.status).toBe(200);
 
@@ -181,11 +195,8 @@ describe('pinned QA number 6268204871', () => {
   });
 
   it('does not bypass a neighbouring number', () => {
-    const previous = process.env.TEST_PHONE_NUMBERS;
-    delete process.env.TEST_PHONE_NUMBERS;
     expect(isBypassNumber('6268204872')).toBe(false);
     expect(isBypassNumber('626820487')).toBe(false);
-    if (previous !== undefined) process.env.TEST_PHONE_NUMBERS = previous;
   });
 });
 

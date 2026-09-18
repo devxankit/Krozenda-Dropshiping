@@ -98,9 +98,9 @@ export function VendorDashboardPage() {
         <StatTile label="Pending Orders" value={summary.pendingOrdersCount} caption="Awaiting processing or shipping" />
         <StatTile label="Live Products" value={summary.liveSkusCount} caption="Active on buyer apps" />
         <StatTile
-          label="Available Payout"
+          label="Due for Payout"
           value={`₹${(summary.availablePayout / 100).toLocaleString('en-IN')}`}
-          caption="Net of platform commission"
+          caption="In a settlement batch, not yet transferred"
           tone="brand"
         />
       </div>

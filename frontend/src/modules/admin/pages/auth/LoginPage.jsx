@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form'
 import { Button, Input, PasswordInput } from '../../../../components/ui'
-import { env } from '../../../../config/env'
 import { AuthShell } from '../../components/auth/AuthShell'
 import { InlineAlert } from '../../components/feedback'
 import { useAdminLoginController } from '../../controllers/useAdminAuthController'
@@ -16,10 +15,6 @@ export function LoginPage() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(adminLoginSchema),
-    defaultValues: {
-      email: env.defaultAdminEmail,
-      password: env.defaultAdminPassword,
-    },
   })
 
   return (

@@ -106,6 +106,9 @@ export function fetchSupplierSync() {
 // the product form always resends its full state — an empty sale price,
 // weight or brand is the user clearing that field, and the backend reads an
 // empty string on those keys as "clear it" rather than "leave it alone".
+// Fields the product endpoints expect as JSON inside a multipart body.
+const JSON_FIELDS = new Set(['dimensions', 'priceTiers', 'variants'])
+
 function buildProductFormData(payload) {
   const formData = new FormData()
   Object.entries(payload).forEach(([key, value]) => {
@@ -116,6 +119,16 @@ function buildProductFormData(payload) {
     }
     if (key === 'removeImages' && Array.isArray(value)) {
       if (value.length) formData.append('removeImages', JSON.stringify(value))
+      return
+    }
+    // Structured fields have to travel JSON-encoded: multipart has no notion
+    // of an array or an object, and the generic append below would stringify
+    // them to "[object Object]" and comma-joined noise. The server parses
+    // these back with parseJsonField.
+    if (JSON_FIELDS.has(key)) {
+      // null is meaningful for `dimensions` ("cleared"), so it is sent rather
+      // than skipped — skipping would leave the old value in place.
+      formData.append(key, JSON.stringify(value ?? null))
       return
     }
     formData.append(key, value === null ? '' : value)

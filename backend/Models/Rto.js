@@ -11,6 +11,11 @@ const rtoSchema = new mongoose.Schema(
   {
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    // Which variant came back, copied from the order line. Restocking has to
+    // credit the variant that was actually shipped — crediting the parent
+    // instead leaves that colour short for good while the parent count drifts
+    // up. Null on a simple product and on every RTO raised before variants.
+    variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
     awb: { type: String, default: '' },
     reason: { type: String, enum: REASONS, required: true },

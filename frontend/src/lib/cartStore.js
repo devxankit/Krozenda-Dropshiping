@@ -31,11 +31,44 @@ export const MAX_LINE_QUANTITY = 50
 
 const isRealProductId = (id) => MONGO_ID_RE.test(String(id ?? ''))
 
+// A cart line is (product, variant), not a product. The same shirt in Red/L
+// and Blue/M is two lines: two prices, two stock pools, two things a seller
+// picks and packs. Everything in this store that used to look a line up by
+// product id now goes through lineKey/findLine instead.
+export const lineKey = (id, variantId = null) => `${id}::${variantId ?? ''}`
+
+// Accepts a full line key OR a bare product id.
+//
+// The bare-id path exists because most callers (the PDP's "already in cart"
+// count, the wishlist, the header badge) only ever deal in simple products and
+// should not have to learn about variants. It resolves to the variant-less
+// line, or to the only line for that product when there is exactly one — and
+// deliberately returns null when a product is in the cart as several variants,
+// because there is no right answer to "which one" and guessing would move the
+// wrong line.
+function findLine(items, keyOrId) {
+  const direct = items.find((item) => lineKey(item.id, item.variantId) === keyOrId)
+  if (direct) return direct
+
+  const forProduct = items.filter((item) => item.id === keyOrId)
+  if (forProduct.length === 0) return null
+  return forProduct.find((item) => !item.variantId) ?? (forProduct.length === 1 ? forProduct[0] : null)
+}
+
+
 function normaliseServerItem(item) {
   return {
     id: item.id,
     name: item.name,
+    // Null on a simple product. Together with `id` this identifies the line.
+    variantId: item.variantId ?? null,
     variant: item.variant ?? '',
+    // B2B context the server resolves, so the cart page can explain its own
+    // numbers without re-deriving the pricing rules.
+    moq: item.moq ?? 1,
+    priceSource: item.priceSource ?? 'PRODUCT',
+    appliedTier: item.appliedTier ?? null,
+    nextTier: item.nextTier ?? null,
     image: item.image ?? null,
     imageSrcSet: item.imageSrcSet ?? null,
     price: Number(item.price ?? 0),
@@ -94,16 +127,18 @@ export const useCartStore = create(
       // the server's answer. No optimistic local price, no local stock guess.
       addItem: async (product, qty = 1) => {
         const id = product.id ?? product._id
+        const variantId = product.variantId ?? null
+        const key = lineKey(id, variantId)
 
         if (!get().isAuthed() || !isRealProductId(id)) {
           // Guest cart. Quantities are still capped locally so the number the
           // visitor sees is one the server will actually honour on merge.
           set((state) => {
-            const existing = state.items.find((item) => item.id === id)
+            const existing = state.items.find((item) => lineKey(item.id, item.variantId) === key)
             if (existing) {
               return {
                 items: state.items.map((item) =>
-                  item.id === id
+                  lineKey(item.id, item.variantId) === key
                     ? { ...item, quantity: Math.min(MAX_LINE_QUANTITY, item.quantity + qty) }
                     : item,
                 ),
@@ -114,6 +149,7 @@ export const useCartStore = create(
                 ...state.items,
                 {
                   id,
+                  variantId,
                   name: product.name,
                   variant: product.variant ?? product.subtitle ?? '',
                   image: product.image ?? null,
@@ -122,6 +158,7 @@ export const useCartStore = create(
                   originalPrice: Number(product.originalPrice ?? product.price ?? product.salePrice ?? 0),
                   quantity: Math.min(MAX_LINE_QUANTITY, qty),
                   stock: product.stock ?? null,
+                  moq: product.moq ?? 1,
                   availability: 'AVAILABLE',
                   priceChanged: false,
                 },
@@ -132,24 +169,27 @@ export const useCartStore = create(
         }
 
         return runCartMutation(set, get, () =>
-          api.post('/user/cart/items', { productId: id, quantity: qty, variant: product.variant ?? '' }),
+          api.post('/user/cart/items', { productId: id, quantity: qty, variantId }),
         )
       },
 
       // `delta` is +1 / -1 from the stepper. Dropping to zero removes the line,
       // which is what a buyer tapping "−" on a single unit expects.
-      updateQuantity: async (id, delta) => {
-        const current = get().items.find((item) => item.id === id)
+      updateQuantity: async (keyOrId, delta) => {
+        const current = findLine(get().items, keyOrId)
         if (!current) return { ok: false }
 
+        const key = lineKey(current.id, current.variantId)
         const next = current.quantity + delta
-        if (next < 1) return get().removeItem(id)
+        if (next < 1) return get().removeItem(key)
 
         const capped = Math.min(MAX_LINE_QUANTITY, next)
 
-        if (!get().isAuthed() || !isRealProductId(id)) {
+        if (!get().isAuthed() || !isRealProductId(current.id)) {
           set((state) => ({
-            items: state.items.map((item) => (item.id === id ? { ...item, quantity: capped } : item)),
+            items: state.items.map((item) =>
+              lineKey(item.id, item.variantId) === key ? { ...item, quantity: capped } : item,
+            ),
           }))
           return { ok: true }
         }
@@ -158,7 +198,7 @@ export const useCartStore = create(
         // response can never compound into the wrong number the way a
         // fire-and-forget increment could.
         return runCartMutation(set, get, () =>
-          api.put(`/user/cart/items/${id}`, { quantity: capped, variant: current.variant }),
+          api.put(`/user/cart/items/${current.id}`, { quantity: capped, variantId: current.variantId }),
         )
       },
 
@@ -174,16 +214,17 @@ export const useCartStore = create(
       // quantity: whatever arrives last is the truth, and a dropped
       // intermediate value changes nothing. A fire-and-forget increment could
       // not be collapsed this way.
-      setQuantity: (id, quantity) => {
-        const current = get().items.find((item) => item.id === id);
+      setQuantity: (keyOrId, quantity) => {
+        const current = findLine(get().items, keyOrId);
         if (!current) return { ok: false };
 
+        const key = lineKey(current.id, current.variantId);
         const wanted = Math.round(Number(quantity));
         if (!Number.isFinite(wanted)) return { ok: false };
 
         // Zero means remove, and that is NOT debounced: it is a deliberate,
         // visible act and the user should see it happen.
-        if (wanted < 1) return get().removeItem(id);
+        if (wanted < 1) return get().removeItem(key);
 
         const capped = Math.min(MAX_LINE_QUANTITY, wanted);
         if (capped === current.quantity) return { ok: true };
@@ -191,22 +232,38 @@ export const useCartStore = create(
         // Optimistic, always — including for a guest, whose cart is local
         // anyway.
         set((state) => ({
-          items: state.items.map((item) => (item.id === id ? { ...item, quantity: capped } : item)),
+          items: state.items.map((item) =>
+            lineKey(item.id, item.variantId) === key ? { ...item, quantity: capped } : item,
+          ),
         }));
 
-        if (get().isAuthed() && isRealProductId(id)) {
-          pushQuantity(id, { set, get, variant: current.variant });
+        if (get().isAuthed() && isRealProductId(current.id)) {
+          // Debounced per LINE, not per product — otherwise two variants of the
+          // same product being adjusted together would collapse onto one timer
+          // and only the last one would be sent.
+          pushQuantity(key, { set, get });
         }
 
         return { ok: true };
       },
 
-      removeItem: async (id) => {
-        if (!get().isAuthed() || !isRealProductId(id)) {
-          set((state) => ({ items: state.items.filter((item) => item.id !== id) }))
+      removeItem: async (keyOrId) => {
+        const current = findLine(get().items, keyOrId)
+        if (!current) return { ok: false }
+        const key = lineKey(current.id, current.variantId)
+
+        if (!get().isAuthed() || !isRealProductId(current.id)) {
+          set((state) => ({
+            items: state.items.filter((item) => lineKey(item.id, item.variantId) !== key),
+          }))
           return { ok: true }
         }
-        return runCartMutation(set, get, () => api.delete(`/user/cart/items/${id}`))
+
+        // The variant goes in the query string: a DELETE body is not reliably
+        // sent by every client, and the server reads either (see
+        // cartController.removeCartItem).
+        const query = current.variantId ? `?variantId=${current.variantId}` : ''
+        return runCartMutation(set, get, () => api.delete(`/user/cart/items/${current.id}${query}`))
       },
 
       clearCart: async () => {
@@ -256,6 +313,10 @@ export const useCartStore = create(
           const { data } = await api.post('/user/cart/merge', {
             items: guestItems.map((item) => ({
               productId: item.id,
+              // Sent so the server merges onto the right LINE. A guest who
+              // chose Red/L and Blue/M has two lines, and merging on product
+              // alone would fold one into the other.
+              variantId: item.variantId ?? null,
               quantity: item.quantity,
               variant: item.variant,
             })),
@@ -294,12 +355,12 @@ export const useCartStore = create(
 // for another. The quantity is read from the store when the timer fires rather
 // than captured at tap time — that way the request carries where the stepper
 // actually ended up, not where it was three taps ago.
-const pushQuantity = keyedDebounce((id, { set, get, variant }) => {
-  const line = get().items.find((item) => item.id === id);
+const pushQuantity = keyedDebounce((key, { set, get }) => {
+  const line = get().items.find((item) => lineKey(item.id, item.variantId) === key);
   if (!line) return; // removed while the timer was pending
 
   runCartMutation(set, get, () =>
-    api.put(`/user/cart/items/${id}`, { quantity: line.quantity, variant })
+    api.put(`/user/cart/items/${line.id}`, { quantity: line.quantity, variantId: line.variantId })
   );
 }, 450);
 
@@ -328,13 +389,23 @@ async function runCartMutation(set, get, request) {
 
 function describeAdjustments(adjustments) {
   const capped = adjustments.filter((a) => a.reason === 'STOCK_CAPPED')
-  const dropped = adjustments.filter((a) => a.reason !== 'STOCK_CAPPED')
+  // A line below its minimum order quantity is kept, not dropped — the buyer
+  // has to raise the quantity before checkout will take it. Calling that "no
+  // longer available" (which is what the catch-all below used to do) sends
+  // them looking for a replacement for something that is still on sale.
+  const belowMoq = adjustments.filter((a) => a.reason === 'BELOW_MOQ')
+  const dropped = adjustments.filter((a) => !['STOCK_CAPPED', 'BELOW_MOQ'].includes(a.reason))
 
   const parts = []
   if (capped.length === 1) {
     parts.push(`Only ${capped[0].applied} of "${capped[0].name}" are in stock, so the quantity was reduced.`)
   } else if (capped.length > 1) {
     parts.push(`${capped.length} items were reduced to the quantity currently in stock.`)
+  }
+  if (belowMoq.length === 1) {
+    parts.push(`"${belowMoq[0].name}" needs a minimum of ${belowMoq[0].moq} to check out.`)
+  } else if (belowMoq.length > 1) {
+    parts.push(`${belowMoq.length} items are below their minimum order quantity.`)
   }
   if (dropped.length === 1) {
     parts.push(`"${dropped[0].name || 'One item'}" is no longer available and was not added.`)

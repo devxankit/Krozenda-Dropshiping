@@ -54,6 +54,8 @@ export function ShipmentDrawer({ shipmentId, isOpen, onClose, isAdmin = false })
           <StatusSummary shipment={shipment} />
           <ParcelDetails shipment={shipment} isAdmin={isAdmin} />
           <ItemList shipment={shipment} />
+          <ShipmentDocuments controller={controller} />
+          <NdrSection controller={controller} />
           <TrackingSection controller={controller} />
           {isAdmin && <InternalDetails shipment={shipment} />}
         </div>
@@ -409,6 +411,198 @@ function InternalDetails({ shipment }) {
             </li>
           ))}
         </ol>
+      )}
+    </Section>
+  )
+}
+
+// Carrier documents. Separate from ShipmentActions because these are not part
+// of the parcel's forward sequence — a seller reprints a label at any point
+// after an AWB exists, and doing so changes nothing about the shipment.
+//
+// The window is opened from inside the click handler using the URL the mutation
+// resolves to. Opening it before the await would show a blank tab; opening it
+// after, in a .then(), gets killed by popup blockers. So: await, then open with
+// an explicit user-gesture-adjacent call, and fall back to a visible link if the
+// browser still refuses.
+function ShipmentDocuments({ controller }) {
+  const { shipment, canPrintLabel, canPrintInvoice, documents, isFetchingDocument } = controller
+  const [pending, setPending] = useState(null)
+  const [blocked, setBlocked] = useState(null)
+
+  if (!shipment || shipment.reconciliationRequired) return null
+
+  const available = [
+    canPrintLabel && { type: 'LABEL', label: 'Shipping label', url: documents.label },
+    canPrintLabel && { type: 'MANIFEST', label: 'Manifest', url: documents.manifest },
+    canPrintInvoice && { type: 'INVOICE', label: 'Tax invoice', url: documents.invoice },
+  ].filter(Boolean)
+
+  if (available.length === 0) return null
+
+  async function open(type) {
+    setPending(type)
+    setBlocked(null)
+    try {
+      const result = await controller.fetchDocument({ type })
+      const opened = window.open(result.url, '_blank', 'noopener,noreferrer')
+      // Popup blocked — show the link instead of silently doing nothing.
+      if (!opened) setBlocked({ type, url: result.url })
+    } catch {
+      // The error is surfaced by documentError below.
+    } finally {
+      setPending(null)
+    }
+  }
+
+  return (
+    <Section title="Documents">
+      <div className="flex flex-wrap items-center gap-2">
+        {available.map((doc) => (
+          <Button
+            key={doc.type}
+            variant="secondary"
+            size="sm"
+            icon="print"
+            onClick={() => open(doc.type)}
+            isLoading={isFetchingDocument && pending === doc.type}
+          >
+            {doc.label}
+          </Button>
+        ))}
+      </div>
+
+      {blocked && (
+        <p className="text-2xs text-ink-subtle">
+          Your browser blocked the new tab.{' '}
+          <a
+            href={blocked.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-brand-700 underline"
+          >
+            Open the document
+          </a>
+        </p>
+      )}
+
+      {controller.documentError && (
+        <InlineAlert tone="danger" title="Could not get that document">
+          {controller.documentError?.message || 'The courier could not produce it. Try again shortly.'}
+        </InlineAlert>
+      )}
+    </Section>
+  )
+}
+
+// Non-delivery. The courier tried and could not deliver; the seller decides
+// whether to try again or take it back.
+//
+// Collapsed until asked for, because reading it costs a real carrier call and
+// most parcels never have one. Left unanswered, couriers return the parcel by
+// default — which is why this is worth surfacing at all rather than letting
+// the seller find out from the return freight.
+function NdrSection({ controller }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [comments, setComments] = useState('')
+
+  if (!controller.canHandleNdr) return null
+
+  async function open() {
+    setIsOpen(true)
+    try {
+      await controller.fetchNdr()
+    } catch {
+      // Surfaced through ndrError below.
+    }
+  }
+
+  async function answer(action) {
+    try {
+      await controller.actOnNdr({ action, comments })
+      setComments('')
+    } catch {
+      // Surfaced through ndrActionError below.
+    }
+  }
+
+  return (
+    <Section
+      title="Delivery attempts"
+      action={
+        !isOpen ? (
+          <Button variant="quiet" size="sm" onClick={open} isLoading={controller.isFetchingNdr}>
+            Check with courier
+          </Button>
+        ) : null
+      }
+    >
+      {!isOpen ? (
+        <p className="text-2xs text-ink-subtle">
+          If the courier could not deliver, check here and tell them what to do next.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {controller.isFetchingNdr && <Skeleton className="h-16 w-full rounded-lg" />}
+
+          {controller.ndrError && (
+            <InlineAlert tone="danger" title="Could not reach the courier">
+              {controller.ndrError?.message || 'Try again in a moment.'}
+            </InlineAlert>
+          )}
+
+          {!controller.isFetchingNdr && !controller.ndrError && (
+            <>
+              {controller.ndr ? (
+                // The carrier's payload, shown as-is. Its shape is theirs, and
+                // pretending to understand every field would go stale the
+                // first time they add one.
+                <pre className="admin-scroll max-h-40 overflow-auto rounded-lg border border-border bg-surface-subtle p-2.5 text-2xs text-ink-muted">
+                  {JSON.stringify(controller.ndr, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-2xs text-ink-subtle">
+                  The courier has no failed delivery on record for this parcel.
+                </p>
+              )}
+
+              <Textarea
+                id="ndr-comments"
+                label="Note for the courier (optional)"
+                rows={2}
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="e.g. buyer confirmed they will be home after 6pm"
+              />
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => answer('return')}
+                  isLoading={controller.isActingOnNdr}
+                >
+                  Send it back
+                </Button>
+                <Button size="sm" onClick={() => answer('re-attempt')} isLoading={controller.isActingOnNdr}>
+                  Try delivery again
+                </Button>
+              </div>
+
+              {controller.ndrActionDone && (
+                <InlineAlert tone="success" title="Sent to the courier">
+                  They will confirm on the next tracking update — this is an instruction, not an outcome.
+                </InlineAlert>
+              )}
+
+              {controller.ndrActionError && (
+                <InlineAlert tone="danger" title="The courier did not accept that">
+                  {controller.ndrActionError?.message || 'Try again in a moment.'}
+                </InlineAlert>
+              )}
+            </>
+          )}
+        </div>
       )}
     </Section>
   )

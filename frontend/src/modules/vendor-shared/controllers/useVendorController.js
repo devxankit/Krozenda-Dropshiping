@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addVendorTicketMessage,
@@ -21,8 +22,10 @@ import {
   fetchVendorKycDocs,
   fetchVendorNotifications,
   fetchVendorOrders,
+  fetchVendorPayouts,
   fetchVendorProducts,
   fetchVendorReturns,
+  recommendOnVendorReturn,
   fetchVendorReviews,
   fetchVendorSettings,
   fetchVendorSummary,
@@ -38,9 +41,18 @@ import {
   uploadVendorKycDocument,
   deleteVendorProduct,
 } from '../services/vendorService'
-import { fetchVendorProfile, loginVendor, requestVendorPasswordReset, resetVendorPassword, updateVendorProfile } from '../services/authService'
+import {
+  fetchVendorProfile,
+  loginVendor,
+  registerVendor,
+  requestVendorPasswordReset,
+  resetVendorPassword,
+  submitVendorForVerification,
+  updateVendorProfile,
+} from '../services/authService'
 import { useListController } from '../../admin/controllers/useListController'
 import { requestPushToken } from '../../../lib/firebase'
+import { onRealtime } from '../../../lib/realtime'
 
 export function useVendorLoginController() {
   const mutation = useMutation({ mutationFn: loginVendor })
@@ -55,6 +67,11 @@ export function useVendorForgotPasswordController() {
 export function useVendorResetPasswordController() {
   const mutation = useMutation({ mutationFn: resetVendorPassword })
   return { resetPassword: mutation.mutateAsync, isSubmitting: mutation.isPending, error: mutation.error }
+}
+
+export function useVendorRegisterController() {
+  const mutation = useMutation({ mutationFn: registerVendor })
+  return { register: mutation.mutateAsync, isSubmitting: mutation.isPending, error: mutation.error }
 }
 
 function useResource(key, queryFn, enabled = true) {
@@ -178,17 +195,36 @@ export function useVendorReviewsController() {
 }
 
 export function useVendorReturnsController() {
+  const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['vendor', 'returns'], queryFn: fetchVendorReturns })
-  return { items: query.data?.items ?? [], isLoading: query.isLoading, error: query.error }
+
+  const recommendMutation = useMutation({
+    mutationFn: ({ id, decision, note }) => recommendOnVendorReturn(id, { decision, note }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendor', 'returns'] }),
+  })
+
+  return {
+    items: query.data?.items ?? [],
+    isLoading: query.isLoading,
+    error: query.error,
+    recommend: recommendMutation.mutateAsync,
+    isRecommending: recommendMutation.isPending,
+    recommendError: recommendMutation.error,
+  }
 }
 
 export function useVendorEarningsController() {
   const summary = useResource(['vendor', 'earnings', 'summary'], fetchVendorEarningsSummary)
   const entries = useResource(['vendor', 'earnings', 'entries'], fetchVendorEarningsEntries)
+  const payouts = useResource(['vendor', 'earnings', 'payouts'], fetchVendorPayouts)
+
   return {
-    summary: summary.data,
+    summary: summary.data ?? null,
     entries: entries.data?.items ?? [],
+    payouts: payouts.data?.items ?? [],
     isLoading: summary.isLoading || entries.isLoading,
+    isLoadingPayouts: payouts.isLoading,
+    error: summary.error || entries.error,
   }
 }
 
@@ -270,6 +306,42 @@ export function useVendorProfileController() {
   return { ...query, updateProfile: mutation.mutateAsync, isSubmitting: mutation.isPending }
 }
 
+// Submitting the application invalidates BOTH the profile and the document
+// list: the status banner reads the first and the KYC page's gating reads the
+// second, and a stale copy of either shows the seller a button they can no
+// longer press.
+export function useVendorSubmitForVerificationController() {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: submitVendorForVerification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'profile'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'kyc-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'summary'] })
+    },
+  })
+  return { submit: mutation.mutateAsync, isSubmitting: mutation.isPending, error: mutation.error }
+}
+
+// One read of the vendor's own verification state, shared by the routing gate
+// and by the sidebar's lock affordance. Both mount at the same time and both
+// need the same answer; react-query dedupes them onto the single
+// ['vendor','profile'] fetch the Store Profile screen already makes.
+export function useVendorOnboardingState() {
+  const { data, isLoading, isError } = useResource(['vendor', 'profile'], fetchVendorProfile)
+  const status = data?.verificationStatus ?? null
+
+  return {
+    status,
+    isLoading,
+    // An unreadable profile must not lock an approved seller out of their own
+    // panel, so an error reads as approved here and the server stays the real
+    // boundary — same reasoning as VendorOnboardingGate.
+    isApproved: isError || !status ? true : status === 'APPROVED',
+    rejectionReason: data?.rejectionReason || '',
+  }
+}
+
 export function useVendorSettingsController() {
   const queryClient = useQueryClient()
   const query = useResource(['vendor', 'settings'], fetchVendorSettings)
@@ -278,6 +350,39 @@ export function useVendorSettingsController() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendor', 'settings'] }),
   })
   return { ...query, updateSettings: mutation.mutateAsync, isSubmitting: mutation.isPending }
+}
+
+// Keeps the panel live without polling.
+//
+// Rather than pushing the websocket payload straight into a list, this
+// INVALIDATES the affected queries and lets react-query refetch. The payload
+// is a hint that something changed, not a replacement for the authoritative
+// read — merging a partial socket message into a paged, filtered, tab-counted
+// list is how two clients end up showing different totals.
+export function useVendorRealtime() {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const offNotification = onRealtime('notification', () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'notifications'] })
+    })
+
+    const offOrder = onRealtime('order:updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'orders'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'summary'] })
+    })
+
+    const offShipment = onRealtime('shipment:updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'shipments'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'orders'] })
+    })
+
+    return () => {
+      offNotification()
+      offOrder()
+      offShipment()
+    }
+  }, [queryClient])
 }
 
 // Best-effort, same reasoning as the buyer app's registerPushToken in

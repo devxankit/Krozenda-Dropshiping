@@ -962,6 +962,185 @@ const CANCELLABLE_STATUSES = [
 const TERMINAL_RETURN_STATUSES = ['RETURN_DELIVERED', 'CANCELLED', 'FAILED'];
 
 // ---------------------------------------------------------------------------
+// Carrier documents: shipping label, manifest, tax invoice
+// ---------------------------------------------------------------------------
+//
+// All three are the same shape of operation — ask the carrier to render a PDF,
+// keep the URL it gives back — so they share one function rather than three
+// near-identical ones that would drift.
+//
+// Two things worth knowing:
+//
+//   1. The URL is CACHED on the shipment. Shiprocket bills per generation for
+//      some plans and the document does not change once the parcel exists, so
+//      a seller clicking "print label" four times must not spend four carrier
+//      calls. `force` exists for the case where the stored URL has expired.
+//
+//   2. A label and a manifest are addressed by SHIPMENT id, an invoice by
+//      ORDER id. Getting that backwards returns someone else's document, so
+//      the table below is explicit about which identifier each one takes.
+const CARRIER_DOCUMENTS = Object.freeze({
+  LABEL: {
+    field: 'labelUrl',
+    label: 'shipping label',
+    // The carrier only renders a label once a courier has been allocated.
+    requiresAwb: true,
+    call: (integration, doc) =>
+      shiprocketService.generateLabel(integration, { shipmentIds: [doc.shiprocketShipmentId] }, { onLog: log }),
+    readUrl: (body) => body?.label_url || body?.response?.label_url || null,
+  },
+  MANIFEST: {
+    field: 'manifestUrl',
+    label: 'manifest',
+    requiresAwb: true,
+    call: (integration, doc) =>
+      shiprocketService.generateManifest(integration, { shipmentIds: [doc.shiprocketShipmentId] }, { onLog: log }),
+    readUrl: (body) => body?.manifest_url || body?.response?.manifest_url || null,
+  },
+  INVOICE: {
+    field: 'invoiceUrl',
+    label: 'invoice',
+    // An invoice is a document about the ORDER, and exists as soon as the
+    // order reaches the carrier — no courier allocation needed.
+    requiresAwb: false,
+    call: (integration, doc) =>
+      shiprocketService.printInvoice(integration, { orderIds: [doc.shiprocketOrderId] }, { onLog: log }),
+    readUrl: (body) => body?.invoice_url || body?.response?.invoice_url || null,
+  },
+});
+
+async function generateDocument({ shipmentId, vendorId = null, type, force = false, actor = 'SELLER' }) {
+  const spec = CARRIER_DOCUMENTS[type];
+  if (!spec) return fail('INVALID_DOCUMENT_TYPE', 'Unknown document type');
+
+  const loaded = await loadOwnedShipment(shipmentId, vendorId);
+  if (!loaded.ok) return loaded;
+  const doc = loaded.shipment;
+
+  if (!doc.shiprocketOrderId) {
+    return fail('NOT_CREATED_AT_CARRIER', `This parcel has not reached the courier yet, so there is no ${spec.label} to print.`);
+  }
+  if (spec.requiresAwb && !doc.awbCode) {
+    return fail('NO_AWB', `Assign an AWB before printing the ${spec.label}.`);
+  }
+
+  // Cached — see note 1 above.
+  if (doc[spec.field] && !force) {
+    return { ok: true, shipment: doc, url: doc[spec.field], cached: true };
+  }
+
+  const resolution = await resolveForShipment(doc, { operation: 'GENERATE_DOCUMENT' });
+  if (!resolution.ok) return fail(resolution.reason, resolution.message);
+
+  try {
+    const { body } = await spec.call(resolution.integration, doc);
+    const url = spec.readUrl(body);
+
+    if (!url) {
+      // The call succeeded but the carrier gave us nothing to show. Reporting
+      // that plainly beats saving an empty string and rendering a dead link.
+      return fail('DOCUMENT_NOT_READY', `The courier could not produce a ${spec.label} for this parcel yet. Try again shortly.`);
+    }
+
+    doc[spec.field] = url;
+    doc.errorMessage = '';
+    await doc.save();
+
+    log({ event: `SHIPROCKET_${type}_GENERATED`, shipmentId: String(doc._id), awb: doc.awbCode, actor });
+
+    return { ok: true, shipment: doc, url, cached: false };
+  } catch (err) {
+    // Nothing is created or charged by a failed render, so unlike createShipment
+    // this needs no reconciliation state — it is safe to simply retry.
+    const message = safeCarrierMessage(err, spec.label);
+    return fail(err.isTimeout ? 'CARRIER_TIMEOUT' : 'CARRIER_ERROR', message, { shipment: doc });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// NDR: non-delivery reports
+// ---------------------------------------------------------------------------
+//
+// An NDR is the courier saying "we tried and could not deliver". The seller
+// then has to choose: try again, or send it back. Left unanswered, couriers
+// return the parcel by default — so a seller who cannot see their NDRs is
+// paying return freight on orders that a phone call would have saved.
+//
+// The action vocabulary is Shiprocket's own and is passed through unmapped.
+// Inventing friendlier names would risk sending "return" where the seller
+// asked for "re-attempt", which is an expensive thing to get wrong.
+const NDR_ACTIONS = Object.freeze(['re-attempt', 'return']);
+
+// GET the courier's NDR record for one parcel.
+async function getNdr({ shipmentId, vendorId = null }) {
+  const loaded = await loadOwnedShipment(shipmentId, vendorId);
+  if (!loaded.ok) return loaded;
+  const doc = loaded.shipment;
+
+  if (!doc.awbCode) {
+    return fail('NO_AWB', 'This parcel has no AWB, so the courier has nothing to report on it.');
+  }
+
+  const resolution = await resolveForShipment(doc, { operation: 'NDR_READ' });
+  if (!resolution.ok) return fail(resolution.reason, resolution.message);
+
+  try {
+    const { body } = await shiprocketService.getNdrByAwb(resolution.integration, doc.awbCode, { onLog: log });
+    return { ok: true, shipment: doc, ndr: body ?? null };
+  } catch (err) {
+    return fail(err.isTimeout ? 'CARRIER_TIMEOUT' : 'CARRIER_ERROR', safeCarrierMessage(err, 'delivery report'));
+  }
+}
+
+// Tell the courier what to do next with an undelivered parcel.
+async function actOnNdr({ shipmentId, vendorId = null, action, comments = '', actor = 'SELLER' }) {
+  if (!NDR_ACTIONS.includes(action)) {
+    return fail('INVALID_NDR_ACTION', `Action must be one of: ${NDR_ACTIONS.join(', ')}`);
+  }
+
+  const loaded = await loadOwnedShipment(shipmentId, vendorId);
+  if (!loaded.ok) return loaded;
+  const doc = loaded.shipment;
+
+  if (!doc.awbCode) {
+    return fail('NO_AWB', 'This parcel has no AWB, so there is no delivery attempt to answer.');
+  }
+  // A delivered or cancelled parcel has no open attempt to answer, and the
+  // carrier would reject the call anyway.
+  if (['DELIVERED', 'CANCELLED'].includes(doc.internalStatus)) {
+    return fail('NOT_NDR_ACTIONABLE', `This parcel is already ${doc.internalStatus.toLowerCase()}.`);
+  }
+
+  const resolution = await resolveForShipment(doc, { operation: 'NDR_ACTION' });
+  if (!resolution.ok) return fail(resolution.reason, resolution.message);
+
+  try {
+    const { body } = await shiprocketService.actOnNdr(
+      resolution.integration,
+      { awbCode: doc.awbCode, action, comments: String(comments || '').slice(0, 500) },
+      { onLog: log }
+    );
+
+    // The carrier decides what actually happens next and reports it through
+    // the tracking webhook. Recording the instruction on the timeline without
+    // claiming an outcome is the honest thing to store.
+    doc.statusHistory.push({
+      status: doc.internalStatus,
+      at: new Date(),
+      source: actor,
+      note: `NDR action requested: ${action}${comments ? ` (${comments})` : ''}`,
+    });
+    await doc.save();
+
+    log({ event: 'SHIPROCKET_NDR_ACTION', shipmentId: String(doc._id), awb: doc.awbCode, action });
+
+    return { ok: true, shipment: doc, result: body ?? null };
+  } catch (err) {
+    return fail(err.isTimeout ? 'CARRIER_TIMEOUT' : 'CARRIER_ERROR', safeCarrierMessage(err, 'delivery attempt'));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
@@ -1000,6 +1179,11 @@ async function notifyBuyer(shipment, message) {
 
 module.exports = {
   createShipment,
+  generateDocument,
+  getNdr,
+  actOnNdr,
+  NDR_ACTIONS,
+  CARRIER_DOCUMENTS,
   assignAwb,
   schedulePickup,
   cancelShipment,

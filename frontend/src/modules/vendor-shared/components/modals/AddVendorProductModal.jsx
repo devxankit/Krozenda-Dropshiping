@@ -2,8 +2,38 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, Icon, Input, Modal, Select, Textarea } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
 import { api } from '../../../../lib/axios'
+import {
+  CollapsibleSection,
+  PriceTierEditor,
+  ShippingFields,
+  TaxFields,
+  VariantEditor,
+} from '../../../../components/catalog/ProductAdvancedFields'
+import { appendAdvancedFields } from '../../../../components/catalog/productFormPayload'
 
-const EMPTY_FORM = { name: '', sku: '', category: '', brand: '', price: '', salePrice: '', stock: '100', description: '' }
+const EMPTY_FORM = {
+  name: '',
+  sku: '',
+  category: '',
+  brand: '',
+  price: '',
+  salePrice: '',
+  stock: '100',
+  description: '',
+  // Shipping. Blank falls back to the seller's default package, which is why
+  // these are optional rather than required.
+  weight: '',
+  dimensions: { lengthCm: '', breadthCm: '', heightCm: '' },
+  // Tax.
+  hsnCode: '',
+  gstRate: '',
+  // B2B. moq of 1 means no minimum.
+  moq: '1',
+  priceTiers: [],
+  // Buyable options. Non-empty makes the product itself unbuyable - see
+  // VariantEditor's warning copy.
+  variants: [],
+}
 
 // A seller only picks from the admin-created catalog — no ad-hoc category/
 // brand creation here (per platform rule: sellers get product CRUD, not
@@ -54,6 +84,7 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
     if (formData.salePrice) body.append('salePrice', formData.salePrice)
     body.append('stock', formData.stock || '0')
     body.append('description', formData.description)
+    appendAdvancedFields(body, formData)
     files.forEach((f) => body.append('images', f))
 
     setIsSubmitting(true)
@@ -199,6 +230,61 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
         />
+
+        {/* Everything below is optional and collapsed: a seller listing a
+            simple retail item should not have to scroll past four sections
+            they do not need. The badge on each header shows when one is in
+            use, so a filled-in section is never hidden silently. */}
+        <CollapsibleSection
+          title="Shipping"
+          description="Weight and dimensions — these decide what a courier charges."
+          badge={formData.weight || formData.dimensions.lengthCm ? 'Set' : null}
+        >
+          <ShippingFields value={formData} onChange={setFormData} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Tax"
+          description="HSN code and GST rate for invoicing."
+          badge={formData.hsnCode || formData.gstRate ? 'Set' : null}
+        >
+          <TaxFields value={formData} onChange={setFormData} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Bulk & wholesale pricing"
+          description="Minimum order quantity and per-unit price breaks."
+          badge={formData.priceTiers.length > 0 || formData.moq !== '1' ? 'Set' : null}
+        >
+          <div className="flex flex-col gap-3">
+            <Input
+              id="vp-moq"
+              label="Minimum order quantity"
+              type="number"
+              min="1"
+              value={formData.moq}
+              onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
+              description="1 means no minimum. Buyers cannot check out below this."
+              containerClassName="sm:max-w-xs"
+            />
+            <PriceTierEditor
+              tiers={formData.priceTiers}
+              basePrice={formData.salePrice || formData.price}
+              onChange={(priceTiers) => setFormData({ ...formData, priceTiers })}
+            />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Options & variants"
+          description="Sizes, colours or pack sizes with their own price and stock."
+          badge={formData.variants.length > 0 ? `${formData.variants.length}` : null}
+        >
+          <VariantEditor
+            variants={formData.variants}
+            onChange={(variants) => setFormData({ ...formData, variants })}
+          />
+        </CollapsibleSection>
       </form>
     </Modal>
   )

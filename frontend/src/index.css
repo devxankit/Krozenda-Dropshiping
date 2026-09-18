@@ -227,3 +227,17 @@
 .scroll-contain {
   overscroll-behavior: contain;
 }
+
+/* The vendor sign-in / sign-up shell is a dark card, but the shared form
+   controls in components/ui are built for the light panels and render their
+   labels at text-slate-700. Two fields on the login screen made that easy to
+   miss; the three-step registration form has nineteen. Scoped to the auth
+   shell so the same components keep their light-panel styling everywhere
+   else. */
+.vendor-auth label {
+  color: theme('colors.slate.300');
+}
+
+.vendor-auth legend {
+  color: theme('colors.slate.300');
+}

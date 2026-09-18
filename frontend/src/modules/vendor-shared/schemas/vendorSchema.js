@@ -37,6 +37,42 @@ export const vendorProductSchema = z.object({
   discountPercent: z.number(),
   stock: z.number().int(),
   weight: z.number().nullable(),
+  // All three or none. utils/packaging treats a partial set as absent, so the
+  // server never stores one.
+  dimensions: z
+    .object({
+      lengthCm: z.number().nullable(),
+      breadthCm: z.number().nullable(),
+      heightCm: z.number().nullable(),
+    })
+    .nullable(),
+
+  hsnCode: z.string(),
+  gstRate: z.number().nullable(),
+
+  // moq of 1 means no minimum, which is every product that has not set one.
+  moq: z.number().int(),
+  priceTiers: z.array(z.object({ minQty: z.number().int(), price: z.number() })),
+
+  // Non-empty means the product itself is not buyable — a buyer must choose an
+  // option, and each sells from its own stock (see `variantStock`, which is
+  // the total across them; `stock` above stays the parent's own number).
+  variants: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      attributes: z.record(z.string(), z.string()),
+      sku: z.string(),
+      barcode: z.string(),
+      price: z.number().nullable(),
+      salePrice: z.number().nullable(),
+      stock: z.number().int(),
+      image: z.string().nullable(),
+      isActive: z.boolean(),
+    }),
+  ),
+  variantStock: z.number().int(),
+
   images: z.array(z.string()),
   description: z.string(),
   isActive: z.boolean(),
@@ -71,6 +107,12 @@ const vendorOrderItemSchema = z.object({
   quantity: z.number().int(),
   variant: z.string(),
   status: z.string(),
+  // When the seller accepted this line. Null while it is still waiting on
+  // them, which is what makes an acceptance SLA measurable.
+  acceptedAt: z.string().nullable(),
+  // Why the seller rejected it. Always present when status is CANCELLED —
+  // the server refuses a cancellation without one.
+  rejectionReason: z.string(),
   courierName: z.string(),
   trackingNumber: z.string(),
   statusHistory: z.array(z.object({ status: z.string(), at: z.string() })),
@@ -151,6 +193,15 @@ export const vendorReturnSchema = z.object({
   photos: z.array(z.string()),
   status: z.string(),
   adminNote: z.string(),
+  // The seller's own advisory input, null until they give one. Never a
+  // decision — admin still rules on the request.
+  sellerRecommendation: z
+    .object({
+      decision: z.enum(['APPROVE', 'REJECT']),
+      note: z.string(),
+      at: z.string(),
+    })
+    .nullable(),
   refundAmount: z.number().nullable(),
   resolvedAt: z.string().nullable(),
   createdAt: z.string(),
@@ -159,14 +210,24 @@ export const vendorReturnSchema = z.object({
 export const vendorReturnListSchema = paged(vendorReturnSchema)
 
 export const vendorEarningsSummarySchema = z.object({
+  // The seller's default rate. Not necessarily what every line was charged —
+  // a category or product CommissionRule outranks it — so the screen labels
+  // it as the default rather than "your commission".
   commissionRatePercent: z.number(),
   totalSales: z.number().int(),
   totalCommission: z.number().int(),
   netEarnings: z.number().int(),
+  // Everything still owed: inBatchAmount + unsettledAmount.
   pendingAmount: z.number().int(),
+  // Real ledger figures — read off Settlement/Payout, not computed.
   paidAmount: z.number().int(),
+  // Claimed by a live settlement batch, money not sent yet.
+  inBatchAmount: z.number().int(),
+  // Delivered but not yet claimed by any batch.
+  unsettledAmount: z.number().int(),
   inTransitOrderValue: z.number().int(),
   deliveredOrdersCount: z.number().int(),
+  completedPayoutsCount: z.number().int(),
 })
 
 export const vendorEarningsEntrySchema = z.object({
@@ -178,9 +239,37 @@ export const vendorEarningsEntrySchema = z.object({
   commission: z.number().int(),
   netAmount: z.number().int(),
   deliveredAt: z.string().nullable(),
+  // Which settlement batch reckoned this line, if any. Null while the line is
+  // still UNSETTLED.
+  settlementId: z.string().nullable(),
+  settlementStatus: z.string().nullable(),
+  state: z.enum(['PAID', 'IN_BATCH', 'UNSETTLED']),
+  paidAt: z.string().nullable(),
 })
 
 export const vendorEarningsEntryListSchema = z.object({ items: z.array(vendorEarningsEntrySchema) })
+
+// GET /vendor/earnings/payouts — the actual transfers. The bank account is
+// only ever the masked snapshot the Payout carries.
+export const vendorPayoutSchema = z.object({
+  id: z.string(),
+  payoutId: z.string(),
+  amount: z.number().int(),
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED']),
+  method: z.string(),
+  bankAccountMasked: z.string(),
+  bankName: z.string(),
+  utr: z.string().nullable(),
+  failureReason: z.string(),
+  attempt: z.number().int(),
+  settlementId: z.string().nullable(),
+  periodStart: z.string().nullable(),
+  periodEnd: z.string().nullable(),
+  processedAt: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export const vendorPayoutListSchema = z.object({ items: z.array(vendorPayoutSchema) })
 
 export const vendorAnalyticsSchema = z.object({
   salesTrend: z.array(z.object({ date: z.string(), revenue: z.number(), orders: z.number() })),

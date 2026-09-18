@@ -27,6 +27,70 @@ function toRelativePath(url) {
   return index === -1 ? url : url.slice(index);
 }
 
+// The B2B/variant fields arrive over multipart/form-data, where arrays and
+// objects have to travel JSON-encoded. Same parsing and the same validation
+// the seller panel uses (vendorProductController) — deliberately duplicated in
+// behaviour, not in rules: both call validateCatalogB2B below, so an admin and
+// a seller can never disagree about what a valid GST rate is.
+function parseJsonField(raw, fallback) {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (typeof raw !== 'string') return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const GST_SLABS = [0, 5, 12, 18, 28];
+
+function validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers }) {
+  if (gstRate !== undefined && gstRate !== null && gstRate !== '') {
+    if (!GST_SLABS.includes(Number(gstRate))) return `GST rate must be one of ${GST_SLABS.join(', ')}%`;
+  }
+  if (hsnCode && String(hsnCode).trim() && !/^\d{4,8}$/.test(String(hsnCode).trim())) {
+    return 'HSN code must be 4 to 8 digits';
+  }
+  if (moq !== undefined && moq !== null && moq !== '') {
+    const n = Number(moq);
+    if (!Number.isInteger(n) || n < 1) return 'Minimum order quantity must be a whole number of at least 1';
+  }
+  if (Array.isArray(priceTiers)) {
+    const seen = new Set();
+    for (const tier of priceTiers) {
+      const minQty = Number(tier?.minQty);
+      const price = Number(tier?.price);
+      if (!Number.isInteger(minQty) || minQty < 2) return 'Each quantity break needs a whole minimum quantity of 2 or more';
+      if (!Number.isFinite(price) || price < 0) return 'Each quantity break needs a valid price';
+      if (seen.has(minQty)) return `You have two quantity breaks at ${minQty} units`;
+      seen.add(minQty);
+    }
+  }
+  return null;
+}
+
+// Replaced wholesale when sent, never merged: the form owns the list, and a
+// merge would make removing a variant impossible. An existing variant keeps
+// its _id (and therefore its identity on live carts and orders) when the
+// client sends it back.
+function normaliseVariants(raw) {
+  if (!Array.isArray(raw)) return null;
+  return raw
+    .filter((v) => v && String(v.name || '').trim())
+    .map((v) => ({
+      ...(v.id && mongoose.isValidObjectId(v.id) ? { _id: v.id } : {}),
+      name: String(v.name).trim(),
+      attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
+      sku: String(v.sku || '').trim(),
+      price: toNumber(v.price),
+      salePrice: toNumber(v.salePrice),
+      stock: Math.max(0, Math.round(toNumber(v.stock, 0))),
+      image: v.image || null,
+      isActive: v.isActive !== false,
+    }));
+}
+
 function serializeProduct(p) {
   return {
     id: p._id.toString(),
@@ -52,6 +116,32 @@ function serializeProduct(p) {
     discountPercent: p.discountPercent || 0,
     stock: p.stock,
     weight: p.weight ?? null,
+    dimensions: p.dimensions
+      ? {
+          lengthCm: p.dimensions.lengthCm ?? null,
+          breadthCm: p.dimensions.breadthCm ?? null,
+          heightCm: p.dimensions.heightCm ?? null,
+        }
+      : null,
+
+    hsnCode: p.hsnCode || '',
+    gstRate: p.gstRate ?? null,
+    moq: p.moq ?? 1,
+    priceTiers: (p.priceTiers || []).map((t) => ({ minQty: t.minQty, price: t.price })),
+    variants: (p.variants || []).map((v) => ({
+      id: v._id.toString(),
+      name: v.name,
+      attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+      sku: v.sku || '',
+      barcode: v.barcode || '',
+      price: v.price ?? null,
+      salePrice: v.salePrice ?? null,
+      stock: v.stock ?? 0,
+      image: v.image ? getImageUrl(v.image) : null,
+      isActive: v.isActive !== false,
+    })),
+    variantStock: (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0),
+
     images: (p.images || []).map((img) => getImageUrl(img)),
     description: p.description || '',
     isActive: p.isActive !== false,
@@ -155,7 +245,14 @@ async function createProduct(req, res) {
     isFlashsale,
     isFlashSale,
     isTrending,
+    hsnCode,
+    gstRate,
+    moq,
   } = req.body;
+
+  const priceTiers = parseJsonField(req.body.priceTiers, []);
+  const variants = normaliseVariants(parseJsonField(req.body.variants, [])) || [];
+  const dimensions = parseJsonField(req.body.dimensions, null);
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Product name is required' });
@@ -173,6 +270,11 @@ async function createProduct(req, res) {
   const salePriceNum = toNumber(salePrice);
   if (salePriceNum !== null && salePriceNum > priceNum) {
     return res.status(400).json({ success: false, message: 'Sale price cannot be higher than the regular price' });
+  }
+
+  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers });
+  if (b2bError) {
+    return res.status(400).json({ success: false, message: b2bError });
   }
 
   if (sku && sku.trim()) {
@@ -197,6 +299,18 @@ async function createProduct(req, res) {
     discountPercent: toNumber(discountPercent, 0),
     stock: Math.max(0, Math.round(toNumber(stock, 0))),
     weight: toNumber(weight),
+    dimensions: dimensions
+      ? {
+          lengthCm: toNumber(dimensions.lengthCm),
+          breadthCm: toNumber(dimensions.breadthCm),
+          heightCm: toNumber(dimensions.heightCm),
+        }
+      : null,
+    hsnCode: String(hsnCode || '').trim(),
+    gstRate: toNumber(gstRate),
+    moq: Math.max(1, Math.round(toNumber(moq, 1))),
+    priceTiers: (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
+    variants,
     images,
     description: description || '',
     isActive: toBool(isActive, true),
@@ -235,7 +349,16 @@ async function updateProduct(req, res) {
     isFlashSale,
     isTrending,
     removeImages,
+    hsnCode,
+    gstRate,
+    moq,
   } = req.body;
+
+  // Undefined means "not sent, leave alone"; an empty array means "cleared".
+  // parseJsonField keeps that distinction by defaulting to undefined.
+  const priceTiers = parseJsonField(req.body.priceTiers, undefined);
+  const variants = normaliseVariants(parseJsonField(req.body.variants, undefined));
+  const dimensions = parseJsonField(req.body.dimensions, undefined);
 
   const product = await Product.findById(id);
   if (!product) {
@@ -295,6 +418,30 @@ async function updateProduct(req, res) {
 
   if (weight !== undefined) {
     product.weight = toNumber(weight);
+  }
+
+  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers });
+  if (b2bError) {
+    return res.status(400).json({ success: false, message: b2bError });
+  }
+
+  if (dimensions !== undefined) {
+    product.dimensions = dimensions
+      ? {
+          lengthCm: toNumber(dimensions.lengthCm),
+          breadthCm: toNumber(dimensions.breadthCm),
+          heightCm: toNumber(dimensions.heightCm),
+        }
+      : null;
+  }
+  if (hsnCode !== undefined) product.hsnCode = String(hsnCode || '').trim();
+  if (gstRate !== undefined) product.gstRate = toNumber(gstRate);
+  if (moq !== undefined) product.moq = Math.max(1, Math.round(toNumber(moq, product.moq)));
+  if (priceTiers !== undefined) {
+    product.priceTiers = (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) }));
+  }
+  if (variants !== undefined && variants !== null) {
+    product.variants = variants;
   }
 
   if (description !== undefined) {
@@ -485,6 +632,24 @@ function serializeProductCard(p) {
     salePrice,
     discountPercent,
     stock: p.stock,
+
+    // Enough for a card to say "4 options" and "from Rs X" without shipping
+    // the whole variant list to a grid of sixty tiles. The detail endpoint
+    // carries the rest.
+    variantCount: (p.variants || []).filter((v) => v.isActive !== false).length,
+    // The cheapest a buyer could pay at quantity 1, across all variants. Null
+    // when there are no variants, so the card falls back to `salePrice`/`price`.
+    fromPrice: (() => {
+      const active = (p.variants || []).filter((v) => v.isActive !== false);
+      if (active.length === 0) return null;
+      const prices = active.map((v) => v.salePrice ?? v.price ?? salePrice ?? p.price ?? 0);
+      return Math.min(...prices);
+    })(),
+    moq: p.moq ?? 1,
+    // True when a quantity break exists, so a card can carry a "bulk pricing"
+    // badge without the tiers themselves.
+    hasBulkPricing: (p.priceTiers || []).length > 0,
+
     // Just the card image. The gallery belongs to the detail endpoint.
     image: p.images?.[0] ? getImageUrl(p.images[0]) : null,
     // Responsive candidates for the same image, so a 400px tile downloads a
@@ -714,6 +879,36 @@ function serializePublicProduct(p) {
     discountPercent: p.discountPercent || 0,
     stock: p.stock,
     weight: p.weight ?? null,
+
+    // Tax, shown on the PDP because a B2B buyer prices on the ex-tax figure.
+    // GST is inclusive in the listed price here - see utils/pricing.
+    hsnCode: p.hsnCode || '',
+    gstRate: p.gstRate ?? null,
+
+    // B2B. moq of 1 is "no minimum", which is every product that has not set
+    // one, so a client can render this unconditionally.
+    moq: p.moq ?? 1,
+    priceTiers: (p.priceTiers || [])
+      .map((t) => ({ minQty: t.minQty, price: t.price }))
+      .sort((a, b) => a.minQty - b.minQty),
+
+    // Buyable options. An empty array means the product itself is the thing
+    // being bought; a non-empty one means the buyer MUST choose before the
+    // cart will accept it (cartController enforces that, this only reports it).
+    variants: (p.variants || [])
+      .filter((v) => v.isActive !== false)
+      .map((v) => ({
+        id: v._id.toString(),
+        name: v.name,
+        attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+        // Null means "same as the parent" - the client falls back to the
+        // product's own price rather than showing nothing.
+        price: v.price ?? null,
+        salePrice: v.salePrice ?? null,
+        stock: v.stock ?? 0,
+        image: v.image ? getImageUrl(v.image) : null,
+      })),
+
     images: (p.images || []).map((img) => getImageUrl(img)),
     // Parallel to `images`, index for index.
     imageSrcSets: (p.images || []).map((img) => getImageVariants(img)?.srcSet ?? null),

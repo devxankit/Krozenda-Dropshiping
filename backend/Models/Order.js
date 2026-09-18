@@ -16,7 +16,27 @@ const orderItemSchema = new mongoose.Schema(
     image: { type: String, default: null },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
+    // Which variant was bought. Null on a simple product, and on every line
+    // written before variants existed. Stock is returned to this variant on a
+    // cancellation or an RTO, so it has to survive on the order, not be
+    // re-derived from a product that may have changed since.
+    variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // Snapshotted label and SKU, for the same reason as `name` and `price`
+    // above: renaming or deleting a variant must never rewrite order history.
     variant: { type: String, default: '' },
+    variantSku: { type: String, default: '' },
+    // Which pricing rule produced `price` — PRODUCT, PRODUCT_SALE, VARIANT,
+    // VARIANT_SALE or PRICE_TIER. Kept so a support query about "why was I
+    // charged this" is answerable from the order alone.
+    priceSource: { type: String, default: 'PRODUCT' },
+
+    // --- tax snapshot, integer paise ---------------------------------------
+    // Frozen at order time. A GST rate changing next month must not rewrite
+    // the tax on an invoice already issued.
+    hsnCode: { type: String, default: '' },
+    gstRate: { type: Number, default: 0 },
+    taxableValue: { type: Number, default: 0 },
+    taxAmount: { type: Number, default: 0 },
     // Snapshotted from Product.vendor at order time (same reasoning as the
     // rest of this schema): a support ticket raised against this item must
     // keep pointing at the seller who owned it when it was bought, even if
@@ -28,6 +48,14 @@ const orderItemSchema = new mongoose.Schema(
     // independently in a multi-vendor cart, without touching other sellers'
     // items or the parent order's status.
     status: { type: String, enum: STATUSES, default: 'PENDING' },
+    // When the seller accepted this line (PENDING -> PROCESSING). Null while
+    // it is still waiting on them, which is what makes an acceptance SLA
+    // measurable at all.
+    acceptedAt: { type: Date, default: null },
+    // Why the seller rejected it. Required when a seller cancels a line -
+    // "cancelled" with no reason tells the buyer nothing and gives support
+    // nothing to work with.
+    rejectionReason: { type: String, default: '', trim: true },
     courierName: { type: String, default: '', trim: true },
     trackingNumber: { type: String, default: '', trim: true },
     statusHistory: {

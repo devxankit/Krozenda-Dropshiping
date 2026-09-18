@@ -10,10 +10,12 @@ import {
   vendorKycListSchema,
   vendorNotificationListSchema,
   vendorOrderListSchema,
+  vendorPayoutListSchema,
   vendorOrderSchema,
   vendorProductListSchema,
   vendorProductSchema,
   vendorReturnListSchema,
+  vendorReturnSchema,
   vendorReviewListSchema,
   vendorSettingsSchema,
   vendorSummarySchema,
@@ -92,11 +94,22 @@ export const replyToVendorReview = (id, message) =>
 export const fetchVendorReturns = () =>
   fetchResource({ path: '/vendor/returns', schema: vendorReturnListSchema, live: true })
 
+// Advisory only. The seller says what they think should happen and why; the
+// request's status does not move and no money changes hands. Admin decides —
+// see adminReturnController.decideReturnRequest.
+export async function recommendOnVendorReturn(id, { decision, note }) {
+  const { data } = await api.post(`/vendor/returns/${id}/recommend`, { decision, note })
+  return vendorReturnSchema.parse(data.data)
+}
+
 export const fetchVendorEarningsSummary = () =>
   fetchResource({ path: '/vendor/earnings/summary', schema: vendorEarningsSummarySchema, live: true })
 
 export const fetchVendorEarningsEntries = () =>
   fetchResource({ path: '/vendor/earnings/transactions', schema: vendorEarningsEntryListSchema, live: true })
+
+export const fetchVendorPayouts = () =>
+  fetchResource({ path: '/vendor/earnings/payouts', schema: vendorPayoutListSchema, live: true })
 
 export const fetchVendorAnalytics = () =>
   fetchResource({ path: '/vendor/analytics/summary', schema: vendorAnalyticsSchema, live: true })

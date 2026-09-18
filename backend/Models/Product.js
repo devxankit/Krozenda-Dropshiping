@@ -1,6 +1,51 @@
 const mongoose = require('mongoose');
 const { generateBarcode } = require('../utils/barcode');
 
+
+// A buyable variation of a product: one size, one colour, one pack size. Each
+// carries its OWN price and stock, which is the whole reason this is a
+// subdocument and not a string — the `variant` field on cart and order lines
+// was free text, so "Red / L" cost whatever the parent product cost and drew
+// down one shared stock number.
+//
+// Variants are optional. A product with none behaves exactly as before, which
+// is what keeps every existing product and every existing order valid.
+const productVariantSchema = new mongoose.Schema(
+  {
+    // Human label, e.g. "Red / L". Shown on the cart line and snapshotted onto
+    // the order, so it must stay readable on its own.
+    name: { type: String, required: true, trim: true },
+    // Structured form of the same thing: { colour: 'Red', size: 'L' }. Drives
+    // the storefront's option pickers; `name` stays the thing people read.
+    attributes: { type: Map, of: String, default: () => new Map() },
+    sku: { type: String, trim: true, default: '' },
+    barcode: { type: String, trim: true, default: null },
+    // Null means "same as the parent product" for both. A variant that only
+    // differs by stock should not have to restate the price.
+    price: { type: Number, default: null, min: 0 },
+    salePrice: { type: Number, default: null, min: 0 },
+    stock: { type: Number, default: 0, min: 0 },
+    image: { type: String, default: null },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: true }
+);
+
+// Quantity-break pricing: buy `minQty` or more and the unit price is `price`.
+// This is what makes the platform B2B-capable — a dealer buying 100 units pays
+// a different unit price from a retail buyer buying one, without needing a
+// separate catalog.
+//
+// Tiers are resolved by utils/pricing.resolveUnitPrice, which picks the
+// highest minQty the line qualifies for. Nothing else should interpret them.
+const priceTierSchema = new mongoose.Schema(
+  {
+    minQty: { type: Number, required: true, min: 2 },
+    price: { type: Number, required: true, min: 0 },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -51,6 +96,27 @@ const productSchema = new mongoose.Schema(
     },
     images: { type: [String], default: [] },
     description: { type: String, default: '', trim: true },
+
+    // --- tax ---------------------------------------------------------------
+    // HSN/SAC code and the GST rate that applies to it. Required on a tax
+    // invoice in India; null means "not classified yet", which is honest for
+    // the catalog as it stands rather than a fabricated default.
+    hsnCode: { type: String, trim: true, default: '', uppercase: true },
+    // Percent. The GST slabs are 0/5/12/18/28 — enforced rather than free,
+    // because an invented rate produces an invoice that is wrong by law.
+    gstRate: { type: Number, default: null, min: 0, max: 28 },
+
+    // --- B2B ---------------------------------------------------------------
+    // Minimum order quantity. 1 means no minimum, which is every existing
+    // product, so this is backwards-compatible by construction.
+    moq: { type: Number, default: 1, min: 1 },
+    // Quantity breaks, see priceTierSchema. Kept sorted ascending by minQty on
+    // save so the resolver can read them in order.
+    priceTiers: { type: [priceTierSchema], default: [] },
+
+    // --- variants ----------------------------------------------------------
+    // Empty on a simple product. See productVariantSchema.
+    variants: { type: [productVariantSchema], default: [] },
     isActive: { type: Boolean, default: true },
     isFlashsale: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },
@@ -75,6 +141,14 @@ productSchema.index({ barcode: 1 }, { unique: true, sparse: true });
 // controller that can create a product (admin's and the vendor panel's) means
 // a third creation path added later gets one for free instead of silently
 // shipping products with no barcode.
+// Tiers are stored sorted so resolveUnitPrice can scan them in one pass and
+// so an admin reading the document sees them in the order they apply.
+productSchema.pre('save', function sortPriceTiers() {
+  if (this.isModified('priceTiers') && Array.isArray(this.priceTiers)) {
+    this.priceTiers.sort((a, b) => a.minQty - b.minQty);
+  }
+});
+
 productSchema.pre('save', async function assignBarcode() {
   if (!this.isNew || this.barcode) return;
   this.barcode = await generateBarcode();

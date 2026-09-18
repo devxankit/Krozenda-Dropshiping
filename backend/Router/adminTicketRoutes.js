@@ -6,11 +6,12 @@ const {
   updateTicketStatus,
   assignTicket,
 } = require('../Controllers/ticketController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
 
 router.use(protectAdmin);
+router.use(requirePermission('admin.people.support'));
 
 router.get('/', listAdminTickets);
 router.get('/:id', getTicketDetails);

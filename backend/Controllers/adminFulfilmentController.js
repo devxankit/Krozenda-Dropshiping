@@ -276,7 +276,16 @@ async function restockRto(req, res) {
   if (!rto) return res.status(404).json({ success: false, message: 'RTO not found' });
   if (rto.stockRestored) return res.status(400).json({ success: false, message: 'Stock was already restored for this RTO' });
 
-  await Product.updateOne({ _id: rto.product }, { $inc: { stock: 1 } });
+  // Credited to the variant that shipped when there is one — see the note on
+  // Rto.variantId.
+  if (rto.variantId) {
+    await Product.updateOne(
+      { _id: rto.product, 'variants._id': rto.variantId },
+      { $inc: { 'variants.$.stock': 1 } }
+    );
+  } else {
+    await Product.updateOne({ _id: rto.product }, { $inc: { stock: 1 } });
+  }
   rto.stockRestored = true;
   await rto.save();
 

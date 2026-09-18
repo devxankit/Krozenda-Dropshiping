@@ -12,6 +12,9 @@ import {
   disconnectShiprocket,
   fetchPickupLocations,
   fetchShipment,
+  fetchShipmentDocument,
+  fetchShipmentNdr,
+  actOnShipmentNdr,
   fetchShipments,
   fetchShippingIntegration,
   fetchTracking,
@@ -216,6 +219,26 @@ export function useShipmentController(shipmentId, { scope = 'vendor' } = {}) {
   const cancelMutation = useMutation({ mutationFn: (body) => cancelShipment(shipmentId, body, scope), onSuccess: invalidate })
   const returnMutation = useMutation({ mutationFn: (body) => createReturn(shipmentId, body, scope), onSuccess: invalidate })
 
+  // Printing is a fetch, not a navigation: the carrier hands back a URL and the
+  // browser opens it. Deliberately NOT window.open() inside the mutation —
+  // popup blockers kill a window opened after an await, so the caller opens it
+  // from the click handler with the resolved URL.
+  const ndrMutation = useMutation({
+    mutationFn: () => fetchShipmentNdr(shipmentId, scope),
+  })
+
+  const ndrActionMutation = useMutation({
+    mutationFn: ({ action, comments }) => actOnShipmentNdr(shipmentId, { action, comments }, scope),
+    onSuccess: invalidate,
+  })
+
+  const documentMutation = useMutation({
+    mutationFn: ({ type, refresh = false }) => fetchShipmentDocument(shipmentId, type, { refresh, scope }),
+    // The URL is cached back onto the shipment server-side, so the next read
+    // of this shipment should see it.
+    onSuccess: invalidate,
+  })
+
   const shipment = shipmentQuery.data ?? null
 
   return {
@@ -265,6 +288,32 @@ export function useShipmentController(shipmentId, { scope = 'vendor' } = {}) {
     isRefreshing: refreshMutation.isPending,
     refreshError: refreshMutation.error,
     lastRefresh: refreshMutation.data ?? null,
+
+    // A label and a manifest need a courier allocated; an invoice does not.
+    // Mirrors CARRIER_DOCUMENTS on the backend, which is still the authority.
+    canPrintLabel: Boolean(shipment?.awbCode && !shipment?.reconciliationRequired),
+    canPrintInvoice: Boolean(shipment && !shipment.reconciliationRequired &&
+      !['PENDING', 'FAILED'].includes(shipment.status)),
+    documents: shipment?.documents ?? { label: null, manifest: null, invoice: null },
+    fetchDocument: documentMutation.mutateAsync,
+    isFetchingDocument: documentMutation.isPending,
+    documentError: documentMutation.error,
+
+    // A parcel can only have an open delivery attempt to answer once it is
+    // with the courier and before it is settled. Mirrors the server's guard.
+    canHandleNdr: Boolean(
+      shipment?.awbCode &&
+        !shipment?.reconciliationRequired &&
+        !['DELIVERED', 'CANCELLED', 'PENDING', 'FAILED'].includes(shipment.status)
+    ),
+    fetchNdr: ndrMutation.mutateAsync,
+    ndr: ndrMutation.data?.ndr ?? null,
+    isFetchingNdr: ndrMutation.isPending,
+    ndrError: ndrMutation.error,
+    actOnNdr: ndrActionMutation.mutateAsync,
+    isActingOnNdr: ndrActionMutation.isPending,
+    ndrActionError: ndrActionMutation.error,
+    ndrActionDone: ndrActionMutation.isSuccess,
   }
 }
 

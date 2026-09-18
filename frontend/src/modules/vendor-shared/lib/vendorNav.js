@@ -1,4 +1,8 @@
-export const getVendorNavTree = (isPartner = false) => {
+// `isApproved` only adds or removes the Verification status entry. Everything
+// else stays in the tree whatever the vendor's state — VendorSidebar renders
+// the unreachable ones as locked rather than hiding them, so the shape of the
+// panel does not change under a seller as they get approved.
+export const getVendorNavTree = (isPartner = false, isApproved = true) => {
   const prefix = isPartner ? '/partner' : '/seller'
   return [
     {
@@ -48,6 +52,8 @@ export const getVendorNavTree = (isPartner = false) => {
       id: 'account',
       label: 'Account',
       items: [
+        // Drops out of the nav once there is nothing left to chase.
+        ...(isApproved ? [] : [{ label: 'Verification Status', to: `${prefix}/status`, icon: 'shield' }]),
         { label: 'Store Profile', to: `${prefix}/profile`, icon: 'store' },
         { label: 'KYC Documents', to: `${prefix}/kyc-documents`, icon: 'kyc' },
         { label: 'Settings', to: `${prefix}/settings`, icon: 'settings' },

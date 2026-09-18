@@ -1,6 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icon, Tooltip } from '../../../../components/ui'
 import { getVendorNavTree, isVendorItemActive } from '../../lib/vendorNav'
+import { useVendorOnboardingState } from '../../controllers/useVendorController'
+import { VENDOR_ONBOARDING_ALLOWED } from '../../constants'
 
 const BADGE_TONE = Object.freeze({
   warning: 'bg-warning-50 text-warning-700',
@@ -8,10 +10,36 @@ const BADGE_TONE = Object.freeze({
   brand: 'bg-brand-100 text-brand-700',
 })
 
-function NavItem({ item, collapsed }) {
+function NavItem({ item, collapsed, locked = false }) {
   const { pathname } = useLocation()
   const active = isVendorItemActive(item, pathname)
   const count = item.badge
+
+  // A locked item stays visible rather than disappearing: a seller waiting on
+  // approval should be able to see what the panel will give them, and an item
+  // that vanishes and reappears makes the nav feel broken. It is rendered as a
+  // disabled control, not a link, so keyboard and screen-reader users get the
+  // same answer as the pointer does.
+  if (locked) {
+    const body = (
+      <span
+        aria-disabled="true"
+        className={`flex h-8 cursor-not-allowed items-center gap-2.5 rounded-md px-2 text-sm font-medium text-ink-faint ${
+          collapsed ? 'w-9 justify-center px-0' : ''
+        }`}
+      >
+        <Icon name={item.icon} className="h-4 w-4 shrink-0 opacity-60" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+        {!collapsed && <Icon name="lock" className="ml-auto h-3 w-3 shrink-0" />}
+      </span>
+    )
+
+    return (
+      <Tooltip label={`${item.label} — available once your account is approved`} placement="right">
+        <span className="relative">{body}</span>
+      </Tooltip>
+    )
+  }
 
   const link = (
     <NavLink
@@ -100,7 +128,13 @@ function SignOutButton({ collapsed, onSignOut }) {
 }
 
 export function VendorSidebar({ collapsed = false, onToggle, isPartner = false, onSignOut }) {
-  const groups = getVendorNavTree(isPartner)
+  const { isApproved } = useVendorOnboardingState()
+  const groups = getVendorNavTree(isPartner, isApproved)
+
+  // Mirrors VendorOnboardingGate's allow-list so the sidebar can never offer a
+  // destination the router would bounce. Both read the same constant.
+  const isLocked = (item) =>
+    !isApproved && !VENDOR_ONBOARDING_ALLOWED.some((suffix) => item.to.endsWith(`/${suffix}`))
 
   return (
     <aside
@@ -144,7 +178,7 @@ export function VendorSidebar({ collapsed = false, onToggle, isPartner = false, 
                 </p>
               ))}
             {group.items.map((item) => (
-              <NavItem key={item.to} item={item} collapsed={collapsed} />
+              <NavItem key={item.to} item={item} collapsed={collapsed} locked={isLocked(item)} />
             ))}
           </div>
         ))}

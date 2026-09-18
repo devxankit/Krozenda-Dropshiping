@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const app = require('./app');
 const connectDB = require('./Config/db');
 const registerSocketHandlers = require('./Router/socketHandler');
+const { attachSocketServer } = require('./utils/realtime');
 const scheduleNightlyBackup = require('./Jobs/backupScheduler');
 const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
@@ -22,6 +23,10 @@ const io = new Server(server, {
 });
 
 registerSocketHandlers(io);
+// Hands the socket server to utils/realtime, which is what controllers
+// emit through. Anything importing `app` without this file (the test
+// suite, scripts) simply has no socket server and every emit no-ops.
+attachSocketServer(io);
 
 // Seeding is intentionally not part of boot. Run `npm run seed` when a
 // database needs the admin/vendor/catalog fixtures.

@@ -48,20 +48,57 @@ export function ProductDetailScreen() {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [activeTab, setActiveTab] = useState('description')
   const [addState, setAddState] = useState('idle') // idle | adding | added
+  // Which option the buyer has picked. Null until they choose; a product with
+  // variants cannot be added to the cart until this is set, which the server
+  // enforces too (cartController.validateLine).
+  const [selectedVariantId, setSelectedVariantId] = useState(null)
 
   const isWishlisted = useWishlistStore((state) => state.items.some((item) => item.id === productId))
   const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
   const addToCart = useCartStore((state) => state.addItem)
   // How many of THIS product are already in the cart. Selected narrowly so the
   // screen re-renders when this line changes, not on every cart change.
-  const cartQuantity = useCartStore((state) => state.items.find((i) => i.id === productId)?.quantity ?? 0)
+  // How many of the SELECTED line are already in the cart. Matching on product
+  // alone would show the Red/L count while the buyer is looking at Blue/M.
+  const cartQuantity = useCartStore(
+    (state) =>
+      state.items.find((i) => i.id === productId && (i.variantId ?? null) === selectedVariantId)?.quantity ?? 0,
+  )
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const images = product?.images?.length ? product.images : []
-  const displayPrice = product ? (product.salePrice ?? product.price) : 0
-  const hasDiscount = Boolean(product && product.salePrice != null && product.salePrice < product.price)
-  const inStock = (product?.stock ?? 0) > 0
-  const lowStock = inStock && product.stock <= LOW_STOCK_THRESHOLD
+  const variants = product?.variants ?? []
+  const hasVariants = variants.length > 0
+  const selectedVariant = hasVariants ? variants.find((v) => v.id === selectedVariantId) ?? null : null
+
+  // Price and stock both come from the chosen variant once there is one. A
+  // product with variants and none chosen shows the cheapest option as a
+  // "from" price rather than the parent's, which is not a price anyone pays.
+  const displayPrice = (() => {
+    if (!product) return 0
+    if (selectedVariant) return selectedVariant.salePrice ?? selectedVariant.price ?? product.salePrice ?? product.price
+    if (hasVariants) {
+      return Math.min(...variants.map((v) => v.salePrice ?? v.price ?? product.salePrice ?? product.price))
+    }
+    return product.salePrice ?? product.price
+  })()
+
+  const listPrice = selectedVariant?.price ?? product?.price ?? 0
+  const hasDiscount = Boolean(product && listPrice > displayPrice)
+
+  const availableStock = selectedVariant
+    ? selectedVariant.stock
+    : hasVariants
+      ? variants.reduce((sum, v) => sum + v.stock, 0)
+      : (product?.stock ?? 0)
+
+  // With options on offer and none chosen, the button is enabled — pressing it
+  // scrolls to the picker rather than failing silently. `canAdd` is what
+  // actually gates the request.
+  const inStock = availableStock > 0
+  const lowStock = inStock && availableStock <= LOW_STOCK_THRESHOLD
+  const needsVariantChoice = hasVariants && !selectedVariant
+  const moq = product?.moq ?? 1
 
   const structuredData = useMemo(
     () =>
@@ -126,27 +163,42 @@ export function ProductDetailScreen() {
 
   const cartLineItem = () => ({
     id: product.id,
+    variantId: selectedVariant?.id ?? null,
     name: product.name,
-    variant: '',
-    image: images[0] ?? null,
+    variant: selectedVariant?.name ?? '',
+    image: selectedVariant?.image ?? images[0] ?? null,
     imageSrcSet: product.imageSrcSets?.[0] ?? null,
     price: displayPrice,
-    originalPrice: product.price,
-    stock: product.stock,
+    originalPrice: listPrice,
+    stock: availableStock,
+    moq,
   })
 
+  // A product with a minimum order quantity is added AT that quantity — adding
+  // one unit of something that cannot be bought in ones just produces a cart
+  // that refuses to check out.
+  const addQuantity = Math.max(1, moq)
+
   const handleAddToCart = async () => {
+    if (needsVariantChoice) {
+      document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     if (!inStock || addState === 'adding') return
     setAddState('adding')
-    const result = await addToCart(cartLineItem())
+    const result = await addToCart(cartLineItem(), addQuantity)
     setAddState(result?.ok ? 'added' : 'idle')
     if (result?.ok) setTimeout(() => setAddState('idle'), 1800)
   }
 
   const handleBuyNow = async () => {
+    if (needsVariantChoice) {
+      document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     if (!inStock || addState === 'adding') return
     setAddState('adding')
-    const result = await addToCart(cartLineItem())
+    const result = await addToCart(cartLineItem(), addQuantity)
     setAddState('idle')
     if (!result?.ok) return
     // A signed-out buyer sent straight to checkout hits the auth guard and
@@ -463,7 +515,7 @@ export function ProductDetailScreen() {
                   <span className="text-xs font-bold text-red-600">Out of stock</span>
                 ) : lowStock ? (
                   <span className="text-xs font-bold text-amber-600">
-                    Only {product.stock} left in stock
+                    Only {availableStock} left in stock
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
@@ -472,7 +524,22 @@ export function ProductDetailScreen() {
                   </span>
                 )}
               </div>
+
+              {moq > 1 && (
+                <p className="text-[11px] font-semibold text-slate-700">
+                  Minimum order: {moq} units
+                </p>
+              )}
             </div>
+
+            <VariantPicker
+              variants={variants}
+              selectedId={selectedVariantId}
+              onSelect={setSelectedVariantId}
+              fallbackPrice={product.salePrice ?? product.price}
+            />
+
+            <BulkPricingTable tiers={product.priceTiers} unitPrice={displayPrice} />
 
             {/* Delivery check */}
             <DeliveryCheckCard productId={product.id} />
@@ -481,7 +548,7 @@ export function ProductDetailScreen() {
               {/* Once it is in the cart, "Add to Cart" has nothing left to say —
                   the useful control is how many. */}
               {cartQuantity > 0 ? (
-                <CartQuantityStepper productId={product.id} stock={product.stock} />
+                <CartQuantityStepper productId={product.id} stock={availableStock} />
               ) : (
                 <button
                   type="button"
@@ -781,6 +848,91 @@ function ProductDetailSkeleton() {
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+// The option picker. Rendered only when the product actually has options, so a
+// simple product's page is unchanged.
+//
+// An out-of-stock option stays visible but unselectable: hiding it makes the
+// product look like it was never offered in that size, which is the question
+// the buyer came to answer.
+function VariantPicker({ variants, selectedId, onSelect, fallbackPrice }) {
+  if (!variants || variants.length === 0) return null
+
+  return (
+    <div id="pdp-variant-picker" className="border-t border-slate-100 pt-4">
+      <p className="text-xs font-bold text-slate-900">
+        Choose an option
+        {!selectedId && <span className="ml-1.5 font-semibold text-red-600">Required</span>}
+      </p>
+
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        {variants.map((variant) => {
+          const isSelected = variant.id === selectedId
+          const isOut = variant.stock <= 0
+          const price = variant.salePrice ?? variant.price ?? fallbackPrice
+
+          return (
+            <button
+              key={variant.id}
+              type="button"
+              disabled={isOut}
+              aria-pressed={isSelected}
+              onClick={() => onSelect(variant.id)}
+              className={`rounded-xl border-2 px-3 py-2 text-left transition-all ${
+                isOut
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+                  : isSelected
+                    ? 'border-blue-600 bg-blue-50 text-blue-900'
+                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-400'
+              }`}
+            >
+              <span className="block text-xs font-bold">{variant.name}</span>
+              <span className="mt-0.5 block text-[11px] font-semibold">
+                {isOut ? 'Out of stock' : `₹${price.toLocaleString('en-IN')}`}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Quantity breaks. Shown as a table because a buyer comparing 10 vs 50 vs 100
+// is doing arithmetic, and a paragraph makes them do it in their head.
+function BulkPricingTable({ tiers, unitPrice }) {
+  if (!tiers || tiers.length === 0) return null
+
+  return (
+    <div className="border-t border-slate-100 pt-4">
+      <p className="text-xs font-bold text-slate-900">Bulk pricing</p>
+      <p className="mt-0.5 text-[11px] text-slate-500">The unit price drops automatically at checkout.</p>
+
+      <table className="mt-2.5 w-full text-left">
+        <thead>
+          <tr className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <th scope="col" className="pb-1">Quantity</th>
+            <th scope="col" className="pb-1 text-right">Price per unit</th>
+          </tr>
+        </thead>
+        <tbody className="text-xs">
+          <tr className="border-t border-slate-100">
+            <td className="py-1.5 font-medium text-slate-700">1 or more</td>
+            <td className="py-1.5 text-right font-semibold text-slate-900">₹{unitPrice.toLocaleString('en-IN')}</td>
+          </tr>
+          {[...tiers]
+            .sort((a, b) => a.minQty - b.minQty)
+            .map((tier) => (
+              <tr key={tier.minQty} className="border-t border-slate-100">
+                <td className="py-1.5 font-medium text-slate-700">{tier.minQty} or more</td>
+                <td className="py-1.5 text-right font-bold text-emerald-700">₹{tier.price.toLocaleString('en-IN')}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
     </div>
   )
 }
