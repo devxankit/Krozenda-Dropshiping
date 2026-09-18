@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { HiOutlineBuildingStorefront, HiOutlineShieldCheck, HiOutlineTruck } from 'react-icons/hi2'
+import { Link, useNavigate } from 'react-router-dom'
+import { HiOutlineShieldCheck, HiOutlineTruck } from 'react-icons/hi2'
 import { Button, Input, PasswordInput } from '../../../components/ui'
+import { VendorAuthShell as VendorLoginShell } from '../components/shell/VendorAuthShell'
 import { useAuthStore } from '../../../lib/authStore'
 import { toast } from '../../admin/stores/toastStore'
 import {
@@ -153,6 +154,13 @@ function SellerLoginPage() {
           {isSubmitting ? 'Signing in…' : `Sign In as ${vendorType}`}
         </Button>
       </form>
+
+      <p className="mt-5 text-center text-2xs text-slate-400">
+        New to Krozenda?{' '}
+        <Link to="/seller/register" className="font-semibold text-brand-400 transition-colors hover:text-brand-300">
+          Create a seller account
+        </Link>
+      </p>
 
       <div className="mt-6 flex items-center justify-center gap-4 border-t border-slate-800/80 pt-4 text-2xs font-medium text-slate-500">
         <span className="inline-flex items-center gap-1">
@@ -373,22 +381,3 @@ function PartnerDemoLoginPage() {
   )
 }
 
-function VendorLoginShell({ title, subtitle, children }) {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-4 sm:p-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-brand-900/30 via-slate-950 to-slate-950 pointer-events-none" />
-
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white text-xl shadow-lg shadow-brand-600/30">
-            <HiOutlineBuildingStorefront className="h-6 w-6" />
-          </div>
-          <h1 className="mt-4 text-xl font-bold text-white tracking-tight">{title}</h1>
-          <p className="mt-1.5 text-xs text-slate-400 max-w-xs">{subtitle}</p>
-        </div>
-
-        {children}
-      </div>
-    </div>
-  )
-}

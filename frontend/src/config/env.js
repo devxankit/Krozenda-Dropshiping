@@ -24,8 +24,4 @@ export const env = Object.freeze({
   }),
   isDev: (RAW.VITE_APP_ENV || 'development') === 'development',
   isProd: RAW.VITE_APP_ENV === 'production',
-  // Dev convenience only — prefills the admin login form with the seeded
-  // account so nobody has to retype it while testing locally.
-  defaultAdminEmail: RAW.VITE_DEFAULT_ADMIN_EMAIL || '',
-  defaultAdminPassword: RAW.VITE_DEFAULT_ADMIN_PASSWORD || '',
 })

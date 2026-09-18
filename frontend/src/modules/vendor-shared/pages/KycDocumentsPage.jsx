@@ -3,27 +3,56 @@ import { Badge, Button, Skeleton } from '../../../components/ui'
 import { PageHeader } from '../../admin/components/shell/PageHeader'
 import { PageBody } from '../../admin/components/shell/PageBody'
 import { DataTable } from '../../admin/components/data/DataTable'
-import { useVendorKycDocsController } from '../controllers/useVendorController'
+import { toast } from '../../admin/stores/toastStore'
+import {
+  useVendorKycDocsController,
+  useVendorOnboardingState,
+  useVendorSubmitForVerificationController,
+} from '../controllers/useVendorController'
 import { VENDOR_KYC_DOC_COLUMNS } from '../tableColumns/vendorColumns'
+import { VENDOR_STATUS_LABELS, VENDOR_VERIFICATION_TONE } from '../constants'
 import { UploadKycModal } from '../components/modals/UploadKycModal'
 
 export function KycDocumentsPage() {
   const { data, isLoading } = useVendorKycDocsController()
+  const { status, isLoading: isLoadingStatus } = useVendorOnboardingState()
+  const { submit, isSubmitting } = useVendorSubmitForVerificationController()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
 
   const kycList = data?.items || []
   const approvedCount = kycList.filter((d) => d.status === 'APPROVED').length
   const isFullyApproved = kycList.length > 0 && approvedCount === kycList.length
 
+  // submitForVerification only accepts PENDING and REJECTED — see
+  // vendorAuthController. Offering the button in UNDER_REVIEW or APPROVED
+  // would just produce a 400 the seller cannot act on.
+  const canSubmit = ['PENDING', 'REJECTED'].includes(status) && kycList.length > 0
+
+  async function handleSubmitApplication() {
+    try {
+      await submit()
+      toast.success('Application submitted', 'An admin will review your documents shortly.')
+    } catch (err) {
+      toast.error('Could not submit', err?.response?.data?.message || 'Something went wrong')
+    }
+  }
+
   return (
     <PageBody>
       <PageHeader
         title="KYC Verification & Compliance"
-        subtitle="Submit GSTIN, PAN, and Bank proof for Razorpay Route automated payout enablement."
+        description="Submit GSTIN, PAN, and Bank proof for Razorpay Route automated payout enablement."
         actions={
-          <Button variant="primary" size="sm" onClick={() => setIsUploadOpen(true)}>
-            + Upload New Document
-          </Button>
+          <div className="flex items-center gap-2">
+            {canSubmit && (
+              <Button variant="primary" size="sm" onClick={handleSubmitApplication} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting…' : status === 'REJECTED' ? 'Resubmit application' : 'Submit for review'}
+              </Button>
+            )}
+            <Button variant={canSubmit ? 'secondary' : 'primary'} size="sm" onClick={() => setIsUploadOpen(true)}>
+              + Upload New Document
+            </Button>
+          </div>
         }
       />
 
@@ -55,17 +84,31 @@ export function KycDocumentsPage() {
           </span>
         </div>
 
+        {/* The vendor's real verificationStatus, not the document tally above.
+            These two genuinely differ: every document can be APPROVED while
+            the account itself is still UNDER_REVIEW, because an admin approves
+            the account separately (adminVendorController.updateVendorStatus). */}
         <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
           <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
             Account Status
           </span>
           <div className="mt-2 flex items-center gap-2">
-            <Badge tone="brand" size="md">
-              Submitted for Review
-            </Badge>
+            {isLoadingStatus || !status ? (
+              <Skeleton className="h-6 w-32 rounded-full" />
+            ) : (
+              <Badge tone={VENDOR_VERIFICATION_TONE[status] || 'neutral'} size="md">
+                {VENDOR_STATUS_LABELS[status.toLowerCase()] || status}
+              </Badge>
+            )}
           </div>
           <span className="mt-1 block text-2xs text-ink-subtle">
-            Admin reviews each document individually
+            {status === 'PENDING'
+              ? 'Upload your documents, then submit for review'
+              : status === 'UNDER_REVIEW'
+                ? 'An admin is reviewing your application'
+                : status === 'REJECTED'
+                  ? 'Fix the flagged documents and submit again'
+                  : 'Admin reviews each document individually'}
           </span>
         </div>
       </div>

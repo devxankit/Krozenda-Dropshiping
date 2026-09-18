@@ -16,6 +16,14 @@ const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
 const PaymentSettings = require('../Models/PaymentSettings');
 const checkoutQuoteService = require('../services/shipping/checkoutQuoteService');
 const { getImageUrl } = require('../utils/imageHelper');
+const {
+  checkMoq,
+  findVariant,
+  requiresVariant,
+  resolveLineTax,
+  resolveStock,
+  resolveUnitPrice,
+} = require('../utils/pricing');
 const accounting = require('../services/accountingPosting');
 const { readPagination, buildPagination } = require('../utils/pagination');
 
@@ -143,38 +151,119 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   // Same reasoning for stock: reserveStock would reject the whole order at the
   // very end anyway, so catching it here gives the buyer a specific message
   // ("Only 2 left") before a payment is taken rather than after.
-  const short = cartEntries.filter((entry) => entry.product.stock < entry.quantity);
-  if (short.length > 0) {
-    const first = short[0];
+  // A variant that was removed after it went into the cart. Named explicitly
+  // rather than folded into "out of stock", because the buyer has to pick a
+  // different option, not wait for a restock.
+  const staleVariant = cartEntries.filter(
+    (entry) => entry.variantId && !findVariant(entry.product, entry.variantId)
+  );
+  if (staleVariant.length > 0) {
+    const names = staleVariant.map((entry) => `${entry.product.name} (${entry.variant || 'selected option'})`);
     return {
       error: {
         status: 409,
-        code: 'INSUFFICIENT_STOCK',
-        message:
-          first.product.stock > 0
-            ? `Only ${first.product.stock} of "${first.product.name}" ${first.product.stock === 1 ? 'is' : 'are'} left. Please reduce the quantity to continue.`
-            : `"${first.product.name}" just went out of stock. Please remove it from your cart to continue.`,
+        code: 'CART_ITEM_UNAVAILABLE',
+        message: `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} no longer available in that option. Please choose another to continue.`,
+        details: { productIds: staleVariant.map((entry) => entry.product._id.toString()) },
+      },
+    };
+  }
+
+  // A product that has since GAINED variants, so the line in the cart no
+  // longer identifies a buyable thing.
+  const needsChoice = cartEntries.filter((entry) => !entry.variantId && requiresVariant(entry.product));
+  if (needsChoice.length > 0) {
+    return {
+      error: {
+        status: 409,
+        code: 'CART_ITEM_NEEDS_OPTION',
+        message: `${needsChoice.map((e) => e.product.name).join(', ')} now ${needsChoice.length === 1 ? 'needs' : 'need'} an option chosen. Please update your cart to continue.`,
+        details: { productIds: needsChoice.map((entry) => entry.product._id.toString()) },
+      },
+    };
+  }
+
+  // Minimum order quantity, enforced at the point money is about to move. The
+  // cart reports it (see mergeCart) but never blocks on it; checkout does.
+  const belowMoq = cartEntries
+    .map((entry) => ({ entry, message: checkMoq(entry.product, entry.quantity) }))
+    .filter((r) => r.message);
+  if (belowMoq.length > 0) {
+    return {
+      error: {
+        status: 409,
+        code: 'BELOW_MOQ',
+        message: `"${belowMoq[0].entry.product.name}" has a minimum order quantity of ${belowMoq[0].entry.product.moq}. Please increase the quantity to continue.`,
         details: {
-          items: short.map((entry) => ({
+          items: belowMoq.map(({ entry }) => ({
             productId: entry.product._id.toString(),
             name: entry.product.name,
             requested: entry.quantity,
-            available: entry.product.stock,
+            moq: entry.product.moq,
           })),
         },
       },
     };
   }
 
-  const items = cartEntries.map((entry) => ({
-    product: entry.product._id,
-    name: entry.product.name,
-    image: entry.product.images?.[0] ? getImageUrl(entry.product.images[0]) : null,
-    price: entry.product.salePrice ?? entry.product.price ?? 0,
-    quantity: entry.quantity,
-    variant: entry.variant || '',
-    vendor: entry.product.vendor || null,
-  }));
+  // Stock, resolved per variant - see utils/pricing.resolveStock.
+  const short = cartEntries.filter((entry) => resolveStock(entry.product, entry.variantId) < entry.quantity);
+  if (short.length > 0) {
+    const first = short[0];
+    const available = resolveStock(first.product, first.variantId);
+    const label = first.variant ? `${first.product.name} (${first.variant})` : first.product.name;
+    return {
+      error: {
+        status: 409,
+        code: 'INSUFFICIENT_STOCK',
+        message:
+          available > 0
+            ? `Only ${available} of "${label}" ${available === 1 ? 'is' : 'are'} left. Please reduce the quantity to continue.`
+            : `"${label}" just went out of stock. Please remove it from your cart to continue.`,
+        details: {
+          items: short.map((entry) => ({
+            productId: entry.product._id.toString(),
+            variantId: entry.variantId ? entry.variantId.toString() : null,
+            name: entry.product.name,
+            requested: entry.quantity,
+            available: resolveStock(entry.product, entry.variantId),
+          })),
+        },
+      },
+    };
+  }
+
+  // Priced through the SAME resolver the cart used, at the same quantity, so
+  // the number the buyer agreed to and the number they are charged cannot
+  // diverge. Tax is snapshotted alongside it: a GST rate changing next month
+  // must not rewrite the tax on an invoice already issued.
+  const items = cartEntries.map((entry) => {
+    const variantId = entry.variantId ? entry.variantId.toString() : null;
+    const variant = findVariant(entry.product, variantId);
+    const { unitPrice, source } = resolveUnitPrice(entry.product, { variantId, quantity: entry.quantity });
+    const tax = resolveLineTax(entry.product, unitPrice * entry.quantity);
+
+    return {
+      product: entry.product._id,
+      name: entry.product.name,
+      image: variant?.image
+        ? getImageUrl(variant.image)
+        : entry.product.images?.[0]
+          ? getImageUrl(entry.product.images[0])
+          : null,
+      price: unitPrice,
+      quantity: entry.quantity,
+      variantId: variantId || null,
+      variant: variant?.name || entry.variant || '',
+      variantSku: variant?.sku || '',
+      priceSource: source,
+      hsnCode: entry.product.hsnCode || '',
+      gstRate: tax.rate,
+      taxableValue: tax.taxableValuePaise,
+      taxAmount: tax.taxPaise,
+      vendor: entry.product.vendor || null,
+    };
+  });
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -251,26 +340,54 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
 // call is put back before returning. This is the only place order stock is
 // ever touched, so two concurrent checkouts for the last unit can never
 // both succeed.
+// Atomic, and variant-aware. A line with a variant decrements THAT variant's
+// stock through a positional match, so two buyers racing for the last Red/L
+// cannot both win just because the parent product still had stock in other
+// colours.
+//
+// The filter is part of the update, not a check before it - that is what makes
+// it atomic. A findOneAndUpdate matching nothing means someone else got there
+// first.
 async function reserveStock(items) {
   const reserved = [];
   for (const item of items) {
-    const updated = await Product.findOneAndUpdate(
-      { _id: item.product, stock: { $gte: item.quantity } },
-      { $inc: { stock: -item.quantity } }
-    );
+    const updated = item.variantId
+      ? await Product.findOneAndUpdate(
+          {
+            _id: item.product,
+            variants: { $elemMatch: { _id: item.variantId, stock: { $gte: item.quantity } } },
+          },
+          { $inc: { 'variants.$.stock': -item.quantity } }
+        )
+      : await Product.findOneAndUpdate(
+          { _id: item.product, stock: { $gte: item.quantity } },
+          { $inc: { stock: -item.quantity } }
+        );
+
     if (!updated) {
       await releaseStock(reserved);
-      return { ok: false, productName: item.name };
+      return { ok: false, productName: item.variant ? `${item.name} (${item.variant})` : item.name };
     }
     reserved.push(item);
   }
   return { ok: true };
 }
 
+// The mirror image of reserveStock, and it has to stay that way: a variant
+// reservation must be given back to THAT variant. Crediting the parent instead
+// would quietly inflate the parent's stock every time a payment failed, while
+// the variant that was actually held stayed short.
 async function releaseStock(items) {
   if (!items || items.length === 0) return;
   await Promise.all(
-    items.map((item) => Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } }))
+    items.map((item) =>
+      item.variantId
+        ? Product.updateOne(
+            { _id: item.product, 'variants._id': item.variantId },
+            { $inc: { 'variants.$.stock': item.quantity } }
+          )
+        : Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } })
+    )
   );
 }
 

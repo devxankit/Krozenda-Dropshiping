@@ -26,3 +26,23 @@ export async function updateVendorProfile(body) {
   const { data } = await api.put('/vendor/auth/me', body)
   return data.data.vendor
 }
+
+// POST /vendor/auth/register — the seller's own sign-up. The backend shares
+// one createVendorAccount() with the admin's "onboard a partner" flow, so the
+// payload here is exactly what that validator expects: a B2B account must
+// carry business.businessName/businessType and a contactPerson, a B2C one
+// need not. A new account comes back PENDING + isActive:false with a usable
+// token, which is what lets the seller straight into the status screen to
+// upload documents rather than stranding them at a "wait for approval" wall.
+export async function registerVendor(payload) {
+  const { data } = await api.post('/vendor/auth/register', payload)
+  return data.data
+}
+
+// POST /vendor/auth/submit-for-verification — moves PENDING/REJECTED to
+// UNDER_REVIEW. Deliberately separate from document upload: a seller uploads
+// documents one at a time and decides for themselves when the set is complete.
+export async function submitVendorForVerification() {
+  const { data } = await api.post('/vendor/auth/submit-for-verification')
+  return data.data.vendor
+}

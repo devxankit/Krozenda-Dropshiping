@@ -73,9 +73,16 @@ const settlementItemSchema = new mongoose.Schema(
 
 const settlementSchema = new mongoose.Schema(
   {
-    // Human-facing identifier (STL-00000001). Null on batches created before
-    // the Accounting module; the sparse unique index below allows that.
-    settlementId: { type: String, default: null },
+    // Human-facing identifier (STL-00000001). ABSENT on batches created before
+    // the Accounting module, which the sparse unique index below allows.
+    //
+    // No `default: null` here on purpose — the same trap Product.sku fell into.
+    // A sparse index only skips documents where the field is genuinely absent,
+    // not ones explicitly set to null, so a default of null meant the SECOND
+    // settlement created without an id threw E11000 on a shared
+    // `settlementId: null`. Every reader already does `settlementId || null`,
+    // so absent and null are indistinguishable downstream.
+    settlementId: { type: String },
 
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
     items: { type: [settlementItemSchema], required: true, validate: (v) => v.length > 0 },

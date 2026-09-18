@@ -5,6 +5,8 @@ import {
   pickupLocationListSchema,
   pickupLocationSchema,
   serviceabilitySchema,
+  shipmentDocumentSchema,
+  shipmentNdrSchema,
   shipmentListSchema,
   shipmentSchema,
   shippingIntegrationViewSchema,
@@ -179,3 +181,26 @@ export const fetchTracking = (id, scope = 'vendor') =>
 // ordinary page load can never spend a carrier call.
 export const refreshTracking = (id, scope = 'vendor') =>
   mutateResource({ path: `${base(scope)}/${id}/tracking/refresh`, body: {}, schema: trackingRefreshSchema, live: true })
+
+// Carrier documents. A GET because the carrier already holds the document and
+// the backend caches its URL on the shipment — pressing "print label" twice
+// costs one carrier call, not two. `refresh` forces a re-render for the case
+// where a stored link has expired.
+export const fetchShipmentDocument = (id, type, { refresh = false, scope = 'vendor' } = {}) =>
+  fetchResource({
+    path: `${base(scope)}/${id}/documents/${type}`,
+    params: refresh ? { refresh: 1 } : undefined,
+    schema: shipmentDocumentSchema,
+    live: true,
+  })
+
+// Non-delivery reports. The read is a live carrier call, so it is requested on
+// demand rather than on a page load.
+export const fetchShipmentNdr = (id, scope = 'vendor') =>
+  fetchResource({ path: `${base(scope)}/${id}/ndr`, schema: shipmentNdrSchema, live: true })
+
+// `action` is the carrier's own vocabulary ('re-attempt' | 'return'), passed
+// through unmapped for the reason given on the server: guessing at a carrier's
+// action names is how a parcel gets returned when a re-attempt was asked for.
+export const actOnShipmentNdr = (id, { action, comments }, scope = 'vendor') =>
+  mutateResource({ path: `${base(scope)}/${id}/ndr/action`, body: { action, comments }, live: true })

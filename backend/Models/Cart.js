@@ -9,6 +9,16 @@ const cartSchema = new mongoose.Schema(
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         quantity: { type: Number, default: 1, min: 1 },
+        // Which variant of the product this line is. Null on a simple product,
+        // which is every line written before variants existed — so old carts
+        // stay valid and keep matching on product alone.
+        //
+        // A cart line is identified by (product, variantId), NOT by product:
+        // the same shirt in Red/L and Blue/M are two lines a seller picks,
+        // packs and prices separately.
+        variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        // Display label, snapshotted so a renamed or removed variant does not
+        // rewrite what the buyer thought they were adding.
         variant: { type: String, default: '', trim: true },
         // What the item cost when it went into the cart. Kept so the cart can
         // say "price changed since you added this" instead of silently

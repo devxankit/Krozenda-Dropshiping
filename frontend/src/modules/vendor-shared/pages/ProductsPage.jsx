@@ -4,6 +4,7 @@ import { ExportMenu, ListScreen } from '../../admin/components/data'
 import { useVendorProductsController } from '../controllers/useVendorController'
 import { VENDOR_PRODUCT_COLUMNS, VENDOR_PRODUCT_TABS } from '../tableColumns/vendorColumns'
 import { AddVendorProductModal } from '../components/modals/AddVendorProductModal'
+import { ImportProductsModal } from '../components/modals/ImportProductsModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
 import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
 
@@ -12,6 +13,7 @@ export function VendorProductsPage() {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   return (
     <>
@@ -23,6 +25,9 @@ export function VendorProductsPage() {
             <ExportMenu onExport={() => {}} />
             <Button size="control" icon="search" variant="secondary" onClick={() => setScanOpen(true)}>
               Scan barcode
+            </Button>
+            <Button size="control" icon="upload" variant="secondary" onClick={() => setImportOpen(true)}>
+              Import CSV
             </Button>
             <Button size="control" icon="add" onClick={() => setAddModalOpen(true)}>
               Add product
@@ -43,6 +48,14 @@ export function VendorProductsPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onAddProduct={list.addProduct}
+      />
+
+      <ImportProductsModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        // The list is server-paged, so a refetch is the only way the new rows
+        // appear — there is nothing local to append them to.
+        onImported={() => list.refetch?.()}
       />
 
       <UpdateStockModal

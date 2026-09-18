@@ -1,4 +1,11 @@
 import { useId, useState } from 'react'
+import {
+  CollapsibleSection,
+  PriceTierEditor,
+  ShippingFields,
+  TaxFields,
+  VariantEditor,
+} from '../../../../components/catalog/ProductAdvancedFields'
 import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
 import { InlineAlert } from '../feedback'
@@ -492,6 +499,28 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     discountValue: product?.discountPercent ? String(product.discountPercent) : '',
     stock: product?.stock != null ? String(product.stock) : '0',
     weight: product?.weight != null ? String(product.weight) : '',
+    // Shipping, tax and B2B. Mirrors the seller panel's form exactly — both
+    // render the same components from components/catalog.
+    dimensions: {
+      lengthCm: product?.dimensions?.lengthCm != null ? String(product.dimensions.lengthCm) : '',
+      breadthCm: product?.dimensions?.breadthCm != null ? String(product.dimensions.breadthCm) : '',
+      heightCm: product?.dimensions?.heightCm != null ? String(product.dimensions.heightCm) : '',
+    },
+    hsnCode: product?.hsnCode ?? '',
+    gstRate: product?.gstRate != null ? String(product.gstRate) : '',
+    moq: product?.moq != null ? String(product.moq) : '1',
+    priceTiers: (product?.priceTiers ?? []).map((t) => ({ minQty: String(t.minQty), price: String(t.price) })),
+    // Existing variants keep their id, so editing one does not orphan the
+    // carts and orders pointing at it.
+    variants: (product?.variants ?? []).map((v) => ({
+      id: v.id,
+      name: v.name ?? '',
+      sku: v.sku ?? '',
+      price: v.price != null ? String(v.price) : '',
+      salePrice: v.salePrice != null ? String(v.salePrice) : '',
+      stock: v.stock != null ? String(v.stock) : '0',
+      isActive: v.isActive !== false,
+    })),
     description: product?.description ?? '',
     isActive: product?.isActive ?? true,
     isFlashsale: product?.isFlashsale ?? false,
@@ -652,12 +681,40 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
 
     setIssue(null)
 
+    const dims = form.dimensions
     const body = {
       ...payload,
       sku: form.sku.trim(),
       brand: form.brand,
       description: form.description,
       images: newFiles,
+
+      hsnCode: form.hsnCode.trim(),
+      // '' is a real choice here ("not classified"), so it is sent rather
+      // than omitted — omitting it would leave a stale rate in place.
+      gstRate: form.gstRate,
+      moq: form.moq,
+      // All three or none: the server stores a partial set as null anyway.
+      dimensions:
+        dims.lengthCm && dims.breadthCm && dims.heightCm
+          ? { lengthCm: Number(dims.lengthCm), breadthCm: Number(dims.breadthCm), heightCm: Number(dims.heightCm) }
+          : null,
+      priceTiers: form.priceTiers
+        .filter((t) => t.minQty && t.price)
+        .map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
+      variants: form.variants
+        .filter((v) => v.name?.trim())
+        .map((v) => ({
+          ...(v.id ? { id: v.id } : {}),
+          name: v.name.trim(),
+          sku: v.sku || '',
+          // Empty means "inherit the parent's price", which is not the same
+          // as zero.
+          price: v.price === '' ? null : Number(v.price),
+          salePrice: v.salePrice === '' ? null : Number(v.salePrice),
+          stock: Number(v.stock) || 0,
+          isActive: v.isActive !== false,
+        })),
     }
 
     if (editing) {
@@ -911,6 +968,57 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
         value={form.description}
         onChange={(event) => updateField('description', event.target.value)}
       />
+
+      {/* Shipping, tax and B2B. Collapsed and rendered from the shared
+          components/catalog set, so this drawer and the seller panel's Add
+          Product modal cannot drift on validation or wording. */}
+      <CollapsibleSection
+        title="Shipping"
+        description="Weight and dimensions — these decide what a courier charges."
+        badge={form.weight || form.dimensions.lengthCm ? 'Set' : null}
+      >
+        <ShippingFields value={form} onChange={(next) => setForm(next)} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Tax"
+        description="HSN code and GST rate for invoicing."
+        badge={form.hsnCode || form.gstRate ? 'Set' : null}
+      >
+        <TaxFields value={form} onChange={(next) => setForm(next)} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Bulk & wholesale pricing"
+        description="Minimum order quantity and per-unit price breaks."
+        badge={form.priceTiers.length > 0 || form.moq !== '1' ? 'Set' : null}
+      >
+        <div className="flex flex-col gap-3">
+          <Input
+            id="product-moq"
+            label="Minimum order quantity"
+            type="number"
+            min="1"
+            value={form.moq}
+            onChange={(event) => updateField('moq', event.target.value)}
+            description="1 means no minimum. Buyers cannot check out below this."
+            containerClassName="sm:max-w-xs"
+          />
+          <PriceTierEditor
+            tiers={form.priceTiers}
+            basePrice={form.salePrice || form.price}
+            onChange={(priceTiers) => updateField('priceTiers', priceTiers)}
+          />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Options & variants"
+        description="Sizes, colours or pack sizes with their own price and stock."
+        badge={form.variants.length > 0 ? `${form.variants.length}` : null}
+      >
+        <VariantEditor variants={form.variants} onChange={(variants) => updateField('variants', variants)} />
+      </CollapsibleSection>
 
       {/* Flash Sale Deal Feature Flag */}
       <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-yellow-50/30 p-4 transition-all">

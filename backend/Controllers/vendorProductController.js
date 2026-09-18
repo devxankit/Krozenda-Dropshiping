@@ -17,6 +17,90 @@ function toNumber(value, fallback = null) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+// The B2B/variant fields arrive over multipart/form-data, where everything is
+// a string — so arrays and objects come in JSON-encoded and are parsed here,
+// once, rather than in each of create and update.
+//
+// A parse failure returns `fallback` rather than throwing: a malformed
+// `priceTiers` should leave the tiers alone, not 500 the whole save.
+function parseJsonField(raw, fallback) {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (typeof raw !== 'string') return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// The GST slabs that exist in India. An invented rate produces an invoice that
+// is wrong by law, so this refuses rather than rounding to the nearest one.
+const GST_SLABS = [0, 5, 12, 18, 28];
+
+// Returns an error message, or null. Shared by create and update so the two
+// cannot drift.
+function validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers }) {
+  if (gstRate !== undefined && gstRate !== null && gstRate !== '') {
+    const rate = Number(gstRate);
+    if (!GST_SLABS.includes(rate)) {
+      return `GST rate must be one of ${GST_SLABS.join(', ')}%`;
+    }
+  }
+
+  if (hsnCode && String(hsnCode).trim() && !/^\d{4,8}$/.test(String(hsnCode).trim())) {
+    return 'HSN code must be 4 to 8 digits';
+  }
+
+  if (moq !== undefined && moq !== null && moq !== '') {
+    const n = Number(moq);
+    if (!Number.isFinite(n) || n < 1 || !Number.isInteger(n)) {
+      return 'Minimum order quantity must be a whole number of at least 1';
+    }
+  }
+
+  if (Array.isArray(priceTiers)) {
+    const seen = new Set();
+    for (const tier of priceTiers) {
+      const minQty = Number(tier?.minQty);
+      const price = Number(tier?.price);
+      if (!Number.isInteger(minQty) || minQty < 2) {
+        return 'Each quantity break needs a whole minimum quantity of 2 or more';
+      }
+      if (!Number.isFinite(price) || price < 0) {
+        return 'Each quantity break needs a valid price';
+      }
+      // Two tiers at the same quantity have no defined winner, so the resolver
+      // would pick whichever happened to sort last. Refuse instead.
+      if (seen.has(minQty)) return `You have two quantity breaks at ${minQty} units`;
+      seen.add(minQty);
+    }
+  }
+
+  return null;
+}
+
+// Variants are replaced wholesale when the field is sent, not merged: the
+// seller's form owns the whole list, and a merge would make removing one
+// impossible. Existing variants keep their _id (and therefore their identity
+// on open carts and orders) when the client sends it back.
+function normaliseVariants(raw) {
+  if (!Array.isArray(raw)) return null;
+  return raw
+    .filter((v) => v && String(v.name || '').trim())
+    .map((v) => ({
+      ...(v.id && mongoose.isValidObjectId(v.id) ? { _id: v.id } : {}),
+      name: String(v.name).trim(),
+      attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
+      sku: String(v.sku || '').trim(),
+      price: toNumber(v.price),
+      salePrice: toNumber(v.salePrice),
+      stock: Math.max(0, Math.round(toNumber(v.stock, 0))),
+      image: v.image || null,
+      isActive: v.isActive !== false,
+    }));
+}
+
 function toRelativePath(url) {
   const index = url.indexOf('/uploads/');
   return index === -1 ? url : url.slice(index);
@@ -45,6 +129,42 @@ function serializeProduct(p) {
     discountPercent: p.discountPercent || 0,
     stock: p.stock,
     weight: p.weight ?? null,
+    // All three or none - utils/packaging treats a partial set as absent,
+    // because a partial set cannot produce a volumetric weight.
+    dimensions: p.dimensions
+      ? {
+          lengthCm: p.dimensions.lengthCm ?? null,
+          breadthCm: p.dimensions.breadthCm ?? null,
+          heightCm: p.dimensions.heightCm ?? null,
+        }
+      : null,
+
+    // Tax
+    hsnCode: p.hsnCode || '',
+    gstRate: p.gstRate ?? null,
+
+    // B2B
+    moq: p.moq ?? 1,
+    priceTiers: (p.priceTiers || []).map((t) => ({ minQty: t.minQty, price: t.price })),
+
+    // Variants. `stock` above stays the parent's number and is only what a
+    // product with NO variants sells from; a product with variants sells from
+    // each variant's own stock, which is why variantStock is reported
+    // separately rather than folded into one figure.
+    variants: (p.variants || []).map((v) => ({
+      id: v._id.toString(),
+      name: v.name,
+      attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+      sku: v.sku || '',
+      barcode: v.barcode || '',
+      price: v.price ?? null,
+      salePrice: v.salePrice ?? null,
+      stock: v.stock ?? 0,
+      image: v.image ? getImageUrl(v.image) : null,
+      isActive: v.isActive !== false,
+    })),
+    variantStock: (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0),
+
     images: (p.images || []).map((img) => getImageUrl(img)),
     description: p.description || '',
     isActive: p.isActive !== false,
@@ -174,7 +294,14 @@ async function getMyProduct(req, res) {
 // controlled centrally (per platform rules: sellers get product CRUD, not
 // category/brand CRUD).
 async function createMyProduct(req, res) {
-  const { name, sku, category, brand, price, salePrice, discountPercent, stock, weight, description } = req.body;
+  const {
+    name, sku, category, brand, price, salePrice, discountPercent, stock,
+    weight, description, hsnCode, gstRate, moq,
+  } = req.body;
+
+  const priceTiers = parseJsonField(req.body.priceTiers, []);
+  const variants = normaliseVariants(parseJsonField(req.body.variants, [])) || [];
+  const dimensions = parseJsonField(req.body.dimensions, null);
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Product name is required' });
@@ -191,6 +318,11 @@ async function createMyProduct(req, res) {
   const salePriceNum = toNumber(salePrice);
   if (salePriceNum !== null && salePriceNum > priceNum) {
     return res.status(400).json({ success: false, message: 'Sale price cannot be higher than the regular price' });
+  }
+
+  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers });
+  if (b2bError) {
+    return res.status(400).json({ success: false, message: b2bError });
   }
 
   if (sku && sku.trim()) {
@@ -215,6 +347,18 @@ async function createMyProduct(req, res) {
     discountPercent: toNumber(discountPercent, 0),
     stock: Math.max(0, Math.round(toNumber(stock, 0))),
     weight: toNumber(weight),
+    dimensions: dimensions
+      ? {
+          lengthCm: toNumber(dimensions.lengthCm),
+          breadthCm: toNumber(dimensions.breadthCm),
+          heightCm: toNumber(dimensions.heightCm),
+        }
+      : null,
+    hsnCode: String(hsnCode || '').trim(),
+    gstRate: toNumber(gstRate),
+    moq: Math.max(1, Math.round(toNumber(moq, 1))),
+    priceTiers: (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
+    variants,
     images,
     description: description || '',
     isActive: autoApprovalEnabled,
@@ -232,7 +376,17 @@ async function createMyProduct(req, res) {
 
 async function updateMyProduct(req, res) {
   const { id } = req.params;
-  const { name, sku, category, brand, price, salePrice, discountPercent, stock, weight, description, isActive, removeImages } = req.body;
+  const {
+    name, sku, category, brand, price, salePrice, discountPercent, stock,
+    weight, description, isActive, removeImages, hsnCode, gstRate, moq,
+  } = req.body;
+
+  // Undefined means "not sent, leave alone"; an empty array means "the seller
+  // removed them all". parseJsonField preserves that distinction by defaulting
+  // to undefined rather than [].
+  const priceTiers = parseJsonField(req.body.priceTiers, undefined);
+  const variants = normaliseVariants(parseJsonField(req.body.variants, undefined));
+  const dimensions = parseJsonField(req.body.dimensions, undefined);
 
   const product = await Product.findOne({ _id: id, vendor: req.vendor._id });
   if (!product) {
@@ -268,6 +422,30 @@ async function updateMyProduct(req, res) {
   if (stock !== undefined) product.stock = Math.max(0, Math.round(toNumber(stock, product.stock)));
   if (weight !== undefined) product.weight = toNumber(weight);
   if (description !== undefined) product.description = description;
+
+  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers });
+  if (b2bError) {
+    return res.status(400).json({ success: false, message: b2bError });
+  }
+
+  if (dimensions !== undefined) {
+    product.dimensions = dimensions
+      ? {
+          lengthCm: toNumber(dimensions.lengthCm),
+          breadthCm: toNumber(dimensions.breadthCm),
+          heightCm: toNumber(dimensions.heightCm),
+        }
+      : null;
+  }
+  if (hsnCode !== undefined) product.hsnCode = String(hsnCode || '').trim();
+  if (gstRate !== undefined) product.gstRate = toNumber(gstRate);
+  if (moq !== undefined) product.moq = Math.max(1, Math.round(toNumber(moq, product.moq)));
+  if (priceTiers !== undefined) {
+    product.priceTiers = (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) }));
+  }
+  if (variants !== undefined && variants !== null) {
+    product.variants = variants;
+  }
   if (isActive !== undefined && product.approvalStatus === 'APPROVED') {
     product.isActive = toBool(isActive, product.isActive);
   }

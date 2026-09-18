@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../Models/Order');
+const Product = require('../Models/Product');
 const { toPaise } = require('../utils/money');
 const { createNotification } = require('./notificationController');
 
@@ -35,6 +36,8 @@ function serializeVendorOrder(order, vendorId) {
       quantity: item.quantity,
       variant: item.variant || '',
       status: item.status || 'PENDING',
+      acceptedAt: item.acceptedAt || null,
+      rejectionReason: item.rejectionReason || '',
       courierName: item.courierName || '',
       trackingNumber: item.trackingNumber || '',
       statusHistory: (item.statusHistory || []).map((h) => ({ status: h.status, at: h.at })),
@@ -125,7 +128,7 @@ async function getMyOrder(req, res) {
 // positional $ operator so this can never touch another seller's item.
 async function updateMyOrderItemStatus(req, res) {
   const { id, productId } = req.params;
-  const { status, courierName, trackingNumber } = req.body;
+  const { status, courierName, trackingNumber, reason } = req.body;
 
   if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(productId)) {
     return res.status(400).json({ success: false, message: 'Invalid order or product id' });
@@ -153,18 +156,55 @@ async function updateMyOrderItemStatus(req, res) {
     return res.status(400).json({ success: false, message: 'Tracking number is required to mark an item shipped' });
   }
 
+  // Rejecting a line is the one transition here that costs the buyer
+  // something, so it has to come with a reason. "Cancelled" on its own tells
+  // them nothing and leaves support guessing.
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (status === 'CANCELLED' && !trimmedReason) {
+    return res.status(400).json({
+      success: false,
+      message: 'Give a reason for cancelling this item — the buyer is told what it is.',
+    });
+  }
+
   item.status = status;
   item.statusHistory.push({ status, at: new Date() });
+  // PENDING -> PROCESSING is the acceptance. Stamped once, and never
+  // overwritten by a later move down the chain.
+  if (status === 'PROCESSING' && !item.acceptedAt) item.acceptedAt = new Date();
+  if (status === 'CANCELLED') item.rejectionReason = trimmedReason.slice(0, 500);
   if (courierName !== undefined) item.courierName = courierName.trim();
   if (trackingNumber !== undefined) item.trackingNumber = trackingNumber.trim();
 
   await order.save();
 
+  // Stock was decremented when the order was placed (orderController.
+  // reserveStock). A cancelled line has to give it back, or every seller
+  // rejection permanently burns inventory that was never shipped. Variant-
+  // aware for the same reason releaseStock is: the reservation came off a
+  // specific variant and has to go back to it.
+  if (status === 'CANCELLED') {
+    if (item.variantId) {
+      await Product.updateOne(
+        { _id: item.product, 'variants._id': item.variantId },
+        { $inc: { 'variants.$.stock': item.quantity } }
+      );
+    } else {
+      await Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } });
+    }
+  }
+
   await createNotification({
     userId: order.user,
     type: 'ORDER',
-    title: `Order Item ${status === 'SHIPPED' ? 'Shipped' : status.charAt(0) + status.slice(1).toLowerCase()}`,
-    message: `"${item.name}" from your order is now ${status.toLowerCase()}.`,
+    title:
+      status === 'CANCELLED'
+        ? 'Order Item Cancelled'
+        : `Order Item ${status === 'SHIPPED' ? 'Shipped' : status.charAt(0) + status.slice(1).toLowerCase()}`,
+    message:
+      status === 'CANCELLED'
+        ? `"${item.name}" was cancelled by the seller: ${trimmedReason}`
+        : `"${item.name}" from your order is now ${status.toLowerCase()}.`,
     actionType: 'ORDER',
     actionRefId: order._id,
   });

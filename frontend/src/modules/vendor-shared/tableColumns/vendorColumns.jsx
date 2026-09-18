@@ -182,6 +182,25 @@ export const VENDOR_RETURN_COLUMNS = Object.freeze([
     width: '8rem',
     render: (row) => <StatusPill status={row.status} tones={VENDOR_RETURN_STATUS_TONE} size="sm" />,
   },
+  {
+    // The seller's own advisory input. Shown as a column so a queue can be
+    // scanned for the ones still waiting on them, which is the only reason a
+    // seller opens this screen.
+    key: 'sellerRecommendation',
+    header: 'Your response',
+    width: '9rem',
+    render: (row) => {
+      if (row.sellerRecommendation) {
+        return (
+          <Badge tone={row.sellerRecommendation.decision === 'APPROVE' ? 'success' : 'danger'} size="sm">
+            {row.sellerRecommendation.decision === 'APPROVE' ? 'Approve' : 'Reject'}
+          </Badge>
+        )
+      }
+      if (row.status !== 'PENDING') return <span className="text-2xs text-ink-faint">—</span>
+      return <span className="text-2xs font-medium text-brand-700">Respond</span>
+    },
+  },
   { key: 'createdAt', header: 'Requested', width: '8rem', render: (row) => <DateCell value={row.createdAt} withTime={false} /> },
 ])
 

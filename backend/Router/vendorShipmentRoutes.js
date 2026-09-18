@@ -8,6 +8,9 @@ const {
   cancelShipment,
   createReturn,
   getTracking,
+  getShipmentDocument,
+  getShipmentNdr,
+  actOnShipmentNdr,
   refreshTracking,
 } = require('../Controllers/shipmentController');
 const { protectVendor } = require('../Middlewares/vendorAuthMiddleware');
@@ -32,6 +35,18 @@ router.post('/:id/pickup', orderRateLimiter, schedulePickup);
 // limiter with create/awb/pickup.
 router.post('/:id/cancel', orderRateLimiter, cancelShipment);
 router.post('/:id/return', orderRateLimiter, createReturn);
+
+// Label / manifest / invoice. A GET because it is a read of a document the
+// carrier already holds, and the service caches the URL so repeated presses of
+// "print label" do not each spend a carrier call — see generateDocument.
+router.get('/:id/documents/:type', getShipmentDocument);
+
+// Non-delivery reports. The read is live (a carrier call), so it is not
+// something a page load should fire — the drawer asks for it on demand.
+router.get('/:id/ndr', getShipmentNdr);
+// Answering costs a carrier call and changes what happens to a real parcel,
+// so it shares the order limiter with the other state-changing operations.
+router.post('/:id/ndr/action', orderRateLimiter, actOnShipmentNdr);
 
 router.get('/:id/tracking', getTracking);
 // Separate from the read above: this one spends a carrier call, so it is

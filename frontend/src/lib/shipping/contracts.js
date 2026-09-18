@@ -204,6 +204,15 @@ export const shipmentSchema = z.object({
   awbCode: z.string().nullable(),
   trackingUrl: z.string().nullable(),
 
+  // Carrier-rendered PDFs. A null means "not generated yet" — the UI asks for
+  // one through GET /shipments/:id/documents/:type, which caches the result
+  // back onto the shipment.
+  documents: z.object({
+    label: z.string().nullable(),
+    manifest: z.string().nullable(),
+    invoice: z.string().nullable(),
+  }),
+
   pickupLocation: z.string(),
   pickupPincode: z.string(),
   deliveryCity: z.string(),
@@ -277,4 +286,23 @@ export const trackingRefreshSchema = z.object({
   currentStatus: z.string(),
   newEvents: z.number().int().nonnegative(),
   events: z.array(trackingEventSchema),
+})
+
+// GET /vendor/shipments/:id/documents/:type
+export const shipmentDocumentSchema = z.object({
+  type: z.enum(['LABEL', 'MANIFEST', 'INVOICE']),
+  url: z.string(),
+  // True when the URL came from the shipment record rather than a fresh
+  // carrier call, which is the common case after the first press.
+  cached: z.boolean(),
+})
+
+// GET /vendor/shipments/:id/ndr
+//
+// `ndr` is the carrier's own payload, passed through unmapped — its shape is
+// Shiprocket's, not ours, and inventing a schema for it would break the first
+// time they add a field. The UI reads the handful of keys it recognises and
+// shows the rest as raw detail.
+export const shipmentNdrSchema = z.object({
+  ndr: z.unknown().nullable(),
 })

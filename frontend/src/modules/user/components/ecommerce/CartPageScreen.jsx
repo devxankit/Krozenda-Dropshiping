@@ -6,7 +6,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { EmptyResult } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
-import { MAX_LINE_QUANTITY, useCartStore } from '../../../../lib/cartStore'
+import { lineKey, MAX_LINE_QUANTITY, useCartStore } from '../../../../lib/cartStore'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 
 // Availability, as the server reports it. The cart previously had no concept
@@ -148,9 +148,14 @@ export function CartPageScreen() {
                 // exists. It used to increment without any bound at all.
                 const maxQty = Math.min(item.stock ?? MAX_LINE_QUANTITY, MAX_LINE_QUANTITY)
 
+                // Keyed by LINE, not product: the same product can be in the
+                // cart as two variants, which would otherwise share a React
+                // key and both fail to resolve in the store.
+                const key = lineKey(item.id, item.variantId)
+
                 return (
                   <div
-                    key={item.id}
+                    key={key}
                     className={`rounded-2xl border bg-white p-3.5 shadow-sm sm:p-4 ${
                       unavailable ? 'border-red-200' : 'border-slate-200/80'
                     }`}
@@ -191,6 +196,14 @@ export function CartPageScreen() {
                                 {formatPrice(item.price)} each
                               </span>
                             )}
+                            {/* Says WHY the unit price is what it is. A price
+                                that quietly drops at quantity 10 reads as a
+                                bug until it is labelled. */}
+                            {item.appliedTier && (
+                              <span className="text-[11px] font-bold text-emerald-600">
+                                Bulk price ({item.appliedTier.minQty}+)
+                              </span>
+                            )}
                           </div>
                         </div>
                       </Link>
@@ -199,7 +212,7 @@ export function CartPageScreen() {
                         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-1 py-1">
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => updateQuantity(key, -1)}
                             disabled={unavailable}
                             aria-label={`Decrease quantity of ${item.name}`}
                             className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-white hover:text-slate-900 disabled:opacity-40"
@@ -214,7 +227,7 @@ export function CartPageScreen() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item.id, 1)}
+                            onClick={() => updateQuantity(key, 1)}
                             disabled={unavailable || item.quantity >= maxQty}
                             aria-label={`Increase quantity of ${item.name}`}
                             className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-white hover:text-slate-900 disabled:opacity-40"
@@ -225,7 +238,7 @@ export function CartPageScreen() {
 
                         <button
                           type="button"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(key)}
                           aria-label={`Remove ${item.name} from cart`}
                           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                         >
@@ -233,6 +246,22 @@ export function CartPageScreen() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Below the seller's minimum. Not an error yet - the
+                        cart holds it - but checkout will refuse, so say so
+                        here rather than at the payment step. */}
+                    {item.moq > 1 && item.quantity < item.moq && (
+                      <p className="mt-2.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-700">
+                        Minimum order is {item.moq} - add {item.moq - item.quantity} more to check out.
+                      </p>
+                    )}
+
+                    {/* The next quantity break, when there is one. */}
+                    {item.nextTier && (
+                      <p className="mt-2.5 text-[11px] font-medium text-emerald-700">
+                        Add {item.nextTier.addMore} more to pay {formatPrice(item.nextTier.price)} each.
+                      </p>
+                    )}
 
                     {/* Per-line status: availability first, then a price change */}
                     {note && (

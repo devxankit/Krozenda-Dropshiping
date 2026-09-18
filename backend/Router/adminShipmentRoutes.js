@@ -8,6 +8,9 @@ const {
   cancelShipment,
   createReturn,
   getTracking,
+  getShipmentDocument,
+  getShipmentNdr,
+  actOnShipmentNdr,
   refreshTracking,
 } = require('../Controllers/shipmentController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
@@ -33,6 +36,14 @@ router.post('/:id/pickup', requirePermission('admin.orders.shipments'), orderRat
 // limiter with create/awb/pickup.
 router.post('/:id/cancel', requirePermission('admin.orders.shipments'), orderRateLimiter, cancelShipment);
 router.post('/:id/return', requirePermission('admin.orders.shipments'), orderRateLimiter, createReturn);
+
+// Same document endpoint the seller has, under the admin's own permission —
+// support needs to be able to pull a label for any seller's parcel.
+router.get('/:id/documents/:type', requirePermission('admin.orders.shipments'), getShipmentDocument);
+
+// Same NDR endpoints as the seller has, under the admin's own permission.
+router.get('/:id/ndr', requirePermission('admin.orders.shipments'), getShipmentNdr);
+router.post('/:id/ndr/action', requirePermission('admin.orders.shipments'), orderRateLimiter, actOnShipmentNdr);
 
 router.get('/:id/tracking', requirePermission('admin.orders.shipments'), getTracking);
 // Separate from the read above: this one spends a carrier call, so it is

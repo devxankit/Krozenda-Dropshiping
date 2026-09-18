@@ -20,6 +20,16 @@ async function protectVendor(req, res, next) {
       return res.status(401).json({ success: false, message: 'Account not found' });
     }
 
+    // A brand-new vendor is APPROVED=false/isActive=false by default and must
+    // still be able to log in to see their pending status (see comment
+    // above) — so this only blocks the OTHER case isActive=false covers: an
+    // admin deactivating/suspending a vendor that was already APPROVED
+    // (adminVendorController.js toggleActive). That vendor's still-valid JWT
+    // must stop working immediately, not just at its next login.
+    if (vendor.verificationStatus === 'APPROVED' && !vendor.isActive) {
+      return res.status(403).json({ success: false, message: 'Account is deactivated' });
+    }
+
     req.vendor = vendor;
     next();
   } catch (err) {

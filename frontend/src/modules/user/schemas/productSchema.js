@@ -20,6 +20,17 @@ export const productCardSchema = z.object({
   salePrice: z.number().nullable(),
   discountPercent: z.number(),
   stock: z.number(),
+
+  // Enough for a card to hint at options and bulk pricing without carrying the
+  // whole variant list into a grid of sixty tiles. Defaulted so a response
+  // served before these fields existed still parses.
+  variantCount: z.number().int().default(0),
+  // Cheapest variant at quantity 1. Null when there are no variants, and the
+  // card falls back to salePrice/price.
+  fromPrice: z.number().nullable().default(null),
+  moq: z.number().int().default(1),
+  hasBulkPricing: z.boolean().default(false),
+
   image: z.string().nullable(),
   // Responsive candidates for the card image. Null for uploads that predate
   // the derivative pipeline.
@@ -64,6 +75,34 @@ export const productSchema = z.object({
   discountPercent: z.number(),
   stock: z.number(),
   weight: z.number().nullable().default(null),
+
+  // Tax. GST is inclusive in the listed price on this platform.
+  hsnCode: z.string().default(''),
+  gstRate: z.number().nullable().default(null),
+
+  // B2B. moq of 1 means no minimum; priceTiers is empty unless the seller set
+  // quantity breaks. Both defaulted so a product served before these fields
+  // existed still parses.
+  moq: z.number().int().default(1),
+  priceTiers: z.array(z.object({ minQty: z.number().int(), price: z.number() })).default([]),
+
+  // Buyable options. Non-empty means the product itself cannot be added to the
+  // cart — one of these must be chosen (cartController enforces it).
+  variants: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        attributes: z.record(z.string(), z.string()).default({}),
+        // Null means "inherit the product's price".
+        price: z.number().nullable(),
+        salePrice: z.number().nullable(),
+        stock: z.number().int(),
+        image: z.string().nullable(),
+      }),
+    )
+    .default([]),
+
   images: z.array(z.string()),
   imageSrcSets: z.array(z.string().nullable()).default([]),
   description: z.string(),

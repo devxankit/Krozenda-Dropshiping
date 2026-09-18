@@ -54,6 +54,12 @@ const STATUS_FOR = {
   NOT_DELIVERED: 409,
   NOT_A_FORWARD_SHIPMENT: 400,
   NO_RETURNABLE_ITEMS: 400,
+  INVALID_DOCUMENT_TYPE: 400,
+  INVALID_NDR_ACTION: 400,
+  NOT_NDR_ACTIONABLE: 409,
+  // Not an error in the parcel's state — the carrier simply has not rendered
+  // the PDF yet. Retrying in a moment is the right response.
+  DOCUMENT_NOT_READY: 409,
 };
 
 // The buyer/seller-facing shape of a shipment. Deliberately omits `account`
@@ -83,6 +89,16 @@ function serializeShipment(shipment, { includeInternal = false } = {}) {
     courierName: shipment.courierName || '',
     awbCode: shipment.awbCode || null,
     trackingUrl: shipment.trackingUrl || null,
+
+    // Which carrier documents have already been rendered. Present so the UI can
+    // offer "Print label" as a direct link once one exists, instead of asking
+    // the carrier again on every press — see generateDocument's caching note.
+    // A null simply means "not generated yet", not "unavailable".
+    documents: {
+      label: shipment.labelUrl || null,
+      manifest: shipment.manifestUrl || null,
+      invoice: shipment.invoiceUrl || null,
+    },
 
     pickupLocation: shipment.pickupLocationName || '',
     pickupPincode: shipment.pickupAddress?.pincode || '',
@@ -379,6 +395,83 @@ async function createReturn(req, res) {
   });
 }
 
+// GET /vendor/shipments/:id/documents/:type  (LABEL | MANIFEST | INVOICE)
+//
+// Returns the carrier-hosted URL rather than proxying the PDF bytes: the
+// document lives on the carrier's CDN, and streaming it through this server
+// would buy nothing but latency. Ownership is still enforced here, so a seller
+// can only ever reach a URL for their own parcel.
+//
+// `?refresh=1` forces a fresh render — the stored URL is cached and carrier
+// links do eventually expire.
+async function getShipmentDocument(req, res) {
+  const type = String(req.params.type || '').toUpperCase();
+
+  const result = await shipmentService.generateDocument({
+    shipmentId: req.params.id,
+    vendorId: scopeFor(req),
+    type,
+    force: req.query.refresh === '1' || req.query.refresh === 'true',
+    actor: req.vendor ? 'SELLER' : 'ADMIN',
+  });
+
+  if (!result.ok) return respondToFailure(res, result);
+
+  res.json({
+    success: true,
+    message: result.cached ? 'Document ready' : 'Document generated',
+    data: {
+      type,
+      url: result.url,
+      cached: Boolean(result.cached),
+      shipment: serializeShipment(result.shipment, { includeInternal: Boolean(req.admin) }),
+    },
+  });
+}
+
+// GET /vendor/shipments/:id/ndr
+//
+// What the courier says about a failed delivery attempt. Read live rather
+// than stored: an NDR changes as the courier re-attempts, and a cached copy
+// would have the seller answering a question that has already moved on.
+async function getShipmentNdr(req, res) {
+  const result = await shipmentService.getNdr({
+    shipmentId: req.params.id,
+    vendorId: scopeFor(req),
+  });
+
+  if (!result.ok) return respondToFailure(res, result);
+
+  res.json({
+    success: true,
+    message: 'Delivery report fetched',
+    data: { ndr: result.ndr, shipment: serializeShipment(result.shipment, { includeInternal: Boolean(req.admin) }) },
+  });
+}
+
+// POST /vendor/shipments/:id/ndr/action  { action, comments }
+//
+// Answers the courier. The response is an ACKNOWLEDGEMENT, not an outcome —
+// what actually happens to the parcel arrives later on the tracking webhook,
+// and the message says so rather than claiming the parcel is on its way.
+async function actOnShipmentNdr(req, res) {
+  const result = await shipmentService.actOnNdr({
+    shipmentId: req.params.id,
+    vendorId: scopeFor(req),
+    action: req.body?.action,
+    comments: req.body?.comments,
+    actor: req.vendor ? 'SELLER' : 'ADMIN',
+  });
+
+  if (!result.ok) return respondToFailure(res, result);
+
+  res.json({
+    success: true,
+    message: 'Sent to the courier. They will confirm on the next tracking update.',
+    data: { result: result.result, shipment: serializeShipment(result.shipment, { includeInternal: Boolean(req.admin) }) },
+  });
+}
+
 const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
 function normaliseIdempotencyKey(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -388,6 +481,9 @@ function normaliseIdempotencyKey(raw) {
 
 module.exports = {
   cancelShipment,
+  getShipmentDocument,
+  getShipmentNdr,
+  actOnShipmentNdr,
   createReturn,
   getTracking,
   refreshTracking,

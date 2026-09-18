@@ -44,6 +44,16 @@ function serializeListItem(r) {
     status: RETURN_STATUS_OUT(r),
     value: toPaise(r.refundAmount || 0),
     rejectionReason: r.adminNote || '',
+    // Advisory input from the seller who owns the product. Surfaced in the
+    // list as well as the detail so a queue can be triaged on it — a seller
+    // flagging "not my SKU" is the cheapest signal admin gets.
+    sellerRecommendation: r.sellerRecommendation
+      ? {
+          decision: r.sellerRecommendation.decision,
+          note: r.sellerRecommendation.note || '',
+          at: r.sellerRecommendation.at,
+        }
+      : null,
   };
 }
 
@@ -105,6 +115,18 @@ async function getReturnDetail(req, res) {
       policy: { windowDays: 7, raisedWithinWindow: true, allowedReason: true, returnShippingBearer: 'platform' },
       timeline: [
         { label: 'Requested', at: r.createdAt, actor: r.user?.name || 'Buyer', reason: r.reason, done: true, tone: 'default' },
+        ...(r.sellerRecommendation
+          ? [
+              {
+                label: `Seller recommended ${r.sellerRecommendation.decision === 'APPROVE' ? 'approving' : 'rejecting'}`,
+                at: r.sellerRecommendation.at,
+                actor: base.seller,
+                reason: r.sellerRecommendation.note || null,
+                done: true,
+                tone: r.sellerRecommendation.decision === 'APPROVE' ? 'success' : 'warning',
+              },
+            ]
+          : []),
         {
           label: r.status === 'PENDING' ? 'Awaiting review' : r.status === 'APPROVED' ? 'Approved' : 'Rejected',
           at: r.resolvedAt,
