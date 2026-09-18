@@ -78,3 +78,11 @@ export async function fetchShippingQuote({ addressId, paymentMethod, couponCode 
   const response = await api.post('/user/orders/shipping-quote', { addressId, paymentMethod, couponCode }, { signal })
   return shippingQuoteSchema.parse(response.data.data)
 }
+
+// Which payment methods the admin currently allows — see PaymentSettings.
+// Checkout hides whatever comes back false instead of offering a method
+// createOrder would then reject.
+export async function fetchPaymentMethods({ signal } = {}) {
+  const response = await api.get('/user/orders/payment-methods', { signal })
+  return response.data.data.methods
+}

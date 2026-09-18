@@ -3,6 +3,7 @@ import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedC
 import { FormDrawer } from '../forms'
 import { InlineAlert } from '../feedback'
 import { ConfirmDialog } from '../overlay/ConfirmDialog'
+import { ProductBarcode } from '../../../../components/common/ProductBarcode'
 import {
   attributeWriteSchema,
   brandWriteSchema,
@@ -890,6 +891,16 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
           onChange={(event) => updateField('weight', event.target.value)}
         />
       </div>
+
+      {/* Assigned automatically on creation — see Models/Product.js — so a
+          brand new product has none to show until it has been saved once. */}
+      {editing && product.barcode && (
+        <ProductBarcode
+          code={product.barcode}
+          imageUrl={`/admin/catalog/products/${product.id}/barcode.png`}
+          className="max-w-xs"
+        />
+      )}
 
       {/* Description */}
       <Textarea

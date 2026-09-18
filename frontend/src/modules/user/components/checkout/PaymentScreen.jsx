@@ -12,6 +12,7 @@ import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useCheckoutController } from '../../controllers/useCheckoutController'
 import { useWalletController } from '../../controllers/useWalletController'
 import { useProfileController } from '../../controllers/useProfileController'
+import { usePaymentMethodsController } from '../../controllers/usePaymentMethodsController'
 import { CheckoutStepper } from './CheckoutStepper'
 
 export function PaymentScreen() {
@@ -32,6 +33,7 @@ export function PaymentScreen() {
 
   const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
   const [selectedMethod, setSelectedMethod] = useState(chosenMethod || 'RAZORPAY')
+  const { methods: enabledMethods } = usePaymentMethodsController()
 
   usePageMeta({ title: 'Payment - Checkout', noindex: true })
 
@@ -76,7 +78,16 @@ export function PaymentScreen() {
       disabledReason: 'Insufficient wallet balance',
     },
     { id: 'COD', name: 'Cash on Delivery', icon: HiTruck },
-  ]
+  ].filter((method) => !enabledMethods || enabledMethods[method.id] !== false)
+
+  // If the method the buyer had selected (from a previous visit, via
+  // checkoutStore) got switched off admin-side, fall onto the first one
+  // still allowed instead of letting them pay/place an order createOrder
+  // would then reject. Derived at render rather than synced back into
+  // `selectedMethod` — a click is still what commits a real choice.
+  const activeMethod = paymentMethods.some((m) => m.id === selectedMethod)
+    ? selectedMethod
+    : paymentMethods[0]?.id || 'RAZORPAY'
 
   const handlePay = async () => {
     // Frontend guard only — the real protection is the idempotency key the
@@ -87,7 +98,7 @@ export function PaymentScreen() {
     try {
       const order = await payAndPlaceOrder({
         addressId: selectedAddressId,
-        paymentMethod: selectedMethod,
+        paymentMethod: activeMethod,
         couponCode: appliedCoupon?.code || undefined,
         prefill: { name: profile?.name, email: profile?.email, contact: profile?.mobileNumber },
       })
@@ -147,7 +158,7 @@ export function PaymentScreen() {
             <div role="radiogroup" aria-label="Payment method" className="space-y-3">
               {paymentMethods.map((method) => {
                 const IconComponent = method.icon
-                const isSelected = selectedMethod === method.id
+                const isSelected = activeMethod === method.id
                 const methodRow = quote?.methods?.[method.id] ?? null
 
                 return (
@@ -232,7 +243,7 @@ export function PaymentScreen() {
               })}
             </div>
 
-            {selectedMethod === 'RAZORPAY' && (
+            {activeMethod === 'RAZORPAY' && (
               <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-medium text-slate-500">
                 You may be taken to your bank or UPI app to complete the payment. Come back to this
                 app afterwards — your order is only confirmed once we have verified the payment with
@@ -304,7 +315,7 @@ export function PaymentScreen() {
                 <span>
                   {isPlacingOrder
                     ? 'Processing…'
-                    : selectedMethod === 'COD'
+                    : activeMethod === 'COD'
                       ? `Place Order • ₹${Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
                       : `Pay ₹${Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                 </span>

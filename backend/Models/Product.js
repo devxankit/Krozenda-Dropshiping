@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { generateBarcode } = require('../utils/barcode');
 
 const productSchema = new mongoose.Schema(
   {
@@ -8,6 +9,12 @@ const productSchema = new mongoose.Schema(
     // explicitly set to null. A default of null meant every second product
     // created without a SKU threw an uncaught E11000 duplicate-key error.
     sku: { type: String, trim: true },
+    // A real, scannable EAN-13. Assigned automatically the moment a product
+    // is created (see the pre-save hook below) — nobody types or uploads
+    // one, so there is nothing to get wrong or leave blank. Once set it is
+    // never reassigned; the label that gets printed and stuck on a box has
+    // to keep meaning the same product for the product's whole life.
+    barcode: { type: String, trim: true, default: null },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
     // null = platform-owned catalog item (current default for everything
@@ -56,6 +63,22 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ sku: 1 }, { unique: true, sparse: true });
+// Sparse, matching the sku index above: it only has to be unique among
+// products that HAVE one, and a product created before this field existed
+// (or created inside a single transaction that hasn't committed yet) simply
+// has none rather than colliding with every other productless document on a
+// shared `barcode: null`.
+productSchema.index({ barcode: 1 }, { unique: true, sparse: true });
+
+// Runs once, on creation only — see the field comment above for why a
+// barcode is never reassigned. Generating it here rather than in every
+// controller that can create a product (admin's and the vendor panel's) means
+// a third creation path added later gets one for free instead of silently
+// shipping products with no barcode.
+productSchema.pre('save', async function assignBarcode() {
+  if (!this.isNew || this.barcode) return;
+  this.barcode = await generateBarcode();
+});
 
 // Index set derived from what listPublicProducts actually issues, not from
 // "one index per field" — every storefront query starts with the same

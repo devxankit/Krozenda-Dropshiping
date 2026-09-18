@@ -5,6 +5,7 @@ const {
   refreshAccessToken,
   getMe,
   updateProfile,
+  updateLanguage,
   uploadProfileImage,
   changePassword,
   deleteAccount,
@@ -22,6 +23,7 @@ router.post('/login-otp', otpRateLimiter, verifyOtp);
 router.post('/refresh-token', refreshRateLimiter, refreshAccessToken);
 router.get('/me', protectUser, getMe);
 router.put('/profile', protectUser, updateProfile);
+router.put('/language', protectUser, updateLanguage);
 router.put('/change-password', protectUser, changePassword);
 router.delete('/account', protectUser, deleteAccount);
 router.post(

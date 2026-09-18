@@ -96,6 +96,20 @@ describe('POST /translate', () => {
     expect(translate).not.toHaveBeenCalled();
   });
 
+  it('leaves identifiers intact — translating one would corrupt it', async () => {
+    const texts = ['ORD-2024-0011', 'KROZ50', 'AWB1234567890', 'Save 20% today'];
+    translate.mockImplementationOnce(async (t) => asResults(t, (x) => `hi:${x}`));
+
+    const res = await request(app).post('/translate').send({ to: 'hi', texts });
+
+    // Only the real sentence is worth a call; the three codes are not.
+    expect(translate.mock.calls[0][0]).toEqual(['Save 20% today']);
+    expect(res.body.data.translations['ORD-2024-0011']).toBe('ORD-2024-0011');
+    expect(res.body.data.translations.KROZ50).toBe('KROZ50');
+    expect(res.body.data.translations.AWB1234567890).toBe('AWB1234567890');
+    expect(res.body.data.translations['Save 20% today']).toBe('hi:Save 20% today');
+  });
+
   it('sends each distinct string once, however many times it is repeated', async () => {
     translate.mockImplementationOnce(async (texts) => asResults(texts, (t) => `hi:${t}`));
 

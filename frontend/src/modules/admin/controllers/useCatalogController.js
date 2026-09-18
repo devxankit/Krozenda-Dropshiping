@@ -31,6 +31,8 @@ function useCatalogResource(key, queryFn) {
 
 export const useProductListController = () => useCatalogResource('products', fetchProducts)
 export const useApprovalQueueController = () => useCatalogResource('approvals', fetchApprovalQueue)
+export const useApprovalSettingsController = () =>
+  useCatalogResource('approval-settings', service.fetchApprovalSettings)
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
 export const useAttributesController = () => useCatalogResource('attributes', fetchAttributes)
@@ -76,6 +78,15 @@ export const useProductWriteController = ({ onSaved } = {}) => ({
     mutationFn: service.deleteProduct,
     invalidate: CATALOG,
     success: 'Product removed',
+  }),
+})
+
+export const useApprovalSettingsWriteController = () => ({
+  update: useAdminMutation({
+    mutationFn: service.updateApprovalSettings,
+    invalidate: CATALOG,
+    success: (data) =>
+      data.autoApprovalEnabled ? 'Auto-approval turned on' : 'Auto-approval turned off',
   }),
 })
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { handleShiprocketWebhook } = require('../Controllers/shipmentWebhookController');
+const { handleRazorpayWebhook } = require('../Controllers/paymentWebhookController');
 
 const router = express.Router();
 
@@ -29,5 +30,10 @@ const webhookRateLimiter = rateLimit({
 // (e.g. '/payments'), because a shared endpoint would have to guess the sender
 // from the payload, and a payload is not proof of who sent it.
 router.post('/', webhookRateLimiter, handleShiprocketWebhook);
+
+// A second provider, its own sub-path (see comment above) — Razorpay's
+// payload has nothing in common with Shiprocket's and genuinely signs its
+// requests, so it gets its own handler rather than being guessed at here.
+router.post('/payments', webhookRateLimiter, handleRazorpayWebhook);
 
 module.exports = router;

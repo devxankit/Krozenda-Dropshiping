@@ -9,6 +9,7 @@ import {
   HiTruck,
   HiWallet,
 } from 'react-icons/hi2'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
@@ -16,6 +17,7 @@ import { CheckoutStepper } from './CheckoutStepper'
 import { PAYMENT_METHODS, useCheckoutStore } from '../../../../lib/checkoutStore'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { useShippingQuoteController } from '../../controllers/useShippingQuoteController'
+import { usePaymentMethodsController } from '../../controllers/usePaymentMethodsController'
 import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 
@@ -52,6 +54,22 @@ export function PaymentMethodScreen() {
   usePageMeta({ title: 'Payment & Delivery - Checkout', noindex: true })
 
   const address = addresses.find((a) => a.id === selectedAddressId) || null
+
+  const { methods: enabledMethods } = usePaymentMethodsController()
+  const availableMethods = enabledMethods
+    ? PAYMENT_METHODS.filter((method) => enabledMethods[method.id] !== false)
+    : PAYMENT_METHODS
+
+  // If the method the buyer had selected got switched off admin-side between
+  // visits, move them onto the first one that is still allowed rather than
+  // letting them continue toward an order createOrder will reject.
+  useEffect(() => {
+    if (!enabledMethods) return
+    if (enabledMethods[paymentMethod] === false) {
+      setPaymentMethod(availableMethods[0]?.id || 'RAZORPAY')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledMethods])
 
   const { quote, isLoading, error } = useShippingQuoteController({
     addressId: selectedAddressId,
@@ -134,7 +152,7 @@ export function PaymentMethodScreen() {
                 Choose Payment Option
               </h2>
 
-              {PAYMENT_METHODS.map((method) => {
+              {availableMethods.map((method) => {
                 const Icon = ICONS[method.id] || HiCreditCard
                 const details = METHOD_DETAILS[method.id]
                 const selected = paymentMethod === method.id

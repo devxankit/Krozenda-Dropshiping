@@ -5,6 +5,7 @@ import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedb
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { ProductFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
+import { ScanBarcodeModal } from '../../../../components/common/ScanBarcodeModal'
 import {
   useBrandsController,
   useCategoryTreeController,
@@ -43,6 +44,7 @@ export function ProductsPage() {
 
   const [editingProduct, setEditingProduct] = useState(null)
   const [removingProduct, setRemovingProduct] = useState(null)
+  const [scanOpen, setScanOpen] = useState(false)
   const [page, setPage] = useState(1)
 
   const writer = useProductWriteController({
@@ -385,6 +387,15 @@ export function ProductsPage() {
                   className={`h-3.5 w-3.5 ${products.isFetching ? 'animate-spin text-brand-600' : ''}`}
                 />
                 <span>Refresh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScanOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                title="Scan a product's barcode"
+              >
+                <Icon name="search" className="h-3.5 w-3.5" />
+                <span>Scan barcode</span>
               </button>
               <PermissionGate permission={MANAGE}>
                 <button
@@ -872,6 +883,19 @@ export function ProductsPage() {
           writer={writer}
         />
       )}
+
+      {/* Scan a barcode to jump straight to that product's edit drawer —
+          the lookup response is already shaped exactly like a row from the
+          product list, so it opens the same drawer with no translation. */}
+      <ScanBarcodeModal
+        isOpen={scanOpen}
+        onClose={() => setScanOpen(false)}
+        lookupPath={(code) => `/admin/catalog/products/barcode/${code}`}
+        onFound={(product) => {
+          setScanOpen(false)
+          setEditingProduct(product)
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

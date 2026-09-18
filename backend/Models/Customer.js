@@ -27,6 +27,17 @@ const customerSchema = new mongoose.Schema(
     gender: { type: String, enum: ['male', 'female', 'other'] },
     dob: { type: Date },
     walletBalance: { type: Number, default: 0, min: 0 },
+    // The buyer app's UI language. On the ACCOUNT rather than the device, so
+    // it follows them to a new phone and survives a reinstall, and so it only
+    // ever changes when they change it. Not validated against an enum here:
+    // the supported list lives in services/translationService.js and is
+    // checked at the endpoint, so trimming that list later cannot make
+    // existing documents fail validation on an unrelated save.
+    //
+    // Null means "never chosen", which is NOT the same as English: it lets a
+    // visitor who picked a language before signing up keep it, instead of
+    // being thrown back to English by a brand-new account.
+    language: { type: String, default: null, lowercase: true, trim: true },
     // Push (FCM) device tokens — one account can be signed in on several
     // devices at once, so each entry carries the platform it registered from.
     // Deduped on `token` by pushTokenController.

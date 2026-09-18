@@ -13,6 +13,7 @@ import {
   useTaxSettingsController,
   useWebhooksController,
 } from '../../controllers/useSystemController'
+import { usePaymentSettingsController } from '../../controllers/usePaymentSettingsController'
 
 export function GeneralSettingsPage() {
   const controller = useGeneralSettingsController()
@@ -152,18 +153,83 @@ function IntegrationSettings({ title, description, ids, note }) {
 }
 
 export function PaymentSettingsPage() {
+  const controller = usePaymentSettingsController()
+  const integrations = useIntegrationsController()
+
   return (
-    <IntegrationSettings
+    <SettingsShell
       title="Payments"
-      description="Razorpay keys, Route linked accounts and webhook signature verification."
-      ids={['razorpay']}
-      note={
-        <InlineAlert tone="info" title="Route is the compliance path, not a preference">
-          The platform may not collect vendor funds into its own account and disburse them without
-          a payment aggregator licence. Every vendor is a Route linked account with its own KYC.
-        </InlineAlert>
-      }
-    />
+      description="Which payment methods buyers can use at checkout, Razorpay keys, Route linked accounts and webhook signature verification."
+      controller={controller}
+      changed={controller.changed}
+      saveNote="A method turned off here disappears from checkout immediately; an order already placed on it is unaffected."
+      onSave={controller.save}
+      onDiscard={controller.discard}
+      isSaving={controller.isSaving}
+    >
+      {() => {
+        const { settings } = controller
+        if (!settings) return null
+
+        const allOff = !settings.codEnabled && !settings.razorpayEnabled && !settings.walletEnabled
+
+        return (
+          <>
+            {controller.saveError && (
+              <InlineAlert tone="danger" title="Could not save">
+                {controller.saveError?.message || 'The change was rejected.'}
+              </InlineAlert>
+            )}
+
+            <FormSection
+              title="Payment methods"
+              description="At least one must stay on, or nobody can check out."
+              columns={1}
+            >
+              <Switch
+                id="codEnabled"
+                checked={settings.codEnabled}
+                onChange={(e) => controller.update('codEnabled', e.target.checked)}
+                label="Cash on delivery"
+                description="Buyer pays the courier when the parcel arrives."
+              />
+              <Switch
+                id="razorpayEnabled"
+                checked={settings.razorpayEnabled}
+                onChange={(e) => controller.update('razorpayEnabled', e.target.checked)}
+                label="Online (Razorpay)"
+                description="Card, UPI and netbanking, via Razorpay."
+              />
+              <Switch
+                id="walletEnabled"
+                checked={settings.walletEnabled}
+                onChange={(e) => controller.update('walletEnabled', e.target.checked)}
+                label="Wallet"
+                description="Pay from the buyer's in-app wallet balance."
+              />
+
+              {allOff && (
+                <InlineAlert tone="danger" title="No payment method is on">
+                  With all three off, no buyer can place an order. Turn at least one on.
+                </InlineAlert>
+              )}
+            </FormSection>
+
+            <InlineAlert tone="info" title="Route is the compliance path, not a preference">
+              The platform may not collect vendor funds into its own account and disburse them
+              without a payment aggregator licence. Every vendor is a Route linked account with
+              its own KYC.
+            </InlineAlert>
+
+            {!integrations.isLoading &&
+              !integrations.error &&
+              integrations.data?.items
+                ?.filter((item) => item.id === 'razorpay')
+                .map((item) => <IntegrationCard key={item.id} integration={item} />)}
+          </>
+        )
+      }}
+    </SettingsShell>
   )
 }
 

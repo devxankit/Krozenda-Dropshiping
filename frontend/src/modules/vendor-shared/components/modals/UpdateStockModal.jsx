@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Input, Modal } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
+import { ProductBarcode } from '../../../../components/common/ProductBarcode'
 
 // Parent remounts this (key={product?.id}) whenever the target product
 // changes, so the initial stock value below is always fresh without an
@@ -53,6 +54,13 @@ export function UpdateStockModal({ product, isOpen, onClose, onUpdateStock }) {
           <p className="font-semibold text-slate-900">{product.name}</p>
           <p className="mt-0.5 text-ink-subtle">SKU: {product.sku || '—'}</p>
         </div>
+
+        {/* Assigned automatically when the product was created — see
+            Models/Product.js — so it is always present by the time a seller
+            can open this modal at all. */}
+        {product.barcode && (
+          <ProductBarcode code={product.barcode} imageUrl={`/vendor/products/${product.id}/barcode.png`} />
+        )}
 
         <Input
           label="Current Stock Quantity (Units)"

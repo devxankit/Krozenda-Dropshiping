@@ -5,6 +5,7 @@ const Wishlist = require('../Models/Wishlist');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { isValidEan13, renderBarcodePng } = require('../utils/barcode');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -32,6 +33,7 @@ function serializeProduct(p) {
     _id: p._id.toString(),
     name: p.name,
     sku: p.sku || '',
+    barcode: p.barcode || '',
     category:
       p.category && p.category.name
         ? { id: p.category._id.toString(), name: p.category.name }
@@ -83,6 +85,57 @@ async function listProducts(req, res) {
   };
 
   res.json({ success: true, data: { items, stats } });
+}
+
+// GET /admin/catalog/products/barcode/:code
+//
+// The other half of "scan and see the details": a warehouse screen reads a
+// code off a scanner (which behaves exactly like a keyboard — it types the
+// digits and an Enter) and looks it up here, the same way a person would
+// type a SKU into search, except the code is unambiguous and requires no
+// typing at all.
+async function getProductByBarcode(req, res) {
+  const { code } = req.params;
+
+  if (!isValidEan13(code)) {
+    return res.status(400).json({ success: false, message: 'Not a valid barcode' });
+  }
+
+  const product = await Product.findOne({ barcode: code })
+    .populate('category', 'name')
+    .populate('brand', 'name');
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'No product carries this barcode' });
+  }
+
+  res.json({ success: true, message: 'Product found', data: serializeProduct(product) });
+}
+
+// GET /admin/catalog/products/:id/barcode.png
+//
+// The printable half: a PNG of the product's own barcode, for the "Print
+// barcode" button on the product page and for a label printer. Generated on
+// request rather than stored — a 13-digit code renders in a few milliseconds,
+// so caching the image would only be caching something cheaper to make than
+// to fetch.
+async function getProductBarcodeImage(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findById(id).select('barcode').lean();
+  if (!product || !product.barcode) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const png = await renderBarcodePng(product.barcode);
+  // The barcode never changes once assigned (see Models/Product.js), so this
+  // response can be cached hard — a browser or CDN never needs to re-fetch it.
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(png);
 }
 
 async function createProduct(req, res) {
@@ -761,6 +814,8 @@ module.exports = {
   getPublicProduct,
   listRelatedProducts,
   createProduct,
+  getProductByBarcode,
+  getProductBarcodeImage,
   updateProduct,
   updateProductStatus,
   updateProductFlashSaleStatus,

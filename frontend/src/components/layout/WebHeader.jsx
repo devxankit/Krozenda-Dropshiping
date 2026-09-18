@@ -16,6 +16,7 @@ import { useCartCount } from '../../lib/cartStore'
 import { useWishlistCount } from '../../lib/wishlistStore'
 import { useUnreadNotificationCount } from '../../lib/notificationStore'
 import { useCategoriesController } from '../../modules/user/controllers/useProductsController'
+import { LanguageSwitcher } from '../common/LanguageSwitcher'
 
 // REMOVED: FALLBACK_NAV_CATEGORIES — four invented categories ("Smartwatches",
 // "Home & Kitchen") with ids that matched nothing in the catalog, shown

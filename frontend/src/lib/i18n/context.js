@@ -11,5 +11,7 @@ import { createContext } from 'react'
 export const TranslationContext = createContext({
   language: 'en',
   t: (text) => text,
+  lookup: (text) => text,
+  ensure: () => Promise.resolve(),
   translating: false,
 })

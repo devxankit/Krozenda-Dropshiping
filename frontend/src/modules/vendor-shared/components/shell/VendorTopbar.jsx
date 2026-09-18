@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Icon } from '../../../../components/ui'
 import { useAuthStore } from '../../../../lib/authStore'
+import { LanguageSwitcher } from '../../../../components/common/LanguageSwitcher'
 import { toast } from '../../../admin/stores/toastStore'
 
 export function VendorTopbar({ onOpenMobileNav, isPartner = false }) {
@@ -56,6 +57,8 @@ export function VendorTopbar({ onOpenMobileNav, isPartner = false }) {
       </button>
 
       <div className="flex-1" />
+
+      <LanguageSwitcher variant="compact" tone="panel" />
 
       {/* Notifications Button */}
       <button

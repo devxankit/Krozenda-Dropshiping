@@ -1,5 +1,6 @@
 const Category = require('../Models/Category');
 const Brand = require('../Models/Brand');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
 
 function serializeCategory(cat) {
@@ -56,16 +57,18 @@ async function createMyCategory(req, res) {
     return res.status(400).json({ success: false, message: `"${name.trim()}" already exists or is pending review` });
   }
 
+  const { autoApprovalEnabled } = await CatalogSettings.getSettings();
+
   const category = await Category.create({
     name: name.trim(),
     image: req.file?.url || null,
     createdByVendor: req.vendor._id,
-    approvalStatus: 'PENDING',
+    approvalStatus: autoApprovalEnabled ? 'APPROVED' : 'PENDING',
   });
 
   res.status(201).json({
     success: true,
-    message: 'Category submitted for admin approval',
+    message: autoApprovalEnabled ? 'Category created' : 'Category submitted for admin approval',
     data: serializeCategory(category),
   });
 }
@@ -92,16 +95,18 @@ async function createMyBrand(req, res) {
     return res.status(400).json({ success: false, message: `"${name.trim()}" already exists or is pending review` });
   }
 
+  const { autoApprovalEnabled } = await CatalogSettings.getSettings();
+
   const brand = await Brand.create({
     name: name.trim(),
     logo: req.file?.url || null,
     createdByVendor: req.vendor._id,
-    approvalStatus: 'PENDING',
+    approvalStatus: autoApprovalEnabled ? 'APPROVED' : 'PENDING',
   });
 
   res.status(201).json({
     success: true,
-    message: 'Brand submitted for admin approval',
+    message: autoApprovalEnabled ? 'Brand created' : 'Brand submitted for admin approval',
     data: serializeBrand(brand),
   });
 }

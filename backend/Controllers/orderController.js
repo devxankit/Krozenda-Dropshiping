@@ -13,6 +13,7 @@ const { createNotification } = require('./notificationController');
 const Shipment = require('../Models/Shipment');
 const trackingService = require('../services/shipping/trackingService');
 const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
+const PaymentSettings = require('../Models/PaymentSettings');
 const checkoutQuoteService = require('../services/shipping/checkoutQuoteService');
 const { getImageUrl } = require('../utils/imageHelper');
 const accounting = require('../services/accountingPosting');
@@ -347,6 +348,11 @@ async function createOrder(req, res) {
 
   if (!Order.PAYMENT_METHODS.includes(paymentMethod)) {
     return res.status(400).json({ success: false, message: 'Select a valid payment method' });
+  }
+
+  const paymentSettings = await PaymentSettings.getSettings();
+  if (!paymentSettings[PaymentSettings.FIELD_BY_METHOD[paymentMethod]]) {
+    return res.status(400).json({ success: false, message: 'This payment method is currently unavailable' });
   }
 
   // Accepted from either the standard header or the body so a WebView client
@@ -836,8 +842,25 @@ async function getShippingQuote(req, res) {
   });
 }
 
+// GET /user/orders/payment-methods — which of COD/RAZORPAY/WALLET the admin
+// currently allows, so the checkout screen can hide the rest instead of
+// letting the buyer pick one createOrder will then reject.
+async function getPaymentMethods(req, res) {
+  const settings = await PaymentSettings.getSettings();
+  res.json({
+    success: true,
+    data: {
+      methods: Order.PAYMENT_METHODS.reduce((acc, method) => {
+        acc[method] = Boolean(settings[PaymentSettings.FIELD_BY_METHOD[method]]);
+        return acc;
+      }, {}),
+    },
+  });
+}
+
 module.exports = {
   getShippingQuote,
+  getPaymentMethods,
   // Exported so the checkout price can be tested directly. It is the single
   // place the total is decided, so testing it is testing what gets charged.
   computeCheckoutTotals,

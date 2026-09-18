@@ -1,5 +1,6 @@
 import { Avatar, Icon } from '../../../../components/ui'
 import { ProfileMenu } from './ProfileMenu'
+import { LanguageSwitcher } from '../../../../components/common/LanguageSwitcher'
 
 export function AdminTopbar({
   user,
@@ -33,6 +34,8 @@ export function AdminTopbar({
       </button>
 
       <div className="flex-1" />
+
+      <LanguageSwitcher variant="compact" tone="panel" />
 
       <button
         type="button"

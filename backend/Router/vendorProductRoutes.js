@@ -2,6 +2,8 @@ const express = require('express');
 const {
   listMyProducts,
   getMyProduct,
+  getMyProductByBarcode,
+  getMyProductBarcodeImage,
   createMyProduct,
   updateMyProduct,
   deleteMyProduct,
@@ -20,6 +22,8 @@ const uploadProductImages = [
 ];
 
 router.get('/', listMyProducts);
+router.get('/barcode/:code', getMyProductByBarcode);
+router.get('/:id/barcode.png', getMyProductBarcodeImage);
 router.get('/:id', getMyProduct);
 router.post('/', ...uploadProductImages, createMyProduct);
 router.put('/:id', ...uploadProductImages, updateMyProduct);
