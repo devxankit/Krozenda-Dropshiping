@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   HiBell,
   HiOutlineShoppingBag,
@@ -43,17 +44,17 @@ const BANNER_ICON_MAP = {
 }
 
 const PROMO_THEME_CLASSES = {
-  emerald: 'bg-gradient-to-r from-emerald-700 to-teal-900',
-  purple: 'bg-gradient-to-r from-purple-800 to-indigo-900',
-  blue: 'bg-gradient-to-r from-blue-600 to-indigo-600',
-  amber: 'bg-gradient-to-r from-amber-600 to-orange-700',
+  emerald: 'bg-gradient-to-br from-emerald-600 via-teal-800 to-slate-950 border-emerald-500/30 hover:border-emerald-400/60 shadow-emerald-950/20',
+  purple: 'bg-gradient-to-br from-purple-600 via-indigo-800 to-slate-950 border-purple-500/30 hover:border-purple-400/60 shadow-purple-950/20',
+  blue: 'bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-950 border-blue-500/30 hover:border-blue-400/60 shadow-blue-950/20',
+  amber: 'bg-gradient-to-br from-amber-500 via-orange-700 to-slate-950 border-amber-500/30 hover:border-amber-400/60 shadow-amber-950/20',
 }
 
 const PROMO_TAG_THEME_CLASSES = {
-  emerald: 'bg-emerald-400/20 text-emerald-300',
-  purple: 'bg-purple-400/20 text-purple-300',
-  blue: 'bg-blue-400/20 text-blue-100',
-  amber: 'bg-amber-400/20 text-amber-100',
+  emerald: 'bg-emerald-400/15 text-emerald-200 border-emerald-400/30',
+  purple: 'bg-purple-400/15 text-purple-200 border-purple-400/30',
+  blue: 'bg-blue-400/15 text-blue-200 border-blue-400/30',
+  amber: 'bg-amber-400/15 text-amber-200 border-amber-400/30',
 }
 
 const STRIP_THEME_CLASSES = {
@@ -192,6 +193,32 @@ const getBrandLogo = (brand) => {
 // The only claim left is one the platform can stand behind: this is the
 // brand's official store on Krozenda.
 const getBrandOffer = () => 'Official Store'
+
+const heroSlideVariants = {
+  enter: (direction) => ({
+    x: direction > 0 ? '100%' : '-100%',
+    opacity: 0,
+  }),
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction) => ({
+    zIndex: 0,
+    x: direction < 0 ? '100%' : '-100%',
+    opacity: 0,
+  }),
+}
+
+const sectionFadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1.0] },
+  },
+}
 
 export function HomeScreen({ onNavigateTab = () => {} }) {
   const navigate = useNavigate()
@@ -338,6 +365,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
     },
   ]
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
+  const [bannerDirection, setBannerDirection] = useState(1)
 
   const heroDynamicBanners = banners.filter((b) => (b.placement || 'hero') === 'hero')
   const promoDynamicBanners = banners.filter((b) => b.placement === 'promo')
@@ -354,6 +382,16 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
           subtitle: b.subtitle || '',
         }))
       : heroBanners
+
+  const nextBanner = () => {
+    setBannerDirection(1)
+    setCurrentBannerIndex((prev) => (prev + 1) % activeHeroBanners.length)
+  }
+
+  const prevBanner = () => {
+    setBannerDirection(-1)
+    setCurrentBannerIndex((prev) => (prev - 1 + activeHeroBanners.length) % activeHeroBanners.length)
+  }
 
   const promoCards = promoDynamicBanners.length > 0 ? promoDynamicBanners : FALLBACK_PROMO_CARDS
   const trustTiles = stripDynamicBanners.length > 0 ? stripDynamicBanners : FALLBACK_TRUST_TILES
@@ -373,8 +411,9 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
     const start = () => {
       if (interval === null) {
         interval = setInterval(() => {
+          setBannerDirection(1)
           setCurrentBannerIndex((prev) => (prev + 1) % activeHeroBanners.length)
-        }, 5000)
+        }, 5500)
       }
     }
     const stop = () => {
@@ -464,7 +503,13 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
   // it (with a real "no image" placeholder).
 
   return (
-    <div className="relative w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
+    <div className="relative w-full min-h-screen bg-slate-50/70 flex flex-col justify-between text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
+      {/* Background ambient accents for wide monitors */}
+      <div className="absolute top-0 left-0 w-full h-[600px] overflow-hidden pointer-events-none -z-10">
+        <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-blue-400/5 rounded-full blur-3xl" />
+        <div className="absolute -top-20 right-1/4 w-[500px] h-[500px] bg-indigo-400/5 rounded-full blur-3xl" />
+      </div>
+
       {/* DESKTOP WEB HEADER */}
       <div className="hidden md:block">
         <WebHeader />
@@ -472,109 +517,118 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
 
       {/* Main Content Area */}
       <div className="flex-1 pb-20 md:pb-12">
-        {/* MOBILE TOP HEADER & SEARCH */}
-        <div className="md:hidden">
-          <div className="bg-white px-4 py-3 border-b border-slate-200 shadow-xs flex items-center justify-between sticky top-0 z-40">
+        {/* MOBILE TOP HEADER & SEARCH (Streamlined single unified bar) */}
+        <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+          <div className="px-3.5 py-2.5 flex items-center justify-between gap-2.5">
             <Link
               to={USER_ROUTES.DASHBOARD}
               className="flex items-center shrink-0 cursor-pointer transition-opacity hover:opacity-90"
               title="Krozenda Home"
             >
-              <img src="/images/logo.png" alt="Krozenda Logo" className="h-9 w-auto object-contain" />
+              <img src="/images/logo.png" alt="Krozenda Logo" className="h-8 w-auto object-contain" />
             </Link>
-            <div className="flex items-center space-x-3">
+
+            <form
+              onSubmit={handleMobileSearchSubmit}
+              className="flex-1 flex items-center bg-slate-100/90 border border-slate-200/80 rounded-full px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition-all shadow-2xs"
+            >
+              <HiMagnifyingGlass className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <input
+                type="search"
+                value={mobileSearchQuery}
+                onChange={(e) => setMobileSearchQuery(e.target.value)}
+                placeholder="Search products, brands..."
+                className="w-full px-2 bg-transparent text-xs font-normal text-slate-800 placeholder-slate-400 focus:outline-none"
+              />
+            </form>
+
+            <div className="flex items-center space-x-1 shrink-0">
               <button
+                type="button"
                 onClick={() => navigate(USER_ROUTES.NOTIFICATIONS)}
-                className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-700"
+                className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
+                aria-label="Notifications"
               >
                 <HiBell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
                 )}
               </button>
               <button
+                type="button"
                 onClick={() => navigate(USER_ROUTES.CART)}
-                className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-700"
+                className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
+                aria-label="Cart"
               >
                 <HiOutlineShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                     {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
               </button>
             </div>
           </div>
-
-          <form
-            onSubmit={handleMobileSearchSubmit}
-            className="px-4 py-3 bg-white border-b border-slate-200 shadow-xs"
-          >
-            <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-2xl px-3.5 py-2">
-              <HiMagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={mobileSearchQuery}
-                onChange={(e) => setMobileSearchQuery(e.target.value)}
-                placeholder="Search 100,000+ products, brands..."
-                className="w-full px-2.5 bg-transparent text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none"
-              />
-              <button type="submit" className="text-xs font-bold text-blue-600 shrink-0 ml-1">
-                Search
-              </button>
-            </div>
-          </form>
         </div>
 
-        {/* MAIN CONTAINER */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 md:pt-6 space-y-4 sm:space-y-6 md:space-y-8">
-          {/* Main Top Hero Banner Section (Clean Single Full-Width Carousel) */}
-          <div className="w-full relative overflow-hidden rounded-2xl md:rounded-3xl shadow-xl group cursor-pointer aspect-[16/7] sm:aspect-[21/8] lg:aspect-[25/8] min-h-[220px] sm:min-h-[280px] lg:min-h-[340px]">
+        {/* MAIN CONTAINER (Full-width fluid layout without side gutters) */}
+        <div className="w-full px-3.5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pt-3 sm:pt-5 md:pt-6 space-y-6 sm:space-y-8 md:space-y-10">
+          {/* Main Top Hero Banner Section with Framer Motion AnimatePresence */}
+          <div className="w-full relative overflow-hidden rounded-2xl md:rounded-3xl shadow-card group cursor-pointer aspect-[16/7] sm:aspect-[21/7] lg:aspect-[28/8] min-h-[240px] sm:min-h-[300px] lg:min-h-[380px] bg-slate-900">
             <div
               onClick={() => {
                 const cur = activeHeroBanners[currentBannerIndex]
                 navigate(cur?.productId ? userPath.product(cur.productId) : USER_ROUTES.LISTING)
               }}
-              className="w-full h-full relative overflow-hidden bg-slate-950"
+              className="w-full h-full relative overflow-hidden"
             >
-              {activeHeroBanners.map((banner, idx) => (
-                <div
-                  key={banner.id}
-                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                    idx === currentBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                  }`}
+              <AnimatePresence initial={false} custom={bannerDirection}>
+                <motion.div
+                  key={currentBannerIndex}
+                  custom={bannerDirection}
+                  variants={heroSlideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{
+                    x: { type: 'spring', stiffness: 300, damping: 30 },
+                    opacity: { duration: 0.35 },
+                  }}
+                  className="absolute inset-0 h-full w-full"
                 >
                   <SmartImage
-                    src={banner.image}
-                    alt={banner.alt}
-                    // The hero is the LCP element on this page; only the
-                    // currently-visible slide is eager, the rest stay lazy so
-                    // five full-width images are not all fetched at once.
-                    priority={idx === currentBannerIndex}
+                    src={activeHeroBanners[currentBannerIndex]?.image}
+                    alt={activeHeroBanners[currentBannerIndex]?.alt}
+                    priority
                     sizes="100vw"
                     ratio="auto"
                     fit="cover"
-                    className="!absolute inset-0 h-full w-full rounded-2xl md:rounded-3xl"
+                    className="!absolute inset-0 h-full w-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent pointer-events-none" />
 
-                  {/* Floating Callout Badge (admin-managed via Banner tag/subtitle) */}
-                  {(banner.tag || banner.subtitle) && (
-                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-20 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                      {banner.tag && (
-                        <span className="px-3 py-1 rounded-full bg-blue-600/90 text-white font-black text-[11px] uppercase tracking-wider shadow-lg backdrop-blur-md border border-blue-400/40">
-                          {banner.tag}
+                  {/* Floating Callout Badge */}
+                  {(activeHeroBanners[currentBannerIndex]?.tag || activeHeroBanners[currentBannerIndex]?.subtitle) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="absolute bottom-4 left-4 sm:bottom-6 sm:left-8 z-20 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 max-w-xl"
+                    >
+                      {activeHeroBanners[currentBannerIndex]?.tag && (
+                        <span className="px-3.5 py-1 rounded-full bg-blue-600/90 text-white font-semibold text-xs tracking-wide shadow-lg backdrop-blur-md border border-blue-400/40">
+                          {activeHeroBanners[currentBannerIndex]?.tag}
                         </span>
                       )}
-                      {banner.subtitle && (
-                        <span className="px-3 py-1 rounded-full bg-slate-900/80 text-amber-300 font-bold text-[11px] backdrop-blur-md border border-amber-400/30">
-                          {banner.subtitle}
+                      {activeHeroBanners[currentBannerIndex]?.subtitle && (
+                        <span className="px-3.5 py-1 rounded-full bg-slate-900/80 text-amber-300 font-medium text-xs backdrop-blur-md border border-amber-400/30">
+                          {activeHeroBanners[currentBannerIndex]?.subtitle}
                         </span>
                       )}
-                    </div>
+                    </motion.div>
                   )}
-                </div>
-              ))}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Left Chevron Control */}
@@ -582,9 +636,10 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                setCurrentBannerIndex((prev) => (prev - 1 + activeHeroBanners.length) % activeHeroBanners.length)
+                prevBanner()
               }}
-              className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-black/50 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl border border-white/20"
+              className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg border border-white/20 hover:scale-105 active:scale-95"
+              aria-label="Previous slide"
             >
               <HiChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -594,35 +649,37 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                setCurrentBannerIndex((prev) => (prev + 1) % activeHeroBanners.length)
+                nextBanner()
               }}
-              className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-black/50 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl border border-white/20"
+              className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-blue-600 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg border border-white/20 hover:scale-105 active:scale-95"
+              aria-label="Next slide"
             >
               <HiChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
             {/* Carousel Dot Indicators */}
-            <div className="absolute bottom-3 right-4 sm:bottom-4 sm:right-6 z-20 flex items-center space-x-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+            <div className="absolute bottom-3 right-4 sm:bottom-5 sm:right-8 z-20 flex items-center space-x-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
               {activeHeroBanners.map((_, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
+                    setBannerDirection(idx > currentBannerIndex ? 1 : -1)
                     setCurrentBannerIndex(idx)
                   }}
                   className={`transition-all duration-300 rounded-full ${
                     idx === currentBannerIndex
-                      ? 'w-5 sm:w-6 h-1.5 sm:h-2 bg-amber-400'
-                      : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white'
+                      ? 'w-6 h-2 bg-amber-400 shadow-xs'
+                      : 'w-2 h-2 bg-white/40 hover:bg-white/70'
                   }`}
+                  aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
             </div>
           </div>
 
-          {/* CATEGORY QUICK-BAR. Hidden when the catalog has no categories —
-              an empty auto-scrolling rail with arrow buttons reads as broken. */}
+          {/* CATEGORY QUICK-BAR */}
           <div
             className={`relative group/catbar py-1 sm:py-2 ${!isLoading.categories && !hasCategories ? 'hidden' : ''}`}
             onMouseEnter={() => setIsCategoryPaused(true)}
@@ -630,11 +687,11 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
             onTouchStart={() => setIsCategoryPaused(true)}
             onTouchEnd={() => setTimeout(() => setIsCategoryPaused(false), 2000)}
           >
-            {/* Left Scroll Arrow Button - Hidden on mobile */}
+            {/* Left Scroll Arrow Button */}
             <button
               type="button"
               onClick={() => scrollCategories('left')}
-              className={`hidden sm:flex absolute -left-1 sm:-left-3.5 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 hover:bg-blue-600 text-slate-700 hover:text-white shadow-lg border border-slate-200/90 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 ${
+              className={`hidden sm:flex absolute -left-2 sm:-left-3.5 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 hover:bg-blue-600 text-slate-700 hover:text-white shadow-card border border-slate-200/80 items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 ${
                 canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
               aria-label="Scroll left categories"
@@ -642,16 +699,16 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               <HiChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            {/* Scrollable Row (Scrollbar 100% hidden across all browsers) */}
+            {/* Scrollable Row */}
             <div
               ref={categoryScrollRef}
               onScroll={checkCategoryScroll}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="flex items-start overflow-x-auto gap-1.5 sm:gap-6 md:gap-8 lg:gap-10 text-center px-0.5 sm:px-2 scroll-smooth no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
+              className="flex items-start overflow-x-auto gap-2 sm:gap-6 md:gap-8 lg:gap-10 text-center px-1 sm:px-2 scroll-smooth no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
             >
               {isLoading.categories ? (
                 [1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                  <div key={n} className="flex flex-col items-center shrink-0 space-y-1.5 w-[64px] sm:w-[78px] md:w-[84px] animate-pulse">
+                  <div key={n} className="flex flex-col items-center shrink-0 space-y-2 w-[68px] sm:w-[82px] md:w-[90px] animate-pulse">
                     <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full bg-slate-200" />
                     <div className="w-12 h-2.5 bg-slate-200 rounded-md mt-1" />
                   </div>
@@ -660,27 +717,27 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                 categories.map((item, idx) => {
                   const bg = PASTEL_BG_COLORS[idx % PASTEL_BG_COLORS.length]
                   return (
-                    // A real link: long-press, open-in-new-tab and keyboard
-                    // navigation all work, and the filter is in the URL so the
-                    // destination is shareable.
                     <Link
                       key={item.id}
                       to={userPath.listing({ category: item.id })}
-                      className="flex flex-col items-center shrink-0 group w-[64px] sm:w-[78px] md:w-[84px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-xl"
+                      className="flex flex-col items-center shrink-0 group w-[68px] sm:w-[82px] md:w-[90px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-xl"
                     >
-                      <div
-                        className={`w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full ${bg} overflow-hidden shadow-2xs group-hover:scale-108 transition-all duration-300 border border-slate-200/50`}
+                      <motion.div
+                        whileHover={{ y: -3, scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                        className={`w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full ${bg} overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300 border border-slate-200/60 flex items-center justify-center p-1.5`}
                       >
                         <SmartImage
                           src={item.image}
                           alt={item.name}
                           sizes="80px"
                           ratio="1 / 1"
-                          fit="cover"
-                          className="h-full w-full !bg-transparent"
+                          fit="contain"
+                          className="h-full w-full !bg-transparent object-contain transition-transform duration-300 group-hover:scale-105"
                         />
-                      </div>
-                      <span className="text-[10.5px] sm:text-xs font-semibold text-slate-800 group-hover:text-blue-600 transition-colors text-center leading-tight line-clamp-2 w-full mt-1.5 break-words">
+                      </motion.div>
+                      <span className="text-[11px] sm:text-xs font-medium text-slate-700 group-hover:text-blue-600 transition-colors text-center leading-tight line-clamp-2 w-full mt-2 break-words">
                         {item.name}
                       </span>
                     </Link>
@@ -689,11 +746,11 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               )}
             </div>
 
-            {/* Right Scroll Arrow Button - Hidden on mobile */}
+            {/* Right Scroll Arrow Button */}
             <button
               type="button"
               onClick={() => scrollCategories('right')}
-              className={`hidden sm:flex absolute -right-1 sm:-right-3.5 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 hover:bg-blue-600 text-slate-700 hover:text-white shadow-lg border border-slate-200/90 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 ${
+              className={`hidden sm:flex absolute -right-2 sm:-right-3.5 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 hover:bg-blue-600 text-slate-700 hover:text-white shadow-card border border-slate-200/80 items-center justify-center transition-all duration-200 hover:scale-108 active:scale-95 ${
                 canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
               aria-label="Scroll right categories"
@@ -702,18 +759,13 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
             </button>
           </div>
 
-          {/* FLASH SALE — rendered only when there is a real flash sale.
-              The old version fell back to four invented products under a
-              live countdown, and the API itself used to backfill an empty
-              flash-sale query with ordinary newest products, so full-price
-              items appeared under a "FLASH SALE / Ends In" header. Both are
-              gone: no promotion, no rail. */}
+          {/* FLASH SALE SECTION */}
           <SectionErrorBoundary label="Flash sale">
             {isLoading.flashSale ? (
-              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
+              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/70 shadow-card space-y-4">
                 <div className="h-5 w-40 bg-slate-200 rounded animate-pulse" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  {[1, 2, 3, 4].map((n) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+                  {[1, 2, 3, 4, 5].map((n) => (
                     <div key={n} className="bg-slate-50 rounded-2xl p-4 animate-pulse space-y-3">
                       <div className="w-full aspect-square bg-slate-200 rounded-xl" />
                       <div className="w-3/4 h-3 bg-slate-200 rounded" />
@@ -723,81 +775,120 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                 </div>
               </div>
             ) : hasFlashSale ? (
-              <section className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center space-x-2.5 flex-wrap gap-y-1">
-                    <span className="bg-red-600 text-white font-black text-[10px] sm:text-xs uppercase px-2.5 py-1 rounded-lg whitespace-nowrap shadow-xs flex items-center space-x-1">
-                      <HiBolt className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+              <motion.section
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-50px' }}
+                variants={sectionFadeUp}
+                className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/70 shadow-card space-y-4 sm:space-y-5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+                  <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+                    <span className="bg-red-600 text-white font-semibold text-xs uppercase tracking-wider px-3 py-1 rounded-lg whitespace-nowrap shadow-xs flex items-center space-x-1.5">
+                      <HiBolt className="w-3.5 h-3.5 text-amber-300 animate-pulse" aria-hidden="true" />
                       <span>Flash Sale</span>
                     </span>
-                    <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Ends in</span>
+                    <span className="text-xs font-medium text-slate-500 whitespace-nowrap">Ends in</span>
                     <div
-                      className="flex items-center space-x-1 font-mono text-xs font-black text-slate-900 whitespace-nowrap"
+                      className="flex items-center space-x-1.5 font-mono text-xs font-bold text-slate-900 whitespace-nowrap"
                       role="timer"
                       aria-label={`Ends in ${timeLeft.hours} hours ${timeLeft.minutes} minutes`}
                     >
-                      <span className="bg-slate-900 text-white px-2 py-0.5 rounded-md">{formatTime(timeLeft.hours)}</span>
-                      <span aria-hidden="true">:</span>
-                      <span className="bg-slate-900 text-white px-2 py-0.5 rounded-md">{formatTime(timeLeft.minutes)}</span>
-                      <span aria-hidden="true">:</span>
-                      <span className="bg-slate-900 text-white px-2 py-0.5 rounded-md">{formatTime(timeLeft.seconds)}</span>
+                      <span className="bg-slate-900 text-white px-2 py-1 rounded-md shadow-2xs">{formatTime(timeLeft.hours)}</span>
+                      <span className="text-slate-400 font-bold" aria-hidden="true">:</span>
+                      <span className="bg-slate-900 text-white px-2 py-1 rounded-md shadow-2xs">{formatTime(timeLeft.minutes)}</span>
+                      <span className="text-slate-400 font-bold" aria-hidden="true">:</span>
+                      <span className="bg-slate-900 text-white px-2 py-1 rounded-md shadow-2xs">{formatTime(timeLeft.seconds)}</span>
                     </div>
                   </div>
 
                   <Link
                     to={userPath.listing({ flashSale: true })}
-                    className="text-xs font-bold text-blue-600 hover:underline whitespace-nowrap shrink-0"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center space-x-1 group whitespace-nowrap shrink-0"
                   >
-                    See all deals →
+                    <span>See all deals</span>
+                    <HiChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
                   {flashSale.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-              </section>
+              </motion.section>
             ) : null}
           </SectionErrorBoundary>
 
-          {/* Promotional Highlight Banners (admin-managed via Banner placement='promo') */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Promotional Feature Bento Cards */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${promoCards.length >= 4 ? 'lg:grid-cols-4' : promoCards.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 sm:gap-5`}>
             {promoCards.map((card, idx) => {
               const CardIcon = BANNER_ICON_MAP[card.icon] || HiSparkles
               const gradient = PROMO_THEME_CLASSES[card.theme] || PROMO_THEME_CLASSES.blue
               const tagClass = PROMO_TAG_THEME_CLASSES[card.theme] || PROMO_TAG_THEME_CLASSES.blue
               return (
-                <Link
+                <motion.div
                   key={card.id || card._id || idx}
-                  to={card.ctaPath || USER_ROUTES.LISTING}
-                  className={`${gradient} rounded-3xl p-6 text-white shadow-md hover:shadow-lg transition-all flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60`}
+                  whileHover={{ y: -5, scale: 1.01 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                  className="h-full"
                 >
-                  <div className="space-y-1 max-w-xs">
-                    {card.tag && (
-                      <span className={`${tagClass} px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider`}>
-                        {card.tag}
-                      </span>
-                    )}
-                    <h3 className="text-lg font-black pt-1">{card.title}</h3>
-                    <p className="text-xs text-white/80">{card.subtitle}</p>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-white/10 text-white shrink-0">
-                    <CardIcon className="w-8 h-8" aria-hidden="true" />
-                  </div>
-                </Link>
+                  <Link
+                    to={card.ctaPath || USER_ROUTES.LISTING}
+                    className={`${gradient} rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full min-h-[195px] sm:min-h-[215px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 relative overflow-hidden group border`}
+                  >
+                    {/* Atmospheric Lighting */}
+                    <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-white/10 blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                    {/* Top Row: Tag badge & Squircle Glass Icon */}
+                    <div className="flex items-start justify-between gap-3 z-10">
+                      {card.tag ? (
+                        <span
+                          className={`${tagClass} px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border inline-flex items-center gap-1.5 shadow-2xs`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                          {card.tag}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-xs group-hover:bg-white/25 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shrink-0">
+                        <CardIcon className="w-5 h-5" aria-hidden="true" />
+                      </div>
+                    </div>
+
+                    {/* Body: Title and Subtitle */}
+                    <div className="mt-4 mb-3 z-10 space-y-1.5 flex-1">
+                      <h3 className="text-base sm:text-[17px] font-bold tracking-tight text-white leading-snug group-hover:text-white transition-colors line-clamp-2">
+                        {card.title}
+                      </h3>
+                      <p className="text-xs text-white/80 font-normal leading-relaxed line-clamp-2">
+                        {card.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Bottom: Interactive CTA */}
+                    <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-white/90 z-10 group-hover:text-white transition-colors">
+                      <span>Explore Benefits</span>
+                      <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/25 group-hover:translate-x-0.5 transition-all duration-200">
+                        <HiChevronRight className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
               )
             })}
           </div>
 
-          {/* TRENDING — same rule: hidden when there is nothing trending,
-              rather than backfilled with invented "best value picks". */}
+          {/* TRENDING NOW SECTION */}
           <SectionErrorBoundary label="Trending products">
             {isLoading.trending ? (
-              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
+              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/70 shadow-card space-y-4">
                 <div className="h-5 w-52 bg-slate-200 rounded animate-pulse" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  {[1, 2, 3, 4].map((n) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+                  {[1, 2, 3, 4, 5].map((n) => (
                     <div key={n} className="bg-slate-50 rounded-2xl p-4 animate-pulse space-y-3">
                       <div className="w-full aspect-square bg-slate-200 rounded-xl" />
                       <div className="w-3/4 h-3 bg-slate-200 rounded" />
@@ -807,158 +898,177 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
                 </div>
               </div>
             ) : hasTrending ? (
-              <section className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
+              <motion.section
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-50px' }}
+                variants={sectionFadeUp}
+                className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/70 shadow-card space-y-4 sm:space-y-5"
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-xs md:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center space-x-2">
                       <HiCurrencyRupee className="w-4 h-4 text-emerald-600" aria-hidden="true" />
-                      <span>Trending now</span>
+                      <span>Trending Now</span>
                     </h2>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      Products other buyers are ordering most
+                    <p className="text-xs text-slate-500 font-normal mt-0.5">
+                      High-velocity wholesale products ordered most this week
                     </p>
                   </div>
 
                   <Link
                     to={userPath.listing({ trending: true })}
-                    className="text-xs font-bold text-blue-600 hover:underline shrink-0"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center space-x-1 group whitespace-nowrap shrink-0"
                   >
-                    View all →
+                    <span>View all</span>
+                    <HiChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
                   {trending.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-              </section>
+              </motion.section>
             ) : null}
           </SectionErrorBoundary>
 
-          {/* OFFICIAL BRAND STORES — real brands only. The previous version
-              fell back to six invented brands with invented product counts
-              ("Samsung — 450+ Products") and attached a made-up discount claim
-              to each ("Up to 70% OFF"). */}
+          {/* OFFICIAL BRAND STORES */}
           <SectionErrorBoundary label="Brand stores">
             {isLoading.brands ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
                   <div key={n} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : hasBrands ? (
-              <section className="space-y-3">
+              <motion.section
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-50px' }}
+                variants={sectionFadeUp}
+                className="space-y-3.5"
+              >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <h2 className="text-xs md:text-sm font-bold text-slate-900 uppercase tracking-wider">
-                      Official brand stores
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                      Official Brand Stores
                     </h2>
-                    <span className="hidden sm:inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
                       <HiCheckBadge className="w-3 h-3 mr-1 text-emerald-600" aria-hidden="true" /> 100% Genuine
                     </span>
                   </div>
                   <Link
                     to={USER_ROUTES.CATEGORIES}
-                    className="text-[11px] md:text-xs font-bold text-blue-600 hover:underline flex items-center shrink-0"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center space-x-0.5 shrink-0 group"
                   >
-                    Explore all <HiChevronRight className="w-3.5 h-3.5 ml-0.5" aria-hidden="true" />
+                    <span>Explore all</span>
+                    <HiChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 sm:gap-4 text-center">
                   {brands.map((brand) => {
                     const logo = getBrandLogo(brand)
                     return (
-                      <Link
+                      <motion.div
                         key={brand.id}
-                        to={userPath.listing({ brand: brand.id })}
-                        className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-blue-400/80 hover:-translate-y-1.5 transition-all duration-300 group flex flex-col items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        whileHover={{ y: -4 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                       >
-                        <div className="w-full rounded-xl sm:rounded-2xl bg-slate-50/80 border border-slate-100 p-3 group-hover:bg-white group-hover:border-blue-200/90 transition-all">
-                          {logo ? (
-                            <SmartImage
-                              src={logo}
-                              alt={brand.name}
-                              sizes="120px"
-                              ratio="3 / 2"
-                              className="w-full !bg-transparent"
-                            />
-                          ) : (
-                            // No logo on file: the brand's initials, not a
-                            // borrowed logo from a lookup table.
-                            <div className="flex aspect-[3/2] items-center justify-center">
-                              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                                {brand.name ? brand.name.slice(0, 2).toUpperCase() : 'BR'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        <Link
+                          to={userPath.listing({ brand: brand.id })}
+                          className="h-full bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/70 shadow-card hover:shadow-card-hover hover:border-blue-200 transition-all group flex flex-col items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        >
+                          <div className="w-full rounded-xl bg-slate-50/80 border border-slate-100 p-2.5 sm:p-3 group-hover:bg-white group-hover:border-blue-100 transition-colors flex items-center justify-center min-h-[70px]">
+                            {logo ? (
+                              <SmartImage
+                                src={logo}
+                                alt={brand.name}
+                                sizes="120px"
+                                ratio="3 / 2"
+                                className="w-full max-h-12 object-contain !bg-transparent"
+                              />
+                            ) : (
+                              <div className="flex aspect-[3/2] items-center justify-center">
+                                <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs uppercase">
+                                  {brand.name ? brand.name.slice(0, 2).toUpperCase() : 'BR'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
 
-                        <div className="mt-2.5 w-full text-center flex flex-col items-center">
-                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate w-full">
-                            {brand.name}
-                          </h3>
-                          <span className="mt-1 text-[10px] font-bold text-blue-600 bg-blue-50/90 border border-blue-100 px-2.5 py-0.5 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all truncate max-w-full">
-                            {getBrandOffer()}
-                          </span>
-                        </div>
-                      </Link>
+                          <div className="mt-2 w-full text-center flex flex-col items-center">
+                            <h3 className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate w-full">
+                              {brand.name}
+                            </h3>
+                            <span className="mt-1 text-[10px] font-medium text-blue-600 bg-blue-50/80 border border-blue-100/80 px-2 py-0.5 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-colors truncate max-w-full">
+                              {getBrandOffer()}
+                            </span>
+                          </div>
+                        </Link>
+                      </motion.div>
                     )
                   })}
                 </div>
-              </section>
+              </motion.section>
             ) : null}
           </SectionErrorBoundary>
 
-          {/* Coupon Banner — pulls a real active sitewide coupon; never fabricates a code */}
-          <Link
-            to={USER_ROUTES.LISTING}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 sm:p-6 text-white shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          {/* Coupon Banner */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
-            <div className="space-y-1 min-w-0 flex-1">
-              <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest block">
-                {bestCoupon ? 'SPECIAL PROMOTION' : "TODAY'S PICKS"}
+            <Link
+              to={USER_ROUTES.LISTING}
+              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-3xl p-5 sm:p-7 text-white shadow-card hover:shadow-card-hover transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden group"
+            >
+              <div className="space-y-1.5 min-w-0 flex-1 z-10">
+                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block">
+                  {bestCoupon ? 'SPECIAL PROMOTION' : "TODAY'S PICKS"}
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug">
+                  {bestCoupon ? formatCouponHeadline(bestCoupon) : "Explore Today's Best Wholesale Deals"}
+                </h3>
+                <p className="text-xs sm:text-sm text-blue-100 font-normal">
+                  {bestCoupon ? (
+                    <>
+                      Use coupon code <span className="font-bold underline text-white">{bestCoupon.code}</span>
+                      {bestCoupon.minOrderAmount > 0
+                        ? ` on orders above ₹${bestCoupon.minOrderAmount.toLocaleString('en-IN')}.`
+                        : ' at checkout.'}
+                    </>
+                  ) : (
+                    'Verified factory direct prices across electronics, fashion, beauty & home.'
+                  )}
+                </p>
+              </div>
+
+              <span className="bg-white text-blue-700 font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs hover:bg-blue-50 transition-colors shrink-0 flex items-center space-x-1.5 group-hover:scale-105">
+                <span>Shop now</span>
+                <HiChevronRight className="w-4 h-4" aria-hidden="true" />
               </span>
-              <h3 className="text-base sm:text-xl font-bold text-white leading-snug">
-                {bestCoupon ? formatCouponHeadline(bestCoupon) : "Explore Today's Best Deals"}
-              </h3>
-              <p className="text-xs text-blue-100 font-medium">
-                {bestCoupon ? (
-                  <>
-                    Use coupon code <span className="font-bold underline text-white">{bestCoupon.code}</span>
-                    {bestCoupon.minOrderAmount > 0
-                      ? ` on orders above ₹${bestCoupon.minOrderAmount.toLocaleString('en-IN')}.`
-                      : ' at checkout.'}
-                  </>
-                ) : (
-                  'Hand-picked wholesale deals across electronics, fashion & more.'
-                )}
-              </p>
-            </div>
+            </Link>
+          </motion.div>
 
-            <span className="bg-white text-blue-700 font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs hover:bg-blue-50 transition-colors shrink-0 flex items-center space-x-1.5">
-              <span>Shop now</span>
-              <HiChevronRight className="w-4 h-4" aria-hidden="true" />
-            </span>
-          </Link>
-
-          {/* Trust strip (moved to the bottom, closing reassurance) — admin-managed via Banner placement='strip' */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Trust strip */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {trustTiles.map((tile, idx) => {
               const TileIcon = BANNER_ICON_MAP[tile.icon] || HiSparkles
               const theme = STRIP_THEME_CLASSES[tile.theme] || STRIP_THEME_CLASSES.blue
               return (
                 <div
                   key={tile.id || tile._id || idx}
-                  className={`bg-white rounded-2xl p-2.5 sm:p-4 border border-slate-200/80 shadow-2xs flex items-center space-x-2.5 sm:space-x-3 hover:shadow-xs transition-all ${theme.hover}`}
+                  className={`bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/70 shadow-card flex items-center space-x-3 hover:shadow-card-hover hover:border-blue-200/80 transition-all ${theme.hover}`}
                 >
-                  <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${theme.icon}`}>
-                    <TileIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${theme.icon}`}>
+                    <TileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">{tile.title}</h4>
-                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">{tile.subtitle}</p>
+                    <h4 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">{tile.title}</h4>
+                    <p className="text-[11px] text-slate-500 font-normal truncate mt-0.5">{tile.subtitle}</p>
                   </div>
                 </div>
               )

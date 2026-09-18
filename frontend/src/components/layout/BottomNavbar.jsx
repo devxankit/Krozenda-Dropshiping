@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 import { useKeyboardOpen } from '../../lib/useKeyboardOpen'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -47,9 +48,6 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
     { id: 'profile', label: 'Profile', route: USER_ROUTES.PROFILE, ActiveIcon: HiUser, InactiveIcon: HiOutlineUser },
   ]
 
-  const activeIndex = tabs.findIndex((t) => t.id === currentActiveTab)
-  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0
-
   const handleTabClick = (tab) => {
     if (onChangeTab) {
       onChangeTab(tab.id)
@@ -58,60 +56,50 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
     }
   }
 
-  // A bottom bar dragged on top of the keyboard is the single worst thing a
-  // fixed element does on a phone. Nothing here is useful mid-keystroke, so it
-  // steps out of the way instead of fighting the viewport.
   const keyboardOpen = useKeyboardOpen()
   if (keyboardOpen) return null
 
   return (
     <nav
       aria-label="Primary"
-      // pb-[env(safe-area-inset-bottom)] is what keeps the labels above the
-      // iPhone home indicator and Android gesture bar instead of behind them.
-      // It resolves to 0 in a desktop browser, so nothing changes there.
-      className="fixed inset-x-0 bottom-0 z-50 md:hidden w-full select-none border-t border-slate-200/90 bg-white/95 px-2 pt-1.5 shadow-2xl backdrop-blur-md pb-[calc(6px+env(safe-area-inset-bottom,0px))] fixed-bottom-nav"
+      className="fixed inset-x-0 bottom-0 z-50 md:hidden w-full select-none border-t border-slate-200/80 bg-white/95 px-2 pt-1.5 shadow-2xl backdrop-blur-md pb-[calc(6px+env(safe-area-inset-bottom,0px))] fixed-bottom-nav"
     >
       <div className="max-w-md mx-auto relative grid grid-cols-5 items-center">
-        {/* Smooth Sliding Background Pill Indicator */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-0.5 top-0.5 rounded-2xl border border-blue-500/20 bg-blue-600/10 shadow-2xs transition-all duration-300 ease-out"
-          style={{
-            left: `${safeActiveIndex * 20}%`,
-            width: '20%',
-          }}
-        />
-
         {tabs.map((tab) => {
           const isActive = currentActiveTab === tab.id
           const IconComponent = isActive ? tab.ActiveIcon : tab.InactiveIcon
 
           return (
-            <button
+            <motion.button
               key={tab.id}
               type="button"
+              whileTap={{ scale: 0.9 }}
               onClick={() => handleTabClick(tab)}
-              // aria-current tells a screen reader which tab is active; the
-              // colour change alone conveyed nothing to one.
               aria-current={isActive ? 'page' : undefined}
-              // min-h-12 gives a 48px target — the icon+label was ~36px.
-              className="relative z-10 flex min-h-12 flex-col items-center justify-center rounded-2xl px-1 py-1.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="relative z-10 flex min-h-12 flex-col items-center justify-center rounded-2xl px-1 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
+              {isActive && (
+                <motion.div
+                  layoutId="bottomNavPill"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  className="absolute inset-0 rounded-2xl bg-blue-50 border border-blue-100/80 -z-10"
+                />
+              )}
+
               <IconComponent
                 aria-hidden="true"
-                className={`w-5 h-5 transition-all duration-300 ${
-                  isActive ? 'scale-110 -translate-y-0.5 text-blue-600' : 'scale-100 text-slate-500 hover:text-slate-800'
+                className={`w-5 h-5 transition-transform duration-200 ${
+                  isActive ? 'scale-110 text-blue-600' : 'scale-100 text-slate-500 hover:text-slate-800'
                 }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${
-                  isActive ? 'text-blue-700 font-extrabold' : 'text-slate-500 font-semibold'
+                className={`text-[10px] mt-1 tracking-tight transition-colors duration-200 ${
+                  isActive ? 'text-blue-700 font-bold' : 'text-slate-500 font-medium'
                 }`}
               >
                 {tab.label}
               </span>
-            </button>
+            </motion.button>
           )
         })}
       </div>

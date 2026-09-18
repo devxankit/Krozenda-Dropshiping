@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 const os = require('os');
+const dns = require('dns');
+
+// Fallback to Google Public DNS if local network router fails SRV query resolution
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (e) {
+  console.warn('Could not set custom DNS servers:', e.message);
+}
 
 async function connectDB() {
   try {
