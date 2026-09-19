@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import {
   createCustomer,
   createVendor,
+  decideKycApplication,
+  decideKycDocument,
   fetchCustomers,
   fetchKycApplication,
   fetchKycQueue,
@@ -77,6 +79,23 @@ export const useKycApplicationController = (applicationId) =>
     () => fetchKycApplication(applicationId),
     Boolean(applicationId),
   )
+
+export const useKycDecisionController = ({ applicationId, onDone } = {}) => ({
+  decideApplication: useAdminMutation({
+    mutationFn: decideKycApplication,
+    invalidate: [['admin', 'kyc'], ['admin', 'vendors']],
+    success: (vendor) => `${vendor.name} marked ${vendor.verificationStatus.toLowerCase().replace('_', ' ')}`,
+    onDone,
+  }),
+  decideDocument: useAdminMutation({
+    mutationFn: decideKycDocument,
+    invalidate: [
+      ['admin', 'kyc', applicationId],
+      ['admin', 'kyc'],
+    ],
+    success: (doc) => `${doc.documentLabel || doc.documentType} ${doc.status.toLowerCase()}`,
+  }),
+})
 
 export const useRoleDetailController = (roleId) =>
   useResource(['admin', 'roles', roleId], () => fetchRoleDetail(roleId), Boolean(roleId))

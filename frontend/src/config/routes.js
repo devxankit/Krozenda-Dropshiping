@@ -213,6 +213,16 @@ export const ADMIN_ROUTES = Object.freeze({
   DROPSHIPPING_ORDERS: '/admin/dropshipping/orders',
   DROPSHIPPING_MARGINS: '/admin/dropshipping/margins',
 
+  // ---- CJ Dropshipping (provider-specific, admin-only) --------------------
+  CJ_DASHBOARD: '/admin/cj',
+  CJ_SETTINGS: '/admin/cj/settings',
+  CJ_CATALOGUE: '/admin/cj/catalogue',
+  CJ_PRODUCTS: '/admin/cj/products',
+  CJ_ORDERS: '/admin/cj/orders',
+  CJ_SHIPMENTS: '/admin/cj/shipments',
+  CJ_DISPUTES: '/admin/cj/disputes',
+  CJ_SYNC_LOGS: '/admin/cj/sync-logs',
+
   // ---- marketing & content ------------------------------------------------
   COUPONS: '/admin/marketing/coupons',
   OFFERS: '/admin/marketing/offers',

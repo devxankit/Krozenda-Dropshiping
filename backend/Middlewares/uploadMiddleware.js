@@ -319,4 +319,11 @@ module.exports = {
   handleDocumentUploadError,
   variantPath,
   sniffImageType,
+  // Exported for cjImageService, which downloads a remote CJ image into a
+  // buffer (rather than receiving a multipart upload) and needs the same
+  // resize/WebP/derivative pipeline every other upload path already uses —
+  // reused rather than reimplemented.
+  writeImageSet,
+  generateFilename,
+  MAX_INPUT_PIXELS,
 };

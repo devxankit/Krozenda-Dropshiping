@@ -154,7 +154,9 @@ function serializeProduct(p) {
     variants: (p.variants || []).map((v) => ({
       id: v._id.toString(),
       name: v.name,
-      attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+      // See productController.js's identical branch: v.attributes is a Map
+      // on a hydrated doc but a plain object once `.lean()`'d.
+      attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes || {},
       sku: v.sku || '',
       barcode: v.barcode || '',
       price: v.price ?? null,

@@ -75,6 +75,7 @@ export function ApprovalsPage() {
 
   const tabCounts = data?.tabCounts || { all: 0, category: 0, brand: 0, product: 0 }
   const isAutoApprovalOn = Boolean(settings?.autoApprovalEnabled)
+  const isSellerOnlyOn = Boolean(settings?.sellerOnlyMode)
 
   return (
     <>
@@ -234,6 +235,51 @@ export function ApprovalsPage() {
                   settingsWriter.update.run({ autoApprovalEnabled: event.target.checked })
                 }
                 label={isAutoApprovalOn ? 'Enabled' : 'Disabled'}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Seller-Only Catalog Mode Configuration Card */}
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-shadow hover:shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-2xs ${
+                  isSellerOnlyOn
+                    ? 'border-amber-200 bg-amber-50 text-amber-600'
+                    : 'border-slate-200 bg-slate-100 text-slate-500'
+                }`}
+              >
+                <Icon name="approvals" className="h-5 w-5" />
+              </span>
+
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Seller-Only Catalog Mode
+                  </h3>
+                  <Badge tone={isSellerOnlyOn ? 'warning' : 'neutral'} size="sm" dot>
+                    {isSellerOnlyOn ? 'Sellers Only' : 'Admin + Sellers'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
+                  {isSellerOnlyOn
+                    ? 'Admin can no longer add products, categories, or brands directly — only sellers can submit new listings, and admin’s role here is limited to approving or rejecting them.'
+                    : 'Both admin and sellers can add new products, categories, and brands directly.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+              <Switch
+                id="catalog-seller-only-mode"
+                checked={isSellerOnlyOn}
+                disabled={!canApprove || !settings || settingsWriter.update.isSubmitting}
+                onChange={(event) =>
+                  settingsWriter.update.run({ sellerOnlyMode: event.target.checked })
+                }
+                label={isSellerOnlyOn ? 'Enabled' : 'Disabled'}
               />
             </div>
           </div>

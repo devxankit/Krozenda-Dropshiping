@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { handleShiprocketWebhook } = require('../Controllers/shipmentWebhookController');
 const { handleRazorpayWebhook } = require('../Controllers/paymentWebhookController');
+const { handleCjWebhook } = require('../Controllers/cjWebhookController');
 
 const router = express.Router();
 
@@ -35,5 +36,9 @@ router.post('/', webhookRateLimiter, handleShiprocketWebhook);
 // payload has nothing in common with Shiprocket's and genuinely signs its
 // requests, so it gets its own handler rather than being guessed at here.
 router.post('/payments', webhookRateLimiter, handleRazorpayWebhook);
+
+// CJ Dropshipping's own sub-path — genuinely signs its payloads (HMAC-SHA256
+// over the raw body), so no path-name restriction like Shiprocket's applies.
+router.post('/cj', webhookRateLimiter, handleCjWebhook);
 
 module.exports = router;

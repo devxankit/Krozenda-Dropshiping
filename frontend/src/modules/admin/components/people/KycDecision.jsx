@@ -4,7 +4,7 @@ import { SectionCard } from '../display'
 
 // Rejecting requires a reason. It is sent to the seller and written to the
 // audit log, which is why the field is mandatory rather than encouraged.
-export function DecisionStrip({ note, onNoteChange, disabled }) {
+export function DecisionStrip({ note, onNoteChange, disabled, onApprove, onReject }) {
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -26,13 +26,14 @@ export function DecisionStrip({ note, onNoteChange, disabled }) {
           className="min-w-64 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-xs text-slate-900 placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <div className="flex w-44 flex-col gap-2">
-          <Button size="control" icon="check" disabled={disabled} className="w-full">
+          <Button size="control" icon="check" disabled={disabled} onClick={onApprove} className="w-full">
             Approve document
           </Button>
           <Button
             variant="dangerOutline"
             size="control"
             disabled={disabled || note.trim().length === 0}
+            onClick={onReject}
             className="w-full"
           >
             Reject document

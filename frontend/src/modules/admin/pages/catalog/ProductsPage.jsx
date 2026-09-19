@@ -7,6 +7,7 @@ import { ProductFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { ScanBarcodeModal } from '../../../../components/common/ScanBarcodeModal'
 import {
+  useApprovalSettingsController,
   useBrandsController,
   useCategoryTreeController,
   useProductListController,
@@ -36,6 +37,8 @@ export function ProductsPage() {
   const products = useProductListController()
   const categories = useCategoryTreeController()
   const brands = useBrandsController()
+  const { data: approvalSettings } = useApprovalSettingsController()
+  const isSellerOnlyOn = Boolean(approvalSettings?.sellerOnlyMode)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'active' | 'inactive' | 'out_of_stock'
@@ -401,7 +404,9 @@ export function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingProduct('new')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20"
+                  disabled={isSellerOnlyOn}
+                  title={isSellerOnlyOn ? 'Seller-only catalog mode is on — sellers add products, admin only approves them' : undefined}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <Icon name="add" className="h-3.5 w-3.5" />
                   <span>New Product</span>

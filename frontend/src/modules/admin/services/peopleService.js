@@ -125,6 +125,7 @@ export const fetchKycQueue = (query) =>
     params: params(query),
     fixture: () => kycQueueFixture(query),
     schema: kycQueueSchema,
+    live: true,
   })
 
 export const fetchKycApplication = (applicationId) =>
@@ -132,7 +133,27 @@ export const fetchKycApplication = (applicationId) =>
     path: `/admin/kyc/${applicationId}`,
     fixture: () => kycApplicationFixture(applicationId),
     schema: kycApplicationSchema,
+    live: true,
   })
+
+// The application-level decision (approve/reject the vendor) and the
+// per-document decision are two different endpoints on the vendor resource —
+// see adminVendorController.updateVendorStatus / reviewVendorDocument.
+export async function decideKycApplication({ vendorId, verificationStatus, rejectionReason }) {
+  const { data } = await api.patch(`/admin/vendors/${vendorId}/status`, {
+    verificationStatus,
+    rejectionReason,
+  })
+  return data.data.vendor
+}
+
+export async function decideKycDocument({ vendorId, documentId, status, rejectionReason }) {
+  const { data } = await api.patch(`/admin/vendors/${vendorId}/documents/${documentId}`, {
+    status,
+    rejectionReason,
+  })
+  return data.data
+}
 
 export const fetchPolicyAcceptances = (query) =>
   fetchResource({

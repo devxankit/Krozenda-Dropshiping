@@ -85,8 +85,14 @@ export const useApprovalSettingsWriteController = () => ({
   update: useAdminMutation({
     mutationFn: service.updateApprovalSettings,
     invalidate: CATALOG,
-    success: (data) =>
-      data.autoApprovalEnabled ? 'Auto-approval turned on' : 'Auto-approval turned off',
+    success: (data, variables) => {
+      if (variables.sellerOnlyMode !== undefined) {
+        return variables.sellerOnlyMode
+          ? 'Seller-only catalog mode turned on — admin can no longer add products, categories or brands directly'
+          : 'Seller-only catalog mode turned off'
+      }
+      return data.autoApprovalEnabled ? 'Auto-approval turned on' : 'Auto-approval turned off'
+    },
   }),
 })
 

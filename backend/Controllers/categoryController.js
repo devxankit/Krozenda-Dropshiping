@@ -1,7 +1,11 @@
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+
+const SELLER_ONLY_MESSAGE =
+  'Seller-only catalog mode is on: new categories can only be submitted by sellers. Review them in the approval queue instead.';
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -83,6 +87,11 @@ async function listCategories(req, res) {
 }
 
 async function createCategory(req, res) {
+  const settings = await CatalogSettings.getSettings();
+  if (settings.sellerOnlyMode) {
+    return res.status(403).json({ success: false, message: SELLER_ONLY_MESSAGE });
+  }
+
   const { name, isActive, isTopCategory } = req.body;
 
   if (!name || !name.trim()) {

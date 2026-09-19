@@ -7,24 +7,42 @@ const { createNotification } = require('./notificationController');
 // GET /admin/catalog/approvals/settings — current auto-approval policy.
 async function getApprovalSettings(req, res) {
   const settings = await CatalogSettings.getSettings();
-  res.json({ success: true, data: { autoApprovalEnabled: settings.autoApprovalEnabled } });
+  res.json({
+    success: true,
+    data: { autoApprovalEnabled: settings.autoApprovalEnabled, sellerOnlyMode: settings.sellerOnlyMode },
+  });
 }
 
-// PUT /admin/catalog/approvals/settings — flip the auto-approval switch.
-// On: sellers' new categories/brands/products go live immediately instead of
-// queuing here. Off: everything a seller submits waits for a manual decision.
+// PUT /admin/catalog/approvals/settings — flip the auto-approval and/or
+// seller-only switches. autoApprovalEnabled on: sellers' new categories/
+// brands/products go live immediately instead of queuing here. Off:
+// everything a seller submits waits for a manual decision. sellerOnlyMode
+// on: admin's own create endpoints (productController.createProduct etc.)
+// start rejecting with 403 — catalog entries can then only originate from
+// sellers, with admin limited to approving/rejecting them here.
 async function updateApprovalSettings(req, res) {
-  const { autoApprovalEnabled } = req.body;
-  if (typeof autoApprovalEnabled !== 'boolean') {
+  const { autoApprovalEnabled, sellerOnlyMode } = req.body;
+  if (autoApprovalEnabled === undefined && sellerOnlyMode === undefined) {
+    return res.status(400).json({ success: false, message: 'Nothing to update' });
+  }
+  if (autoApprovalEnabled !== undefined && typeof autoApprovalEnabled !== 'boolean') {
     return res.status(400).json({ success: false, message: 'autoApprovalEnabled must be true or false' });
+  }
+  if (sellerOnlyMode !== undefined && typeof sellerOnlyMode !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'sellerOnlyMode must be true or false' });
   }
 
   const settings = await CatalogSettings.getSettings();
-  settings.autoApprovalEnabled = autoApprovalEnabled;
+  if (autoApprovalEnabled !== undefined) settings.autoApprovalEnabled = autoApprovalEnabled;
+  if (sellerOnlyMode !== undefined) settings.sellerOnlyMode = sellerOnlyMode;
   settings.updatedBy = req.admin?._id || null;
   await settings.save();
 
-  res.json({ success: true, message: 'Approval settings updated', data: { autoApprovalEnabled: settings.autoApprovalEnabled } });
+  res.json({
+    success: true,
+    message: 'Approval settings updated',
+    data: { autoApprovalEnabled: settings.autoApprovalEnabled, sellerOnlyMode: settings.sellerOnlyMode },
+  });
 }
 
 // Unified admin approval queue across the three things a seller can propose:
