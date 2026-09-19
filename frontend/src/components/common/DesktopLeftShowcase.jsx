@@ -9,170 +9,308 @@ import {
   HiCheckBadge,
   HiLockClosed,
   HiStar,
+  HiChartBarSquare,
+  HiGlobeAlt,
 } from 'react-icons/hi2'
 
 export function DesktopLeftShowcase({
-  title = "Scale Your Dropshipping Business with Zero Inventory",
-  subtitle = "India's premier B2B & B2C marketplace connecting 100,000+ smart retailers directly with verified manufacturers.",
-  tag = "DIRECT FACTORY NETWORK",
+  title = "Direct Factory Wholesale & Automated Dropshipping",
+  subtitle = "Connect with 500+ verified Indian manufacturers. Enjoy transparent wholesale pricing from unit 1, automated fulfillment, and 7-day safe escrow payouts.",
+  tag = "INDIA'S #1 DROPSHIPPING PLATFORM",
 }) {
   return (
-    <div className="hidden md:flex flex-1 flex-col justify-between bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white p-8 lg:p-12 xl:p-14 relative overflow-hidden min-h-screen select-none">
-      {/* Dynamic Ambient Background Glows */}
-      <div className="absolute -top-24 -left-24 w-[420px] h-[420px] bg-blue-600/25 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 -right-28 w-[380px] h-[380px] bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Subtle Background Grid Pattern */}
+    <div
+      className="hidden md:flex flex-1 flex-col justify-between text-white relative overflow-hidden min-h-screen select-none"
+      style={{
+        background: 'linear-gradient(135deg, #060B18 0%, #0A1628 40%, #0D1F3C 70%, #091428 100%)',
+      }}
+    >
+      {/* Layered Ambient Glows */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+          top: '-80px',
+          left: '-80px',
+          width: '420px',
+          height: '420px',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(40px)',
+        }}
+      />
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          bottom: '60px',
+          right: '-60px',
+          width: '360px',
+          height: '360px',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(50px)',
+        }}
+      />
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: '45%',
+          left: '30%',
+          width: '280px',
+          height: '280px',
+          background: 'radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(40px)',
+        }}
+      />
+
+      {/* Dot Grid Pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)',
           backgroundSize: '28px 28px',
         }}
       />
 
-      {/* Top Header Bar */}
-      <div className="relative z-10 flex items-center justify-between">
-        <Link to={USER_ROUTES.DASHBOARD} className="flex items-center space-x-3.5 cursor-pointer group" title="KroZenda Home">
-          <div className="p-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/20 flex items-center justify-center group-hover:bg-white/20 transition-all">
+      {/* Diagonal accent line */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, transparent 40%, rgba(59,130,246,0.04) 50%, transparent 60%)',
+        }}
+      />
+
+      {/* === TOP HEADER === */}
+      <div className="relative z-10 p-8 lg:p-10 xl:p-12">
+        <Link
+          to={USER_ROUTES.DASHBOARD}
+          className="flex items-center space-x-3 group focus:outline-none"
+          title="KroZenda Home"
+        >
+          {/* Logo with glowing ring */}
+          <div
+            className="relative p-2.5 rounded-2xl border border-white/10 group-hover:border-blue-400/30 transition-all"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 0 20px rgba(59,130,246,0.12)',
+            }}
+          >
             <img
               src="/images/logo.png"
               alt="KroZenda Logo"
-              className="h-10 lg:h-12 w-auto object-contain"
+              className="h-9 lg:h-10 w-auto object-contain"
             />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-lg font-black text-white tracking-wider group-hover:text-blue-200 transition-colors">
+              <span className="text-base lg:text-lg font-black text-white tracking-widest group-hover:text-blue-200 transition-colors">
                 KROZENDA
               </span>
-              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
-                <HiCheckBadge className="w-3 h-3 text-emerald-400" />
+              <span
+                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style={{
+                  background: 'rgba(16,185,129,0.12)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  color: '#6ee7b7',
+                }}
+              >
+                <HiCheckBadge className="w-3 h-3" />
                 <span>Verified</span>
               </span>
             </div>
-            <span className="text-[11px] text-blue-300/90 font-bold tracking-widest uppercase block">
-              B2B & B2C Dropshipping
+            <span className="text-[10px] font-bold tracking-widest uppercase block mt-0.5 text-blue-400/70">
+              B2B &amp; B2C Dropshipping
             </span>
           </div>
-        </Link>
 
-        <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-xs text-blue-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold text-[11px]">Live Factory Inventory</span>
-        </div>
+          {/* Live status - top right area */}
+          <div className="ml-auto">
+            <div
+              className="hidden lg:inline-flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="font-semibold text-[11px] text-slate-300">Live Factory Inventory</span>
+            </div>
+          </div>
+        </Link>
       </div>
 
-      {/* Center Body Content */}
-      <div className="relative z-10 space-y-7 my-auto max-w-xl py-6">
-        {/* Category / Badge Tag */}
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-400/20 border border-amber-400/40 text-amber-300 font-extrabold text-[11px] uppercase tracking-wider rounded-full backdrop-blur-md shadow-xs">
+      {/* === CENTER BODY === */}
+      <div className="relative z-10 flex-1 px-8 lg:px-10 xl:px-12 pb-6 flex flex-col justify-center space-y-6 max-w-xl">
+
+        {/* Badge Tag */}
+        <div
+          className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest w-fit"
+          style={{
+            background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.25)',
+            color: '#fbbf24',
+          }}
+        >
           <HiBolt className="w-3.5 h-3.5 text-amber-400" />
           <span>{tag}</span>
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.15] text-white tracking-tight">
+        <h1
+          className="text-2xl lg:text-3xl xl:text-4xl font-extrabold leading-[1.18] tracking-tight"
+          style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #c7d2fe 50%, #93c5fd 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           {title}
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm lg:text-base text-blue-100/80 leading-relaxed font-normal">
+        <p className="text-sm lg:text-[15px] text-slate-400 leading-relaxed">
           {subtitle}
         </p>
 
-        {/* 3 Interactive Feature Highlights */}
-        <div className="grid grid-cols-1 gap-3 pt-1">
-          <div className="bg-white/10 hover:bg-white/15 transition-colors backdrop-blur-xl border border-white/15 p-3.5 rounded-2xl flex items-center space-x-3.5 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-400/30">
-              <HiBuildingOffice2 className="w-5 h-5" />
+        {/* 3 Feature Cards with glassmorphism */}
+        <div className="grid grid-cols-1 gap-3">
+          {[
+            {
+              icon: HiBuildingOffice2,
+              color: 'amber',
+              title: 'Direct Factory Margins',
+              desc: 'Zero middlemen markups. Source from 500+ Indian manufacturers at unit wholesale price.',
+              iconBg: 'rgba(245,158,11,0.1)',
+              iconBorder: 'rgba(245,158,11,0.2)',
+              iconColor: '#fbbf24',
+            },
+            {
+              icon: HiRocketLaunch,
+              color: 'blue',
+              title: '24-48hr Pan-India Express',
+              desc: 'Automated Shiprocket courier integration with live buyer SMS & WhatsApp tracking.',
+              iconBg: 'rgba(59,130,246,0.1)',
+              iconBorder: 'rgba(59,130,246,0.2)',
+              iconColor: '#60a5fa',
+            },
+            {
+              icon: HiShieldCheck,
+              color: 'emerald',
+              title: '100% Safe Escrow Protection',
+              desc: 'Guaranteed payouts and 7-day hassle-free replacement with verified GST invoicing.',
+              iconBg: 'rgba(16,185,129,0.1)',
+              iconBorder: 'rgba(16,185,129,0.2)',
+              iconColor: '#34d399',
+            },
+          ].map(({ icon: Icon, title: t, desc, iconBg, iconBorder, iconColor }) => (
+            <div
+              key={t}
+              className="flex items-start space-x-3 p-3.5 rounded-2xl transition-all group cursor-default"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                backdropFilter: 'blur(8px)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                e.currentTarget.style.border = '1px solid rgba(255,255,255,0.12)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                e.currentTarget.style.border = '1px solid rgba(255,255,255,0.07)'
+              }}
+            >
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                style={{ background: iconBg, border: `1px solid ${iconBorder}` }}
+              >
+                <Icon className="w-4.5 h-4.5" style={{ color: iconColor, width: '18px', height: '18px' }} />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-white/90 tracking-tight">{t}</h3>
+                <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{desc}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-black text-white">Direct Factory Margins</h4>
-              <p className="text-[11px] text-blue-200/80 mt-0.5">
-                Zero middlemen markups. Source directly from 500+ Indian manufacturers at unit wholesale price.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white/10 hover:bg-white/15 transition-colors backdrop-blur-xl border border-white/15 p-3.5 rounded-2xl flex items-center space-x-3.5 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-blue-400/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-400/30">
-              <HiRocketLaunch className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-white">24-48hr Pan-India Express Air</h4>
-              <p className="text-[11px] text-blue-200/80 mt-0.5">
-                Automated Shiprocket courier integration with live buyer SMS & WhatsApp tracking.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white/10 hover:bg-white/15 transition-colors backdrop-blur-xl border border-white/15 p-3.5 rounded-2xl flex items-center space-x-3.5 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-emerald-400/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/30">
-              <HiShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-white">100% Safe Escrow Protection</h4>
-              <p className="text-[11px] text-blue-200/80 mt-0.5">
-                Guaranteed payouts and 7-day hassle-free replacement with verified GST tax invoicing.
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Live Platform Stats */}
-        <div className="pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
-          <div className="bg-white/5 rounded-xl p-2.5 border border-white/10">
-            <span className="text-xl lg:text-2xl font-black text-white block">100K+</span>
-            <span className="text-[10px] lg:text-[11px] text-blue-300 font-semibold block mt-0.5">
-              Active Retailers
-            </span>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-2.5 border border-white/10">
-            <span className="text-xl lg:text-2xl font-black text-white block">500K+</span>
-            <span className="text-[10px] lg:text-[11px] text-blue-300 font-semibold block mt-0.5">
-              Monthly Deliveries
-            </span>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-2.5 border border-white/10">
-            <span className="text-xl lg:text-2xl font-black text-white block">26,000+</span>
-            <span className="text-[10px] lg:text-[11px] text-blue-300 font-semibold block mt-0.5">
-              Pincodes Covered
-            </span>
-          </div>
+        {/* Live Stats */}
+        <div
+          className="grid grid-cols-3 gap-3 p-4 rounded-2xl"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          {[
+            { value: '100K+', label: 'Active Retailers', icon: HiChartBarSquare },
+            { value: '500K+', label: 'Monthly Deliveries', icon: HiRocketLaunch },
+            { value: '26K+', label: 'Pincodes Served', icon: HiGlobeAlt },
+          ].map(({ value, label, icon: Icon }) => (
+            <div key={label} className="text-center space-y-1">
+              <span
+                className="text-lg lg:text-xl font-black block"
+                style={{
+                  background: 'linear-gradient(135deg, #fff 0%, #93c5fd 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {value}
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium block">{label}</span>
+            </div>
+          ))}
         </div>
 
-        {/* Retailer Testimonial Snippet */}
-        <div className="bg-blue-900/30 border border-blue-400/20 rounded-2xl p-3 flex items-start space-x-3">
-          <div className="flex text-amber-400 text-xs shrink-0 mt-0.5">
-            <HiStar className="w-3.5 h-3.5 fill-amber-400" />
-            <HiStar className="w-3.5 h-3.5 fill-amber-400" />
-            <HiStar className="w-3.5 h-3.5 fill-amber-400" />
-            <HiStar className="w-3.5 h-3.5 fill-amber-400" />
-            <HiStar className="w-3.5 h-3.5 fill-amber-400" />
+        {/* Testimonial */}
+        <div
+          className="p-4 rounded-2xl flex items-start space-x-3"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.06) 100%)',
+            border: '1px solid rgba(59,130,246,0.18)',
+          }}
+        >
+          <div className="flex text-amber-400 shrink-0 mt-0.5 space-x-0.5">
+            {[...Array(5)].map((_, i) => (
+              <HiStar key={i} className="w-3 h-3 fill-amber-400" style={{ fill: '#fbbf24' }} />
+            ))}
           </div>
-          <p className="text-[11px] text-blue-200/90 leading-snug">
-            <strong className="text-white font-semibold">"Zero inventory investment:</strong> scaled from 5 to 150 daily orders within 30 days."
-            <span className="block text-[10px] text-blue-300/70 mt-0.5 font-medium">— Retail Partner, Surat Hub</span>
+          <p className="text-[11px] text-slate-400 leading-snug">
+            <strong className="text-white/80 font-semibold">"Zero inventory investment:</strong>{' '}
+            scaled from 5 to 150 daily orders in 30 days."
+            <span className="block text-[10px] text-slate-500 mt-1 font-medium">— Retail Partner, Surat Hub</span>
           </p>
         </div>
       </div>
 
-      {/* Footer Security Badges */}
-      <div className="relative z-10 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-blue-300/80">
+      {/* === FOOTER === */}
+      <div
+        className="relative z-10 px-8 lg:px-10 xl:px-12 py-6 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-500"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
         <div className="flex items-center space-x-4">
-          <span className="flex items-center space-x-1 font-medium">
-            <HiLockClosed className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="flex items-center space-x-1.5 text-slate-400 font-medium">
+            <HiLockClosed className="w-3.5 h-3.5 text-emerald-500" />
             <span>256-Bit SSL</span>
           </span>
-          <span className="font-medium">• ISO 9001</span>
-          <span className="font-medium">• GST Invoiced</span>
+          <span className="text-slate-700">•</span>
+          <span className="font-medium text-slate-400">ISO 9001</span>
+          <span className="text-slate-700">•</span>
+          <span className="font-medium text-slate-400">GST Invoiced</span>
         </div>
-        <span>© 2026 KroZenda Technologies</span>
+        <span className="text-slate-600">© 2026 KroZenda Technologies</span>
       </div>
     </div>
   )
