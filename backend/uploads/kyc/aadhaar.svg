@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540">
+  <rect width="900" height="540" fill="#eaf6ff"/>
+  <rect x="20" y="20" width="860" height="500" rx="14" fill="#ffffff" stroke="#9cc9e6" stroke-width="2"/>
+  <text x="50" y="65" font-family="Arial" font-size="20" fill="#004f8a" font-weight="bold">Unique Identification Authority of India</text>
+  <text x="50" y="90" font-family="Arial" font-size="14" fill="#334155">Government of India</text>
+  <rect x="50" y="120" width="140" height="170" rx="8" fill="#dbeafe" stroke="#94a3b8"/>
+  <text x="80" y="210" font-family="Arial" font-size="12" fill="#64748b">PHOTO</text>
+  <text x="220" y="150" font-family="Arial" font-size="16" fill="#0f172a">Name</text>
+  <text x="220" y="180" font-family="Arial" font-size="22" fill="#0f172a" font-weight="bold">Suresh Nair</text>
+  <text x="220" y="220" font-family="Arial" font-size="16" fill="#0f172a">DOB: 12/04/1985  Male</text>
+  <text x="220" y="270" font-family="Arial" font-size="26" fill="#004f8a" font-weight="bold" letter-spacing="4">4821 7734 9012</text>
+  <text x="50" y="340" font-family="Arial" font-size="14" fill="#334155">Address: 221 Brigade Road, Ashok Nagar, Bengaluru, Karnataka - 560001</text>
+  <text x="50" y="470" font-family="Arial" font-size="12" fill="#94a3b8">Seeded demo document — Krozenda KYC review queue</text>
+</svg>

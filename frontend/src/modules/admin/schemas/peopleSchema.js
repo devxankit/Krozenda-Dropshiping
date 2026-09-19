@@ -110,6 +110,7 @@ export const kycDocumentSchema = z.object({
   status: reviewStatus,
   required: z.boolean(),
   rejectionReason: z.string().nullable(),
+  url: z.string().nullable().optional(),
 })
 
 export const kycApplicationSchema = z.object({

@@ -10,6 +10,8 @@ const registerSocketHandlers = require('./Router/socketHandler');
 const { attachSocketServer } = require('./utils/realtime');
 const scheduleNightlyBackup = require('./Jobs/backupScheduler');
 const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
+const { scheduleCjSync } = require('./Jobs/cjSyncJob');
+const { scheduleCjTrackingPoller } = require('./Jobs/cjTrackingPoller');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
@@ -38,6 +40,9 @@ async function start() {
   scheduleNightlyBackup();
   // Fallback for lost carrier webhooks; no-op when shipping is disabled.
   await scheduleTrackingPoller();
+  // Fallback for lost/absent CJ webhooks — see Jobs/cjSyncJob.
+  scheduleCjSync();
+  scheduleCjTrackingPoller();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

@@ -7,12 +7,14 @@ const mongoose = require('mongoose');
 const connectDB = require('./Config/db');
 const ensureAdmin = require('./Router/seedAdmin');
 const ensureDemoVendors = require('./Router/seedVendors');
+const ensureKycDemoVendor = require('./Router/seedKycDemoVendor');
 const seedCatalog = require('./Router/seedCatalog');
 
 async function run() {
   await connectDB();
   await ensureAdmin();
   await ensureDemoVendors();
+  await ensureKycDemoVendor();
   await seedCatalog();
   await mongoose.connection.close();
 }

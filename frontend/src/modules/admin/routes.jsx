@@ -22,6 +22,14 @@ import { InventoryPage } from './pages/catalog/InventoryPage'
 import { ImportPage } from './pages/catalog/ImportPage'
 import { SupplierSyncPage } from './pages/catalog/SupplierSyncPage'
 import { DropshippingOverviewPage } from './pages/dropshipping/DropshippingOverviewPage'
+import { CjSettingsPage } from './pages/cj/CjSettingsPage'
+import { CjDashboardPage } from './pages/cj/CjDashboardPage'
+import { CjCataloguePage } from './pages/cj/CjCataloguePage'
+import { CjProductsPage } from './pages/cj/CjProductsPage'
+import { CjOrdersPage } from './pages/cj/CjOrdersPage'
+import { CjShipmentsPage } from './pages/cj/CjShipmentsPage'
+import { CjDisputesPage } from './pages/cj/CjDisputesPage'
+import { CjSyncLogsPage } from './pages/cj/CjSyncLogsPage'
 import { DropshippingPartnersPage } from './pages/dropshipping/DropshippingPartnersPage'
 import { DropshippingProductsPage } from './pages/dropshipping/DropshippingProductsPage'
 import { DropshippingOrdersPage } from './pages/dropshipping/DropshippingOrdersPage'
@@ -252,6 +260,16 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_PRODUCTS)} element={<DropshippingProductsPage />} />
               <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_ORDERS)} element={<DropshippingOrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_MARGINS)} element={<DropshippingMarginsPage />} />
+
+              {/* CJ Dropshipping Module — provider-specific, admin-only. */}
+              <Route path={rel(ADMIN_ROUTES.CJ_DASHBOARD)} element={<CjDashboardPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_CATALOGUE)} element={<CjCataloguePage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_PRODUCTS)} element={<CjProductsPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_ORDERS)} element={<CjOrdersPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_SHIPMENTS)} element={<CjShipmentsPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_DISPUTES)} element={<CjDisputesPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_SYNC_LOGS)} element={<CjSyncLogsPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_SETTINGS)} element={<CjSettingsPage />} />
 
               {/* People. The customer, B2B, partner, company and channel lists
                 are the same screen with a different default filter. */}

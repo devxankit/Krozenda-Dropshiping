@@ -40,8 +40,8 @@ export async function fetchApprovalSettings() {
   return data.data
 }
 
-export async function updateApprovalSettings({ autoApprovalEnabled }) {
-  const { data } = await api.put('/admin/catalog/approvals/settings', { autoApprovalEnabled })
+export async function updateApprovalSettings({ autoApprovalEnabled, sellerOnlyMode }) {
+  const { data } = await api.put('/admin/catalog/approvals/settings', { autoApprovalEnabled, sellerOnlyMode })
   return data.data
 }
 

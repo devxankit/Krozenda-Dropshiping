@@ -55,6 +55,18 @@ export const ADMIN_PERMISSIONS = Object.freeze({
   DROPSHIP_SUPPLIER_SYNC: 'admin.dropship.supplier_sync',
   DROPSHIP_MARGINS: 'admin.dropship.margins',
 
+  // CJ Dropshipping (provider-specific — distinct from the generic
+  // admin.dropship.* partner module above)
+  CJ_VIEW: 'admin.cj.view',
+  CJ_SETTINGS: 'admin.cj.settings',
+  CJ_CATALOGUE: 'admin.cj.catalogue',
+  CJ_PRODUCTS: 'admin.cj.products',
+  CJ_ORDERS: 'admin.cj.orders',
+  CJ_SHIPMENTS: 'admin.cj.shipments',
+  CJ_RETURNS: 'admin.cj.returns',
+  CJ_REFUNDS: 'admin.cj.refunds',
+  CJ_SYNC: 'admin.cj.sync',
+
   // Network
   PEOPLE_VIEW: 'admin.people.view',
   PEOPLE_MANAGE: 'admin.people.manage',
@@ -243,11 +255,11 @@ export const NAV_TREE = Object.freeze([
         badgeTone: 'warning',
       },
       {
-        label: 'Supplier sync',
-        to: ADMIN_ROUTES.SUPPLIER_SYNC,
-        icon: 'refresh',
-        permission: ADMIN_PERMISSIONS.CATALOG_SUPPLIER_SYNC,
-        legacyPermission: ADMIN_PERMISSIONS.CATALOG_MANAGE,
+        label: 'Margin & rules',
+        to: ADMIN_ROUTES.DROPSHIPPING_MARGINS,
+        icon: 'sliders',
+        permission: ADMIN_PERMISSIONS.DROPSHIP_MARGINS,
+        legacyPermission: ADMIN_PERMISSIONS.FINANCE_MANAGE,
       },
     ],
   },
@@ -262,33 +274,6 @@ export const NAV_TREE = Object.freeze([
         permission: ADMIN_PERMISSIONS.ORDERS_LIST,
         legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
         match: '/admin/orders/detail',
-      },
-      {
-        label: 'Sub-orders',
-        to: ADMIN_ROUTES.SUB_ORDERS,
-        icon: 'list',
-        permission: ADMIN_PERMISSIONS.ORDERS_SUB_ORDERS,
-        legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
-      },
-      {
-        label: 'Shipments',
-        to: ADMIN_ROUTES.SHIPMENTS,
-        icon: 'shipments',
-        permission: ADMIN_PERMISSIONS.ORDERS_SHIPMENTS,
-        legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
-      },
-      {
-        label: 'Carrier shipments',
-        to: ADMIN_ROUTES.CARRIER_SHIPMENTS,
-        icon: 'truck',
-        permission: ADMIN_PERMISSIONS.ORDERS_SHIPMENTS,
-        legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
-      },
-      {
-        label: 'Carrier accounts',
-        to: ADMIN_ROUTES.CARRIER_ACCOUNTS,
-        icon: 'integrations',
-        permission: ADMIN_PERMISSIONS.SETTINGS_VIEW,
       },
       {
         label: 'Returns & RTO',
@@ -308,50 +293,58 @@ export const NAV_TREE = Object.freeze([
     ],
   },
   {
-    id: 'dropshipping',
-    label: 'Dropshipping',
+    id: 'cj-dropshipping',
+    label: 'CJ Dropshipping',
     items: [
       {
-        label: 'Dropship Hub',
-        to: ADMIN_ROUTES.DROPSHIPPING_OVERVIEW,
+        label: 'Dashboard',
+        to: ADMIN_ROUTES.CJ_DASHBOARD,
         icon: 'dropshipping',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_OVERVIEW,
-        legacyPermission: ADMIN_PERMISSIONS.DROPSHIP_VIEW,
+        permission: ADMIN_PERMISSIONS.CJ_VIEW,
+        exact: true,
       },
       {
-        label: 'Dropship partners',
-        to: ADMIN_ROUTES.DROPSHIPPING_PARTNERS,
-        icon: 'sellers',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_PARTNERS,
-        legacyPermission: ADMIN_PERMISSIONS.DROPSHIP_VIEW,
+        label: 'Catalogue',
+        to: ADMIN_ROUTES.CJ_CATALOGUE,
+        icon: 'catalog',
+        permission: ADMIN_PERMISSIONS.CJ_CATALOGUE,
       },
       {
-        label: 'Dropship products',
-        to: ADMIN_ROUTES.DROPSHIPPING_PRODUCTS,
+        label: 'Products',
+        to: ADMIN_ROUTES.CJ_PRODUCTS,
         icon: 'products',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_PRODUCTS,
-        legacyPermission: ADMIN_PERMISSIONS.DROPSHIP_VIEW,
+        permission: ADMIN_PERMISSIONS.CJ_PRODUCTS,
       },
       {
-        label: 'Forwarded orders',
-        to: ADMIN_ROUTES.DROPSHIPPING_ORDERS,
+        label: 'Orders',
+        to: ADMIN_ROUTES.CJ_ORDERS,
         icon: 'orders',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_ORDERS,
-        legacyPermission: ADMIN_PERMISSIONS.DROPSHIP_MANAGE,
+        permission: ADMIN_PERMISSIONS.CJ_ORDERS,
       },
       {
-        label: 'Supplier sync',
-        to: ADMIN_ROUTES.SUPPLIER_SYNC,
+        label: 'Shipments',
+        to: ADMIN_ROUTES.CJ_SHIPMENTS,
+        icon: 'invoices',
+        permission: ADMIN_PERMISSIONS.CJ_SHIPMENTS,
+      },
+      {
+        label: 'Returns & Disputes',
+        to: ADMIN_ROUTES.CJ_DISPUTES,
+        icon: 'returns',
+        permission: ADMIN_PERMISSIONS.CJ_RETURNS,
+      },
+      {
+        label: 'Sync Logs',
+        to: ADMIN_ROUTES.CJ_SYNC_LOGS,
         icon: 'refresh',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_SUPPLIER_SYNC,
-        legacyPermission: ADMIN_PERMISSIONS.DROPSHIP_MANAGE,
+        permission: ADMIN_PERMISSIONS.CJ_SYNC,
       },
       {
-        label: 'Margin & rules',
-        to: ADMIN_ROUTES.DROPSHIPPING_MARGINS,
-        icon: 'sliders',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_MARGINS,
-        legacyPermission: ADMIN_PERMISSIONS.FINANCE_MANAGE,
+        label: 'Settings',
+        to: ADMIN_ROUTES.CJ_SETTINGS,
+        icon: 'key',
+        permission: ADMIN_PERMISSIONS.CJ_SETTINGS,
+        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
       },
     ],
   },
@@ -394,113 +387,6 @@ export const NAV_TREE = Object.freeze([
         icon: 'staff',
         permission: ADMIN_PERMISSIONS.USER_MANAGEMENT,
         adminOnly: true,
-      },
-    ],
-  },
-  {
-    id: 'finance',
-    label: 'Finance',
-    items: [
-      {
-        label: 'Overview',
-        to: ADMIN_ROUTES.FINANCE_OVERVIEW,
-        icon: 'finance',
-        permission: ADMIN_PERMISSIONS.FINANCE_OVERVIEW,
-        legacyPermission: ADMIN_PERMISSIONS.FINANCE_VIEW,
-      },
-      {
-        label: 'Settlements',
-        to: ADMIN_ROUTES.SETTLEMENTS,
-        icon: 'settlements',
-        permission: ADMIN_PERMISSIONS.FINANCE_SETTLEMENTS,
-        legacyPermission: ADMIN_PERMISSIONS.FINANCE_VIEW,
-        badge: 'failedPayouts',
-        badgeTone: 'danger',
-      },
-      {
-        label: 'Commission & pricing',
-        to: ADMIN_ROUTES.COMMISSION_RULES,
-        icon: 'sliders',
-        permission: ADMIN_PERMISSIONS.FINANCE_RULES,
-        legacyPermission: ADMIN_PERMISSIONS.FINANCE_MANAGE,
-      },
-      {
-        label: 'Accounting',
-        to: ADMIN_ROUTES.PNL,
-        icon: 'ledger',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Tax centre',
-        to: ADMIN_ROUTES.TAX_CENTER,
-        icon: 'tax',
-        permission: ADMIN_PERMISSIONS.TAX_EXPORT,
-      },
-    ],
-  },
-  {
-    // The marketplace money trail, end to end. Eight screens, deliberately —
-    // this is the MVP scope, not a general ledger.
-    id: 'accounting',
-    label: 'Accounting',
-    items: [
-      {
-        label: 'Overview',
-        to: ADMIN_ROUTES.ACCOUNTING,
-        icon: 'ledger',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-        // Overview sits at the group root, which is a prefix of every sibling
-        // path — `exact` stops it reading as active on all of them.
-        exact: true,
-      },
-      {
-        label: 'Transactions',
-        to: ADMIN_ROUTES.ACCOUNTING_TRANSACTIONS,
-        icon: 'money',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_TRANSACTIONS_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Seller ledger',
-        to: ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER,
-        icon: 'ledger',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_LEDGER_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Commissions',
-        to: ADMIN_ROUTES.ACCOUNTING_COMMISSIONS,
-        icon: 'sliders',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Settlements',
-        to: ADMIN_ROUTES.ACCOUNTING_SETTLEMENTS,
-        icon: 'settlements',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Payouts',
-        to: ADMIN_ROUTES.ACCOUNTING_PAYOUTS,
-        icon: 'send',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_PAYOUT_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Refunds',
-        to: ADMIN_ROUTES.ACCOUNTING_REFUNDS,
-        icon: 'returns',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_REFUND_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
-      },
-      {
-        label: 'Reports',
-        to: ADMIN_ROUTES.ACCOUNTING_REPORTS,
-        icon: 'reports',
-        permission: ADMIN_PERMISSIONS.ACCOUNTING_REPORT_VIEW,
-        legacyPermission: ADMIN_PERMISSIONS.ACCOUNTING_VIEW,
       },
     ],
   },
@@ -576,12 +462,6 @@ export const NAV_TREE = Object.freeze([
         match: '/admin/settings',
       },
       {
-        label: 'Audit log',
-        to: ADMIN_ROUTES.AUDIT_LOGS,
-        icon: 'audit',
-        permission: ADMIN_PERMISSIONS.AUDIT_VIEW,
-      },
-      {
         label: 'Backups',
         to: ADMIN_ROUTES.BACKUPS,
         icon: 'backups',
@@ -631,6 +511,42 @@ export const SETTINGS_NAV = Object.freeze([
 
 // Every value in config/constants.js ORDER_STATUS and ORDER_STATUS_EXCEPTION
 // has an entry. A status with no tone here is a bug, not a default.
+// CJ Dropshipping's own internal statuses (backend/services/cj/cjStatusMapper.js
+// and CjOrder/CjShipment/CjDispute models) — never the raw CJ string.
+export const CJ_ORDER_STATUS_TONE = Object.freeze({
+  PENDING_PAYMENT: 'neutral',
+  CONFIRMED: 'brand',
+  PROCESSING: 'brand',
+  SHIPPED: 'brand',
+  IN_TRANSIT: 'brand',
+  DELIVERED: 'success',
+  CANCELLED: 'danger',
+  FULFILLMENT_FAILED: 'danger',
+})
+
+export const CJ_SHIPMENT_STATUS_TONE = Object.freeze({
+  PROCESSING: 'neutral',
+  SHIPPED: 'brand',
+  IN_TRANSIT: 'brand',
+  OUT_FOR_DELIVERY: 'brand',
+  DELIVERED: 'success',
+  DELIVERY_FAILED: 'danger',
+  RTO: 'warning',
+})
+
+export const CJ_DISPUTE_STATUS_TONE = Object.freeze({
+  CREATED: 'neutral',
+  UNDER_REVIEW: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+  CANCELLED: 'neutral',
+})
+
+export const CJ_SYNC_STATUS_TONE = Object.freeze({
+  SUCCESS: 'success',
+  FAILED: 'danger',
+})
+
 export const ORDER_STATUS_TONE = Object.freeze({
   [ORDER_STATUS.PLACED]: 'neutral',
   [ORDER_STATUS.PAYMENT_VERIFIED]: 'brand',

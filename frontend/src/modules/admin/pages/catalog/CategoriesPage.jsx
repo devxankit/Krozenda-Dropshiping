@@ -5,7 +5,11 @@ import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedb
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { CategoryFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
-import { useCategoryTreeController, useCategoryWriteController } from '../../controllers/useCatalogController'
+import {
+  useApprovalSettingsController,
+  useCategoryTreeController,
+  useCategoryWriteController,
+} from '../../controllers/useCatalogController'
 
 const MANAGE = ADMIN_PERMISSIONS.CATALOG_MANAGE
 const PAGE_SIZE = 10
@@ -23,6 +27,8 @@ function formatDate(value) {
 
 export function CategoriesPage() {
   const categories = useCategoryTreeController()
+  const { data: approvalSettings } = useApprovalSettingsController()
+  const isSellerOnlyOn = Boolean(approvalSettings?.sellerOnlyMode)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'top' | 'active' | 'inactive'
@@ -254,7 +260,9 @@ export function CategoriesPage() {
                 <button
                   type="button"
                   onClick={() => setEditingCategory('new')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20"
+                  disabled={isSellerOnlyOn}
+                  title={isSellerOnlyOn ? 'Seller-only catalog mode is on — sellers add categories, admin only approves them' : undefined}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <Icon name="add" className="h-3.5 w-3.5" />
                   <span>New Category</span>

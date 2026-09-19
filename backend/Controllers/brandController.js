@@ -1,6 +1,10 @@
 const Brand = require('../Models/Brand');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+
+const SELLER_ONLY_MESSAGE =
+  'Seller-only catalog mode is on: new brands can only be submitted by sellers. Review them in the approval queue instead.';
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -37,6 +41,11 @@ async function listBrands(req, res) {
 }
 
 async function createBrand(req, res) {
+  const settings = await CatalogSettings.getSettings();
+  if (settings.sellerOnlyMode) {
+    return res.status(403).json({ success: false, message: SELLER_ONLY_MESSAGE });
+  }
+
   const { name, isActive } = req.body;
 
   if (!name || !name.trim()) {

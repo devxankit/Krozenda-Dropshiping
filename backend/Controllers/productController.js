@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
+const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
@@ -131,7 +132,12 @@ function serializeProduct(p) {
     variants: (p.variants || []).map((v) => ({
       id: v._id.toString(),
       name: v.name,
-      attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+      // v.attributes is a Mongoose Map on a hydrated document, but a plain
+      // BSON object once the query is `.lean()`'d — MongoDB itself never
+      // stored a Map, only a subdocument, so lean() has nothing to
+      // reconstruct. Object.fromEntries() on a plain object throws ("object
+      // is not iterable"), so this has to branch on which shape it actually got.
+      attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes || {},
       sku: v.sku || '',
       barcode: v.barcode || '',
       price: v.price ?? null,
@@ -229,6 +235,14 @@ async function getProductBarcodeImage(req, res) {
 }
 
 async function createProduct(req, res) {
+  const settings = await CatalogSettings.getSettings();
+  if (settings.sellerOnlyMode) {
+    return res.status(403).json({
+      success: false,
+      message: 'Seller-only catalog mode is on: new products can only be submitted by sellers. Review them in the approval queue instead.',
+    });
+  }
+
   const {
     name,
     sku,
@@ -900,7 +914,12 @@ function serializePublicProduct(p) {
       .map((v) => ({
         id: v._id.toString(),
         name: v.name,
-        attributes: v.attributes ? Object.fromEntries(v.attributes) : {},
+        // v.attributes is a Mongoose Map on a hydrated document, but a plain
+      // BSON object once the query is `.lean()`'d — MongoDB itself never
+      // stored a Map, only a subdocument, so lean() has nothing to
+      // reconstruct. Object.fromEntries() on a plain object throws ("object
+      // is not iterable"), so this has to branch on which shape it actually got.
+      attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes || {},
         // Null means "same as the parent" - the client falls back to the
         // product's own price rather than showing nothing.
         price: v.price ?? null,

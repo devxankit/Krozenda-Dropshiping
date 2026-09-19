@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Badge, Button, Icon } from '../../../../components/ui'
 import { REVIEW_STATUS, REVIEW_STATUS_LABELS, REVIEW_STATUS_TONE } from '../../constants'
 import { KeyValueList, SectionCard } from '../display'
@@ -76,38 +77,90 @@ export function DocumentList({ documents = [], selectedId, onSelect }) {
   )
 }
 
-// A stand-in for the document itself. There is no real PDF behind a fixture,
-// so this draws the page shape rather than faking a scan.
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg)$/i
+const PDF_EXT = /\.pdf$/i
+const ZOOM_STEPS = [50, 75, 100, 125, 150, 200]
+
+// Renders the actual uploaded file — an image inline (zoomable), a PDF in an
+// embedded viewer, anything else as a plain download link. `document.url` is
+// the real, admin-authenticated-backend-served file (see
+// adminKycController.getKycApplication / utils/imageHelper.getImageUrl).
 export function DocumentViewer({ document, declared, footer }) {
+  const [zoomIndex, setZoomIndex] = useState(2) // 100%
+  const zoom = ZOOM_STEPS[zoomIndex]
+  const isImage = document.url && IMAGE_EXT.test(document.url)
+  const isPdf = document.url && PDF_EXT.test(document.url)
+
   return (
     <SectionCard
       title={document.type}
       description="Check the declared details on the right against what the document says"
       actions={
         <span className="flex items-center gap-1">
-          <Button variant="secondary" size="sm" icon="remove" iconOnly aria-label="Zoom out" />
-          <span className="tabular w-10 text-center text-2xs text-ink-muted">100%</span>
-          <Button variant="secondary" size="sm" icon="add" iconOnly aria-label="Zoom in" />
-          <Button variant="secondary" size="sm" icon="download" iconOnly aria-label="Download" />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="remove"
+            iconOnly
+            aria-label="Zoom out"
+            disabled={!isImage || zoomIndex === 0}
+            onClick={() => setZoomIndex((i) => Math.max(0, i - 1))}
+          />
+          <span className="tabular w-10 text-center text-2xs text-ink-muted">{isImage ? `${zoom}%` : '—'}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="add"
+            iconOnly
+            aria-label="Zoom in"
+            disabled={!isImage || zoomIndex === ZOOM_STEPS.length - 1}
+            onClick={() => setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="download"
+            iconOnly
+            aria-label="Download"
+            disabled={!document.url}
+            onClick={() => {
+              if (!document.url) return
+              const link = window.document.createElement('a')
+              link.href = document.url
+              link.download = document.fileName || ''
+              link.target = '_blank'
+              link.rel = 'noreferrer'
+              link.click()
+            }}
+          />
         </span>
       }
       footer={footer}
     >
       <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
-        <div className="relative flex h-72 items-center justify-center rounded-lg border border-border bg-surface-sunken">
-          <div className="flex h-60 w-52 flex-col gap-2 rounded bg-surface p-4 shadow-raised">
-            <div className="h-1.5 w-2/3 rounded-sm bg-border-strong" />
-            <div className="h-1 w-2/5 rounded-sm bg-border" />
-            <div className="my-1 h-px bg-border" />
-            {[88, 76, 81, 58, 70, 46].map((width, index) => (
-              <div key={index} className="h-1 rounded-sm bg-border" style={{ width: `${width}%` }} />
-            ))}
-            <div className="mt-auto flex items-end justify-between">
-              <div className="h-7 w-14 rounded-sm border border-dashed border-border-strong" />
-              <div className="h-1 w-12 rounded-sm bg-border" />
-            </div>
-          </div>
-          <span className="absolute bottom-2.5 left-3 text-2xs text-ink-faint">Page 1 of 2</span>
+        <div className="relative flex h-72 items-center justify-center overflow-auto rounded-lg border border-border bg-surface-sunken">
+          {isImage ? (
+            <img
+              src={document.url}
+              alt={document.type}
+              className="max-w-none object-contain transition-[width] duration-150"
+              style={{ width: `${zoom}%` }}
+            />
+          ) : isPdf ? (
+            <iframe title={document.type} src={document.url} className="h-full w-full rounded-lg" />
+          ) : document.url ? (
+            <a
+              href={document.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex flex-col items-center gap-2 text-xs font-semibold text-brand-700 hover:underline"
+            >
+              <Icon name="file" className="h-8 w-8" />
+              Open {document.fileName || 'file'}
+            </a>
+          ) : (
+            <span className="text-xs text-ink-faint">No file uploaded</span>
+          )}
         </div>
 
         <div>

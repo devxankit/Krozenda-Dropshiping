@@ -5,7 +5,11 @@ import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedb
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { BrandFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
-import { useBrandsController, useBrandWriteController } from '../../controllers/useCatalogController'
+import {
+  useApprovalSettingsController,
+  useBrandsController,
+  useBrandWriteController,
+} from '../../controllers/useCatalogController'
 
 const MANAGE = ADMIN_PERMISSIONS.CATALOG_MANAGE
 const PAGE_SIZE = 10
@@ -23,6 +27,8 @@ function formatDate(value) {
 
 export function BrandsPage() {
   const brands = useBrandsController()
+  const { data: approvalSettings } = useApprovalSettingsController()
+  const isSellerOnlyOn = Boolean(approvalSettings?.sellerOnlyMode)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'active' | 'inactive'
@@ -212,7 +218,9 @@ export function BrandsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingBrand('new')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20"
+                  disabled={isSellerOnlyOn}
+                  title={isSellerOnlyOn ? 'Seller-only catalog mode is on — sellers add brands, admin only approves them' : undefined}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <Icon name="add" className="h-3.5 w-3.5" />
                   <span>New Brand</span>
