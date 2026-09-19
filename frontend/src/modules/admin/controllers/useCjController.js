@@ -24,13 +24,16 @@ import {
   fetchCjProductDetail,
   onboardCjProduct,
   fetchOnboardedCjProducts,
+  updateCjMarkupSettings,
+  bulkAdjustCjPricing,
+  bulkOnboardCjProducts,
 } from '../services/cjService'
 import { fetchCategoryTree } from '../services/catalogService'
 
 const SETTINGS_KEY = ['admin', 'cj', 'settings']
 const DASHBOARD_KEY = ['admin', 'cj', 'dashboard']
 
-// Connect/disconnect/test/refresh — no draft/save shape like the toggle
+// Connect/disconnect/test/refresh/markup — no draft/save shape like the toggle
 // settings screens, since there's no "field" to edit, only actions to fire.
 export function useCjSettingsController() {
   const queryClient = useQueryClient()
@@ -42,6 +45,7 @@ export function useCjSettingsController() {
   const disconnectMutation = useMutation({ mutationFn: disconnectCj, onSuccess: invalidate })
   const testMutation = useMutation({ mutationFn: testCjConnection, onSuccess: invalidate })
   const refreshMutation = useMutation({ mutationFn: refreshCjToken, onSuccess: invalidate })
+  const markupMutation = useMutation({ mutationFn: updateCjMarkupSettings, onSuccess: invalidate })
 
   return {
     data: query.data,
@@ -62,6 +66,10 @@ export function useCjSettingsController() {
 
     refreshToken: refreshMutation.mutateAsync,
     isRefreshing: refreshMutation.isPending,
+
+    updateMarkupSettings: markupMutation.mutateAsync,
+    isUpdatingMarkup: markupMutation.isPending,
+    updateMarkupError: markupMutation.error,
   }
 }
 
@@ -121,9 +129,42 @@ export function useCjOnboardingController() {
   return { onboard: mutation.mutateAsync, isOnboarding: mutation.isPending, error: mutation.error }
 }
 
+export function useCjBulkOnboardingController() {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: bulkOnboardCjProducts,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'cj', 'products'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] })
+    },
+  })
+  return {
+    bulkOnboard: mutation.mutateAsync,
+    isBulkOnboarding: mutation.isPending,
+    error: mutation.error,
+    data: mutation.data,
+  }
+}
+
 export function useCjOnboardedProductsController(params) {
   const query = useQuery({ queryKey: ['admin', 'cj', 'products', params], queryFn: () => fetchOnboardedCjProducts(params) })
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
+
+export function useCjBulkPricingController() {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: bulkAdjustCjPricing,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'cj', 'products'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'cj', 'dashboard'] })
+    },
+  })
+  return {
+    bulkAdjust: mutation.mutateAsync,
+    isAdjusting: mutation.isPending,
+    error: mutation.error,
+  }
 }
 
 export function useCjOrdersController(params) {

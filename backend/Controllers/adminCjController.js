@@ -14,6 +14,10 @@ function serializeSettings(settings) {
     lastFailureAt: settings.lastFailureAt,
     failureReason: settings.failureReason,
     webhookConfigured: !!settings.webhookSecret,
+    defaultMarkupPercent: settings.defaultMarkupPercent ?? 30,
+    defaultMarkupType: settings.defaultMarkupType || 'PERCENT',
+    defaultMarkupValue: settings.defaultMarkupValue ?? settings.defaultMarkupPercent ?? 30,
+    priceRounding: settings.priceRounding || 'ROUND',
     updatedAt: settings.updatedAt,
   };
 }
@@ -84,4 +88,46 @@ async function refreshToken(req, res) {
   }
 }
 
-module.exports = { getSettings, connect, disconnect, testConnection, refreshToken };
+// POST /admin/cj/settings/markup
+// body: { defaultMarkupType?, defaultMarkupValue?, defaultMarkupPercent?, priceRounding? }
+async function updateMarkupSettings(req, res) {
+  const { defaultMarkupType, defaultMarkupValue, defaultMarkupPercent, priceRounding } = req.body || {};
+  const settings = await CjSettings.getSettings();
+
+  if (defaultMarkupType != null) {
+    if (!['PERCENT', 'FLAT'].includes(defaultMarkupType)) {
+      return res.status(400).json({ success: false, message: 'defaultMarkupType must be PERCENT or FLAT' });
+    }
+    settings.defaultMarkupType = defaultMarkupType;
+  }
+
+  const valueToSet = defaultMarkupValue != null ? defaultMarkupValue : defaultMarkupPercent;
+  if (valueToSet != null) {
+    const parsed = Number(valueToSet);
+    if (isNaN(parsed) || parsed < 0) {
+      return res.status(400).json({ success: false, message: 'Markup value must be a non-negative number' });
+    }
+    settings.defaultMarkupValue = parsed;
+    settings.defaultMarkupPercent = parsed;
+  }
+
+  if (priceRounding != null) {
+    if (!['ROUND', '9_ENDING', 'NONE'].includes(priceRounding)) {
+      return res.status(400).json({ success: false, message: 'priceRounding must be ROUND, 9_ENDING, or NONE' });
+    }
+    settings.priceRounding = priceRounding;
+  }
+
+  if (req.admin?._id) {
+    settings.updatedBy = req.admin._id;
+  }
+
+  await settings.save();
+  res.json({
+    success: true,
+    message: 'CJ markup and pricing rules updated',
+    data: serializeSettings(settings),
+  });
+}
+
+module.exports = { getSettings, connect, disconnect, testConnection, refreshToken, updateMarkupSettings };

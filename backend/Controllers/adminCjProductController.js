@@ -56,4 +56,56 @@ async function listProducts(req, res) {
   res.json({ success: true, data: result });
 }
 
-module.exports = { onboardProduct, listProducts };
+// POST /admin/cj/products/bulk-pricing
+// body: { productIds?, all?, percentage, method?, applyOn?, rounding? }
+async function bulkPricing(req, res) {
+  const { productIds, all, percentage, method, applyOn, rounding } = req.body || {};
+
+  try {
+    const result = await cjOnboardingService.bulkAdjustPricing({
+      productIds,
+      all: Boolean(all),
+      percentage: Number(percentage) || 30,
+      method: method || 'INCREASE_PERCENT',
+      applyOn: applyOn || 'CJ_COST',
+      rounding: rounding || 'ROUND',
+      updatedBy: req.admin?._id || null,
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully adjusted pricing for ${result.updatedCount} product(s).`,
+      data: result,
+    });
+  } catch (err) {
+    handleError(res, err);
+  }
+}
+
+// POST /admin/cj/products/bulk-onboard
+// body: { cjProductIds, krozendaCategoryId, markupType?, markupValue?, markupPercent?, priceRounding? }
+async function bulkOnboard(req, res) {
+  const { cjProductIds, krozendaCategoryId, markupType, markupValue, markupPercent, priceRounding } = req.body || {};
+
+  try {
+    const result = await cjOnboardingService.bulkOnboardProducts({
+      cjProductIds,
+      krozendaCategoryId,
+      markupType: markupType || 'PERCENT',
+      markupValue: markupValue != null ? Number(markupValue) : (markupPercent != null ? Number(markupPercent) : undefined),
+      priceRounding,
+      onboardedBy: req.admin?._id || null,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk onboarding complete: ${result.succeededCount} succeeded, ${result.failedCount} skipped/failed.`,
+      data: result,
+    });
+  } catch (err) {
+    handleError(res, err);
+  }
+}
+
+module.exports = { onboardProduct, listProducts, bulkPricing, bulkOnboard };
+

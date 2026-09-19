@@ -34,6 +34,15 @@ const cjSettingsSchema = new mongoose.Schema(
     lastFailureAt: { type: Date, default: null },
     failureReason: { type: String, default: '' },
 
+    defaultMarkupPercent: { type: Number, default: 30, min: 0 },
+    defaultMarkupType: { type: String, enum: ['PERCENT', 'FLAT'], default: 'PERCENT' },
+    defaultMarkupValue: { type: Number, default: 30, min: 0 },
+    priceRounding: {
+      type: String,
+      enum: ['ROUND', '9_ENDING', 'NONE'],
+      default: 'ROUND',
+    },
+
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }

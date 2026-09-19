@@ -1,10 +1,11 @@
 const Product = require('../../Models/Product');
 const Category = require('../../Models/Category');
 const CjCategoryMapping = require('../../Models/CjCategoryMapping');
+const CjSettings = require('../../Models/CjSettings');
 const ProductFulfillmentMapping = require('../../Models/ProductFulfillmentMapping');
 const cjProductService = require('./cjProductService');
 const cjImageService = require('./cjImageService');
-const { usdToInr, parseCjPrice } = require('./cjPricing');
+const { usdToInr, parseCjPrice, applyPriceRounding, calculateMarkupPrice } = require('./cjPricing');
 
 // Phase 3 — Selected Product Onboarding.
 //
@@ -54,7 +55,15 @@ class OnboardingError extends Error {
 // USD -> ₹) + margin. providerCost/providerShippingCost are CJ's own
 // quotes and always arrive in USD — see cjPricing.js for why the conversion
 // has to happen here rather than being skipped.
-function computeSellingPrice({ pricingMode, marginRule, providerCost, providerShippingCost, manualPrice }) {
+function computeSellingPrice({
+  pricingMode,
+  marginRule,
+  providerCost,
+  providerShippingCost,
+  manualPrice,
+  defaultMarkupPercent = 30,
+  priceRounding = 'ROUND',
+}) {
   if (pricingMode === 'MANUAL') {
     if (typeof manualPrice !== 'number' || manualPrice <= 0) {
       throw new OnboardingError('A positive sellingPrice is required for manual pricing');
@@ -66,12 +75,12 @@ function computeSellingPrice({ pricingMode, marginRule, providerCost, providerSh
   const shipping = usdToInr(providerShippingCost);
   const base = cost + shipping;
 
-  if (!marginRule || typeof marginRule.value !== 'number') {
-    throw new OnboardingError('marginRule is required for automatic pricing');
-  }
+  const rule = marginRule && typeof marginRule.value === 'number'
+    ? marginRule
+    : { type: 'PERCENT', value: defaultMarkupPercent };
 
-  const margin = marginRule.type === 'FLAT' ? marginRule.value : base * (marginRule.value / 100);
-  return Math.round((base + margin) * 100) / 100;
+  const margin = rule.type === 'FLAT' ? rule.value : base * (rule.value / 100);
+  return applyPriceRounding(base + margin, priceRounding);
 }
 
 // Resolves a CJ category to a Krozenda category, preferring an existing
@@ -105,6 +114,7 @@ async function onboardProduct(
     sellingPrice, // used for a simple, variant-less product under MANUAL mode
     variantSelections = null,
     description,
+    priceRounding = null,
     onboardedBy = null,
   },
   { onLog } = {}
@@ -116,12 +126,16 @@ async function onboardProduct(
     throw new OnboardingError('This CJ product has already been onboarded', { code: 'ALREADY_ONBOARDED' });
   }
 
-  const [detail, cjVariants] = await Promise.all([
+  const [detail, cjVariants, globalSettings] = await Promise.all([
     cjProductService.getProductDetail(cjProductId, { onLog }),
     cjProductService.getProductVariants(cjProductId, { onLog }),
+    CjSettings.getSettings(),
   ]);
 
   if (!detail) throw new OnboardingError('CJ product not found', { status: 404 });
+
+  const defaultMarkupPercent = globalSettings?.defaultMarkupPercent ?? 30;
+  const effectivePriceRounding = priceRounding || globalSettings?.priceRounding || 'ROUND';
 
   const category = await resolveKrozendaCategory({ cjCategoryId: detail.categoryId, krozendaCategoryId });
 
@@ -143,53 +157,54 @@ async function onboardProduct(
   const productVariants = [];
   const mappingVariants = [];
 
-  for (const cv of chosenVariants) {
-    const cjVariantId = cv.vid || cv.variantId;
-    const providerCost = parseCjPrice(cv.variantSellPrice ?? cv.sellPrice);
-    // CJ's variant list/detail responses never carry a shipping cost or
-    // stock figure (verified against a live account — both come back null).
-    // Shipping cost only exists via the freight-quote endpoint, which needs
-    // a destination address and so is a checkout-time concern, not an
-    // onboarding one — 0 here is correct, not a placeholder bug. Stock DOES
-    // exist, but only on the separate per-warehouse stock endpoint.
-    const providerShippingCost = Number(cv.logisticPrice ?? 0) || 0;
-    const providerStock = await cjProductService.getVariantTotalStock(cjVariantId, { onLog });
+  const variantResults = await Promise.all(
+    chosenVariants.map(async (cv) => {
+      const cjVariantId = cv.vid || cv.variantId;
+      const providerCost = parseCjPrice(cv.variantSellPrice ?? cv.sellPrice);
+      const providerShippingCost = Number(cv.logisticPrice ?? 0) || 0;
 
-    const price = computeSellingPrice({
-      pricingMode,
-      marginRule,
-      providerCost,
-      providerShippingCost,
-      manualPrice: manualPriceByVariant.get(cjVariantId) ?? (hasVariants ? undefined : sellingPrice),
-    });
+      const [providerStock, variantImage] = await Promise.all([
+        cjProductService.getVariantTotalStock(cjVariantId, { onLog }).catch(() => 0),
+        cv.variantImage ? cjImageService.importCjImage(cv.variantImage).catch(() => null) : Promise.resolve(null),
+      ]);
 
-    const variantName =
-      cv.variantNameEn || [cv.variantKey, cv.variantValue].filter(Boolean).join(' / ') || cjVariantId;
+      const price = computeSellingPrice({
+        pricingMode,
+        marginRule,
+        providerCost,
+        providerShippingCost,
+        manualPrice: manualPriceByVariant.get(cjVariantId) ?? (hasVariants ? undefined : sellingPrice),
+        defaultMarkupPercent,
+        priceRounding: effectivePriceRounding,
+      });
 
-    // Same import-time optimization as the product gallery above. Content-
-    // hash-based dedup in cjImageService means a variant that shares its
-    // photo with the main gallery (common — many variants reuse one shot)
-    // costs nothing extra here, not a second download.
-    const variantImage = cv.variantImage ? await cjImageService.importCjImage(cv.variantImage).catch(() => null) : null;
+      const variantName =
+        cv.variantNameEn || [cv.variantKey, cv.variantValue].filter(Boolean).join(' / ') || cjVariantId;
 
-    productVariants.push({
-      name: variantName,
-      sku: cv.variantSku || '',
-      price,
-      stock: providerStock,
-      image: variantImage,
-      isActive: true,
-    });
+      return {
+        productVariant: {
+          name: variantName,
+          sku: cv.variantSku || '',
+          price,
+          stock: providerStock,
+          image: variantImage,
+          isActive: true,
+        },
+        mappingVariant: {
+          krozendaVariantId: null,
+          cjVariantId,
+          cjSku: cv.variantSku || '',
+          providerCost,
+          providerShippingCost,
+          providerStock,
+        },
+      };
+    })
+  );
 
-    mappingVariants.push({
-      // filled in after Product.create() assigns subdocument _ids, below
-      krozendaVariantId: null,
-      cjVariantId,
-      cjSku: cv.variantSku || '',
-      providerCost,
-      providerShippingCost,
-      providerStock,
-    });
+  for (const vr of variantResults) {
+    productVariants.push(vr.productVariant);
+    mappingVariants.push(vr.mappingVariant);
   }
 
   const basePrice = hasVariants
@@ -200,6 +215,8 @@ async function onboardProduct(
         providerCost: parseCjPrice(detail.sellPrice),
         providerShippingCost: parseCjPrice(detail.logisticPrice),
         manualPrice: sellingPrice,
+        defaultMarkupPercent,
+        priceRounding: effectivePriceRounding,
       });
 
   const baseStock = hasVariants
@@ -250,7 +267,9 @@ async function onboardProduct(
     sourceStatus: typeof detail.status === 'number' ? detail.status : null,
     variants: mappingVariants,
     pricingMode,
-    marginRule: pricingMode === 'AUTOMATIC' ? marginRule : null,
+    marginRule: pricingMode === 'AUTOMATIC'
+      ? (marginRule && typeof marginRule.value === 'number' ? marginRule : { type: 'PERCENT', value: defaultMarkupPercent })
+      : null,
     syncStatus: 'IDLE',
     lastSyncedAt: new Date(),
     onboardedBy,
@@ -268,10 +287,239 @@ async function listOnboardedProducts({ pageNum = 1, pageSize = 20 } = {}) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
-      .populate('product', 'name price stock images isActive'),
+      .populate('product', 'name price stock images isActive variants'),
     ProductFulfillmentMapping.countDocuments({ provider: 'CJ' }),
   ]);
   return { list: rows, pageNum, pageSize, total };
 }
 
-module.exports = { onboardProduct, listOnboardedProducts, computeSellingPrice, cleanCjDescription, OnboardingError };
+/**
+ * Bulk Adjust Pricing for Onboarded CJ Products
+ * @param {Object} params
+ * @param {Array<string>} params.productIds - Array of Product Mongo IDs to adjust (or empty if all=true)
+ * @param {boolean} params.all - If true, applies to all onboarded CJ products
+ * @param {number} params.percentage - Percentage value (e.g., 30 for 30%)
+ * @param {string} params.method - 'INCREASE_PERCENT' | 'DECREASE_PERCENT' | 'FIXED'
+ * @param {string} params.applyOn - 'CJ_COST' | 'CURRENT_PRICE'
+ * @param {string} params.rounding - 'ROUND' | '9_ENDING' | 'NONE'
+ */
+async function bulkAdjustPricing({
+  productIds = [],
+  all = false,
+  percentage = 30,
+  method = 'INCREASE_PERCENT',
+  applyOn = 'CJ_COST',
+  rounding = 'ROUND',
+  updatedBy = null,
+} = {}) {
+  const filter = { provider: 'CJ' };
+  if (!all && Array.isArray(productIds) && productIds.length > 0) {
+    filter.product = { $in: productIds };
+  }
+
+  const mappings = await ProductFulfillmentMapping.find(filter).populate('product');
+  if (!mappings || mappings.length === 0) {
+    return { success: true, updatedCount: 0, products: [] };
+  }
+
+  const updatedProducts = [];
+  const pct = Math.max(0, Number(percentage) || 0);
+
+  for (const mapping of mappings) {
+    const product = mapping.product;
+    if (!product) continue;
+
+    let hasProductChanges = false;
+    const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+
+    if (hasVariants) {
+      const mappingVariantMap = new Map();
+      (mapping.variants || []).forEach((mv) => {
+        if (mv.krozendaVariantId) {
+          mappingVariantMap.set(String(mv.krozendaVariantId), mv);
+        }
+        if (mv.cjVariantId) {
+          mappingVariantMap.set(String(mv.cjVariantId), mv);
+        }
+      });
+
+      for (const variant of product.variants) {
+        const mv = mappingVariantMap.get(String(variant._id));
+        let newPrice;
+
+        if (applyOn === 'CJ_COST' && mv && typeof mv.providerCost === 'number') {
+          const costInr = usdToInr(mv.providerCost) + usdToInr(mv.providerShippingCost || 0);
+          if (method === 'FIXED') {
+            newPrice = applyPriceRounding(costInr + pct, rounding);
+          } else if (method === 'DECREASE_PERCENT') {
+            newPrice = applyPriceRounding(Math.max(1, costInr - (costInr * (pct / 100))), rounding);
+          } else {
+            // INCREASE_PERCENT
+            newPrice = calculateMarkupPrice({ costInInr: costInr, markupPercent: pct, rounding });
+          }
+        } else {
+          // CURRENT_PRICE fallback
+          const current = variant.price || product.price || 0;
+          if (method === 'FIXED') {
+            newPrice = applyPriceRounding(current + pct, rounding);
+          } else if (method === 'DECREASE_PERCENT') {
+            newPrice = applyPriceRounding(Math.max(1, current - (current * (pct / 100))), rounding);
+          } else {
+            newPrice = applyPriceRounding(current + (current * (pct / 100)), rounding);
+          }
+        }
+
+        if (newPrice && newPrice !== variant.price) {
+          variant.price = newPrice;
+          hasProductChanges = true;
+        }
+      }
+
+      // Base product price is min of variants
+      const variantPrices = product.variants.map((v) => v.price).filter((p) => typeof p === 'number' && p > 0);
+      if (variantPrices.length > 0) {
+        product.price = Math.min(...variantPrices);
+        hasProductChanges = true;
+      }
+    } else {
+      // Simple product
+      let newPrice;
+      if (applyOn === 'CJ_COST') {
+        const costInr = usdToInr(mapping.variants?.[0]?.providerCost || 0) +
+          usdToInr(mapping.variants?.[0]?.providerShippingCost || 0);
+        if (costInr > 0) {
+          if (method === 'FIXED') {
+            newPrice = applyPriceRounding(costInr + pct, rounding);
+          } else if (method === 'DECREASE_PERCENT') {
+            newPrice = applyPriceRounding(Math.max(1, costInr - (costInr * (pct / 100))), rounding);
+          } else {
+            newPrice = calculateMarkupPrice({ costInInr: costInr, markupPercent: pct, rounding });
+          }
+        }
+      }
+
+      if (!newPrice) {
+        const current = product.price || 0;
+        if (method === 'FIXED') {
+          newPrice = applyPriceRounding(current + pct, rounding);
+        } else if (method === 'DECREASE_PERCENT') {
+          newPrice = applyPriceRounding(Math.max(1, current - (current * (pct / 100))), rounding);
+        } else {
+          newPrice = applyPriceRounding(current + (current * (pct / 100)), rounding);
+        }
+      }
+
+      if (newPrice && newPrice !== product.price) {
+        product.price = newPrice;
+        hasProductChanges = true;
+      }
+    }
+
+    if (hasProductChanges) {
+      await product.save();
+      mapping.pricingMode = applyOn === 'CJ_COST' && method === 'INCREASE_PERCENT' ? 'AUTOMATIC' : 'MANUAL';
+      mapping.marginRule = { type: method === 'FIXED' ? 'FLAT' : 'PERCENT', value: pct };
+      await mapping.save();
+
+      updatedProducts.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+      });
+    }
+  }
+
+  return {
+    success: true,
+    updatedCount: updatedProducts.length,
+    products: updatedProducts,
+  };
+}
+
+async function bulkOnboardProducts({
+  cjProductIds,
+  krozendaCategoryId,
+  markupType = 'PERCENT',
+  markupValue,
+  markupPercent,
+  priceRounding,
+  onboardedBy = null,
+}) {
+  if (!Array.isArray(cjProductIds) || cjProductIds.length === 0) {
+    throw new OnboardingError('cjProductIds must be a non-empty array');
+  }
+  if (!krozendaCategoryId) {
+    throw new OnboardingError('krozendaCategoryId is required for bulk onboarding');
+  }
+
+  const category = await Category.findById(krozendaCategoryId);
+  if (!category) {
+    throw new OnboardingError('krozendaCategoryId does not match an existing category');
+  }
+
+  const globalSettings = await CjSettings.getSettings();
+  const effectiveType = markupType === 'FLAT' ? 'FLAT' : 'PERCENT';
+  const effectiveValue = markupValue != null && !isNaN(Number(markupValue))
+    ? Number(markupValue)
+    : (markupPercent != null && !isNaN(Number(markupPercent))
+        ? Number(markupPercent)
+        : (globalSettings?.defaultMarkupPercent ?? 30));
+  const effectiveRounding = priceRounding || globalSettings?.priceRounding || 'ROUND';
+
+  const succeeded = [];
+  const failed = [];
+
+  for (const cjProductId of cjProductIds) {
+    try {
+      const existing = await ProductFulfillmentMapping.findOne({ provider: 'CJ', cjProductId });
+      if (existing) {
+        failed.push({
+          cjProductId,
+          reason: 'Already onboarded',
+          code: 'ALREADY_ONBOARDED',
+        });
+        continue;
+      }
+
+      const { product } = await onboardProduct({
+        cjProductId,
+        krozendaCategoryId,
+        pricingMode: 'AUTOMATIC',
+        marginRule: { type: effectiveType, value: effectiveValue },
+        priceRounding: effectiveRounding,
+        onboardedBy,
+      });
+
+      succeeded.push({
+        cjProductId,
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+      });
+    } catch (err) {
+      failed.push({
+        cjProductId,
+        reason: err.message || 'Failed to onboard product',
+        code: err.code || 'UNKNOWN_ERROR',
+      });
+    }
+  }
+
+  return {
+    total: cjProductIds.length,
+    succeededCount: succeeded.length,
+    failedCount: failed.length,
+    succeeded,
+    failed,
+  };
+}
+
+module.exports = {
+  onboardProduct,
+  bulkOnboardProducts,
+  listOnboardedProducts,
+  bulkAdjustPricing,
+  computeSellingPrice,
+  cleanCjDescription,
+  OnboardingError,
+};

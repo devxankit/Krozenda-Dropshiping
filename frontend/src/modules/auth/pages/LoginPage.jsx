@@ -4,6 +4,7 @@ import {
   HiArrowLeft, HiCheck, HiShieldCheck, HiExclamationTriangle,
   HiArrowPath, HiPencilSquare, HiXMark, HiArrowRight,
   HiShoppingBag, HiSparkles, HiCheckCircle, HiLockClosed, HiBolt,
+  HiTruck, HiBuildingStorefront, HiStar
 } from 'react-icons/hi2'
 import { USER_ROUTES } from '../../../config/routes'
 import { useAuthStore } from '../../../lib/authStore'
@@ -42,7 +43,7 @@ export function LoginPage() {
 
   const changeStep = (next) => {
     setStepVisible(false)
-    setTimeout(() => { setCurrentStep(next); setStepVisible(true) }, 280)
+    setTimeout(() => { setCurrentStep(next); setStepVisible(true) }, 260)
   }
 
   const goBack = () => {
@@ -55,7 +56,8 @@ export function LoginPage() {
   }
 
   const handlePhoneChange = e => {
-    setPhoneNumber(e.target.value.replace(/\D/g,'').slice(0,10))
+    const val = e.target.value.replace(/\D/g,'').slice(0,10)
+    setPhoneNumber(val)
     if (error) setError(null)
   }
 
@@ -129,899 +131,1707 @@ export function LoginPage() {
 
   const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
   const isOtpComplete = otp.every(d => d !== '')
+  const isPhoneValid = phoneNumber.length === 10
 
   return (
     <div className="lp-root">
-      {/* ═══════════ ANIMATED BG ═══════════ */}
-      <div className="lp-bg" aria-hidden>
-        <div className="lp-orb lp-orb1" />
-        <div className="lp-orb lp-orb2" />
-        <div className="lp-orb lp-orb3" />
-        <div className="lp-mesh" />
+      {/* ═══════════ DYNAMIC AMBIENT BACKGROUND ═══════════ */}
+      <div className="lp-ambient-bg" aria-hidden>
+        <div className="lp-orb lp-orb-primary" />
+        <div className="lp-orb lp-orb-cyan" />
+        <div className="lp-orb lp-orb-violet" />
+        <div className="lp-dot-pattern" />
       </div>
 
-      {/* ═══════════ HEADER ═══════════ */}
+      {/* ═══════════ MODERN FROSTED HEADER ═══════════ */}
       <header className="lp-header">
-        <div className="lp-header-inner">
-          {currentStep > 1
-            ? <button className="lp-icon-btn" onClick={goBack} aria-label="Back">
-                <HiArrowLeft style={{width:18,height:18}} />
-              </button>
-            : <div style={{width:40}} />
-          }
+        <div className="lp-header-content">
+          {currentStep > 1 ? (
+            <button className="lp-nav-icon-btn" onClick={goBack} aria-label="Go back">
+              <HiArrowLeft className="lp-arrow-icon" />
+            </button>
+          ) : (
+            <div className="lp-nav-placeholder" />
+          )}
 
-          <Link to={USER_ROUTES.DASHBOARD} className="lp-logo-link">
-            <img src="/images/logo.png" alt="KroZenda" className="lp-logo" />
-            <span className="lp-brand">KroZenda</span>
+          <Link to={USER_ROUTES.DASHBOARD} className="lp-brand-container">
+            <div className="lp-logo-glow">
+              <img src="/images/logo.png" alt="KroZenda" className="lp-logo-img" />
+            </div>
+            <div className="lp-brand-text-col">
+              <span className="lp-brand-title">KroZenda</span>
+              <span className="lp-brand-subtitle">Dropshipping Hub</span>
+            </div>
           </Link>
 
-          <button className="lp-ghost-pill" onClick={() => navigate(USER_ROUTES.DASHBOARD, {replace:true})}>
-            Guest <HiArrowRight style={{width:13,height:13}} />
+          <button
+            className="lp-guest-btn"
+            onClick={() => navigate(USER_ROUTES.DASHBOARD, { replace: true })}
+          >
+            <span>Guest</span>
+            <HiArrowRight className="lp-guest-arrow" />
           </button>
         </div>
       </header>
 
-      {/* ═══════════ MAIN ═══════════ */}
+      {/* ═══════════ MAIN VIEWPORT CONTAINER ═══════════ */}
       <main className="lp-main">
+        <div className="lp-card-wrapper">
+          <div className="lp-card">
+            {/* High-end animated color wave strip */}
+            <div className="lp-card-glow-strip" />
 
-        {/* ── Floating card ── */}
-        <div className="lp-card lp-card-enter">
+            <div className={`lp-card-body ${stepVisible ? 'lp-visible' : 'lp-hidden'}`}>
 
-          {/* Rainbow stripe */}
-          <div className="lp-stripe" aria-hidden />
+              {/* ════════════ STEP 1: WELCOME SCREEN ════════════ */}
+              {currentStep === 1 && (
+                <div className="lp-step-container lp-step-welcome">
+                  <div className="lp-welcome-hero-avatar">
+                    <div className="lp-hero-pulse-ring-outer" />
+                    <div className="lp-hero-pulse-ring-inner" />
+                    <div className="lp-hero-logo-box">
+                      <img src="/images/logo.png" alt="KroZenda" className="lp-welcome-logo-img" />
+                    </div>
+                  </div>
 
-          {/* Step content wrapper — fades on transition */}
-          <div className={`lp-step-body ${stepVisible ? 'lp-visible' : 'lp-hidden'}`}>
+                  <div className="lp-verified-badge">
+                    <HiSparkles className="lp-sparkle-icon" />
+                    <span>India's #1 B2B & B2C Dropshipping Platform</span>
+                  </div>
 
-            {/* ════ STEP 1: WELCOME ════ */}
-            {currentStep === 1 && (
-              <div className="lp-step">
-                <div className="lp-welcome-icon">
-                  <div className="lp-pulse-ring" />
-                  <img src="/images/logo.png" alt="KroZenda" className="lp-welcome-logo" />
+                  <h1 className="lp-hero-title">
+                    Direct Factory Wholesale &amp; Commerce
+                  </h1>
+
+                  <p className="lp-hero-desc">
+                    Connect directly with top manufacturers. Single unit wholesale pricing, zero inventory holding, pan-India 24-48hr dispatch.
+                  </p>
+
+                  <div className="lp-action-stack">
+                    <button className="lp-primary-btn lp-btn-shine" onClick={() => changeStep(2)}>
+                      <span>Sign In with Mobile</span>
+                      <HiArrowRight className="lp-btn-icon-slide" />
+                    </button>
+
+                    <button
+                      className="lp-secondary-btn"
+                      onClick={() => navigate(USER_ROUTES.DASHBOARD, { replace: true })}
+                    >
+                      Explore Wholesale Marketplace
+                    </button>
+                  </div>
+
+                  <p className="lp-terms-notice">
+                    By continuing, you agree to our{' '}
+                    <Link to="/terms" target="_blank">Terms of Service</Link> &amp;{' '}
+                    <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>
+                  </p>
                 </div>
+              )}
 
-                <span className="lp-chip lp-chip-amber">
-                  <HiBolt style={{width:11,height:11}} /> INDIA'S #1 DROPSHIPPING
-                </span>
+              {/* ════════════ STEP 2: MOBILE INPUT SCREEN ════════════ */}
+              {currentStep === 2 && (
+                <div className="lp-step-container">
+                  {/* Stepper Progress */}
+                  <div className="lp-stepper-bar">
+                    <div className="lp-stepper-item lp-stepper-active">
+                      <div className="lp-step-circle">1</div>
+                      <span className="lp-step-label">Mobile</span>
+                    </div>
+                    <div className="lp-stepper-connector">
+                      <div
+                        className="lp-connector-fill"
+                        style={{ width: isPhoneValid ? '50%' : '0%' }}
+                      />
+                    </div>
+                    <div className="lp-stepper-item lp-stepper-idle">
+                      <div className="lp-step-circle">2</div>
+                      <span className="lp-step-label">Verify</span>
+                    </div>
+                  </div>
 
-                <h1 className="lp-heading">Smart Factory<br/>Commerce</h1>
-                <p className="lp-sub">Connect directly with manufacturers.<br/>Unit wholesale prices. Pan-India 24–48hr.</p>
+                  {/* Brand Icon & Live Status */}
+                  <div className="lp-avatar-center">
+                    <div className="lp-avatar-glow-ring" />
+                    <div className="lp-avatar-box">
+                      <img src="/images/logo.png" alt="KroZenda" className="lp-avatar-img" />
+                    </div>
+                    <div className="lp-live-pill">
+                      <span className="lp-live-dot" />
+                      <span>Live Wholesale Access</span>
+                    </div>
+                  </div>
 
-                <div className="lp-btn-stack">
-                  <button className="lp-btn-primary lp-btn-anim" onClick={() => changeStep(2)}>
-                    <span>Sign In with Mobile</span>
-                    <span className="lp-btn-icon"><HiArrowRight /></span>
-                  </button>
-                  <button className="lp-btn-outline" onClick={() => navigate(USER_ROUTES.DASHBOARD,{replace:true})}>
-                    Explore as Guest
-                  </button>
-                </div>
+                  {/* Screen Title */}
+                  <div className="lp-title-group">
+                    <h1 className="lp-main-title">Enter Your Mobile</h1>
+                    <p className="lp-subtitle">
+                      Enter your 10-digit number. We'll send a 6-digit OTP — no passwords required.
+                    </p>
+                  </div>
 
-                <p className="lp-fine">
-                  By continuing you agree to our{' '}
-                  <Link to="/terms" target="_blank">Terms</Link> &amp;{' '}
-                  <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>
-                </p>
-              </div>
-            )}
+                  {error && <ErrorAlert msg={error} />}
 
-            {/* ════ STEP 2: MOBILE INPUT ════ */}
-            {currentStep === 2 && (
-              <div className="lp-step">
-                {/* Step progress */}
-                <div className="lp-progress">
-                  <StepBubble num={1} label="Mobile" state="active" />
-                  <div className="lp-prog-line lp-prog-line-half" />
-                  <StepBubble num={2} label="Verify" state="idle" />
-                </div>
+                  {/* Mobile Input Form */}
+                  <form onSubmit={handleMobileSubmit} className="lp-phone-form">
+                    <div className={`lp-input-container ${error ? 'lp-input-error' : ''} ${isPhoneValid ? 'lp-input-valid' : ''}`}>
+                      <div className="lp-country-badge">
+                        <IndianFlag />
+                        <span className="lp-country-code">+91</span>
+                      </div>
 
-                {/* Animated logo area */}
-                <div className="lp-icon-hero">
-                  <div className="lp-icon-bg" />
-                  <div className="lp-icon-wrap">
-                    <img src="/images/logo.png" alt="" className="lp-icon-img" />
+                      <div className="lp-input-separator" />
+
+                      <input
+                        id="mobile-input"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel"
+                        maxLength={10}
+                        placeholder="Enter 10-digit number"
+                        value={phoneNumber}
+                        onChange={handlePhoneChange}
+                        disabled={isLoading}
+                        autoFocus
+                        className="lp-text-input"
+                      />
+
+                      {phoneNumber && !isLoading && (
+                        <button
+                          type="button"
+                          className="lp-input-clear-btn"
+                          onClick={() => { setPhoneNumber(''); setError(null) }}
+                          aria-label="Clear mobile number"
+                        >
+                          <HiXMark />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Interactive Digit Progress Indicator */}
+                    <div className="lp-digit-indicator-wrap">
+                      <div className="lp-digit-dots-row">
+                        {Array.from({ length: 10 }).map((_, index) => {
+                          const isFilled = index < phoneNumber.length
+                          return (
+                            <span
+                              key={index}
+                              className={`lp-digit-dot ${isFilled ? 'lp-digit-filled' : ''}`}
+                            />
+                          )
+                        })}
+                      </div>
+                      <span className={`lp-digit-counter ${isPhoneValid ? 'lp-counter-done' : ''}`}>
+                        {isPhoneValid ? '✓ 10 Digits Complete' : `${phoneNumber.length}/10 digits`}
+                      </span>
+                    </div>
+
+                    {/* Terms Checkbox */}
+                    <label className="lp-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={e => {
+                          setAcceptedTerms(e.target.checked)
+                          if (error && e.target.checked) setError(null)
+                        }}
+                        className="lp-native-checkbox"
+                      />
+                      <span className="lp-checkbox-custom">
+                        {acceptedTerms && <HiCheck className="lp-check-svg" />}
+                      </span>
+                      <span className="lp-checkbox-caption">
+                        I agree to KroZenda's{' '}
+                        <Link to="/terms" target="_blank">Terms of Service</Link> &amp;{' '}
+                        <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>
+                      </span>
+                    </label>
+
+                    {/* Submit CTA Button */}
+                    <button
+                      type="submit"
+                      disabled={isLoading || !isPhoneValid}
+                      className={`lp-primary-btn lp-btn-shine ${!isPhoneValid || isLoading ? 'lp-btn-disabled' : 'lp-btn-active-glow'}`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <HiArrowPath className="lp-spin-icon" />
+                          <span>Sending Secure OTP…</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{isPhoneValid ? 'Get Verification Code' : 'Enter Mobile to Continue'}</span>
+                          <HiArrowRight className="lp-btn-icon-slide" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  {/* Trust & Benefits Horizontal Strip */}
+                  <div className="lp-benefits-container">
+                    <div className="lp-benefit-item">
+                      <div className="lp-benefit-icon-box lp-icon-blue">
+                        <HiBuildingStorefront />
+                      </div>
+                      <div className="lp-benefit-text">
+                        <span className="lp-benefit-title">Factory Direct</span>
+                        <span className="lp-benefit-sub">Up to 70% Wholesale</span>
+                      </div>
+                    </div>
+
+                    <div className="lp-benefit-item">
+                      <div className="lp-benefit-icon-box lp-icon-amber">
+                        <HiBolt />
+                      </div>
+                      <div className="lp-benefit-text">
+                        <span className="lp-benefit-title">Instant Access</span>
+                        <span className="lp-benefit-sub">Zero Password Friction</span>
+                      </div>
+                    </div>
+
+                    <div className="lp-benefit-item">
+                      <div className="lp-benefit-icon-box lp-icon-emerald">
+                        <HiShieldCheck />
+                      </div>
+                      <div className="lp-benefit-text">
+                        <span className="lp-benefit-title">Escrow Safe</span>
+                        <span className="lp-benefit-sub">100% Protected Orders</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <h1 className="lp-heading lp-stagger-1">Enter Your Mobile</h1>
-                <p className="lp-sub lp-stagger-2">We'll send a 6-digit OTP. No password needed.</p>
-
-                {error && <ErrorAlert msg={error} />}
-
-                <form onSubmit={handleMobileSubmit} className="lp-form lp-stagger-3">
-                  {/* Floating label phone input */}
-                  <div className={`lp-phone-wrap ${error ? 'lp-phone-error' : ''}`}>
-                    <div className="lp-phone-prefix">
-                      <IndianFlag />
-                      <span className="lp-prefix-code">+91</span>
+              {/* ════════════ STEP 3: OTP VERIFICATION SCREEN ════════════ */}
+              {currentStep === 3 && (
+                <div className="lp-step-container">
+                  {/* Stepper Progress */}
+                  <div className="lp-stepper-bar">
+                    <div className="lp-stepper-item lp-stepper-done">
+                      <div className="lp-step-circle"><HiCheck /></div>
+                      <span className="lp-step-label">Mobile</span>
                     </div>
-                    <div className="lp-vdivider" />
-                    <input
-                      id="mobile-input"
-                      type="tel"
-                      inputMode="numeric"
-                      autoComplete="tel"
-                      maxLength={10}
-                      placeholder="98765 43210"
-                      value={phoneNumber}
-                      onChange={handlePhoneChange}
-                      disabled={isLoading}
-                      autoFocus
-                      className="lp-phone-input"
-                    />
-                    {phoneNumber && !isLoading && (
-                      <button type="button" className="lp-clear"
-                        onClick={() => { setPhoneNumber(''); setError(null) }}>
-                        <HiXMark style={{width:15,height:15}} />
+                    <div className="lp-stepper-connector">
+                      <div className="lp-connector-fill lp-connector-full" />
+                    </div>
+                    <div className="lp-stepper-item lp-stepper-active">
+                      <div className="lp-step-circle">2</div>
+                      <span className="lp-step-label">Verify</span>
+                    </div>
+                  </div>
+
+                  {/* Active Phone Badge with Edit Action */}
+                  <div className="lp-verified-phone-pill">
+                    <div className="lp-pill-prefix">
+                      <IndianFlag />
+                      <span className="lp-pill-number">+91 {phoneNumber}</span>
+                    </div>
+                    <button
+                      className="lp-change-phone-btn"
+                      onClick={() => { setError(null); changeStep(2) }}
+                      title="Change phone number"
+                    >
+                      <HiPencilSquare className="lp-pencil-icon" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+
+                  {/* Screen Title */}
+                  <div className="lp-title-group">
+                    <h1 className="lp-main-title">Enter Verification Code</h1>
+                    <p className="lp-subtitle">
+                      We sent a 6-digit one-time password to your mobile number.
+                    </p>
+                  </div>
+
+                  {/* Account Status Badge */}
+                  {isRegistered !== null && (
+                    <div className={`lp-member-status-chip ${isRegistered ? 'lp-chip-member' : 'lp-chip-new'}`}>
+                      {isRegistered ? (
+                        <>
+                          <HiShieldCheck className="lp-chip-icon" />
+                          <span>Existing Member • Welcome back</span>
+                        </>
+                      ) : (
+                        <>
+                          <HiSparkles className="lp-chip-icon" />
+                          <span>New Account • Free Wholesale Access Activated</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {error && <ErrorAlert msg={error} />}
+
+                  {resendNotice && (
+                    <div className="lp-success-alert">
+                      <HiCheckCircle className="lp-alert-icon" />
+                      <span>{resendNotice}</span>
+                    </div>
+                  )}
+
+                  {/* 6-Digit OTP Boxes */}
+                  <div className="lp-otp-wrapper" onPaste={handleOtpPaste}>
+                    {otp.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={el => (inputRefs.current[i] = el)}
+                        id={`otp-box-${i}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        disabled={isLoading}
+                        onChange={e => handleOtpChange(i, e.target.value)}
+                        onKeyDown={e => handleOtpKeyDown(i, e)}
+                        aria-label={`OTP digit ${i+1}`}
+                        className={`lp-otp-input-cell ${digit ? 'lp-otp-cell-filled' : ''} ${isLoading ? 'lp-otp-cell-loading' : ''}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Verify & Login Button */}
+                  <button
+                    className={`lp-primary-btn lp-btn-shine ${!isOtpComplete || isLoading ? 'lp-btn-disabled' : 'lp-btn-active-glow'}`}
+                    disabled={isLoading || !isOtpComplete}
+                    onClick={() => verifyOtpCode(otp.join(''))}
+                  >
+                    {isLoading ? (
+                      <>
+                        <HiArrowPath className="lp-spin-icon" />
+                        <span>Verifying Credentials…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Verify &amp; Continue</span>
+                        <HiArrowRight className="lp-btn-icon-slide" />
+                      </>
+                    )}
+                  </button>
+
+                  {/* Resend & Edit Navigation */}
+                  <div className="lp-resend-row">
+                    {timer > 0 ? (
+                      <div className="lp-timer-badge">
+                        <span className="lp-timer-text">Resend code in</span>
+                        <span className="lp-timer-clock">{fmt(timer)}</span>
+                      </div>
+                    ) : (
+                      <button className="lp-link-btn lp-resend-active" onClick={handleResendOtp}>
+                        <HiArrowPath className="lp-inline-icon" />
+                        <span>Resend OTP</span>
                       </button>
                     )}
-                  </div>
 
-                  {/* Animated fill bar */}
-                  <div className="lp-fill-bar">
-                    <div className="lp-fill-track">
-                      <div className="lp-fill-progress"
-                        style={{ width: `${(phoneNumber.length / 10) * 100}%` }} />
+                    <span className="lp-link-sep">•</span>
+
+                    <button
+                      className="lp-link-btn"
+                      onClick={() => { setError(null); changeStep(2) }}
+                    >
+                      Change Number
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ════════════ STEP 4: SUCCESS CONFIRMATION ════════════ */}
+              {currentStep === 4 && (
+                <div className="lp-step-container lp-step-success">
+                  <div className="lp-success-visual">
+                    <div className="lp-success-halo lp-halo-outer" />
+                    <div className="lp-success-halo lp-halo-inner" />
+                    <div className="lp-success-badge-icon">
+                      <HiShieldCheck />
                     </div>
-                    <span className="lp-fill-count">{phoneNumber.length}/10</span>
                   </div>
 
-                  {/* Terms checkbox */}
-                  <label className="lp-terms">
-                    <input type="checkbox" checked={acceptedTerms} className="lp-check"
-                      onChange={e => { setAcceptedTerms(e.target.checked); if(error && e.target.checked) setError(null) }} />
-                    <span className="lp-terms-text">
-                      I agree to <Link to="/terms" target="_blank">Terms</Link> &amp; <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>
-                    </span>
-                  </label>
+                  <div className="lp-verified-pill-success">
+                    <HiSparkles className="lp-sparkle-icon" />
+                    <span>{isNewUser ? 'Welcome to KroZenda!' : 'Welcome Back!'}</span>
+                  </div>
 
-                  <button type="submit"
-                    className={`lp-btn-primary lp-btn-anim ${(isLoading || phoneNumber.length !== 10) ? 'lp-btn-dim' : ''}`}
-                    disabled={isLoading || phoneNumber.length !== 10}>
-                    {isLoading
-                      ? <><HiArrowPath className="lp-spin" style={{width:18,height:18}} /> <span>Sending OTP…</span></>
-                      : <><span>Get OTP</span> <span className="lp-btn-icon"><HiArrowRight /></span></>
-                    }
-                  </button>
-                </form>
+                  <h1 className="lp-main-title">
+                    {userProfile?.name ? `Hello, ${userProfile.name}!` : 'Verification Complete!'}
+                  </h1>
 
-                {/* OTP badge */}
-                <div className="lp-otp-badge lp-stagger-4">
-                  <span className="lp-live-dot" />
-                  Instant OTP &bull; No password &bull; Auto sign-up
-                </div>
+                  <p className="lp-subtitle">
+                    Successfully verified for <strong style={{ color: '#0f172a' }}>+91 {phoneNumber}</strong>.
+                    <br />You have unlocked full factory wholesale pricing and order management.
+                  </p>
 
-                {/* Trust grid */}
-                <div className="lp-trust-grid lp-stagger-5">
-                  {[
-                    { icon: <HiShieldCheck />, label: '100% Secure' },
-                    { icon: <HiBolt />,         label: 'Instant Login' },
-                    { icon: <HiLockClosed />,   label: 'SSL Encrypted' },
-                  ].map(({ icon, label }) => (
-                    <div key={label} className="lp-trust-chip">
-                      <span className="lp-trust-ico">{icon}</span>
-                      <span>{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ════ STEP 3: OTP ════ */}
-            {currentStep === 3 && (
-              <div className="lp-step">
-                <div className="lp-progress">
-                  <StepBubble num={1} label="Mobile" state="done" />
-                  <div className="lp-prog-line lp-prog-line-full" />
-                  <StepBubble num={2} label="Verify" state="active" />
-                </div>
-
-                {/* Phone badge */}
-                <div className="lp-phone-badge lp-stagger-1">
-                  <span>+91 {phoneNumber}</span>
-                  <button className="lp-edit-btn"
-                    onClick={() => { setError(null); changeStep(2) }}>
-                    <HiPencilSquare style={{width:14,height:14}} />
+                  <button
+                    className="lp-success-cta-btn lp-btn-shine"
+                    onClick={() => navigate(returnUrl, { replace: true })}
+                  >
+                    <HiShoppingBag className="lp-shopping-icon" />
+                    <span>Continue to Marketplace</span>
+                    <HiArrowRight className="lp-btn-icon-slide" />
                   </button>
                 </div>
+              )}
 
-                <h1 className="lp-heading lp-stagger-2">Enter OTP</h1>
-                <p className="lp-sub lp-stagger-3">6-digit code sent to your mobile</p>
+            </div>
+          </div>
 
-                {isRegistered !== null && (
-                  <div className={`lp-status-chip lp-stagger-3 ${isRegistered ? 'lp-status-green' : 'lp-status-violet'}`}>
-                    {isRegistered
-                      ? <><HiShieldCheck style={{width:14,height:14}} /> Existing Member</>
-                      : <><HiSparkles style={{width:14,height:14}} /> New Account — Auto Created</>}
-                  </div>
-                )}
-
-                {error && <ErrorAlert msg={error} />}
-                {resendNotice && (
-                  <div className="lp-success-toast">
-                    <HiCheckCircle style={{width:15,height:15}} /> {resendNotice}
-                  </div>
-                )}
-
-                {/* OTP boxes */}
-                <div className="lp-otp-row lp-stagger-4" onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={el => (inputRefs.current[i] = el)}
-                      id={`otp-box-${i}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      disabled={isLoading}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => handleOtpKeyDown(i, e)}
-                      aria-label={`OTP digit ${i+1}`}
-                      className={`lp-otp-box ${digit ? 'lp-otp-filled' : ''} ${isLoading ? 'lp-otp-loading' : ''}`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  className={`lp-btn-primary lp-btn-anim lp-stagger-5 ${(isLoading || !isOtpComplete) ? 'lp-btn-dim' : ''}`}
-                  disabled={isLoading || !isOtpComplete}
-                  onClick={() => verifyOtpCode(otp.join(''))}>
-                  {isLoading
-                    ? <><HiArrowPath className="lp-spin" style={{width:18,height:18}} /> <span>Verifying…</span></>
-                    : <><span>Verify &amp; Login</span> <span className="lp-btn-icon"><HiArrowRight /></span></>}
-                </button>
-
-                <div className="lp-resend-area">
-                  {timer > 0
-                    ? <span className="lp-timer">Resend in <strong>{fmt(timer)}</strong></span>
-                    : <button className="lp-text-btn" onClick={handleResendOtp}>
-                        <HiArrowPath style={{width:13,height:13}} /> Resend OTP
-                      </button>
-                  }
-                  <span className="lp-dot-sep">·</span>
-                  <button className="lp-text-btn" onClick={() => { setError(null); changeStep(2) }}>
-                    Change number
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ════ STEP 4: SUCCESS ════ */}
-            {currentStep === 4 && (
-              <div className="lp-step lp-step-center">
-                <div className="lp-success-anim">
-                  <div className="lp-s-ring lp-s-ring1" />
-                  <div className="lp-s-ring lp-s-ring2" />
-                  <div className="lp-s-icon">
-                    <HiShieldCheck style={{width:38,height:38,color:'#fff'}} />
-                  </div>
-                </div>
-
-                <span className="lp-chip lp-chip-green">
-                  <HiSparkles style={{width:11,height:11}} />
-                  {isNewUser ? 'Account Activated!' : 'Welcome Back!'}
-                </span>
-
-                <h1 className="lp-heading">
-                  {userProfile?.name ? `Hi, ${userProfile.name}!` : "You're In!"}
-                </h1>
-                <p className="lp-sub">
-                  Verified: <strong style={{color:'#1e293b'}}>+91 {phoneNumber}</strong><br/>
-                  Full access to factory wholesale rates.
-                </p>
-
-                <button className="lp-btn-success lp-btn-anim"
-                  onClick={() => navigate(returnUrl, {replace:true})}>
-                  <HiShoppingBag style={{width:18,height:18}} />
-                  <span>Continue to Marketplace</span>
-                </button>
-              </div>
-            )}
-
-          </div>{/* /lp-step-body */}
-        </div>{/* /lp-card */}
-
-        {/* Footer */}
-        <footer className="lp-footer">
-          <HiLockClosed style={{width:11,height:11,color:'#22c55e'}} />
-          256-Bit SSL &bull; Safe Escrow &bull; GST Invoiced
-          <span className="lp-footer-sep">|</span>
-          <Link to="/terms" target="_blank">Terms</Link>
-          <Link to="/privacy-policy" target="_blank">Privacy</Link>
-        </footer>
+          {/* Clean Security Footer */}
+          <footer className="lp-page-footer">
+            <div className="lp-footer-trust">
+              <HiLockClosed className="lp-ssl-icon" />
+              <span>256-Bit SSL Encrypted • RBI Compliant Escrow • GST Invoiced</span>
+            </div>
+            <div className="lp-footer-links">
+              <Link to="/terms" target="_blank" className="lp-footer-link">Terms</Link>
+              <span className="lp-footer-dot">•</span>
+              <Link to="/privacy-policy" target="_blank" className="lp-footer-link">Privacy Policy</Link>
+              <span className="lp-footer-dot">•</span>
+              <Link to="/help" target="_blank" className="lp-footer-link">Help &amp; Support</Link>
+            </div>
+          </footer>
+        </div>
       </main>
 
-      {/* ════ SCOPED CSS ════ */}
+      {/* ═══════════ SCOPED MODERN LIGHT DESIGN SYSTEM ═══════════ */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
-        /* ROOT */
+        /* RESET & BASE */
         .lp-root {
           min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
-          font-family: 'Inter', system-ui, sans-serif;
-          background: #f0f4ff;
-          color: #1e293b;
-          overflow-x: hidden;
+          font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
           position: relative;
+          overflow-x: hidden;
+          -webkit-font-smoothing: antialiased;
         }
 
-        /* ANIMATED BACKGROUND */
-        .lp-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        /* AMBIENT BACKGROUND GLOW & DOT GRID */
+        .lp-ambient-bg {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 0;
+          overflow: hidden;
+          background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        }
         .lp-orb {
           position: absolute;
           border-radius: 50%;
-          filter: blur(80px);
-          animation: lpFloat 16s ease-in-out infinite;
+          filter: blur(100px);
+          opacity: 0.65;
+          animation: lpOrbFloat 20s ease-in-out infinite alternate;
         }
-        .lp-orb1 {
-          width: 600px; height: 600px;
-          background: radial-gradient(circle, rgba(165,180,252,0.45) 0%, transparent 70%);
-          top: -200px; left: -200px;
-          animation-delay: 0s;
+        .lp-orb-primary {
+          width: 550px;
+          height: 550px;
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(79, 70, 229, 0.05) 70%, transparent 100%);
+          top: -160px;
+          left: -120px;
         }
-        .lp-orb2 {
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, rgba(196,181,253,0.4) 0%, transparent 70%);
-          bottom: -150px; right: -150px;
-          animation-delay: -6s;
+        .lp-orb-cyan {
+          width: 480px;
+          height: 480px;
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.20) 0%, rgba(6, 182, 212, 0.04) 70%, transparent 100%);
+          bottom: -100px;
+          right: -100px;
+          animation-delay: -7s;
         }
-        .lp-orb3 {
-          width: 350px; height: 350px;
-          background: radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 70%);
-          top: 45%; left: 55%;
-          transform: translate(-50%,-50%);
-          animation-delay: -12s;
+        .lp-orb-violet {
+          width: 380px;
+          height: 380px;
+          background: radial-gradient(circle, rgba(217, 70, 239, 0.14) 0%, rgba(168, 85, 247, 0.03) 70%, transparent 100%);
+          top: 40%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          animation-delay: -14s;
         }
-        .lp-mesh {
-          position: absolute; inset: 0;
-          background-image: radial-gradient(circle at 1px 1px, rgba(99,102,241,0.06) 1px, transparent 0);
-          background-size: 30px 30px;
+        .lp-dot-pattern {
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+          background-size: 24px 24px;
+          opacity: 0.7;
         }
-        @keyframes lpFloat {
-          0%,100% { transform: translateY(0) scale(1); }
-          50%      { transform: translateY(-35px) scale(1.06); }
+        @keyframes lpOrbFloat {
+          0% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-30px) scale(1.06); }
+          100% { transform: translateY(20px) scale(0.96); }
         }
 
         /* HEADER */
         .lp-header {
-          position: relative; z-index: 20;
-          background: rgba(255,255,255,0.75);
+          position: relative;
+          z-index: 30;
+          background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(99,102,241,0.1);
-          box-shadow: 0 1px 0 rgba(255,255,255,0.8), 0 2px 12px rgba(99,102,241,0.06);
+          -webkit-backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
         }
-        .lp-header-inner {
-          max-width: 480px; margin: 0 auto;
-          padding: 13px 20px;
-          display: flex; align-items: center; justify-content: space-between;
+        .lp-header-content {
+          max-width: 500px;
+          margin: 0 auto;
+          padding: 12px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
-        .lp-icon-btn {
-          width: 38px; height: 38px;
-          border-radius: 50%;
-          border: 1.5px solid #e2e8f0;
-          background: #fff;
-          color: #64748b;
+        .lp-nav-icon-btn {
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          transition: all 0.2s;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
-        .lp-icon-btn:hover { background: #f8fafc; color: #4f46e5; border-color: #c7d2fe; transform: scale(1.05); }
-        .lp-icon-btn:active { transform: scale(0.95); }
-
-        .lp-logo-link { display: flex; align-items: center; gap: 9px; text-decoration: none; }
-        .lp-logo { height: 28px; width: auto; object-fit: contain; border-radius: 6px; }
-        .lp-brand {
-          font-size: 14px; font-weight: 900; letter-spacing: 0.12em;
-          text-transform: uppercase; color: #1e293b;
+        .lp-nav-icon-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+          transform: translateX(-2px);
+        }
+        .lp-arrow-icon {
+          width: 18px;
+          height: 18px;
+        }
+        .lp-nav-placeholder {
+          width: 38px;
+        }
+        .lp-brand-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          text-decoration: none;
+        }
+        .lp-logo-glow {
+          width: 32px;
+          height: 32px;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .lp-logo-img {
+          width: 24px;
+          height: 24px;
+          object-fit: contain;
+        }
+        .lp-brand-text-col {
+          display: flex;
+          flex-direction: column;
+        }
+        .lp-brand-title {
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #0f172a;
+          line-height: 1.15;
+        }
+        .lp-brand-subtitle {
+          font-size: 9.5px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #6366f1;
+        }
+        .lp-guest-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .lp-guest-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+          transform: translateY(-1px);
+        }
+        .lp-guest-arrow {
+          width: 12px;
+          height: 12px;
+          transition: transform 0.2s;
+        }
+        .lp-guest-btn:hover .lp-guest-arrow {
+          transform: translateX(3px);
         }
 
-        .lp-ghost-pill {
-          display: flex; align-items: center; gap: 5px;
-          padding: 7px 14px; border-radius: 999px;
-          border: 1.5px solid #c7d2fe; background: #eef2ff;
-          color: #4f46e5; font-size: 12px; font-weight: 700;
-          cursor: pointer; transition: all 0.2s;
-        }
-        .lp-ghost-pill:hover { background: #e0e7ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
-        .lp-ghost-pill:active { transform: scale(0.97); }
-
-        /* MAIN */
+        /* MAIN WRAPPER */
         .lp-main {
-          position: relative; z-index: 10; flex: 1;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          padding: 24px 16px 20px; gap: 16px;
+          position: relative;
+          z-index: 10;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px 16px 32px;
+        }
+        .lp-card-wrapper {
+          width: 100%;
+          max-width: 440px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
 
-        /* CARD */
+        /* MODERN CARD */
         .lp-card {
-          width: 100%; max-width: 430px;
-          background: #fff;
+          background: #ffffff;
           border-radius: 28px;
-          border: 1px solid rgba(199,210,254,0.8);
+          border: 1px solid rgba(226, 232, 240, 0.85);
           box-shadow:
-            0 0 0 1px rgba(255,255,255,1) inset,
-            0 20px 60px rgba(99,102,241,0.14),
-            0 4px 20px rgba(0,0,0,0.06);
+            0 1px 2px rgba(15, 23, 42, 0.04),
+            0 12px 36px -4px rgba(99, 102, 241, 0.08),
+            0 24px 64px -12px rgba(15, 23, 42, 0.06);
           overflow: hidden;
+          position: relative;
+          animation: lpCardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-        .lp-card-enter {
-          animation: lpCardEnter 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
-        @keyframes lpCardEnter {
-          from { opacity: 0; transform: translateY(24px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes lpCardEntrance {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
-        /* RAINBOW STRIPE */
-        .lp-stripe {
-          height: 4px;
-          background: linear-gradient(90deg, #6366f1 0%, #3b82f6 35%, #06b6d4 65%, #8b5cf6 100%);
+        /* HIGH-END ANIMATED COLOR STRIP */
+        .lp-card-glow-strip {
+          height: 3.5px;
+          background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 30%, #10b981 60%, #8b5cf6 85%, #4f46e5 100%);
           background-size: 200% 100%;
-          animation: lpStripe 4s linear infinite;
+          animation: lpGlowStripWave 4s linear infinite;
         }
-        @keyframes lpStripe {
-          0%   { background-position: 0% 0%; }
+        @keyframes lpGlowStripWave {
+          0% { background-position: 0% 0%; }
           100% { background-position: 200% 0%; }
         }
 
-        /* STEP BODY FADE */
-        .lp-step-body { transition: opacity 0.25s ease, transform 0.25s ease; }
-        .lp-visible { opacity: 1; transform: translateY(0); }
-        .lp-hidden  { opacity: 0; transform: translateY(8px); }
-
-        /* STEP WRAPPER */
-        .lp-step {
-          padding: 28px 28px 32px;
-          display: flex; flex-direction: column; align-items: center;
-          gap: 16px;
+        /* STEP BODY ANIMATION */
+        .lp-card-body {
+          transition: opacity 0.25s ease, transform 0.25s ease;
         }
-        @media (min-width: 420px) { .lp-step { padding: 32px 36px 36px; } }
-        .lp-step-center { text-align: center; }
-
-        /* STAGGER ANIMATIONS */
-        .lp-stagger-1 { animation: lpFadeUp 0.4s 0.05s both; }
-        .lp-stagger-2 { animation: lpFadeUp 0.4s 0.12s both; }
-        .lp-stagger-3 { animation: lpFadeUp 0.4s 0.18s both; }
-        .lp-stagger-4 { animation: lpFadeUp 0.4s 0.24s both; }
-        .lp-stagger-5 { animation: lpFadeUp 0.4s 0.30s both; }
-        @keyframes lpFadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
+        .lp-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .lp-hidden {
+          opacity: 0;
+          transform: translateY(8px);
         }
 
-        /* STEP PROGRESS */
-        .lp-progress {
-          display: flex; align-items: flex-start; gap: 0;
-          width: 100%; max-width: 210px;
-          animation: lpFadeUp 0.4s both;
+        /* STEP CONTAINER */
+        .lp-step-container {
+          padding: 28px 24px 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
         }
-        .lp-prog-line {
-          flex: 1; height: 2px; margin-top: 14px;
-          border-radius: 99px; transition: background 0.4s;
-        }
-        .lp-prog-line-half { background: linear-gradient(90deg, #4f46e5, #e2e8f0 60%); }
-        .lp-prog-line-full { background: linear-gradient(90deg, #059669, #4f46e5); }
-
-        /* CHIPS */
-        .lp-chip {
-          display: inline-flex; align-items: center; gap: 5px;
-          padding: 5px 12px; border-radius: 999px;
-          font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
-          animation: lpFadeUp 0.4s both;
-        }
-        .lp-chip-amber {
-          background: #fffbeb; border: 1px solid #fcd34d; color: #92400e;
-        }
-        .lp-chip-green {
-          background: #ecfdf5; border: 1px solid #86efac; color: #166534;
+        @media (min-width: 440px) {
+          .lp-step-container {
+            padding: 34px 32px 36px;
+          }
         }
 
-        /* WELCOME ICON */
-        .lp-welcome-icon {
+        /* STEP PROGRESS BAR */
+        .lp-stepper-bar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 220px;
+          margin: 0 auto;
+        }
+        .lp-stepper-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        .lp-step-circle {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 800;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .lp-step-label {
+          font-size: 10.5px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+        .lp-stepper-active .lp-step-circle {
+          background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+          color: #ffffff;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+        }
+        .lp-stepper-active .lp-step-label {
+          color: #4f46e5;
+        }
+        .lp-stepper-done .lp-step-circle {
+          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          color: #ffffff;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+        .lp-stepper-done .lp-step-label {
+          color: #059669;
+        }
+        .lp-stepper-idle .lp-step-circle {
+          background: #f1f5f9;
+          color: #94a3b8;
+          border: 1px solid #e2e8f0;
+        }
+        .lp-stepper-idle .lp-step-label {
+          color: #94a3b8;
+        }
+        .lp-stepper-connector {
+          flex: 1;
+          height: 2.5px;
+          background: #e2e8f0;
+          margin: 0 10px 18px;
+          border-radius: 99px;
+          overflow: hidden;
+        }
+        .lp-connector-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #4f46e5, #06b6d4);
+          transition: width 0.4s ease;
+        }
+        .lp-connector-full {
+          width: 100% !important;
+          background: linear-gradient(90deg, #059669, #4f46e5) !important;
+        }
+
+        /* BRAND AVATAR HERO */
+        .lp-avatar-center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
           position: relative;
-          width: 88px; height: 88px;
-          display: flex; align-items: center; justify-content: center;
-          animation: lpFadeUp 0.5s both;
         }
-        .lp-pulse-ring {
-          position: absolute; inset: -8px;
-          border-radius: 28px;
-          background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-          animation: lpPulseRing 2.5s ease-in-out infinite;
-        }
-        @keyframes lpPulseRing {
-          0%,100% { transform: scale(1); opacity: 0.8; }
-          50%      { transform: scale(1.06); opacity: 0.5; }
-        }
-        .lp-welcome-logo {
-          width: 64px; height: 64px; object-fit: contain; border-radius: 16px;
-          position: relative; z-index: 2;
-          box-shadow: 0 8px 24px rgba(99,102,241,0.2);
-        }
-
-        /* ICON HERO */
-        .lp-icon-hero {
-          position: relative;
-          display: flex; align-items: center; justify-content: center;
-          margin: 4px 0;
-          animation: lpFadeUp 0.4s both;
-        }
-        .lp-icon-bg {
+        .lp-avatar-glow-ring {
           position: absolute;
-          width: 110px; height: 110px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
-          filter: blur(14px);
-          animation: lpPulseRing 3s ease-in-out infinite;
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+          filter: blur(12px);
+          top: -2px;
+          animation: lpAvatarPulse 3s ease-in-out infinite;
         }
-        .lp-icon-wrap {
-          width: 76px; height: 76px; border-radius: 24px;
-          background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-          border: 2px solid #c7d2fe;
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 0 0 6px rgba(199,210,254,0.2), 0 10px 28px rgba(99,102,241,0.2);
-          position: relative; z-index: 2;
-          transition: transform 0.3s;
+        @keyframes lpAvatarPulse {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.15); opacity: 0.4; }
         }
-        .lp-icon-wrap:hover { transform: scale(1.04) rotate(-1deg); }
-        .lp-icon-img { width: 46px; height: 46px; object-fit: contain; border-radius: 12px; }
+        .lp-avatar-box {
+          position: relative;
+          z-index: 2;
+          width: 64px;
+          height: 64px;
+          border-radius: 20px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border: 1.5px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.18), 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .lp-avatar-img {
+          width: 40px;
+          height: 40px;
+          object-fit: contain;
+        }
+
+        /* LIVE STATUS PILL */
+        .lp-live-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+        .lp-live-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+          animation: lpLiveSignal 1.5s infinite;
+        }
+        @keyframes lpLiveSignal {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.8); }
+        }
 
         /* TYPOGRAPHY */
-        .lp-heading {
-          font-size: 26px; font-weight: 900; letter-spacing: -0.04em;
-          text-align: center; margin: 0; line-height: 1.1;
-          background: linear-gradient(135deg, #1e40af 0%, #4f46e5 60%, #7c3aed 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        .lp-title-group {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
         }
-        @media (min-width: 420px) { .lp-heading { font-size: 30px; } }
-        .lp-sub {
-          font-size: 13.5px; color: #94a3b8; text-align: center;
-          margin: -6px 0 0; line-height: 1.6; font-weight: 500;
+        .lp-main-title {
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          color: #0f172a;
+          line-height: 1.2;
+          margin: 0;
+        }
+        @media (min-width: 440px) {
+          .lp-main-title {
+            font-size: 26px;
+          }
+        }
+        .lp-subtitle {
+          font-size: 13.5px;
+          color: #64748b;
+          line-height: 1.55;
+          margin: 0;
+          font-weight: 500;
         }
 
         /* FORM */
-        .lp-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
-
-        /* PHONE INPUT */
-        .lp-phone-wrap {
-          display: flex; align-items: center;
-          background: #f8faff;
-          border: 2px solid #e8eeff; border-radius: 18px;
-          padding: 14px 18px; gap: 12px;
-          transition: all 0.25s;
-          box-shadow: 0 2px 8px rgba(99,102,241,0.05);
+        .lp-phone-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          width: 100%;
         }
-        .lp-phone-wrap:focus-within {
-          border-color: #6366f1; background: #fafbff;
-          box-shadow: 0 0 0 4px rgba(99,102,241,0.1), 0 2px 8px rgba(99,102,241,0.08);
+
+        /* PHONE INPUT CONTAINER */
+        .lp-input-container {
+          display: flex;
+          align-items: center;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 18px;
+          padding: 6px 14px;
+          gap: 10px;
+          height: 56px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .lp-input-container:focus-within {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12), 0 4px 14px rgba(79, 70, 229, 0.08);
           transform: translateY(-1px);
         }
-        .lp-phone-error {
-          border-color: #f87171 !important;
-          box-shadow: 0 0 0 4px rgba(239,68,68,0.1) !important;
+        .lp-input-valid {
+          border-color: #818cf8;
         }
-        .lp-phone-prefix { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .lp-prefix-code { font-size: 15px; font-weight: 800; color: #374151; letter-spacing: 0.02em; }
-        .lp-vdivider { width: 1px; height: 22px; background: #e2e8f0; flex-shrink: 0; }
-        .lp-phone-input {
-          flex: 1; min-width: 0; background: transparent; border: none; outline: none;
-          font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 0.08em;
-          caret-color: #4f46e5; font-family: inherit;
+        .lp-input-error {
+          border-color: #ef4444 !important;
+          box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12) !important;
         }
-        .lp-phone-input::placeholder { color: #cbd5e1; font-weight: 500; letter-spacing: 0; }
-        .lp-clear {
-          background: none; border: none; color: #94a3b8; cursor: pointer;
-          padding: 3px; display: flex; align-items: center; transition: all 0.2s; flex-shrink: 0;
-          border-radius: 50%;
-        }
-        .lp-clear:hover { color: #475569; background: #f1f5f9; }
 
-        /* FILL BAR */
-        .lp-fill-bar { display: flex; align-items: center; gap: 8px; margin-top: -6px; }
-        .lp-fill-track {
-          flex: 1; height: 3px; background: #f1f5f9; border-radius: 99px; overflow: hidden;
+        .lp-country-badge {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          flex-shrink: 0;
+          user-select: none;
         }
-        .lp-fill-progress {
-          height: 100%; border-radius: 99px;
-          background: linear-gradient(90deg, #3b82f6, #6366f1);
-          transition: width 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        .lp-country-code {
+          font-size: 15px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: 0.01em;
         }
-        .lp-fill-count { font-size: 11px; color: #94a3b8; font-weight: 600; flex-shrink: 0; }
-
-        /* TERMS */
-        .lp-terms { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
-        .lp-check {
-          margin-top: 1px; width: 16px; height: 16px;
-          accent-color: #4f46e5; cursor: pointer; flex-shrink: 0; border-radius: 4px;
+        .lp-input-separator {
+          width: 1px;
+          height: 24px;
+          background: #e2e8f0;
+          flex-shrink: 0;
         }
-        .lp-terms-text { font-size: 12px; color: #64748b; line-height: 1.6; }
-        .lp-terms-text a { color: #4f46e5; font-weight: 700; text-decoration: none; }
-        .lp-terms-text a:hover { text-decoration: underline; }
-
-        /* BUTTONS */
-        .lp-btn-stack { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-
-        .lp-btn-primary {
-          width: 100%; height: 54px; border-radius: 18px; border: none;
-          background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%);
-          color: #fff; font-size: 15px; font-weight: 800; letter-spacing: 0.01em;
-          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-          position: relative; overflow: hidden;
-          box-shadow: 0 8px 24px rgba(79,70,229,0.35), 0 2px 8px rgba(0,0,0,0.1);
-          transition: all 0.25s;
+        .lp-text-input {
+          flex: 1;
+          min-width: 0;
+          background: transparent;
+          border: none;
+          outline: none;
+          font-size: 17px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: 0.06em;
           font-family: inherit;
         }
-        .lp-btn-primary::after {
-          content: '';
-          position: absolute; inset: 0;
-          background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%);
-          background-size: 200% 100%; background-position: -100% 0;
-          transition: background-position 0.5s;
+        .lp-text-input::placeholder {
+          color: #94a3b8;
+          font-weight: 500;
+          letter-spacing: 0;
+          font-size: 14px;
         }
-        .lp-btn-anim:hover:not(.lp-btn-dim)::after { background-position: 100% 0; }
-        .lp-btn-anim:hover:not(.lp-btn-dim) {
-          transform: translateY(-2px);
-          box-shadow: 0 14px 32px rgba(79,70,229,0.45), 0 4px 12px rgba(0,0,0,0.12);
+        .lp-input-clear-btn {
+          background: #f1f5f9;
+          border: none;
+          color: #64748b;
+          cursor: pointer;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          flex-shrink: 0;
         }
-        .lp-btn-anim:active:not(.lp-btn-dim) { transform: scale(0.98); }
-        .lp-btn-icon { display: flex; align-items: center; }
-        .lp-btn-icon svg { width: 18px; height: 18px; transition: transform 0.2s; }
-        .lp-btn-anim:hover:not(.lp-btn-dim) .lp-btn-icon svg { transform: translateX(3px); }
-
-        .lp-btn-dim {
-          background: #f1f5f9 !important; color: #94a3b8 !important;
-          box-shadow: none !important; cursor: not-allowed !important;
-          transform: none !important; border: 1px solid #e2e8f0;
-        }
-        .lp-btn-dim::after { display: none; }
-
-        .lp-btn-outline {
-          width: 100%; height: 48px; border-radius: 16px;
-          border: 1.5px solid #e2e8f0; background: #f8fafc;
-          color: #475569; font-size: 14px; font-weight: 700;
-          cursor: pointer; transition: all 0.2s; font-family: inherit;
-        }
-        .lp-btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; transform: translateY(-1px); }
-
-        .lp-btn-success {
-          width: 100%; height: 54px; border-radius: 18px; border: none;
-          background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
-          color: #fff; font-size: 15px; font-weight: 800;
-          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
-          position: relative; overflow: hidden;
-          box-shadow: 0 8px 24px rgba(5,150,105,0.35);
-          transition: all 0.25s; font-family: inherit;
-        }
-        .lp-btn-success:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(5,150,105,0.45); }
-
-        /* OTP BADGE */
-        .lp-otp-badge {
-          display: flex; align-items: center; gap: 8px;
-          padding: 10px 18px; border-radius: 14px;
-          background: #eef2ff; border: 1px solid #c7d2fe;
-          color: #4338ca; font-size: 12px; font-weight: 600;
-          width: 100%; justify-content: center;
-        }
-        .lp-live-dot {
-          width: 7px; height: 7px; border-radius: 50%; background: #4f46e5; flex-shrink: 0;
-          animation: lpLivePulse 1.4s ease-in-out infinite;
-        }
-        @keyframes lpLivePulse {
-          0%,100% { opacity: 1; transform: scale(1); }
-          50%      { opacity: 0.4; transform: scale(0.7); }
+        .lp-input-clear-btn:hover {
+          background: #e2e8f0;
+          color: #0f172a;
+          transform: scale(1.08);
         }
 
-        /* TRUST GRID */
-        .lp-trust-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; width: 100%; }
-        .lp-trust-chip {
-          display: flex; flex-direction: column; align-items: center; gap: 6px;
-          padding: 12px 6px; border-radius: 14px;
-          background: #f8fafc; border: 1.5px solid #f1f5f9;
-          font-size: 10px; font-weight: 600; color: #64748b; text-align: center;
-          transition: all 0.2s; cursor: default;
+        /* DIGIT INDICATOR MICRO-ANIMATION */
+        .lp-digit-indicator-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 4px;
+          margin-top: -6px;
         }
-        .lp-trust-chip:hover {
-          background: #eef2ff; border-color: #c7d2fe; color: #4f46e5;
-          transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99,102,241,0.12);
+        .lp-digit-dots-row {
+          display: flex;
+          align-items: center;
+          gap: 5px;
         }
-        .lp-trust-ico {
-          width: 30px; height: 30px; border-radius: 9px;
-          background: #eef2ff; display: flex; align-items: center; justify-content: center;
-          color: #4f46e5; transition: all 0.2s;
+        .lp-digit-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 999px;
+          background: #e2e8f0;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .lp-trust-ico svg { width: 15px; height: 15px; }
-        .lp-trust-chip:hover .lp-trust-ico { background: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.2); }
+        .lp-digit-filled {
+          background: #4f46e5;
+          width: 12px;
+          box-shadow: 0 0 6px rgba(79, 70, 229, 0.5);
+        }
+        .lp-digit-counter {
+          font-size: 11px;
+          font-weight: 600;
+          color: #94a3b8;
+          letter-spacing: 0.02em;
+          transition: color 0.2s;
+        }
+        .lp-counter-done {
+          color: #059669;
+          font-weight: 700;
+        }
 
-        /* PHONE BADGE (step 3) */
-        .lp-phone-badge {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 9px 16px; border-radius: 999px;
-          background: #f8fafc; border: 1.5px solid #e2e8f0;
-          font-size: 14px; font-weight: 700; color: #334155;
+        /* CUSTOM CHECKBOX */
+        .lp-checkbox-label {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          cursor: pointer;
+          user-select: none;
+          margin-top: -2px;
+        }
+        .lp-native-checkbox {
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .lp-checkbox-custom {
+          width: 18px;
+          height: 18px;
+          border-radius: 6px;
+          border: 1.5px solid #cbd5e1;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 2px;
+          flex-shrink: 0;
           transition: all 0.2s;
         }
-        .lp-edit-btn {
-          background: none; border: none; color: #6366f1;
-          cursor: pointer; display: flex; align-items: center; padding: 2px;
-          transition: all 0.2s; border-radius: 4px;
+        .lp-native-checkbox:checked + .lp-checkbox-custom {
+          background: #4f46e5;
+          border-color: #4f46e5;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
         }
-        .lp-edit-btn:hover { color: #4338ca; background: #eef2ff; transform: scale(1.1); }
+        .lp-check-svg {
+          width: 13px;
+          height: 13px;
+          color: #ffffff;
+          stroke-width: 2.5;
+        }
+        .lp-checkbox-caption {
+          font-size: 12px;
+          color: #64748b;
+          line-height: 1.55;
+        }
+        .lp-checkbox-caption a {
+          color: #4f46e5;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .lp-checkbox-caption a:hover {
+          text-decoration: underline;
+        }
 
-        /* STATUS CHIP */
-        .lp-status-chip {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 6px 14px; border-radius: 999px;
-          font-size: 12px; font-weight: 700;
-        }
-        .lp-status-green  { background: #ecfdf5; border: 1px solid #86efac; color: #166534; }
-        .lp-status-violet { background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6; }
-
-        /* OTP BOXES */
-        .lp-otp-row {
-          display: flex; gap: 10px; justify-content: center; width: 100%;
-        }
-        @media (min-width: 380px) { .lp-otp-row { gap: 12px; } }
-        .lp-otp-box {
-          width: 46px; height: 56px;
+        /* PRIMARY CTA BUTTON & SHINE EFFECT */
+        .lp-primary-btn {
+          width: 100%;
+          height: 52px;
           border-radius: 16px;
-          border: 2px solid #e8eeff;
-          background: #f8faff;
-          color: #1e293b; font-size: 22px; font-weight: 900;
-          text-align: center; caret-color: transparent; outline: none;
-          transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+          border: none;
+          background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #4338ca 100%);
+          color: #ffffff;
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
           font-family: inherit;
         }
-        @media (min-width: 380px) { .lp-otp-box { width: 52px; height: 62px; } }
-        .lp-otp-box:focus {
-          border-color: #6366f1; background: #fafbff;
-          box-shadow: 0 0 0 4px rgba(99,102,241,0.14);
-          transform: scale(1.06);
+        .lp-btn-active-glow {
+          box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.45), 0 2px 6px rgba(15, 23, 42, 0.06);
         }
-        .lp-otp-filled {
-          border-color: #3b82f6 !important;
-          background: linear-gradient(135deg, #eff6ff, #eef2ff) !important;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.18) !important;
-          color: #1d4ed8 !important;
-          transform: scale(1.04);
-          animation: lpOtpPop 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        .lp-btn-active-glow:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 30px -4px rgba(79, 70, 229, 0.55), 0 4px 10px rgba(15, 23, 42, 0.08);
         }
-        @keyframes lpOtpPop {
-          0%  { transform: scale(0.9); }
-          100%{ transform: scale(1.04); }
+        .lp-btn-active-glow:active {
+          transform: scale(0.98);
         }
-        .lp-otp-loading { opacity: 0.6; animation: lpShimmer 1.2s ease-in-out infinite; }
-        @keyframes lpShimmer {
-          0%,100% { opacity: 0.6; }
-          50%      { opacity: 0.3; }
+        .lp-btn-disabled {
+          background: #f1f5f9 !important;
+          color: #94a3b8 !important;
+          box-shadow: none !important;
+          cursor: not-allowed !important;
+          border: 1px solid #e2e8f0;
         }
 
-        /* RESEND */
-        .lp-resend-area {
-          display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+        /* SHINE SWEEP */
+        .lp-btn-shine::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -120%;
+          width: 80%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+          transform: skewX(-20deg);
+          animation: lpBtnSweep 3.5s infinite;
         }
-        .lp-timer { font-size: 13px; color: #94a3b8; font-weight: 600; }
-        .lp-timer strong { color: #4f46e5; font-family: monospace; }
-        .lp-dot-sep { color: #cbd5e1; }
-        .lp-text-btn {
-          background: none; border: none; color: #4f46e5; font-size: 13px; font-weight: 700;
-          cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
-          transition: all 0.2s; font-family: inherit; border-radius: 4px; padding: 2px 4px;
+        .lp-btn-disabled::after {
+          display: none;
         }
-        .lp-text-btn:hover { color: #3730a3; text-decoration: underline; }
-
-        /* ERROR / SUCCESS */
-        .lp-error-toast, .lp-success-toast {
-          width: 100%; display: flex; align-items: flex-start; gap: 10px;
-          padding: 12px 14px; border-radius: 14px;
-          font-size: 13px; font-weight: 600; line-height: 1.5;
-          animation: lpFadeUp 0.3s both;
-        }
-        .lp-error-toast {
-          background: #fff0f0; border: 1px solid #fecaca; color: #b91c1c;
-        }
-        .lp-success-toast {
-          background: #f0fdf4; border: 1px solid #86efac; color: #166534;
+        @keyframes lpBtnSweep {
+          0% { left: -120%; }
+          30% { left: 140%; }
+          100% { left: 140%; }
         }
 
-        /* SUCCESS SCREEN */
-        .lp-success-anim {
-          position: relative; width: 130px; height: 130px;
-          display: flex; align-items: center; justify-content: center;
-          animation: lpFadeUp 0.5s both;
+        .lp-btn-icon-slide {
+          width: 17px;
+          height: 17px;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .lp-s-ring {
-          position: absolute; border-radius: 50%;
-          animation: lpSuccessRing 2.5s ease-in-out infinite;
+        .lp-btn-active-glow:hover .lp-btn-icon-slide {
+          transform: translateX(4px);
         }
-        .lp-s-ring1 { inset: 0; background: rgba(5,150,105,0.08); animation-delay: 0s; }
-        .lp-s-ring2 { inset: 14px; background: rgba(5,150,105,0.12); animation-delay: -0.5s; }
-        @keyframes lpSuccessRing {
-          0%,100% { transform: scale(1); opacity: 0.9; }
-          50%      { transform: scale(1.08); opacity: 0.4; }
+        .lp-spin-icon {
+          width: 18px;
+          height: 18px;
+          animation: lpSpinAnim 0.75s linear infinite;
         }
-        .lp-s-icon {
-          width: 78px; height: 78px; border-radius: 22px;
-          background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 14px 40px rgba(5,150,105,0.38);
-          position: relative; z-index: 2;
-          animation: lpSuccessIcon 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
-        @keyframes lpSuccessIcon {
-          from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
-          to   { transform: scale(1) rotate(0); opacity: 1; }
-        }
-
-        /* FINE PRINT */
-        .lp-fine { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.7; }
-        .lp-fine a { color: #4f46e5; font-weight: 700; text-decoration: none; }
-        .lp-fine a:hover { text-decoration: underline; }
-
-        /* FOOTER */
-        .lp-footer {
-          position: relative; z-index: 10;
-          display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
-          font-size: 11px; color: #94a3b8; font-weight: 500;
-        }
-        .lp-footer-sep { color: #e2e8f0; }
-        .lp-footer a { color: #94a3b8; text-decoration: none; transition: color 0.2s; }
-        .lp-footer a:hover { color: #4f46e5; }
-
-        /* SPINNER */
-        .lp-spin { animation: lpSpinAnim 0.7s linear infinite; }
         @keyframes lpSpinAnim {
           from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+          to { transform: rotate(360deg); }
         }
 
-        /* INDIA FLAG */
-        .lp-flag { width: 26px; height: 18px; border-radius: 3px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.08); }
+        /* TRUST & BENEFITS HORIZONTAL STRIP */
+        .lp-benefits-container {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .lp-benefit-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 10px 6px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1px solid #f1f5f9;
+          gap: 6px;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .lp-benefit-item:hover {
+          background: #ffffff;
+          border-color: #cbd5e1;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        }
+        .lp-benefit-icon-box {
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+        }
+        .lp-icon-blue {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+        .lp-icon-amber {
+          background: #fffbeb;
+          color: #d97706;
+        }
+        .lp-icon-emerald {
+          background: #ecfdf5;
+          color: #059669;
+        }
+        .lp-benefit-text {
+          display: flex;
+          flex-direction: column;
+        }
+        .lp-benefit-title {
+          font-size: 11px;
+          font-weight: 700;
+          color: #0f172a;
+          line-height: 1.2;
+        }
+        .lp-benefit-sub {
+          font-size: 9.5px;
+          color: #64748b;
+          line-height: 1.2;
+          margin-top: 1px;
+        }
+
+        /* ═══════════ STEP 3: OTP SCREEN STYLING ═══════════ */
+        .lp-verified-phone-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 14px;
+          border-radius: 999px;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .lp-pill-prefix {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .lp-pill-number {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: 0.04em;
+        }
+        .lp-change-phone-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: #eef2ff;
+          border: none;
+          color: #4f46e5;
+          padding: 4px 10px;
+          border-radius: 999px;
+          font-size: 11.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .lp-change-phone-btn:hover {
+          background: #e0e7ff;
+          transform: scale(1.03);
+        }
+        .lp-pencil-icon {
+          width: 13px;
+          height: 13px;
+        }
+
+        .lp-member-status-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          font-size: 11.5px;
+          font-weight: 700;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .lp-chip-member {
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+        }
+        .lp-chip-new {
+          background: #f5f3ff;
+          border: 1px solid #ddd6fe;
+          color: #5b21b6;
+        }
+        .lp-chip-icon {
+          width: 14px;
+          height: 14px;
+        }
+
+        /* 6-DIGIT OTP BOXES */
+        .lp-otp-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+        }
+        @media (min-width: 400px) {
+          .lp-otp-wrapper {
+            gap: 10px;
+          }
+        }
+        .lp-otp-input-cell {
+          width: 46px;
+          height: 56px;
+          border-radius: 14px;
+          border: 1.5px solid #cbd5e1;
+          background: #ffffff;
+          text-align: center;
+          font-size: 22px;
+          font-weight: 800;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+          font-family: inherit;
+        }
+        @media (min-width: 400px) {
+          .lp-otp-input-cell {
+            width: 52px;
+            height: 62px;
+            font-size: 24px;
+          }
+        }
+        .lp-otp-input-cell:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+          transform: translateY(-2px);
+        }
+        .lp-otp-cell-filled {
+          border-color: #4f46e5 !important;
+          background: #f8faff !important;
+          color: #4f46e5 !important;
+          animation: lpOtpFillPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes lpOtpFillPop {
+          0% { transform: scale(0.92); }
+          50% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+        .lp-otp-cell-loading {
+          opacity: 0.6;
+        }
+
+        .lp-resend-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-size: 13px;
+        }
+        .lp-timer-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .lp-timer-clock {
+          color: #4f46e5;
+          font-weight: 800;
+          font-variant-numeric: tabular-nums;
+        }
+        .lp-link-sep {
+          color: #cbd5e1;
+        }
+        .lp-link-btn {
+          background: none;
+          border: none;
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          transition: color 0.2s;
+          font-family: inherit;
+        }
+        .lp-link-btn:hover {
+          color: #0f172a;
+          text-decoration: underline;
+        }
+        .lp-resend-active {
+          color: #4f46e5 !important;
+          font-weight: 700;
+        }
+        .lp-inline-icon {
+          width: 13px;
+          height: 13px;
+        }
+
+        /* ═══════════ STEP 4: SUCCESS SCREEN ═══════════ */
+        .lp-step-success {
+          text-align: center;
+          align-items: center;
+          gap: 16px;
+        }
+        .lp-success-visual {
+          position: relative;
+          width: 110px;
+          height: 110px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 6px 0;
+        }
+        .lp-success-halo {
+          position: absolute;
+          border-radius: 50%;
+          animation: lpHaloBreathe 3s ease-in-out infinite;
+        }
+        .lp-halo-outer {
+          inset: 0;
+          background: rgba(16, 185, 129, 0.12);
+        }
+        .lp-halo-inner {
+          inset: 12px;
+          background: rgba(16, 185, 129, 0.18);
+          animation-delay: -1s;
+        }
+        @keyframes lpHaloBreathe {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.1); opacity: 0.4; }
+        }
+        .lp-success-badge-icon {
+          position: relative;
+          z-index: 2;
+          width: 68px;
+          height: 68px;
+          border-radius: 22px;
+          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          font-size: 36px;
+          box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+          animation: lpSuccessPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes lpSuccessPop {
+          0% { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .lp-verified-pill-success {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 14px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+          font-size: 11.5px;
+          font-weight: 700;
+        }
+        .lp-success-cta-btn {
+          width: 100%;
+          height: 52px;
+          border-radius: 16px;
+          border: none;
+          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          color: #ffffff;
+          font-size: 15px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.45);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          font-family: inherit;
+        }
+        .lp-success-cta-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.55);
+        }
+        .lp-shopping-icon {
+          width: 18px;
+          height: 18px;
+        }
+
+        /* ═══════════ STEP 1: WELCOME SCREEN STYLING ═══════════ */
+        .lp-step-welcome {
+          text-align: center;
+          align-items: center;
+          gap: 16px;
+        }
+        .lp-welcome-hero-avatar {
+          position: relative;
+          width: 90px;
+          height: 90px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 4px;
+        }
+        .lp-hero-pulse-ring-outer {
+          position: absolute;
+          inset: -6px;
+          border-radius: 28px;
+          background: rgba(99, 102, 241, 0.12);
+          animation: lpHaloBreathe 3s ease-in-out infinite;
+        }
+        .lp-hero-pulse-ring-inner {
+          position: absolute;
+          inset: 0px;
+          border-radius: 24px;
+          background: rgba(99, 102, 241, 0.16);
+          animation: lpHaloBreathe 3s ease-in-out infinite -1.5s;
+        }
+        .lp-hero-logo-box {
+          position: relative;
+          z-index: 2;
+          width: 68px;
+          height: 68px;
+          border-radius: 20px;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.2);
+        }
+        .lp-welcome-logo-img {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+        }
+        .lp-verified-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 14px;
+          border-radius: 999px;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+        }
+        .lp-sparkle-icon {
+          width: 14px;
+          height: 14px;
+          color: #3b82f6;
+        }
+        .lp-hero-title {
+          font-size: 26px;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          color: #0f172a;
+          line-height: 1.2;
+          margin: 0;
+        }
+        .lp-hero-desc {
+          font-size: 13.5px;
+          color: #64748b;
+          line-height: 1.6;
+          margin: 0;
+        }
+        .lp-action-stack {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .lp-secondary-btn {
+          width: 100%;
+          height: 48px;
+          border-radius: 14px;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+        .lp-secondary-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+          transform: translateY(-1px);
+        }
+        .lp-terms-notice {
+          font-size: 11.5px;
+          color: #94a3b8;
+          margin: 0;
+          line-height: 1.5;
+        }
+        .lp-terms-notice a {
+          color: #4f46e5;
+          text-decoration: none;
+          font-weight: 600;
+        }
+        .lp-terms-notice a:hover {
+          text-decoration: underline;
+        }
+
+        /* ERROR & SUCCESS ALERTS */
+        .lp-error-alert, .lp-success-alert {
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 12px 14px;
+          border-radius: 14px;
+          font-size: 12.5px;
+          font-weight: 600;
+          line-height: 1.45;
+          box-sizing: border-box;
+          animation: lpAlertSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes lpAlertSlide {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .lp-error-alert {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
+        }
+        .lp-success-alert {
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #15803d;
+        }
+        .lp-alert-icon {
+          width: 16px;
+          height: 16px;
+          flex-shrink: 0;
+          margin-top: 1px;
+        }
+
+        /* PAGE FOOTER */
+        .lp-page-footer {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          text-align: center;
+        }
+        .lp-footer-trust {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .lp-ssl-icon {
+          width: 13px;
+          height: 13px;
+          color: #10b981;
+          flex-shrink: 0;
+        }
+        .lp-footer-links {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11.5px;
+        }
+        .lp-footer-link {
+          color: #64748b;
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+        .lp-footer-link:hover {
+          color: #4f46e5;
+        }
+        .lp-footer-dot {
+          color: #cbd5e1;
+        }
+
+        /* SVG INDIAN FLAG */
+        .lp-indian-flag-svg {
+          width: 24px;
+          height: 16px;
+          border-radius: 3px;
+          flex-shrink: 0;
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+        }
       `}</style>
     </div>
   )
 }
 
-/* ── Sub-components ── */
-
-function StepBubble({ num, label, state }) {
-  const styles = {
-    active: { bg: 'linear-gradient(135deg,#3b82f6,#4f46e5)', color:'#fff', shadow:'0 4px 14px rgba(79,70,229,0.4)', labelColor:'#4f46e5' },
-    done:   { bg: 'linear-gradient(135deg,#059669,#0d9488)', color:'#fff', shadow:'0 4px 14px rgba(5,150,105,0.35)', labelColor:'#059669' },
-    idle:   { bg: '#f1f5f9', color:'#94a3b8', border:'1.5px solid #e2e8f0', shadow:'none', labelColor:'#94a3b8' },
-  }
-  const s = styles[state]
-  return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flexShrink:0 }}>
-      <div style={{
-        width:30, height:30, borderRadius:'50%',
-        background: s.bg, color: s.color,
-        display:'flex', alignItems:'center', justifyContent:'center',
-        fontSize:11, fontWeight:900,
-        boxShadow: s.shadow,
-        border: s.border || 'none',
-        transition:'all 0.3s',
-      }}>
-        {state === 'done'
-          ? <HiCheck style={{width:13,height:13,strokeWidth:3}} />
-          : num
-        }
-      </div>
-      <span style={{ fontSize:10, fontWeight:700, color: s.labelColor, letterSpacing:'0.02em', transition:'color 0.3s' }}>
-        {label}
-      </span>
-    </div>
-  )
-}
+/* ── SUB-COMPONENTS ── */
 
 function ErrorAlert({ msg }) {
   return (
-    <div className="lp-error-toast" role="alert">
-      <HiExclamationTriangle style={{width:16,height:16,flexShrink:0,marginTop:1}} />
+    <div className="lp-error-alert" role="alert">
+      <HiExclamationTriangle className="lp-alert-icon" />
       <span>{msg}</span>
     </div>
   )
@@ -1029,12 +1839,12 @@ function ErrorAlert({ msg }) {
 
 function IndianFlag() {
   return (
-    <svg className="lp-flag" viewBox="0 0 26 18" fill="none">
-      <rect width="26" height="6"  fill="#FF9933" />
-      <rect y="6"  width="26" height="6" fill="#fff" />
+    <svg className="lp-indian-flag-svg" viewBox="0 0 26 18" fill="none">
+      <rect width="26" height="6" fill="#FF9933" />
+      <rect y="6" width="26" height="6" fill="#ffffff" />
       <rect y="12" width="26" height="6" fill="#138808" />
-      <circle cx="13" cy="9" r="2.5" fill="none" stroke="#000080" strokeWidth="0.7"/>
-      <circle cx="13" cy="9" r="0.6" fill="#000080"/>
+      <circle cx="13" cy="9" r="2.5" fill="none" stroke="#000080" strokeWidth="0.7" />
+      <circle cx="13" cy="9" r="0.6" fill="#000080" />
     </svg>
   )
 }

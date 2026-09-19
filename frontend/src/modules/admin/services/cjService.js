@@ -59,6 +59,23 @@ export async function onboardCjProduct(body) {
   return data.data
 }
 
+export async function bulkOnboardCjProducts(body) {
+  const { data } = await api.post('/admin/cj/products/bulk-onboard', body, {
+    timeout: 300000,
+  })
+  return data
+}
+
+export async function updateCjMarkupSettings(body) {
+  const { data } = await api.post('/admin/cj/settings/markup', body)
+  return data.data
+}
+
+export async function bulkAdjustCjPricing(body) {
+  const { data } = await api.post('/admin/cj/products/bulk-pricing', body)
+  return data
+}
+
 export async function fetchOnboardedCjProducts(params) {
   const { data } = await api.get('/admin/cj/products', { params })
   return data.data

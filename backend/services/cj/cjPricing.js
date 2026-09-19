@@ -27,4 +27,46 @@ function parseCjPrice(raw) {
   return match ? Number(match[0]) : 0;
 }
 
-module.exports = { USD_TO_INR_RATE, usdToInr, parseCjPrice };
+function applyPriceRounding(rawPrice, rounding = 'ROUND') {
+  if (typeof rawPrice !== 'number' || !Number.isFinite(rawPrice) || rawPrice <= 0) {
+    return 0;
+  }
+  if (rounding === 'ROUND') {
+    return Math.round(rawPrice);
+  }
+  if (rounding === '9_ENDING') {
+    const rounded = Math.round(rawPrice);
+    if (rounded < 10) return rounded;
+    return Math.floor(rounded / 10) * 10 + 9;
+  }
+  return Math.round(rawPrice * 100) / 100;
+}
+
+function calculateMarkupPrice(arg1, arg2 = 30, arg3 = 'ROUND') {
+  let costInInr = 0;
+  let markupPercent = 30;
+  let rounding = 'ROUND';
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    costInInr = arg1.costInInr;
+    markupPercent = arg1.markupPercent !== undefined ? arg1.markupPercent : 30;
+    rounding = arg1.rounding || 'ROUND';
+  } else {
+    costInInr = arg1;
+    markupPercent = arg2;
+    rounding = arg3;
+  }
+
+  const cost = Math.max(0, Number(costInInr) || 0);
+  const percent = Math.max(0, Number(markupPercent) || 0);
+  const rawPrice = cost + (cost * (percent / 100));
+  return applyPriceRounding(rawPrice, rounding);
+}
+
+module.exports = {
+  USD_TO_INR_RATE,
+  usdToInr,
+  parseCjPrice,
+  applyPriceRounding,
+  calculateMarkupPrice,
+};
