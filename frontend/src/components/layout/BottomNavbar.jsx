@@ -49,6 +49,7 @@ export function BottomNavbar({ activeTab, onChangeTab }) {
   ]
 
   const handleTabClick = (tab) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     if (onChangeTab) {
       onChangeTab(tab.id)
     } else {

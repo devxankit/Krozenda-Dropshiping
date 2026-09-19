@@ -83,11 +83,11 @@
 
   /* Every interactive control gets a real touch target. 16px icon buttons
      were genuinely hard to hit on a phone (§93). Opt out with `.touch-auto-target`
-     where a control is deliberately inline (e.g. inside a sentence). */
+     or `.indicator-dot` where a control is deliberately inline or a carousel dot. */
   @media (pointer: coarse) {
-    button:not(.touch-auto-target),
-    [role='button']:not(.touch-auto-target),
-    a[role='button']:not(.touch-auto-target) {
+    button:not(.touch-auto-target):not(.indicator-dot),
+    [role='button']:not(.touch-auto-target):not(.indicator-dot),
+    a[role='button']:not(.touch-auto-target):not(.indicator-dot) {
       min-height: 40px;
       min-width: 40px;
     }

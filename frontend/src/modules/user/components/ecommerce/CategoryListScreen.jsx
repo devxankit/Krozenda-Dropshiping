@@ -77,6 +77,7 @@ export function CategoryListScreen() {
   const handleCategoryClick = (cat) => {
     // In the URL, so the filtered listing is shareable, survives a reload
     // and comes back intact on the Android back button.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     navigate(userPath.listing({ category: cat.id || cat._id }))
   }
 

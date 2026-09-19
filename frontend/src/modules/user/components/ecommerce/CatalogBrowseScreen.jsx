@@ -114,10 +114,13 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
     noindex: Boolean(params.search),
   })
 
+  // Ensure any category change in the browse view always resets to absolute top
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [params.category])
+
   const goToPage = (page) => {
     setParams({ page }, { resetPage: false })
-    // A page change that leaves the user halfway down the previous page reads
-    // as "nothing happened".
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -127,7 +130,8 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
       brands={brands}
       categories={categories}
       showCategories={mode === 'listing'}
-      onApply={(draft) =>
+      onApply={(draft) => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
         setParams({
           category: draft.category,
           brands: draft.brands,
@@ -137,8 +141,11 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
           inStock: draft.inStock,
           minDiscount: draft.minDiscount,
         })
-      }
-      onClear={clearFilters}
+      }}
+      onClear={() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+        clearFilters()
+      }}
       onClose={() => setFilterSheetOpen(false)}
     />
   )
