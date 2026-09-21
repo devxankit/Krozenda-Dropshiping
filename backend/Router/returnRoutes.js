@@ -1,7 +1,6 @@
 const express = require('express');
 const { getReturnableItems, createReturnRequest, listMyReturnRequests } = require('../Controllers/returnController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
-const { writeRateLimiter } = require('../Middlewares/rateLimiter');
 const { upload, processImages, handleUploadError } = require('../Middlewares/uploadMiddleware');
 
 const router = express.Router();
@@ -18,6 +17,6 @@ router.get('/returnable', getReturnableItems);
 router.get('/', listMyReturnRequests);
 // Limited ahead of the upload middleware so a flood is rejected before any
 // image bytes are read into memory and handed to sharp.
-router.post('/', writeRateLimiter, ...uploadReturnPhotos, createReturnRequest);
+router.post('/', ...uploadReturnPhotos, createReturnRequest);
 
 module.exports = router;

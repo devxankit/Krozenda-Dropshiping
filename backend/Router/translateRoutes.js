@@ -1,6 +1,5 @@
 const express = require('express');
 const { listLanguages, translateTexts } = require('../Controllers/translateController');
-const { translateRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -8,6 +7,6 @@ const router = express.Router();
 // visitor browsing the catalogue, exactly like /catalog/* does. The rate
 // limiter is what keeps it from being used as a free translation proxy.
 router.get('/languages', listLanguages);
-router.post('/', translateRateLimiter, translateTexts);
+router.post('/', translateTexts);
 
 module.exports = router;

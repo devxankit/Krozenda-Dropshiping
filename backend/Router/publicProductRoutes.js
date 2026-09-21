@@ -5,14 +5,8 @@ const {
   listRelatedProducts,
 } = require('../Controllers/productController');
 const { checkProductDelivery } = require('../Controllers/deliveryCheckController');
-const { catalogRateLimiter, deliveryCheckRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
-
-// Browse/search is unauthenticated and therefore the easiest surface to
-// scrape or flood; the limit is loose enough that a filter-heavy shopping
-// session never touches it.
-router.use(catalogRateLimiter);
 
 router.get('/', listPublicProducts);
 router.get('/:id', getPublicProduct);
@@ -26,6 +20,6 @@ router.get('/:id/related', listRelatedProducts);
 // currently charges a fixed ladder instead (see checkoutStore.SHIPPING_OPTIONS
 // and orderController.ALLOWED_SHIPPING_FEES), so the two will not agree until
 // one of them moves.
-router.get('/:id/delivery', deliveryCheckRateLimiter, checkProductDelivery);
+router.get('/:id/delivery', checkProductDelivery);
 
 module.exports = router;

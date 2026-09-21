@@ -7,7 +7,6 @@ const {
   testPlatformConnection,
 } = require('../Controllers/adminShippingController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
-const { writeRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -30,7 +29,6 @@ router.get('/integrations', requirePermission('admin.settings.view'), listIntegr
 router.post(
   '/platform/test-connection',
   requirePermission('admin.settings.manage'),
-  writeRateLimiter,
   testPlatformConnection
 );
 

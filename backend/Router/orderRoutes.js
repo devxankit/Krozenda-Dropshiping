@@ -10,7 +10,6 @@ const {
   getPaymentMethods,
 } = require('../Controllers/orderController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
-const { orderRateLimiter } = require('../Middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -24,9 +23,9 @@ router.get('/payment-methods', getPaymentMethods);
 // What shipping costs for this cart, before anything is placed. Each call
 // can reach the carrier, so it shares the order limiter — a buyer toggling
 // between COD and prepaid is a handful of calls, not a flood.
-router.post('/shipping-quote', orderRateLimiter, getShippingQuote);
-router.post('/razorpay-order', orderRateLimiter, createRazorpayOrder);
-router.post('/', orderRateLimiter, createOrder);
+router.post('/shipping-quote', getShippingQuote);
+router.post('/razorpay-order', createRazorpayOrder);
+router.post('/', createOrder);
 router.get('/:id', getOrder);
 router.patch('/:id/cancel', cancelOrder);
 // Reads the stored timeline only; it never calls the carrier, so a buyer

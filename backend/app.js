@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { globalRateLimiter } = require('./Middlewares/rateLimiter');
 
 const app = express();
 const isProduction = process.env.ENV === 'production';
@@ -50,7 +49,6 @@ const jsonParser = express.json({
 const translateJsonParser = express.json({ limit: '128kb' });
 app.use((req, res, next) => (req.path.startsWith('/translate') ? translateJsonParser : jsonParser)(req, res, next));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(globalRateLimiter);
 
 // Express 5 makes req.query a read-only getter, so keys are stripped in
 // place instead of reassigning req.body/query/params.
