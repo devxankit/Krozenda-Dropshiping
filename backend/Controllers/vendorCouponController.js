@@ -102,7 +102,7 @@ async function createMyCoupon(req, res) {
   if (!Coupon.DISCOUNT_TYPES.includes(discountType)) {
     return res.status(400).json({ success: false, message: 'Enter a valid discount type' });
   }
-  if (discountType !== 'FREE_SHIPPING' && (discountValueNum === null || discountValueNum <= 0)) {
+  if (discountValueNum === null || discountValueNum <= 0) {
     return res.status(400).json({ success: false, message: 'Enter a valid discount value' });
   }
 
@@ -130,7 +130,7 @@ async function createMyCoupon(req, res) {
     code: normalizedCode,
     description: description ? String(description).trim() : '',
     discountType,
-    discountValue: discountType === 'FREE_SHIPPING' ? 0 : discountValueNum,
+    discountValue: discountValueNum,
     maxDiscountAmount: toNumber(maxDiscountAmount),
     minOrderAmount: toNumber(minOrderAmount, 0),
     usageLimit: toNumber(usageLimit),

@@ -2,6 +2,8 @@
 // screen is showing, so an export is a re-serialisation of data already in
 // hand — no second round trip, and no "export" button that does nothing.
 
+import { renderToStaticMarkup } from 'react-dom/server'
+
 function escapeCell(value) {
   if (value === null || value === undefined) return ''
   const text = String(value)
@@ -27,7 +29,11 @@ export function toCsv(columns, rows) {
 export function downloadCsv(filename, sections) {
   const blocks = sections
     .filter((section) => section.rows.length > 0)
-    .map((section) => `${escapeCell(section.title)}\r\n${toCsv(section.columns, section.rows)}`)
+    .map((section) =>
+      section.title
+        ? `${escapeCell(section.title)}\r\n${toCsv(section.columns, section.rows)}`
+        : toCsv(section.columns, section.rows),
+    )
 
   // The BOM is what makes Excel read ₹ and other UTF-8 correctly.
   const blob = new Blob([`\ufeff${blocks.join('\r\n\r\n')}`], {
@@ -47,3 +53,42 @@ export function downloadCsv(filename, sections) {
 // Money is held in paise everywhere in this panel; a spreadsheet wants rupees
 // as a number it can sum, not a formatted string with a ₹ in it.
 export const rupees = (paise) => (paise / 100).toFixed(2)
+
+// Best-effort text for a DataTable column that only has a JSX `render`, not a
+// dedicated `exportValue`. Renders the same cell the user sees and strips the
+// markup, so the export matches the table instead of dumping "[object Object]".
+function cellText(column, row) {
+  if (column.exportValue) return column.exportValue(row)
+  const raw = row[column.key]
+  if (raw === null || raw === undefined) return ''
+  if (typeof raw !== 'object') return raw
+  if (!column.render) return ''
+  try {
+    return renderToStaticMarkup(column.render(row))
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Export whatever a DataTable is currently showing, using its own column
+ * definitions (`key` + `header`, optionally `exportValue` or `render`).
+ * This is what every plain list screen's ExportMenu should call — it needs
+ * no bespoke column mapping to stop being a no-op.
+ */
+export function downloadTableCsv(filename, columns, rows) {
+  downloadCsv(filename, [
+    {
+      title: undefined,
+      columns: columns.map((column) => ({
+        header: typeof column.header === 'string' ? column.header : column.key,
+        value: (row) => cellText(column, row),
+      })),
+      rows,
+    },
+  ])
+}

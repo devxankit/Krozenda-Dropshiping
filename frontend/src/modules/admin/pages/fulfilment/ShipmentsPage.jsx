@@ -6,6 +6,7 @@ import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert } from '../../components/feedback'
 import { useShipmentListController } from '../../controllers/useFulfilmentController'
 import { SHIPMENT_COLUMNS, SHIPMENT_TABS } from '../../tableColumns/fulfilmentColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function ShipmentsPage() {
   const list = useShipmentListController()
@@ -26,7 +27,7 @@ export function ShipmentsPage() {
     <ListScreen
       title="Shipments"
       description="AWB, courier allocation and the last tracking scan received from Shiprocket."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('shipments.csv', SHIPMENT_COLUMNS, list.items)} />}
       banner={
         late > 0 && (
           <InlineAlert tone="warning" title={`${late} consignments are past their promised date`}>

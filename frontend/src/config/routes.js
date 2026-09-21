@@ -88,6 +88,7 @@ export const SELLER_ROUTES = Object.freeze({
 
 export const DROPSHIPPING_PARTNER_ROUTES = Object.freeze({
   ROOT: '/partner',
+  LOGIN: '/partner/login',
   DASHBOARD: '/partner/dashboard',
   KYC_DOCUMENTS: '/partner/kyc-documents',
 })
@@ -217,6 +218,7 @@ export const ADMIN_ROUTES = Object.freeze({
   CJ_DASHBOARD: '/admin/cj',
   CJ_SETTINGS: '/admin/cj/settings',
   CJ_CATALOGUE: '/admin/cj/catalogue',
+  CJ_CATEGORY: '/admin/cj/category',
   CJ_PRODUCTS: '/admin/cj/products',
   CJ_ORDERS: '/admin/cj/orders',
   CJ_SHIPMENTS: '/admin/cj/shipments',

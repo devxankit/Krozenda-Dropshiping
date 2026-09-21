@@ -9,7 +9,12 @@ import { SectionCard, Timeline, formatMoney } from '../../components/display'
 import { DetailField } from '../../components/accounting/AccountingShell'
 import { CompletePayoutDialog, FailPayoutDialog } from '../../components/accounting/AccountingDialogs'
 import { downloadCsv, rupees } from '../../lib/exportCsv'
-import { ADMIN_PERMISSIONS, PAYOUT_STATUS_LABELS, PAYOUT_STATUS_TONE } from '../../constants'
+import {
+  ADMIN_PERMISSIONS,
+  PAYOUT_METHOD_LABELS,
+  PAYOUT_STATUS_LABELS,
+  PAYOUT_STATUS_TONE,
+} from '../../constants'
 import * as columns from '../../tableColumns/accountingColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
 import { usePayoutController, usePayoutListController, usePayoutWriteController } from '../../controllers/useAccountingController'
@@ -229,7 +234,7 @@ export function PayoutDetailPage() {
             <dl className="grid gap-x-6 px-4 py-2 sm:grid-cols-2 lg:grid-cols-3">
               <DetailField label="Payout ID" value={data.payoutId} mono />
               <DetailField label="Amount" value={formatMoney(data.amount)} mono />
-              <DetailField label="Method" value={data.method} />
+              <DetailField label="Method" value={PAYOUT_METHOD_LABELS[data.method] || data.method} />
               <DetailField
                 label="Seller"
                 value={
@@ -257,6 +262,12 @@ export function PayoutDetailPage() {
               />
               <DetailField label="UTR" value={data.utr} mono />
               <DetailField label="Provider reference" value={data.providerReference} mono />
+              {data.method === 'RAZORPAY_ROUTE' && (
+                <>
+                  <DetailField label="Razorpay transfer ID" value={data.razorpayTransferId} mono />
+                  <DetailField label="Razorpay account ID" value={data.razorpayAccountId} mono />
+                </>
+              )}
               <DetailField label="Initiated by" value={data.initiatedBy || 'System'} />
               <DetailField label="Created" value={new Date(data.createdAt).toLocaleString('en-IN')} />
               <DetailField

@@ -20,8 +20,16 @@ export const DEFAULT_PAGE_SIZE = 20
 const MAX_PAGE_SIZE = 50
 
 const SORT_VALUES = ['newest', 'price_asc', 'price_desc', 'rating', 'discount', 'popular']
+// 'all' is the default and never written to the URL — only 'dropship' and
+// 'normal' narrow the result set.
+const SOURCE_VALUES = ['all', 'dropship', 'normal']
 
 function readInt(value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
+  // `URLSearchParams.get` returns `null` for an absent key, and `Number(null)`
+  // is `0` — a finite number — so without this check a missing param silently
+  // clamps to `min` instead of falling back to the caller's default (this is
+  // what made `limit` default to 1 instead of 20).
+  if (value === null || value === undefined || value === '') return fallback
   const n = Number(value)
   if (!Number.isFinite(n)) return fallback
   return Math.min(max, Math.max(min, Math.trunc(n)))
@@ -47,6 +55,7 @@ export function useCatalogParams() {
         : null,
       flashSale: searchParams.get('flashSale') === 'true',
       trending: searchParams.get('trending') === 'true',
+      source: SOURCE_VALUES.includes(searchParams.get('source')) ? searchParams.get('source') : 'all',
       sort: SORT_VALUES.includes(searchParams.get('sort')) ? searchParams.get('sort') : DEFAULT_SORT,
       page: readInt(searchParams.get('page'), 1, { min: 1 }),
       limit: readInt(searchParams.get('limit'), DEFAULT_PAGE_SIZE, { min: 1, max: MAX_PAGE_SIZE }),
@@ -72,7 +81,8 @@ export function useCatalogParams() {
               serialised === false ||
               (urlKey === 'sort' && serialised === DEFAULT_SORT) ||
               (urlKey === 'limit' && serialised === DEFAULT_PAGE_SIZE) ||
-              (urlKey === 'page' && serialised === 1)
+              (urlKey === 'page' && serialised === 1) ||
+              (urlKey === 'source' && serialised === 'all')
 
             if (isDefault) next.delete(urlKey)
             else next.set(urlKey, String(serialised))
@@ -120,6 +130,7 @@ export function useCatalogParams() {
     if (params.minDiscount) out.minDiscount = params.minDiscount
     if (params.flashSale) out.flashSale = true
     if (params.trending) out.trending = true
+    if (params.source !== 'all') out.source = params.source
     return out
   }, [params])
 
@@ -132,6 +143,7 @@ export function useCatalogParams() {
         Boolean(params.rating),
         params.inStock,
         Boolean(params.minDiscount),
+        params.source !== 'all',
       ].filter(Boolean).length,
     [params],
   )

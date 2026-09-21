@@ -63,6 +63,41 @@ const bankSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Only the Razorpay linked-account identifier is stored here, never secrets;
+// isSettlementEligible must be true and onboardingStatus must be 'ACTIVE'
+// before any transfer can be created for this vendor.
+const razorpaySchema = new mongoose.Schema(
+  {
+    accountId: { type: String },           // Razorpay Linked Account id (acc_xxx) — not a secret
+    onboardingStatus: {
+      type: String,
+      enum: ['NOT_STARTED','PENDING','ONBOARDING','KYC_PENDING','ACTIVE','REJECTED','SUSPENDED'],
+      default: 'NOT_STARTED',
+    },
+    kycStatus: { type: String },
+    isSettlementEligible: { type: Boolean, default: false },
+    lastSyncedAt: { type: Date },
+
+    // Recovery owed BACK from this vendor because a refund/return was
+    // approved after their Razorpay Route payout for that line had already
+    // been RELEASED or COMPLETED — money that may have already left for the
+    // seller's bank, so it cannot be clawed back with an automatic Route
+    // reversal (see refundService.js's Scenario C handling). This is a
+    // running total in integer paise, incremented there and intended to be
+    // subtracted from a FUTURE settlement's payable for this vendor.
+    //
+    // NOT YET WIRED: settlementService.js's collectEligibleLines/
+    // generateSettlements (the only settlement generator) does not currently
+    // read or deduct this field when computing a new settlement's
+    // netPayablePaise — that wiring is out of scope for the sub-task that
+    // added this field and is a required follow-up. Until it lands, this is
+    // a correct record of what is owed back, not an amount actually being
+    // withheld anywhere automatically.
+    pendingRecoveryPaise: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false }
+);
+
 const vendorSchema = new mongoose.Schema(
   {
     // Seller type on this marketplace — not a government registration
@@ -82,6 +117,7 @@ const vendorSchema = new mongoose.Schema(
     contactPerson: { type: contactPersonSchema, default: () => ({}) },
     address: { type: addressSchema, default: () => ({}) },
     bank: { type: bankSchema, default: () => ({}) },
+    razorpay: { type: razorpaySchema, default: () => ({}) },
 
     verificationStatus: {
       type: String,

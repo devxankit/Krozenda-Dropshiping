@@ -14,6 +14,7 @@ import {
 } from '../../controllers/useSystemController'
 import * as columns from '../../tableColumns/systemColumns'
 import { BACKUP_COLUMNS } from '../../tableColumns/systemColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function AuditLogPage() {
   const list = useAuditLogController()
@@ -23,7 +24,7 @@ export function AuditLogPage() {
     <ListScreen
       title="Audit log"
       description="Every privileged action, with who did it, from where, and what changed."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('audit-log.csv', columns.AUDIT_COLUMNS, list.items)} />}
       banner={
         <InlineAlert tone="info" title={`${critical} critical entries in this period`}>
           The log is append-only. Nobody, including a Super Admin, can edit or delete an entry —
@@ -51,7 +52,7 @@ export function SupportTicketsPage() {
     <ListScreen
       title="Support tickets"
       description="Queries from buyers and sellers, who owns each one, and how long it has waited."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('support-tickets.csv', columns.TICKET_COLUMNS, list.items)} />}
       banner={
         unassigned > 0 && (
           <InlineAlert tone="warning" title={`${unassigned} tickets have no owner`}>

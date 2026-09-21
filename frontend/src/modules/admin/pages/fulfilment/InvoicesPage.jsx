@@ -4,6 +4,7 @@ import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert } from '../../components/feedback'
 import { useInvoiceListController } from '../../controllers/useFulfilmentController'
 import { INVOICE_COLUMNS, INVOICE_TABS } from '../../tableColumns/fulfilmentColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function InvoicesPage() {
   const navigate = useNavigate()
@@ -13,7 +14,7 @@ export function InvoicesPage() {
     <ListScreen
       title="Invoices"
       description="One GST invoice per sub-order, issued by whoever is the seller of record for that model."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('invoices.csv', INVOICE_COLUMNS, list.items)} />}
       banner={
         <InlineAlert tone="info" title="Seller of record differs by business model">
           Under dropshipping and own stock the Krozenda entity invoices the buyer. Under

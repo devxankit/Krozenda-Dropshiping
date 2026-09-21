@@ -5,6 +5,7 @@ import {
   POLICY_ACCEPTANCE_COLUMNS,
   POLICY_ACCEPTANCE_TABS,
 } from '../../tableColumns/peopleColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 // Acceptance is evidence: who agreed, to which VERSION, when, and from which
 // IP. Publishing a new policy version supersedes every acceptance of the old
@@ -17,7 +18,7 @@ export function PolicyAcceptancesPage() {
     <ListScreen
       title="Policy acceptances"
       description="Who accepted which policy version, when, and from where."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('policy-acceptances.csv', POLICY_ACCEPTANCE_COLUMNS, list.items)} />}
       banner={
         superseded > 0 && (
           <InlineAlert tone="warning" title={`${superseded} acceptances are against a superseded version`}>

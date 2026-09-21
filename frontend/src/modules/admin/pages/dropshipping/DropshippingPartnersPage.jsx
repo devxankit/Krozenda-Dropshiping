@@ -11,6 +11,7 @@ import {
 } from '../../tableColumns/dropshippingColumns'
 import { OnboardPartnerModal } from '../../components/dropshipping/OnboardPartnerModal'
 import { PartnerDetailDrawer } from '../../components/dropshipping/PartnerDetailDrawer'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function DropshippingPartnersPage() {
   const list = useDropshipPartnersController()
@@ -26,7 +27,7 @@ export function DropshippingPartnersPage() {
         description="External companies, manufacturers, wholesalers and distributors operating under Model A Direct Dropshipping."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('dropship-partners.csv', DROPSHIP_PARTNER_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.PEOPLE_MANAGE}>
               <Button size="control" icon="add" onClick={() => setOnboardOpen(true)}>
                 Onboard supplier

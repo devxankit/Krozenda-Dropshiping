@@ -16,6 +16,7 @@ import {
   fetchStaff,
   fetchVendors,
   setVendorActive,
+  syncVendorRazorpay,
   updateCustomerStatus,
 } from '../services/peopleService'
 import { useAdminMutation } from './useAdminMutation'
@@ -96,6 +97,19 @@ export const useKycDecisionController = ({ applicationId, onDone } = {}) => ({
     success: (doc) => `${doc.documentLabel || doc.documentType} ${doc.status.toLowerCase()}`,
   }),
 })
+
+// Not part of the KYC read model — nothing joins vendor.razorpay into the
+// application fetch, so this mutation's own response is the only place the
+// panel gets its data from until the next sync.
+export const useVendorRazorpaySyncController = ({ onDone } = {}) =>
+  useAdminMutation({
+    mutationFn: syncVendorRazorpay,
+    invalidate: [['admin', 'vendors']],
+    success: () => 'Razorpay Route synced',
+    describe: (result) =>
+      `${result.razorpay.onboardingStatus} · ${result.razorpay.isSettlementEligible ? 'Eligible for settlement' : 'Not eligible yet'}`,
+    onDone,
+  })
 
 export const useRoleDetailController = (roleId) =>
   useResource(['admin', 'roles', roleId], () => fetchRoleDetail(roleId), Boolean(roleId))

@@ -54,16 +54,49 @@ export const businessRulesSchema = z.object({
 export const generalSettingsSchema = z.object({
   platform: z.object({
     name: z.string(),
-    legalEntity: z.string(),
-    gstin: z.string(),
-    supportEmail: z.string(),
-    supportPhone: z.string(),
-    timezone: z.string(),
-    currency: z.string(),
+    legalEntity: z.string().optional().default(''),
+    gstin: z.string().optional().default(''),
+    supportEmail: z.string().optional().default(''),
+    supportPhone: z.string().optional().default(''),
+    footerTagline: z.string().optional().default(''),
+    copyrightText: z.string().optional().default(''),
+    socialLinks: z
+      .object({
+        whatsapp: z.string().optional().default(''),
+        instagram: z.string().optional().default(''),
+        linkedin: z.string().optional().default(''),
+        twitter: z.string().optional().default(''),
+        youtube: z.string().optional().default(''),
+        facebook: z.string().optional().default(''),
+      })
+      .optional()
+      .default({}),
+    quickLinks: z
+      .array(z.object({ label: z.string(), path: z.string() }))
+      .optional()
+      .default([]),
+    customerLinks: z
+      .array(z.object({ label: z.string(), path: z.string() }))
+      .optional()
+      .default([]),
+    legalLinks: z
+      .array(z.object({ label: z.string(), path: z.string() }))
+      .optional()
+      .default([]),
+    timezone: z.string().optional().default('Asia/Kolkata (IST, UTC+5:30)'),
+    currency: z.string().optional().default('Indian Rupee (INR)'),
+    defaultCommissionPercent: z.number().optional().default(10),
+    commissionRate: z.number().optional().default(10),
+    commissionType: z.enum(['percentage', 'flat']).optional().default('percentage'),
+    defaultGstRate: z.number().optional().default(18),
+    gstRate: z.number().optional().default(18),
+    gstType: z.enum(['percentage', 'flat']).optional().default('percentage'),
+    gstOnCommissionRate: z.number().optional().default(18),
+    commissionBase: z.string().optional().default('LINE_NET_OF_SELLER_FUNDED_DISCOUNT'),
   }),
   toggles: z.array(
     z.object({ key: z.string(), label: z.string(), description: z.string(), enabled: z.boolean() }),
-  ),
+  ).optional().default([]),
 })
 
 export const integrationListSchema = z.object({

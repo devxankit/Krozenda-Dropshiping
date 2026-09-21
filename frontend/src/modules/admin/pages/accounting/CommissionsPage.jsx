@@ -4,14 +4,94 @@ import { ListScreen } from '../../components/data'
 import { InlineAlert, PermissionGate } from '../../components/feedback'
 import { Drawer } from '../../components/overlay/Drawer'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
+import { SectionCard } from '../../components/display'
 import { COMMISSION_SCOPE_LABELS, ADMIN_PERMISSIONS } from '../../constants'
 import * as columns from '../../tableColumns/accountingColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
 import {
+  useAccountingConfigController,
+  useAccountingConfigWriteController,
   useCommissionOptionsController,
   useCommissionRuleListController,
   useCommissionRuleWriteController,
 } from '../../controllers/useAccountingController'
+
+const SETTLEMENT_MODE_OPTIONS = [
+  { value: 'AUTO', label: 'Automatic — released on schedule' },
+  { value: 'MANUAL', label: 'Manual — an admin releases each transfer' },
+]
+
+// This is AccountingConfig (backend/Models/AccountingConfig.js) — the real
+// ledger's policy record, which this screen already surfaces via the
+// commission `policy` banner below. It is a different record from the
+// legacy Finance module's platform_configurations (Settings → Business
+// rules), which this page does not touch.
+//
+// Note: as of this sub-task, adminCommissionController's serializeConfig /
+// updateAccountingConfig whitelist do not yet read or accept
+// sellerSettlementMode / sellerSettlementWindowDays even though the model
+// carries them — see AccountingConfig.js. This panel is wired to the real
+// config endpoint and will start working the moment that whitelist is
+// extended; until then saving here is a no-op on the backend.
+function SellerSettlementAutomationCard() {
+  const config = useAccountingConfigController()
+  if (!config.data) return null
+  // Keyed on the loaded config below so a save (which refetches it) starts
+  // this form fresh from the new server state, the same way RuleFormDrawer
+  // above is keyed on the row it edits.
+  return <SellerSettlementAutomationForm key={config.data.updatedAt} config={config.data} />
+}
+
+function SellerSettlementAutomationForm({ config }) {
+  const writer = useAccountingConfigWriteController()
+  const [mode, setMode] = useState(config.sellerSettlementMode || 'MANUAL')
+  const [windowDays, setWindowDays] = useState(String(config.sellerSettlementWindowDays ?? ''))
+
+  const dirty =
+    mode !== (config.sellerSettlementMode || 'MANUAL') ||
+    windowDays !== String(config.sellerSettlementWindowDays ?? '')
+
+  return (
+    <SectionCard
+      title="Seller settlement automation"
+      description="Whether Razorpay Route transfers for eligible settlements go out on their own, or wait for an admin to release them."
+    >
+      <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
+        <Select
+          id="seller-settlement-mode"
+          label="Mode"
+          value={mode}
+          onChange={(event) => setMode(event.target.value)}
+          options={SETTLEMENT_MODE_OPTIONS}
+        />
+        <Input
+          id="seller-settlement-window-days"
+          label="Window (days)"
+          type="number"
+          min={0}
+          value={windowDays}
+          onChange={(event) => setWindowDays(event.target.value)}
+          description="How long after eligibility AUTO waits before releasing."
+        />
+        <PermissionGate permission={ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_MANAGE}>
+          <Button
+            size="control"
+            disabled={!dirty}
+            isLoading={writer.isSubmitting}
+            onClick={() =>
+              writer.run({
+                sellerSettlementMode: mode,
+                sellerSettlementWindowDays: Number(windowDays) || 0,
+              })
+            }
+          >
+            Save
+          </Button>
+        </PermissionGate>
+      </div>
+    </SectionCard>
+  )
+}
 
 // /admin/accounting/commissions — what the marketplace charges.
 //
@@ -285,14 +365,17 @@ export function CommissionsPage() {
           </PermissionGate>
         }
         banner={
-          rulePolicy && (
-            <InlineAlert tone="info" title="How a rate is chosen">
-              Product → Seller → Category → Global, then the seller&rsquo;s own rate, then the platform
-              default of {rulePolicy.defaultCommissionPercent}%. Nothing may exceed{' '}
-              {rulePolicy.maxCommissionPercent}%. Editing a rule never changes what past orders were
-              charged.
-            </InlineAlert>
-          )
+          <>
+            <SellerSettlementAutomationCard />
+            {rulePolicy && (
+              <InlineAlert tone="info" title="How a rate is chosen">
+                Product → Seller → Category → Global, then the seller&rsquo;s own rate, then the
+                platform default of {rulePolicy.defaultCommissionPercent}%. Nothing may exceed{' '}
+                {rulePolicy.maxCommissionPercent}%. Editing a rule never changes what past orders were
+                charged.
+              </InlineAlert>
+            )}
+          </>
         }
         controller={{ ...list, items: rows }}
         columns={cols}

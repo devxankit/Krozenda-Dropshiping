@@ -17,6 +17,7 @@ import {
   HiBuildingOffice2,
 } from 'react-icons/hi2'
 import { api } from '../lib/axios'
+import { Footer } from '../components/layout/Footer'
 
 const NAV_DOCUMENTS = [
   { slug: 'terms', title: 'Terms & Conditions', icon: HiScale, path: '/terms' },
@@ -550,21 +551,8 @@ export function PublicCmsPage({ defaultSlug }) {
         </div>
       </main>
 
-      {/* Global Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 print:hidden mt-auto">
-        <div className="max-w-7xl mx-auto px-4 space-y-1">
-          <p>© 2026 KroZenda Technologies Private Limited. All rights reserved.</p>
-          <div className="flex items-center justify-center space-x-4 text-xs font-semibold pt-1">
-            <Link to="/terms" className="hover:text-blue-700 transition-colors">
-              Terms & Conditions
-            </Link>
-            <span>•</span>
-            <Link to="/privacy-policy" className="hover:text-blue-700 transition-colors">
-              Privacy Policy
-            </Link>
-          </div>
-        </div>
-      </footer>
+      {/* Global Modern Footer */}
+      <Footer />
     </div>
   )
 }

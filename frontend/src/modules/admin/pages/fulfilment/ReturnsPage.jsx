@@ -4,6 +4,7 @@ import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert } from '../../components/feedback'
 import { useReturnListController } from '../../controllers/useFulfilmentController'
 import { RETURN_COLUMNS, RETURN_FILTERS, RETURN_TABS } from '../../tableColumns/fulfilmentColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function ReturnsPage() {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export function ReturnsPage() {
     <ListScreen
       title="Returns & replacements"
       description="The platform default is no returns. Only damaged, wrong and missing items qualify."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('returns.csv', RETURN_COLUMNS, list.items)} />}
       banner={
         waiting > 0 && (
           <InlineAlert tone="warning" title={`${waiting} requests are waiting on a decision`}>

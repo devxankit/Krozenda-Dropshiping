@@ -14,6 +14,7 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { Footer } from '../../../../components/layout/Footer'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
@@ -635,6 +636,8 @@ export function ProductDetailScreen() {
           <RelatedProducts productId={productId} />
         </SectionErrorBoundary>
       </main>
+
+      <Footer />
 
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />

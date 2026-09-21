@@ -34,13 +34,11 @@ function formatDate(value) {
 
 const CJ_NAV_ITEMS = [
   { label: 'Dashboard', to: ADMIN_ROUTES.CJ_DASHBOARD, icon: 'dashboard' },
-  { label: 'Settings', to: ADMIN_ROUTES.CJ_SETTINGS, icon: 'settings' },
-  { label: 'Catalogue', to: ADMIN_ROUTES.CJ_CATALOGUE, icon: 'catalog' },
+  { label: 'Category', to: ADMIN_ROUTES.CJ_CATEGORY, icon: 'catalog' },
   { label: 'Products', to: ADMIN_ROUTES.CJ_PRODUCTS, icon: 'products' },
   { label: 'Orders', to: ADMIN_ROUTES.CJ_ORDERS, icon: 'orders' },
-  { label: 'Shipments', to: ADMIN_ROUTES.CJ_SHIPMENTS, icon: 'shipments' },
-  { label: 'Disputes', to: ADMIN_ROUTES.CJ_DISPUTES, icon: 'returns' },
-  { label: 'Sync Logs', to: ADMIN_ROUTES.CJ_SYNC_LOGS, icon: 'refresh' },
+  { label: 'Onboard Products', to: ADMIN_ROUTES.CJ_CATALOGUE, icon: 'add' },
+  { label: 'Settings', to: ADMIN_ROUTES.CJ_SETTINGS, icon: 'settings' },
 ]
 
 export function CjSettingsPage() {

@@ -16,6 +16,7 @@ import {
   SUB_ORDER_FILTERS,
   SUB_ORDER_TABS,
 } from '../../tableColumns/fulfilmentColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 // The operational queue. A parent order is what the buyer sees; a sub-order
 // is what somebody actually has to pack, and it is the unit of work here.
@@ -48,7 +49,7 @@ export function SubOrdersPage() {
       <ListScreen
       title="Sub-orders"
       description={`${list.totalItems} sub-orders — one per vendor bucket, each with its own lifecycle`}
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('sub-orders.csv', SUB_ORDER_COLUMNS, list.items)} />}
       banner={
         stale > 0 && (
           <InlineAlert tone="warning" title={`${stale} sub-orders are older than 24 hours`}>

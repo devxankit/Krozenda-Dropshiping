@@ -149,6 +149,30 @@ export const kycApplicationSchema = z.object({
   ),
 })
 
+// POST /admin/vendors/:id/razorpay/sync response — see
+// adminVendorController.syncVendorRazorpay. Returned on demand rather than
+// joined into the vendor/KYC read models, so this schema is only ever parsed
+// from that one mutation's response.
+export const vendorRazorpaySyncSchema = z.object({
+  vendorId: z.string(),
+  razorpay: z.object({
+    accountId: z.string().nullable(),
+    onboardingStatus: z.enum([
+      'NOT_STARTED',
+      'PENDING',
+      'ONBOARDING',
+      'KYC_PENDING',
+      'ACTIVE',
+      'REJECTED',
+      'SUSPENDED',
+    ]),
+    kycStatus: z.string().nullable(),
+    isSettlementEligible: z.boolean(),
+    lastSyncedAt: z.string().nullable(),
+  }),
+  bankAccountMasked: z.string().nullable(),
+})
+
 export const kycQueueSchema = paged(
   z.object({
     id: z.string(),

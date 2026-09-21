@@ -21,6 +21,7 @@ import {
   roleListSchema,
   staffListSchema,
   vendorListSchema,
+  vendorRazorpaySyncSchema,
   vendorSchema,
 } from '../schemas/peopleSchema'
 
@@ -117,6 +118,17 @@ export async function createVendor(payload) {
 export async function setVendorActive({ id, isActive }) {
   const { data } = await api.patch(`/admin/vendors/${id}/active`, { isActive })
   return toVendorRow(vendorSchema.parse({ ...data.data.vendor, products: 0, orders: 0, revenue: 0 }))
+}
+
+// POST /admin/vendors/:id/razorpay/sync — idempotent: creates the Route
+// linked account if it doesn't exist yet, and optionally lets an admin
+// override the eligibility flag / onboarding status in the same call.
+export async function syncVendorRazorpay({ vendorId, isSettlementEligible, onboardingStatus }) {
+  const body = {}
+  if (isSettlementEligible !== undefined) body.isSettlementEligible = isSettlementEligible
+  if (onboardingStatus !== undefined) body.onboardingStatus = onboardingStatus
+  const { data } = await api.post(`/admin/vendors/${vendorId}/razorpay/sync`, body)
+  return vendorRazorpaySyncSchema.parse(data.data)
 }
 
 export const fetchKycQueue = (query) =>

@@ -17,7 +17,7 @@ export const couponSchema = z.object({
   id: z.string(),
   code: z.string(),
   description: z.string(),
-  discountType: z.enum(['PERCENTAGE', 'FIXED', 'FREE_SHIPPING']),
+  discountType: z.enum(['PERCENTAGE', 'FIXED']),
   discountValue: z.number(), // paise when FIXED, a plain percent when PERCENTAGE — see backend serializeCoupon
   maxDiscountAmount: z.number().int().nullable(),
   minOrderAmount: z.number().int(),

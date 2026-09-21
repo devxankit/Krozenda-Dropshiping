@@ -11,6 +11,7 @@ import {
 } from '../../controllers/useCatalogController'
 import { INVENTORY_COLUMNS, INVENTORY_TABS } from '../../tableColumns/catalogColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function InventoryPage() {
   const list = useInventoryController()
@@ -39,7 +40,7 @@ export function InventoryPage() {
       <PageHeader
         title="Inventory"
         description="Own stock and vendor stock are counted in separate buckets and reported separately."
-        actions={<ExportMenu onExport={() => {}} />}
+        actions={<ExportMenu onExport={() => downloadTableCsv('inventory.csv', INVENTORY_COLUMNS, list.items)} />}
       />
 
       {lowCount > 0 && (

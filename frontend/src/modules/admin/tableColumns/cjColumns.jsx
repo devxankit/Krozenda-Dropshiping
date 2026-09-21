@@ -75,6 +75,12 @@ export const CJ_PRODUCT_COLUMNS = Object.freeze([
     ),
   },
   {
+    key: 'category',
+    header: 'Category',
+    width: '9rem',
+    render: (row) => row.product?.category?.name || '—',
+  },
+  {
     key: 'pricingMode',
     header: 'Pricing',
     width: '7rem',

@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { Footer } from '../../../../components/layout/Footer'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { api } from '../../../../lib/axios'
@@ -365,6 +366,8 @@ export function CategoryListScreen() {
           </button>
         </div>
       </main>
+
+      <Footer />
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">

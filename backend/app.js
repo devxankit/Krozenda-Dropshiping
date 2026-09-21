@@ -130,6 +130,7 @@ app.use('/admin', require('./Router/adminFulfilmentRoutes'));
 app.use('/admin/shipping/shipments', require('./Router/adminShipmentRoutes'));
 app.use('/admin/shipping', require('./Router/adminShippingRoutes'));
 app.use('/admin/payments', require('./Router/adminPaymentSettingsRoutes'));
+app.use('/admin/settings', require('./Router/adminSettingsRoutes'));
 app.use('/admin/cj', require('./Router/adminCjRoutes'));
 app.use('/admin/cj/catalogue', require('./Router/adminCjCatalogueRoutes'));
 app.use('/admin/cj/products', require('./Router/adminCjProductRoutes'));
@@ -165,6 +166,7 @@ app.use('/catalog/brands', require('./Router/publicBrandRoutes'));
 app.use('/catalog/banners', require('./Router/publicBannerRoutes'));
 app.use('/catalog/coupons', require('./Router/publicCouponRoutes'));
 app.get('/public/cms/:slug', require('./Controllers/cmsController').getPublicCmsPage);
+app.get('/public/settings', require('./Controllers/adminSettingsController').getPublicSettings);
 app.use('/faq', require('./Router/publicFaqRoutes'));
 // Runtime UI translation. Unauthenticated like /catalog/*, because the
 // language switcher has to work before anyone signs in.

@@ -15,43 +15,7 @@ import {
 } from '../../controllers/useSystemController'
 import { usePaymentSettingsController } from '../../controllers/usePaymentSettingsController'
 
-export function GeneralSettingsPage() {
-  const controller = useGeneralSettingsController()
-
-  return (
-    <SettingsShell
-      title="General"
-      description="Who the platform is, how buyers reach it, and which capabilities are switched on."
-      controller={controller}
-    >
-      {(data) => (
-        <>
-          <FormSection title="Platform identity" description="Appears on invoices and in transactional messages">
-            <Input id="name" label="Platform name" size="control" defaultValue={data.platform.name} />
-            <Input id="entity" label="Legal entity" size="control" defaultValue={data.platform.legalEntity} />
-            <Input id="gstin" label="GSTIN" size="control" defaultValue={data.platform.gstin} />
-            <Input id="email" label="Support email" size="control" defaultValue={data.platform.supportEmail} />
-            <Input id="phone" label="Support phone" size="control" defaultValue={data.platform.supportPhone} />
-            <Input id="tz" label="Timezone" size="control" defaultValue={data.platform.timezone} disabled />
-          </FormSection>
-
-          <FormSection title="Capabilities" columns={1}>
-            {data.toggles.map((toggle) => (
-              <Switch
-                key={toggle.key}
-                id={toggle.key}
-                checked={toggle.enabled}
-                onChange={() => {}}
-                label={toggle.label}
-                description={toggle.description}
-              />
-            ))}
-          </FormSection>
-        </>
-      )}
-    </SettingsShell>
-  )
-}
+export { GeneralSettingsPage } from './GeneralSettingsPage'
 
 
 export function TaxSettingsPage() {

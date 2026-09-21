@@ -25,6 +25,7 @@ import { DropshippingOverviewPage } from './pages/dropshipping/DropshippingOverv
 import { CjSettingsPage } from './pages/cj/CjSettingsPage'
 import { CjDashboardPage } from './pages/cj/CjDashboardPage'
 import { CjCataloguePage } from './pages/cj/CjCataloguePage'
+import { CjCategoryPage } from './pages/cj/CjCategoryPage'
 import { CjProductsPage } from './pages/cj/CjProductsPage'
 import { CjOrdersPage } from './pages/cj/CjOrdersPage'
 import { CjShipmentsPage } from './pages/cj/CjShipmentsPage'
@@ -264,6 +265,7 @@ export default function AdminRoutes() {
               {/* CJ Dropshipping Module — provider-specific, admin-only. */}
               <Route path={rel(ADMIN_ROUTES.CJ_DASHBOARD)} element={<CjDashboardPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_CATALOGUE)} element={<CjCataloguePage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_CATEGORY)} element={<CjCategoryPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_PRODUCTS)} element={<CjProductsPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_ORDERS)} element={<CjOrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_SHIPMENTS)} element={<CjShipmentsPage />} />
@@ -377,7 +379,7 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.SETTINGS_LOGISTICS)} element={<LogisticsSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_NOTIFICATIONS)} element={<NotificationSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_INTEGRATIONS)} element={<IntegrationHealthPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTINGS_SECURITY)} element={<SecuritySettingsPage />} />
+              <Route path={rel(ADMIN_ROUTES.SETTINGS_SECURITY)} element={<GeneralSettingsPage defaultTab="security" />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_API_WEBHOOKS)} element={<ApiWebhooksPage />} />
               <Route path={rel(ADMIN_ROUTES.AUDIT_LOGS)} element={<AuditLogPage />} />
               <Route path={rel(ADMIN_ROUTES.BACKUPS)} element={<BackupsPage />} />

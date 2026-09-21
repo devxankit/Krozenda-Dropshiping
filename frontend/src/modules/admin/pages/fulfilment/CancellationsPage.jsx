@@ -6,6 +6,7 @@ import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert } from '../../components/feedback'
 import { useCancellationListController } from '../../controllers/useFulfilmentController'
 import { CANCELLATION_COLUMNS, CANCELLATION_TABS } from '../../tableColumns/fulfilmentColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function CancellationsPage() {
   const list = useCancellationListController()
@@ -20,7 +21,7 @@ export function CancellationsPage() {
     <ListScreen
       title="Cancellations"
       description="Buyer, vendor and admin cancellations, and the refund each one owes."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('cancellations.csv', CANCELLATION_COLUMNS, list.items)} />}
       banner={
         openRefunds > 0 && (
           <InlineAlert tone="danger" title={`${openRefunds} refunds are not yet settled`}>

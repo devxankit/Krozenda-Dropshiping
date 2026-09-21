@@ -244,7 +244,23 @@ export function useSettlementWriteController({ onDone } = {}) {
     onDone,
   })
 
-  return { generate, hold, release }
+  // Result shape varies — see accountingService.releaseSettlementTransfer.
+  // A `payoutId` means a Razorpay transfer is actually now in flight; no
+  // `payoutId` means the backend reports nothing was actionable and the
+  // `message` it sent back already explains why (already released, on hold,
+  // manual mode, no payment to transfer against, …).
+  const releaseTransfer = useAdminMutation({
+    mutationFn: service.releaseSettlementTransfer,
+    invalidate: ACCOUNTING,
+    success: (result) => (result?.payoutId ? `${result.payoutId} release requested` : 'Nothing to release yet'),
+    describe: (result) =>
+      result?.payoutId
+        ? 'Razorpay will settle the transfer to the seller once it confirms.'
+        : result?.outcome || undefined,
+    onDone,
+  })
+
+  return { generate, hold, release, releaseTransfer }
 }
 
 // ---------------------------------------------------------------------------

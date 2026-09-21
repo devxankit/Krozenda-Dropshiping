@@ -83,9 +83,9 @@ const SEED_COUPONS = [
   },
   {
     code: 'FREESHIP',
-    description: 'Zero shipping charges on any cart value over ₹499.',
-    discountType: 'FREE_SHIPPING',
-    discountValue: 0,
+    description: 'Flat ₹50 off shipping on any cart value over ₹499.',
+    discountType: 'FIXED',
+    discountValue: 50,
     maxDiscountAmount: null,
     minOrderAmount: 499,
     usageLimit: null,

@@ -12,6 +12,7 @@ const scheduleNightlyBackup = require('./Jobs/backupScheduler');
 const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
 const { scheduleCjSync } = require('./Jobs/cjSyncJob');
 const { scheduleCjTrackingPoller } = require('./Jobs/cjTrackingPoller');
+const { scheduleSettlementRelease } = require('./Jobs/settlementReleaseJob');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
@@ -43,6 +44,9 @@ async function start() {
   // Fallback for lost/absent CJ webhooks — see Jobs/cjSyncJob.
   scheduleCjSync();
   scheduleCjTrackingPoller();
+  // Releases held Razorpay Route transfers once their settlement's hold
+  // window has passed — see Jobs/settlementReleaseJob.
+  scheduleSettlementRelease();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

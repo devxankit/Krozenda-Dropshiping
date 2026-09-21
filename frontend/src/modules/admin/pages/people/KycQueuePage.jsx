@@ -4,6 +4,7 @@ import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert } from '../../components/feedback'
 import { useKycQueueController } from '../../controllers/usePeopleController'
 import { KYC_QUEUE_COLUMNS, KYC_TABS } from '../../tableColumns/peopleColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 // Document collection plus MANUAL admin review. No third-party API validates
 // PAN, Aadhaar, GST or FSSAI on this platform (project context §5.1) — the
@@ -17,7 +18,7 @@ export function KycQueuePage() {
     <ListScreen
       title="KYC review"
       description="Applications waiting on a human decision, oldest first."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('kyc-review.csv', KYC_QUEUE_COLUMNS, list.items)} />}
       banner={
         overdue > 0 && (
           <InlineAlert tone="warning" title={`${overdue} applications have waited more than 3 days`}>

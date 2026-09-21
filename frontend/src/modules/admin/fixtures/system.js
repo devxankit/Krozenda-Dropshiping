@@ -65,6 +65,10 @@ export function generalSettingsFixture() {
       supportPhone: '+91 22 6820 4400',
       timezone: 'Asia/Kolkata (IST, UTC+5:30)',
       currency: 'Indian Rupee (INR)',
+      defaultCommissionPercent: 10,
+      defaultGstRate: 18,
+      gstOnCommissionRate: 18,
+      commissionBase: 'LINE_NET_OF_SELLER_FUNDED_DISCOUNT',
     },
     toggles: [
       { key: 'seller_self_registration', label: 'Seller self-registration', description: 'Marketplace sellers can sign up without an invitation. Dropshipping partners are always added by an admin.', enabled: true },

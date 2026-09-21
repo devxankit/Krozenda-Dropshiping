@@ -67,6 +67,13 @@ const productSchema = new mongoose.Schema(
     // marketplace seller, so order items and support tickets can be routed
     // to the right vendor instead of always falling back to Admin.
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
+    // Denormalized off ProductFulfillmentMapping (the real source of truth —
+    // see that model's own comment) purely so the public catalog can filter
+    // "dropship only / normal only / all" with a plain indexed match instead
+    // of a $lookup on every browse request. Set once at onboarding time and
+    // never read by checkout/fulfilment logic, which still goes through
+    // ProductFulfillmentMapping as before.
+    fulfillmentProvider: { type: String, enum: ['CJ', null], default: null, index: true },
     // Vendor-created products enter the marketplace catalog PENDING until an
     // admin approves them — admin-created products (vendor: null) skip this
     // by defaulting straight to APPROVED, matching pre-marketplace behavior.

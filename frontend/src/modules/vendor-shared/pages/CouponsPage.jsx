@@ -7,6 +7,7 @@ import { toast } from '../../admin/stores/toastStore'
 import { useVendorCouponsController } from '../controllers/useVendorController'
 import { VendorCouponFormDrawer } from '../components/marketing/VendorCouponFormDrawer'
 import { VENDOR_COUPON_COLUMNS, VENDOR_COUPON_TABS } from '../tableColumns/vendorColumns'
+import { downloadTableCsv } from '../../admin/lib/exportCsv'
 
 // Mirrors admin's Coupons screen (ListScreen + FormDrawer, same banner/tabs/
 // actions pattern) — scoped to coupons this seller created for their own
@@ -55,7 +56,7 @@ export function CouponsPage() {
         description="Codes buyers type at checkout — scoped to your own products only."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('coupons.csv', VENDOR_COUPON_COLUMNS, list.items)} />
             <Button size="control" icon="add" onClick={() => setDrawerOpen(true)}>
               New coupon
             </Button>

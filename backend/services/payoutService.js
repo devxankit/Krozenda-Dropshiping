@@ -280,6 +280,8 @@ function serializePayout(payout, { vendor = null, settlement = null } = {}) {
     accountHolderName: payout.accountHolderName || '',
     utr: payout.utr || null,
     providerReference: payout.providerReference || null,
+    razorpayTransferId: payout.razorpayTransferId || null,
+    razorpayAccountId: payout.razorpayAccountId || null,
     status: payout.status,
     failureReason: payout.failureReason || '',
     notes: payout.notes || '',

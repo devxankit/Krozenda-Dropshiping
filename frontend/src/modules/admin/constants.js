@@ -254,13 +254,6 @@ export const NAV_TREE = Object.freeze([
         badge: 'productApprovals',
         badgeTone: 'warning',
       },
-      {
-        label: 'Margin & rules',
-        to: ADMIN_ROUTES.DROPSHIPPING_MARGINS,
-        icon: 'sliders',
-        permission: ADMIN_PERMISSIONS.DROPSHIP_MARGINS,
-        legacyPermission: ADMIN_PERMISSIONS.FINANCE_MANAGE,
-      },
     ],
   },
   {
@@ -304,10 +297,10 @@ export const NAV_TREE = Object.freeze([
         exact: true,
       },
       {
-        label: 'Catalogue',
-        to: ADMIN_ROUTES.CJ_CATALOGUE,
+        label: 'Category',
+        to: ADMIN_ROUTES.CJ_CATEGORY,
         icon: 'catalog',
-        permission: ADMIN_PERMISSIONS.CJ_CATALOGUE,
+        permission: ADMIN_PERMISSIONS.CJ_PRODUCTS,
       },
       {
         label: 'Products',
@@ -322,22 +315,13 @@ export const NAV_TREE = Object.freeze([
         permission: ADMIN_PERMISSIONS.CJ_ORDERS,
       },
       {
-        label: 'Shipments',
-        to: ADMIN_ROUTES.CJ_SHIPMENTS,
-        icon: 'invoices',
-        permission: ADMIN_PERMISSIONS.CJ_SHIPMENTS,
-      },
-      {
-        label: 'Returns & Disputes',
-        to: ADMIN_ROUTES.CJ_DISPUTES,
-        icon: 'returns',
-        permission: ADMIN_PERMISSIONS.CJ_RETURNS,
-      },
-      {
-        label: 'Sync Logs',
-        to: ADMIN_ROUTES.CJ_SYNC_LOGS,
-        icon: 'refresh',
-        permission: ADMIN_PERMISSIONS.CJ_SYNC,
+        // Live CJ search + select-to-onboard flow. Same screen and route as
+        // before (CjCataloguePage) — only the label changed, to say what an
+        // admin actually uses it for.
+        label: 'Onboard Products',
+        to: ADMIN_ROUTES.CJ_CATALOGUE,
+        icon: 'add',
+        permission: ADMIN_PERMISSIONS.CJ_CATALOGUE,
       },
       {
         label: 'Settings',
@@ -473,34 +457,18 @@ export const NAV_TREE = Object.freeze([
 
 // Sub-navigation for the settings shell — a second level that would clutter
 // the sidebar but has to live somewhere structured.
+// Trimmed to what the platform actually needs day to day — profile and
+// password live on the profile page, so this is just the business-critical
+// settings (commission, GST) plus the identity fields invoices need.
 export const SETTINGS_NAV = Object.freeze([
   {
     id: 'platform',
     label: 'Platform',
     items: [
       { label: 'General', to: ADMIN_ROUTES.SETTINGS_GENERAL },
-      { label: 'Business rules', to: ADMIN_ROUTES.SETTINGS_BUSINESS_RULES },
-      { label: 'Taxes & HSN', to: ADMIN_ROUTES.SETTINGS_TAXES },
-      { label: 'Policies & legal', to: ADMIN_ROUTES.SETTINGS_POLICIES },
-    ],
-  },
-  {
-    id: 'integrations',
-    label: 'Integrations',
-    items: [
-      { label: 'Payments', to: ADMIN_ROUTES.SETTINGS_PAYMENTS },
-      { label: 'Logistics', to: ADMIN_ROUTES.SETTINGS_LOGISTICS },
-      { label: 'Notifications', to: ADMIN_ROUTES.SETTINGS_NOTIFICATIONS },
-      { label: 'Integration health', to: ADMIN_ROUTES.SETTINGS_INTEGRATIONS },
-    ],
-  },
-  {
-    id: 'access',
-    label: 'Access',
-    items: [
-      { label: 'Roles & permissions', to: ADMIN_ROUTES.ROLES },
       { label: 'Security', to: ADMIN_ROUTES.SETTINGS_SECURITY },
-      { label: 'API keys & webhooks', to: ADMIN_ROUTES.SETTINGS_API_WEBHOOKS },
+      { label: 'Commission & business rules', to: ADMIN_ROUTES.SETTINGS_BUSINESS_RULES },
+      { label: 'Taxes & GST', to: ADMIN_ROUTES.SETTINGS_TAXES },
     ],
   },
 ])
@@ -797,6 +765,10 @@ export const ACCOUNTING_SETTLEMENT_STATUS_TONE = Object.freeze({
 export const PAYOUT_STATUS_LABELS = Object.freeze({
   PENDING: 'Pending',
   PROCESSING: 'Processing',
+  // RELEASED: release requested from Razorpay Route, awaiting the webhook
+  // that confirms the transfer actually settled — a distinct in-flight state
+  // from PROCESSING (which is the pre-transfer manual-payout state).
+  RELEASED: 'Release requested',
   COMPLETED: 'Completed',
   FAILED: 'Failed',
   CANCELLED: 'Cancelled',
@@ -805,9 +777,70 @@ export const PAYOUT_STATUS_LABELS = Object.freeze({
 export const PAYOUT_STATUS_TONE = Object.freeze({
   PENDING: 'neutral',
   PROCESSING: 'brand',
+  RELEASED: 'accent',
   COMPLETED: 'success',
   FAILED: 'danger',
   CANCELLED: 'neutral',
+})
+
+// Payout.method — see backend/Models/Payout.js. RAZORPAY_ROUTE is the
+// automated seller-settlement path; the others are manual/legacy entries an
+// operator typed in themselves.
+export const PAYOUT_METHOD_LABELS = Object.freeze({
+  RAZORPAY_ROUTE: 'Razorpay Route',
+  BANK_TRANSFER: 'Bank transfer',
+  UPI: 'UPI',
+  MANUAL: 'Manual',
+  CHEQUE: 'Cheque',
+})
+
+export const PAYOUT_METHOD_TONE = Object.freeze({
+  RAZORPAY_ROUTE: 'accent',
+})
+
+// Settlement.holdReason — free text for older holds, but the automation puts
+// one of these fixed codes on a hold it created itself. Anything not in this
+// map (an older, hand-typed reason) is shown as-is.
+export const SETTLEMENT_HOLD_REASON_LABELS = Object.freeze({
+  VENDOR_RAZORPAY_NOT_ACTIVE: "Seller's Razorpay account is not active",
+  ACTIVE_RETURN_OR_REFUND: 'An order in this settlement has an active return or refund',
+  AMOUNT_MISMATCH: 'Computed payable does not match the amount on file',
+  NO_RAZORPAY_PAYMENT_TO_TRANSFER_AGAINST: 'No matching Razorpay payment to transfer against',
+  MULTI_ORDER_SETTLEMENT_UNSUPPORTED: 'Settlement spans multiple orders — not yet supported for auto-transfer',
+  REFUND_AFTER_SETTLEMENT_GENERATED_NEEDS_REGEN: 'A refund landed after this settlement was generated — needs regeneration',
+  REFUND_BEFORE_RELEASE_REVERSAL_FAILED_MANUAL_RECONCILIATION:
+    'A pre-release refund reversal failed — needs manual reconciliation',
+})
+
+// backend/Models/Vendor.js razorpay.onboardingStatus
+export const RAZORPAY_ONBOARDING_STATUS_OPTIONS = Object.freeze([
+  'NOT_STARTED',
+  'PENDING',
+  'ONBOARDING',
+  'KYC_PENDING',
+  'ACTIVE',
+  'REJECTED',
+  'SUSPENDED',
+])
+
+export const RAZORPAY_ONBOARDING_STATUS_LABELS = Object.freeze({
+  NOT_STARTED: 'Not started',
+  PENDING: 'Pending',
+  ONBOARDING: 'Onboarding',
+  KYC_PENDING: 'KYC pending',
+  ACTIVE: 'Active',
+  REJECTED: 'Rejected',
+  SUSPENDED: 'Suspended',
+})
+
+export const RAZORPAY_ONBOARDING_STATUS_TONE = Object.freeze({
+  NOT_STARTED: 'neutral',
+  PENDING: 'warning',
+  ONBOARDING: 'warning',
+  KYC_PENDING: 'warning',
+  ACTIVE: 'success',
+  REJECTED: 'danger',
+  SUSPENDED: 'danger',
 })
 
 export const ACCOUNTING_REFUND_STATUS_LABELS = Object.freeze({

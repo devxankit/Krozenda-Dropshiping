@@ -21,6 +21,7 @@ import {
   HiXMark,
 } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { Footer } from '../../../../components/layout/Footer'
 import { fetchPublicFaqs } from '../../services/faqService'
 import { fetchUserTickets } from '../../services/ticketService'
 import { RaiseTicketModal } from './RaiseTicketModal'
@@ -739,6 +740,8 @@ export function HelpSupportScreen({ onBack }) {
           </div>
         )}
       </main>
+
+      <Footer />
 
       {/* Raise Ticket Modal */}
       <RaiseTicketModal

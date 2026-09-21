@@ -81,6 +81,14 @@ export async function fetchOnboardedCjProducts(params) {
   return data.data
 }
 
+// Krozenda categories that hold at least one onboarded CJ product, with a
+// count each. Backs the standalone Category screen's cards and the Products
+// screen's category filter.
+export async function fetchCjProductCategorySummary() {
+  const { data } = await api.get('/admin/cj/products/category-summary')
+  return data.data.categories
+}
+
 export async function fetchCjCategoryMappings() {
   const { data } = await api.get('/admin/cj/category-mappings')
   return data.data

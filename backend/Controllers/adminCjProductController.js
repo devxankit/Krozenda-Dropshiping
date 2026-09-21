@@ -1,5 +1,6 @@
 const cjOnboardingService = require('../services/cj/cjOnboardingService');
 const cjAuthService = require('../services/cj/cjAuthService');
+const { getImageUrl } = require('../utils/imageHelper');
 
 function handleError(res, err) {
   if (err.status && err.status < 500) {
@@ -47,13 +48,41 @@ async function onboardProduct(req, res) {
   }
 }
 
-// GET /admin/cj/products?pageNum=&pageSize=
+// GET /admin/cj/products?pageNum=&pageSize=&categoryId=
 async function listProducts(req, res) {
   const pageNum = Math.max(Number(req.query.pageNum) || 1, 1);
   const pageSize = Math.min(Number(req.query.pageSize) || 20, 100);
+  const categoryId = req.query.categoryId || null;
 
-  const result = await cjOnboardingService.listOnboardedProducts({ pageNum, pageSize });
-  res.json({ success: true, data: result });
+  const result = await cjOnboardingService.listOnboardedProducts({ pageNum, pageSize, categoryId });
+
+  // Product.images is stored as relative paths (see Models/Product.js) —
+  // every other admin/public product listing resolves them to servable URLs
+  // in its controller (see serializeProduct/serializeProductCard in
+  // productController.js) before the response leaves the API; this listing
+  // was the one place still shipping the raw path, which is why the CJ
+  // Products cards had no image.
+  const list = result.list.map((row) => {
+    const plain = row.toObject ? row.toObject() : row;
+    if (plain.product?.images?.length) {
+      plain.product = {
+        ...plain.product,
+        images: plain.product.images.map((img) => getImageUrl(img)),
+      };
+    }
+    return plain;
+  });
+
+  res.json({ success: true, data: { ...result, list } });
+}
+
+// GET /admin/cj/products/category-summary
+// Krozenda categories that hold at least one onboarded CJ product, with a
+// count each. Backs both the standalone Category screen's cards and the
+// Products screen's category filter dropdown.
+async function getCategorySummary(req, res) {
+  const categories = await cjOnboardingService.getOnboardedCategorySummary();
+  res.json({ success: true, data: { categories } });
 }
 
 // POST /admin/cj/products/bulk-pricing
@@ -107,5 +136,5 @@ async function bulkOnboard(req, res) {
   }
 }
 
-module.exports = { onboardProduct, listProducts, bulkPricing, bulkOnboard };
+module.exports = { onboardProduct, listProducts, getCategorySummary, bulkPricing, bulkOnboard };
 

@@ -14,6 +14,7 @@ import {
   useReviewListController,
 } from '../../controllers/useMarketingController'
 import * as columns from '../../tableColumns/marketingColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function CouponsPage() {
   const list = useCouponListController()
@@ -55,7 +56,7 @@ export function CouponsPage() {
         description="Codes buyers type at checkout, and how much of each allowance is left."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('coupons.csv', columns.COUPON_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.MARKETING_MANAGE}>
               <Button size="control" icon="add" onClick={() => setEditingCoupon('new')}>
                 New coupon
@@ -122,7 +123,7 @@ export function CampaignsPage() {
         description="Push notifications sent from here go out live via Firebase Cloud Messaging to every device registered for the chosen audience."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('campaigns.csv', columns.CAMPAIGN_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.MARKETING_MANAGE}>
               <Button size="control" icon="add" onClick={() => setIsModalOpen(true)}>
                 New campaign
@@ -167,7 +168,7 @@ export function ReviewsPage() {
     <ListScreen
       title="Review moderation"
       description="Ratings and reviews waiting on a decision before they appear on the storefront."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('reviews.csv', columns.REVIEW_COLUMNS, list.items)} />}
       banner={
         flagged > 0 && (
           <InlineAlert tone="danger" title={`${flagged} reviews are flagged`}>

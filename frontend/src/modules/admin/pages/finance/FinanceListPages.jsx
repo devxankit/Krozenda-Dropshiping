@@ -11,6 +11,7 @@ import {
 } from '../../controllers/useFinanceController'
 import * as columns from '../../tableColumns/financeColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 const MANAGE = ADMIN_PERMISSIONS.FINANCE_MANAGE
 
@@ -36,7 +37,7 @@ export function TransactionsPage() {
     <ListScreen
       title="Transactions"
       description="Every Razorpay capture, its gateway fee, and whether it has been matched to a settlement."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('transactions.csv', columns.TRANSACTION_COLUMNS, list.items)} />}
       banner={
         unreconciled > 0 && (
           <InlineAlert tone="warning" title={`${unreconciled} payments are not reconciled`}>
@@ -103,7 +104,7 @@ export function RefundsPage() {
       <ListScreen
         title="Refunds"
         description="Full and partial refunds, and whether the vendor's Route transfer has been reversed."
-        actions={<ExportMenu onExport={() => {}} />}
+        actions={<ExportMenu onExport={() => downloadTableCsv('refunds.csv', columns.REFUND_COLUMNS, list.items)} />}
         banner={
           open > 0 && (
             <InlineAlert tone="warning" title={`${open} refunds are still open`}>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HiArrowLeft, HiShieldCheck, HiArrowPath, HiBanknotes, HiPlus, HiXMark, HiCheckCircle, HiClock, HiXCircle } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { Footer } from '../../../../components/layout/Footer'
 import { USER_ROUTES } from '../../../../config/routes'
 import { useReturnsController } from '../../controllers/useReturnsController'
 
@@ -292,6 +293,8 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }

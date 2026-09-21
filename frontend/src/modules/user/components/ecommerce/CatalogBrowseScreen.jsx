@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { Footer } from '../../../../components/layout/Footer'
 import { Pagination } from '../../../../components/ui/Pagination'
 import {
   EmptyResult,
@@ -140,6 +141,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
           rating: draft.rating,
           inStock: draft.inStock,
           minDiscount: draft.minDiscount,
+          source: draft.source,
         })
       }}
       onClear={() => {
@@ -237,6 +239,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
                     rating: draft.rating,
                     inStock: draft.inStock,
                     minDiscount: draft.minDiscount,
+                    source: draft.source,
                   })
                 }
                 onClear={clearFilters}
@@ -405,6 +408,8 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
           </div>
         </div>
       </main>
+
+      <Footer />
 
       <FilterSheet open={isFilterSheetOpen} onClose={() => setFilterSheetOpen(false)}>
         {filterPanel}

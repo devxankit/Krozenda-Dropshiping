@@ -84,6 +84,7 @@ router.get('/settlements', SETTLEMENT_VIEW, settlement.listSettlements);
 router.get('/settlements/:id', SETTLEMENT_VIEW, settlement.getSettlement);
 router.post('/settlements/:id/hold', SETTLEMENT_MANAGE, settlement.holdSettlement);
 router.post('/settlements/:id/release', SETTLEMENT_MANAGE, settlement.releaseSettlement);
+router.post('/settlements/:id/release-transfer', moneyMovementLimiter, SETTLEMENT_MANAGE, settlement.releaseSettlementTransfer);
 
 // --- payouts ---------------------------------------------------------------
 router.get('/payouts', PAYOUT_VIEW, settlement.listPayouts);

@@ -28,6 +28,8 @@ export async function requestAdminLogin(body) {
       id: admin.id,
       name: admin.name || 'Admin',
       email: admin.email,
+      image: admin.image || null,
+      mobileNumber: admin.mobileNumber || null,
       roleLabel: isAdmin ? 'Super Admin' : 'Staff',
       language: admin.language ?? null,
     },

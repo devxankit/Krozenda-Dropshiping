@@ -25,6 +25,12 @@ const DISCOUNT_OPTIONS = [
 
 const PRICE_CEILING = 200000
 
+const SOURCE_OPTIONS = [
+  { label: 'All products', value: 'all' },
+  { label: 'Dropship only', value: 'dropship' },
+  { label: 'Regular stock only', value: 'normal' },
+]
+
 export function CatalogFilterPanel({
   params,
   brands,
@@ -45,6 +51,7 @@ export function CatalogFilterPanel({
       rating: params.rating,
       inStock: params.inStock,
       minDiscount: params.minDiscount,
+      source: params.source,
     }),
     [params],
   )
@@ -264,6 +271,27 @@ export function CatalogFilterPanel({
               {draft.minDiscount === option.value && (
                 <HiCheck className="h-4 w-4" aria-hidden="true" />
               )}
+            </button>
+          ))}
+        </fieldset>
+
+        <fieldset className="space-y-1">
+          <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Product type
+          </legend>
+          {SOURCE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => patch({ source: option.value })}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
+                draft.source === option.value
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>{option.label}</span>
+              {draft.source === option.value && <HiCheck className="h-4 w-4" aria-hidden="true" />}
             </button>
           ))}
         </fieldset>

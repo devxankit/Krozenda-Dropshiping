@@ -7,6 +7,7 @@ import { AddVendorProductModal } from '../components/modals/AddVendorProductModa
 import { ImportProductsModal } from '../components/modals/ImportProductsModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
 import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
+import { downloadTableCsv } from '../../admin/lib/exportCsv'
 
 export function VendorProductsPage() {
   const list = useVendorProductsController()
@@ -22,7 +23,7 @@ export function VendorProductsPage() {
         description="Manage your product listings, pricing and stock. New products go live once an admin approves them."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('products.csv', VENDOR_PRODUCT_COLUMNS, list.items)} />
             <Button size="control" icon="search" variant="secondary" onClick={() => setScanOpen(true)}>
               Scan barcode
             </Button>

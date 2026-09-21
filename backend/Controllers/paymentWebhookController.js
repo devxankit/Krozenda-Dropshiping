@@ -1,6 +1,5 @@
-const crypto = require('crypto');
 const Order = require('../Models/Order');
-const { safeEqual } = require('../utils/secretBox');
+const { verifyRazorpaySignature } = require('../utils/razorpayWebhookVerify');
 
 // POST /webhook/payments — Razorpay's server-to-server event feed, the
 // reconciliation path that the buyer-driven flow in orderController
@@ -18,12 +17,6 @@ function log(entry) {
   console.log(JSON.stringify({ scope: 'PAYMENTS', at: new Date().toISOString(), ...entry }));
 }
 
-function verifySignature(rawBody, signature, secret) {
-  if (!rawBody || !signature) return false;
-  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  return safeEqual(signature, expected);
-}
-
 async function handleRazorpayWebhook(req, res) {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -35,7 +28,7 @@ async function handleRazorpayWebhook(req, res) {
   }
 
   const signature = req.get('x-razorpay-signature') || '';
-  if (!verifySignature(req.rawBody, signature, secret)) {
+  if (!verifyRazorpaySignature(req.rawBody, signature, secret)) {
     log({ event: 'RAZORPAY_WEBHOOK_REJECTED', reason: 'BAD_SIGNATURE' });
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }

@@ -11,6 +11,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
+import { Footer } from '../../../../components/layout/Footer'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useCartCount } from '../../../../lib/cartStore'
 import { useUnreadNotificationCount } from '../../../../lib/notificationStore'
@@ -211,6 +212,9 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
           </div>
         </div>
       </div>
+
+      {/* GLOBAL FOOTER */}
+      <Footer />
 
       {/* MOBILE BOTTOM NAVBAR (For screens < md) */}
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">

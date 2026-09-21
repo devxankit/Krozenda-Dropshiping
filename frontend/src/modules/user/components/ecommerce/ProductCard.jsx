@@ -122,6 +122,11 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
           />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
+          {product.isDropship && (
+            <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+              Dropship
+            </span>
+          )}
           {ratingBadge}
           <h3 className="line-clamp-2 text-sm font-semibold text-slate-800 transition-colors group-hover:text-blue-600">
             {product.name}
@@ -144,6 +149,11 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
     >
       <div className="relative overflow-hidden rounded-xl border border-slate-100/90 bg-slate-50/50">
         {wishlistButton}
+        {product.isDropship && (
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-indigo-600/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-md">
+            Dropship
+          </span>
+        )}
         <SmartImage
           src={product.image}
           srcSet={product.imageSrcSet}

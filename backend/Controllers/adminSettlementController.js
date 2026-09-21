@@ -10,6 +10,7 @@ const refundService = require('../services/refundService');
 const posting = require('../services/accountingPosting');
 const { recordAudit } = require('../services/accountingAudit');
 const { paged, resolveRange, vendorLabel, orderNumber } = require('./adminAccountingController');
+const razorpaySettlementIntegration = require('../services/razorpaySettlementIntegration');
 
 // Admin > Accounting > Settlements, Payouts and Refunds — the screens where
 // money actually moves, and therefore the ones with the most guardrails.
@@ -245,6 +246,102 @@ async function setSettlementHold(req, res, hold) {
 const holdSettlement = (req, res) => setSettlementHold(req, res, true);
 const releaseSettlement = (req, res) => setSettlementHold(req, res, false);
 
+// POST /admin/accounting/settlements/:id/release-transfer
+//
+// The manual counterpart to settlementReleaseJob.js's cron: for MANUAL
+// settlement mode (or an explicit forced retry in AUTO mode), an admin can
+// pay a settlement out right now instead of waiting for the job. Nothing
+// here recomputes an amount — it only drives the already-computed Settlement/
+// Payout through the same server-side flow the automation uses:
+//   1. no Razorpay Route payout yet          -> create+hold (forced),
+//      then immediately release it via the same safety-checked path the
+//      cron job uses (razorpaySettlementIntegration.releaseSinglePayout).
+//   2. a payout already PROCESSING            -> release it via that same
+//      path directly.
+//   3. a payout already RELEASED/COMPLETED    -> no-op, report current state.
+async function releaseSettlementTransfer(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid settlement id' });
+  }
+
+  const settlement = await Settlement.findById(id).lean();
+  if (!settlement) {
+    return res.status(404).json({ success: false, message: 'Settlement not found' });
+  }
+
+  const respondWithPayout = async (payout, message) => {
+    const populated = await Payout.findById(payout._id)
+      .populate('vendor', 'name business.businessName')
+      .populate('settlement', 'settlementId')
+      .lean();
+    res.json({
+      success: true,
+      message,
+      data: payoutService.serializePayout(populated, { vendor: vendorLabel(populated.vendor) }),
+    });
+  };
+
+  // Latest Razorpay Route attempt on this settlement, if any.
+  const existing = await Payout.findOne({ settlement: settlement._id, method: 'RAZORPAY_ROUTE' })
+    .sort({ attempt: -1 })
+    .lean();
+
+  if (existing && ['RELEASED', 'COMPLETED'].includes(existing.status)) {
+    return respondWithPayout(existing, `This settlement's Razorpay Route payout is already ${existing.status.toLowerCase()} — nothing to release`);
+  }
+
+  let payoutToRelease = null;
+
+  if (existing && existing.status === 'PROCESSING' && existing.razorpayTransferId) {
+    payoutToRelease = existing;
+  } else {
+    // No Razorpay Route payout on hold yet — create (and hold) one now.
+    // `force: true` bypasses only the AUTO-mode gate; every safety check
+    // still applies.
+    const initiated = await razorpaySettlementIntegration.initiateRazorpayTransferForSettlement(id, { force: true });
+
+    if (!initiated.ok) {
+      return res.status(400).json({ success: false, message: initiated.message || 'Could not create the Razorpay Route transfer' });
+    }
+    if (initiated.outcome !== 'TRANSFER_CREATED') {
+      // ALREADY_EXISTS / HELD / SKIPPED_MANUAL_MODE / NOT_TRANSFERABLE — none
+      // of these leave us with a freshly-held payout to release.
+      return res.status(200).json({
+        success: true,
+        message: initiated.message || `Settlement release not actionable right now (${initiated.outcome})`,
+        data: { settlementId: String(settlement._id), outcome: initiated.outcome, reason: initiated.reason || null, detail: initiated.detail || null },
+      });
+    }
+    payoutToRelease = initiated.payout;
+  }
+
+  const withSettlement = await Payout.findById(payoutToRelease._id)
+    .populate({ path: 'settlement' })
+    .lean();
+
+  const released = await razorpaySettlementIntegration.releaseSinglePayout(withSettlement);
+
+  await recordAudit({
+    action: released.ok ? 'SETTLEMENT_TRANSFER_RELEASED' : 'SETTLEMENT_TRANSFER_RELEASE_FAILED',
+    req,
+    entityType: 'Payout',
+    entityId: withSettlement._id,
+    before: { status: withSettlement.status },
+    after: { status: released.payout?.status || withSettlement.status },
+    reason: released.ok ? '' : (released.message || released.reason || ''),
+  });
+
+  if (!released.ok) {
+    return res.status(409).json({
+      success: false,
+      message: released.message || `Could not release this payout (${released.outcome})`,
+    });
+  }
+
+  return respondWithPayout(released.payout, 'Settlement released — Razorpay will settle the transfer to the seller');
+}
+
 // ---------------------------------------------------------------------------
 // Payouts
 // ---------------------------------------------------------------------------
@@ -357,8 +454,55 @@ async function getPayout(req, res) {
 }
 
 // POST /admin/accounting/payouts
+//
+// For method RAZORPAY_ROUTE this is also how a FAILED Route payout gets
+// retried: payoutService.createPayout alone only inserts a Payout row, it
+// never talks to Razorpay, so a plain retry through it would leave a Route
+// payout stuck with no transfer. Instead the settlement is re-run through
+// initiateRazorpayTransferForSettlement (force: true, so a MANUAL-mode
+// settlement can still be retried explicitly) — the same creator the
+// automation uses — which itself calls payoutService.createPayout internally.
 async function createPayout(req, res) {
   const { settlementId, method, notes } = req.body;
+
+  if ((method || '').toUpperCase() === 'RAZORPAY_ROUTE') {
+    if (!mongoose.isValidObjectId(settlementId)) {
+      return res.status(400).json({ success: false, message: 'Invalid settlement id' });
+    }
+
+    const initiated = await razorpaySettlementIntegration.initiateRazorpayTransferForSettlement(settlementId, { force: true });
+    if (!initiated.ok) {
+      return res.status(400).json({ success: false, message: initiated.message || 'Could not create the Razorpay Route transfer' });
+    }
+
+    if (initiated.outcome !== 'TRANSFER_CREATED' && initiated.outcome !== 'ALREADY_EXISTS') {
+      return res.status(200).json({
+        success: true,
+        message: initiated.message || `Not actionable right now (${initiated.outcome})`,
+        data: { settlementId, outcome: initiated.outcome, reason: initiated.reason || null, detail: initiated.detail || null },
+      });
+    }
+
+    await recordAudit({
+      action: 'PAYOUT_INITIATED',
+      req,
+      entityType: 'Payout',
+      entityId: initiated.payout._id,
+      after: {
+        payoutId: initiated.payout.payoutId,
+        settlement: String(settlementId),
+        method: 'RAZORPAY_ROUTE',
+        outcome: initiated.outcome,
+      },
+      reason: String(notes || '').trim(),
+    });
+
+    return res.status(initiated.outcome === 'TRANSFER_CREATED' ? 201 : 200).json({
+      success: true,
+      message: initiated.outcome === 'TRANSFER_CREATED' ? 'Razorpay Route transfer created and held' : initiated.message,
+      data: payoutService.serializePayout(initiated.payout),
+    });
+  }
 
   const result = await payoutService.createPayout({
     settlementId,
@@ -591,6 +735,7 @@ module.exports = {
   generateSettlements,
   holdSettlement,
   releaseSettlement,
+  releaseSettlementTransfer,
   listPayouts,
   getPayout,
   createPayout,

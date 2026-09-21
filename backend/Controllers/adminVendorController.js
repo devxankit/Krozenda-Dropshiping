@@ -4,6 +4,7 @@ const Product = require('../Models/Product');
 const Order = require('../Models/Order');
 const { serializeVendor, createVendorAccount } = require('./vendorAuthController');
 const { serializeDocument } = require('./vendorDocumentController');
+const razorpayRouteService = require('../services/razorpayRouteService');
 
 // Live SKU count and gross sales per vendor, read from the catalog and the
 // order line items that snapshot their vendor at order time — the directory
@@ -212,6 +213,76 @@ async function reviewVendorDocument(req, res) {
   });
 }
 
+// POST /admin/vendors/:id/razorpay/sync
+//
+// The human checkpoint the Route integration needs: the SDK's own
+// account-status-string -> onboardingStatus mapping
+// (razorpayRouteService.mapAccountStatusToOnboardingStatus) is not fully
+// confirmed, so an admin who has actually looked at this vendor's linked
+// account on the Razorpay dashboard can override what the automated sync
+// concluded. Ensures the linked account exists (idempotent — createLinkedAccount
+// no-ops if vendor.razorpay.accountId is already set), then lets the admin
+// set isSettlementEligible and/or onboardingStatus directly.
+//
+// No amount, bank detail, or anything financial is accepted here beyond the
+// linked-account bookkeeping itself — this endpoint only ever flips
+// eligibility flags on a vendor already reviewed elsewhere in this same
+// controller (updateVendorStatus / reviewVendorDocument).
+const RAZORPAY_ONBOARDING_STATUSES = ['NOT_STARTED', 'PENDING', 'ONBOARDING', 'KYC_PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED'];
+
+async function syncVendorRazorpay(req, res) {
+  const { id } = req.params;
+  const { isSettlementEligible, onboardingStatus } = req.body;
+
+  if (onboardingStatus !== undefined && !RAZORPAY_ONBOARDING_STATUSES.includes(onboardingStatus)) {
+    return res.status(400).json({ success: false, message: `onboardingStatus must be one of ${RAZORPAY_ONBOARDING_STATUSES.join(', ')}` });
+  }
+  if (isSettlementEligible !== undefined && typeof isSettlementEligible !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'isSettlementEligible must be true or false' });
+  }
+
+  const vendor = await Vendor.findById(id);
+  if (!vendor) {
+    return res.status(404).json({ success: false, message: 'Vendor not found' });
+  }
+
+  try {
+    // Idempotent: no-ops and returns the existing id if already linked.
+    await razorpayRouteService.createLinkedAccount(vendor);
+  } catch (err) {
+    return res.status(502).json({
+      success: false,
+      message: err?.error?.description || err.message || 'Could not create/sync the Razorpay linked account',
+    });
+  }
+
+  if (isSettlementEligible !== undefined) {
+    vendor.razorpay.isSettlementEligible = isSettlementEligible;
+  }
+  if (onboardingStatus !== undefined) {
+    vendor.razorpay.onboardingStatus = onboardingStatus;
+  }
+  vendor.razorpay.lastSyncedAt = new Date();
+  await vendor.save();
+
+  res.json({
+    success: true,
+    message: 'Vendor Razorpay linked account synced',
+    data: {
+      vendorId: String(vendor._id),
+      razorpay: {
+        accountId: vendor.razorpay.accountId || null,
+        onboardingStatus: vendor.razorpay.onboardingStatus,
+        kycStatus: vendor.razorpay.kycStatus || null,
+        isSettlementEligible: Boolean(vendor.razorpay.isSettlementEligible),
+        lastSyncedAt: vendor.razorpay.lastSyncedAt,
+      },
+      // Masked, never the full number — see razorpayRouteService.maskAccountNumber.
+      bankAccountMasked: razorpayRouteService.maskAccountNumber(vendor.bank?.accountNumber),
+    },
+  });
+}
+
 module.exports = {
   listVendors,
   getVendor,
@@ -219,4 +290,5 @@ module.exports = {
   updateVendorStatus,
   toggleVendorActive,
   reviewVendorDocument,
+  syncVendorRazorpay,
 };

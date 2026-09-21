@@ -13,6 +13,7 @@ import {
 } from '../../controllers/useFinanceController'
 import * as columns from '../../tableColumns/financeColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function SettlementsPage() {
   const navigate = useNavigate()
@@ -40,7 +41,7 @@ export function SettlementsPage() {
     <ListScreen
       title="Settlements"
       description="Payout batches, the 30-day hold window, and the maker–checker approval queue."
-      actions={<ExportMenu onExport={() => {}} />}
+      actions={<ExportMenu onExport={() => downloadTableCsv('settlements.csv', columns.SETTLEMENT_COLUMNS, list.items)} />}
       banner={
         <>
           {failed > 0 && (
@@ -95,7 +96,7 @@ export function VendorLedgersPage() {
       <ListScreen
         title="Vendor ledgers"
         description="What each vendor is owed today, and when they were last paid."
-        actions={<ExportMenu onExport={() => {}} />}
+        actions={<ExportMenu onExport={() => downloadTableCsv('vendor-ledgers.csv', columns.VENDOR_LEDGER_COLUMNS, list.items)} />}
         banner={
           <InlineAlert tone="info" title="Closing balance is a sub-ledger of account 2010">
             Opening plus credited less paid out. The sum of every closing balance below equals the

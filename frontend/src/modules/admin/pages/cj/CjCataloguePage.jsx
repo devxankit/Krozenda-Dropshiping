@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Badge, Button, Checkbox, Input, Modal, Pagination, Select, Skeleton } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, NoData, PageSkeleton } from '../../components/feedback'
@@ -755,9 +756,13 @@ function ProductGridSkeleton({ count = PAGE_SIZE }) {
 }
 
 export function CjCataloguePage() {
+  // The Category screen links here with ?categoryId=<cj leaf id> so opening
+  // a category from there lands with that filter already applied instead of
+  // an admin having to find it again in the dropdown.
+  const [searchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
   const [keywordInput, setKeywordInput] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const [categoryId, setCategoryId] = useState(() => searchParams.get('categoryId') || '')
   const [pageNum, setPageNum] = useState(1)
   const [openProductId, setOpenProductId] = useState(null)
   const [selectedProductIds, setSelectedProductIds] = useState(() => new Set())
@@ -765,6 +770,22 @@ export function CjCataloguePage() {
 
   const { data: categoryTree } = useCjCategoriesController()
   const categoryLeaves = flattenCjCategories(categoryTree)
+
+  // React Router keeps this component mounted across a ?categoryId= change
+  // (same route, only the query string differs), so the lazy useState
+  // initializer above only fires once — this render-phase adjustment (same
+  // pattern as CatalogFilterPanel's draft/applied sync) is what makes
+  // clicking a DIFFERENT category link from the Category screen, while
+  // already on this page, actually update the filter instead of doing
+  // nothing. A plain effect would do the same update one render late.
+  const categoryIdFromUrl = searchParams.get('categoryId') || ''
+  const [syncedUrlCategoryId, setSyncedUrlCategoryId] = useState(categoryIdFromUrl)
+  if (categoryIdFromUrl && categoryIdFromUrl !== syncedUrlCategoryId) {
+    setSyncedUrlCategoryId(categoryIdFromUrl)
+    setCategoryId(categoryIdFromUrl)
+    setSelectedProductIds(new Set())
+    setPageNum(1)
+  }
 
   const { data, isLoading, isFetching, error, refetch } = useCjCatalogueSearchController({
     keyword: keyword || undefined,

@@ -13,6 +13,8 @@ import {
   COMMISSION_RULE_STATE_TONE,
   COMMISSION_SCOPE_LABELS,
   ORDER_PAYMENT_METHOD_LABELS,
+  PAYOUT_METHOD_LABELS,
+  PAYOUT_METHOD_TONE,
   PAYOUT_STATUS_LABELS,
   PAYOUT_STATUS_TONE,
 } from '../constants'
@@ -540,7 +542,19 @@ export const PAYOUT_COLUMNS = Object.freeze([
     sortable: true,
     render: (row) => <MoneyCell amount={row.amount} />,
   },
-  { key: 'method', header: 'Method', width: '8rem', cellClassName: 'text-xs text-ink-muted' },
+  {
+    key: 'method',
+    header: 'Method',
+    width: '9rem',
+    render: (row) =>
+      row.method === 'RAZORPAY_ROUTE' ? (
+        <Badge tone={PAYOUT_METHOD_TONE.RAZORPAY_ROUTE} size="sm">
+          {PAYOUT_METHOD_LABELS.RAZORPAY_ROUTE}
+        </Badge>
+      ) : (
+        <span className="text-xs text-ink-muted">{PAYOUT_METHOD_LABELS[row.method] || row.method}</span>
+      ),
+  },
   {
     // Masked at the source — the API never sends the full number.
     key: 'bankAccountMasked',
@@ -551,10 +565,18 @@ export const PAYOUT_COLUMNS = Object.freeze([
   },
   {
     key: 'utr',
-    header: 'UTR',
-    width: '10rem',
+    header: 'UTR / Transfer ID',
+    width: '11rem',
     cellClassName: 'tabular text-xs text-ink-muted',
-    render: (row) => row.utr || <span className="text-ink-faint">—</span>,
+    render: (row) => {
+      const reference = row.utr || row.razorpayTransferId
+      if (!reference) return <span className="text-ink-faint">—</span>
+      return (
+        <span className="block max-w-[10rem] truncate" title={reference}>
+          {reference}
+        </span>
+      )
+    },
   },
   {
     key: 'status',
@@ -577,6 +599,7 @@ export const PAYOUT_TABS = Object.freeze([
   { id: 'all', label: 'All' },
   { id: 'PENDING', label: 'Pending' },
   { id: 'PROCESSING', label: 'Processing' },
+  { id: 'RELEASED', label: 'Release requested' },
   { id: 'COMPLETED', label: 'Completed' },
   { id: 'FAILED', label: 'Failed' },
   { id: 'CANCELLED', label: 'Cancelled' },

@@ -14,6 +14,7 @@ import {
 } from '../../tableColumns/dropshippingColumns'
 import { OverrideMarginModal } from '../../components/dropshipping/OverrideMarginModal'
 import { MarginRuleModal } from '../../components/dropshipping/MarginRuleModal'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function DropshippingProductsPage() {
   const list = useDropshipProductsController()
@@ -31,7 +32,7 @@ export function DropshippingProductsPage() {
         description="Products supplied via Model A dropshipping partners with cost prices, list prices and gross margin percentages."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('dropship-products.csv', DROPSHIP_PRODUCT_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.CATALOG_MANAGE}>
               <Button size="control" icon="sliders" onClick={() => setRuleModalOpen(true)}>
                 Margin rules

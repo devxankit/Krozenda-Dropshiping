@@ -39,6 +39,9 @@ export const productCardSchema = z.object({
   isTrending: z.boolean(),
   rating: z.number(),
   reviewsCount: z.number(),
+  // CJ-fulfilled product, shown as a small badge. Defaulted so a response
+  // served before this field existed still parses.
+  isDropship: z.boolean().default(false),
 })
 
 export const productCardListSchema = z.array(productCardSchema)
@@ -110,6 +113,7 @@ export const productSchema = z.object({
   isTrending: z.boolean(),
   rating: z.number(),
   reviewsCount: z.number(),
+  isDropship: z.boolean().default(false),
 })
 
 export const productListSchema = z.array(productSchema)

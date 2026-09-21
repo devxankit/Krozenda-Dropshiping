@@ -39,6 +39,8 @@ export const adminSessionSchema = z.object({
     id: z.string(),
     name: z.string(),
     email: z.string(),
+    image: z.string().nullable().optional(),
+    mobileNumber: z.string().nullable().optional(),
     roleLabel: z.string(),
     // Null means this account has never chosen a UI language — see
     // lib/i18n/languageStore.js, which treats that differently from English.

@@ -60,6 +60,21 @@ const accountingConfigSchema = new mongoose.Schema(
     // the cash — see task §12 and accountingPosting.recordCodRemittance.
     requireCodRemittanceBeforeSettlement: { type: Boolean, default: true },
 
+    // Whether an ELIGIBLE settlement's Razorpay Route transfer is created
+    // automatically (by a future cron job) or only on an admin's explicit
+    // manual-release action. AUTO is the default so eligible sellers keep
+    // getting paid without a human having to click through every batch;
+    // MANUAL is the escape hatch for a seller/category that needs a human
+    // to look before money moves.
+    sellerSettlementMode: { type: String, enum: ['AUTO', 'MANUAL'], default: 'AUTO' },
+    // Kept separate from settlementHoldDays above: that one governs when a
+    // delivered LINE becomes eligible to join a settlement batch; this one
+    // is the additional window (from a batch's eligibleAt) before its
+    // Razorpay transfer's on_hold_until releases the money to the seller —
+    // giving admin a further buffer to catch a problem on an already-batched
+    // settlement before Razorpay actually settles the transfer.
+    sellerSettlementWindowDays: { type: Number, default: 7, min: 0 },
+
     currency: { type: String, default: 'INR', immutable: true },
 
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

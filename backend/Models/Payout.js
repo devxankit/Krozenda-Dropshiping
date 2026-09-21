@@ -13,15 +13,37 @@ const mongoose = require('mongoose');
 // Bank details are SNAPSHOTTED MASKED at creation time. The full account
 // number is never copied here and never leaves the Vendor document (§8, §17).
 
-const STATUSES = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'];
-const METHODS = ['BANK_TRANSFER', 'UPI', 'MANUAL'];
+// RELEASED (added for Razorpay Route seller-settlement automation, sub-task
+// 4/11): a held Route transfer whose settlement hold has been released, but
+// which Razorpay has not yet confirmed as actually settled to the seller —
+// that confirmation is a later webhook sub-task, which will add whatever
+// RELEASED -> COMPLETED transition it needs once it exists. It sits strictly
+// between PROCESSING (transfer created, held) and COMPLETED (money
+// confirmed moved) so a payout is never marked COMPLETED before Razorpay has
+// actually said so.
+const STATUSES = ['PENDING', 'PROCESSING', 'RELEASED', 'COMPLETED', 'FAILED', 'CANCELLED'];
+const METHODS = ['BANK_TRANSFER', 'UPI', 'MANUAL', 'RAZORPAY_ROUTE'];
 
 // Only these moves are legal. A COMPLETED payout is terminal — money has
 // left, so it can never be walked back to PENDING; it is corrected with a
 // reversing ADJUSTMENT on the ledger instead.
 const ALLOWED_TRANSITIONS = Object.freeze({
   PENDING: ['PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'],
-  PROCESSING: ['COMPLETED', 'FAILED'],
+  // RELEASED: the settlementReleaseJob has atomically claimed this payout
+  // (PROCESSING -> RELEASED) and asked Razorpay to release the hold.
+  // COMPLETED direct from PROCESSING covers the edge case where Razorpay's
+  // transfer.processed webhook arrives before settlementReleaseJob's own
+  // PROCESSING -> RELEASED claim runs (the job polls on a 30-min cron; the
+  // webhook can beat it there) — already allowed pre-sub-task-5 for the
+  // manual/legacy payout flow, kept as-is.
+  PROCESSING: ['COMPLETED', 'FAILED', 'RELEASED'],
+  // If the release job's claim succeeds but the actual Razorpay release call
+  // then fails, it rolls back to FAILED (retry-eligible) rather than being
+  // stuck RELEASED with no transfer actually released. COMPLETED (added for
+  // sub-task 5/11, the route-transfers webhook) is the happy path: Razorpay's
+  // transfer.processed webhook confirms the released transfer actually
+  // settled to the seller.
+  RELEASED: ['FAILED', 'COMPLETED'],
   COMPLETED: [],
   FAILED: [],
   CANCELLED: [],
@@ -66,6 +88,10 @@ const payoutSchema = new mongoose.Schema(
     utr: { type: String, default: null },
     providerReference: { type: String, default: null },
 
+    // Razorpay Route transfer id and the destination linked account it went to.
+    razorpayTransferId: { type: String },
+    razorpayAccountId: { type: String },
+
     status: { type: String, enum: STATUSES, default: 'PENDING', index: true },
     failureReason: { type: String, default: '' },
     notes: { type: String, default: '', trim: true },
@@ -88,6 +114,9 @@ const payoutSchema = new mongoose.Schema(
 
 payoutSchema.index({ idempotencyKey: 1 }, { unique: true });
 payoutSchema.index({ vendor: 1, createdAt: -1 });
+// Unique per transfer, but only enforced when present — hard-prevents duplicate
+// Razorpay Route transfers per payout without rejecting docs that have none yet.
+payoutSchema.index({ razorpayTransferId: 1 }, { unique: true, sparse: true });
 
 payoutSchema.statics.canTransition = function canTransition(from, to) {
   return (ALLOWED_TRANSITIONS[from] || []).includes(to);

@@ -5,9 +5,9 @@ import { PageBody, PageHeader } from '../shell'
 import { ErrorState, PageSkeleton } from '../feedback'
 import { FormActions, UnsavedIndicator } from '../forms'
 
-// Ten settings screens behind one sub-navigation. Each page supplies only its
-// own sections; the rail, the header, the four states and the save bar are
-// decided here so none of them can drift.
+// A handful of settings screens behind one sub-navigation. Each page supplies
+// only its own sections; the rail, the header, the four states and the save
+// bar are decided here so none of them can drift.
 export function SettingsShell({
   title,
   description,
@@ -21,6 +21,7 @@ export function SettingsShell({
   onSave,
   onDiscard,
   isSaving = false,
+  hideNav = false,
   children,
 }) {
   const { pathname } = useLocation()
@@ -29,8 +30,9 @@ export function SettingsShell({
     <PageBody>
       <PageHeader title={title} description={description} actions={actions} />
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <nav className="flex shrink-0 flex-col gap-px lg:w-49" style={{ width: '12.25rem' }}>
+      <div className={`flex flex-col gap-5 ${hideNav ? '' : 'lg:flex-row lg:items-start'}`}>
+        {!hideNav && (
+          <nav className="flex shrink-0 flex-col gap-px lg:w-49" style={{ width: '12.25rem' }}>
           {SETTINGS_NAV.map((group) => (
             <div key={group.id} className="flex flex-col gap-px">
               <p className="px-3 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-ink-faint first:pt-0">
@@ -55,6 +57,7 @@ export function SettingsShell({
             </div>
           ))}
         </nav>
+      )}
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {controller?.isLoading && <PageSkeleton rows={3} />}

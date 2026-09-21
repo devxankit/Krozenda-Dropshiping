@@ -288,6 +288,12 @@ export const accountingConfigSchema = z.object({
   requireCodRemittanceBeforeSettlement: z.boolean(),
   currency: z.string(),
   updatedAt: z.string(),
+  // Optional: not yet in adminCommissionController's serializeConfig
+  // whitelist as of this sub-task — see accountingService.js note. Kept
+  // optional so this schema doesn't start failing the day the backend adds
+  // them, and doesn't fail today while it hasn't.
+  sellerSettlementMode: z.enum(['AUTO', 'MANUAL']).optional(),
+  sellerSettlementWindowDays: z.number().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -342,6 +348,11 @@ export const payoutSchema = z.object({
   initiatedBy: z.string(),
   createdAt: z.string(),
   processedAt: timestamp,
+  // Optional: payoutService.serializePayout does not put these on the wire
+  // yet even though Payout.razorpayTransferId/razorpayAccountId exist on the
+  // model (see backend/Models/Payout.js) — see accountingService.js note.
+  razorpayTransferId: z.string().nullable().optional(),
+  razorpayAccountId: z.string().nullable().optional(),
 })
 
 export const payoutListSchema = paged(payoutSchema)

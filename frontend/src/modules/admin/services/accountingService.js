@@ -149,6 +149,17 @@ export const holdSettlement = ({ id, reason }) =>
 export const releaseSettlement = ({ id }) =>
   write('post', `${BASE}/settlements/${id}/release`, { body: {}, schema: settlementSchema })
 
+// POST /admin/accounting/settlements/:id/release-transfer — drives the
+// settlement's Razorpay Route payout through create+hold+release right now
+// instead of waiting for settlementReleaseJob's cron. The response is NOT
+// always a Payout: when there is nothing actionable yet (already
+// released/completed, or blocked — NOT_TRANSFERABLE / HELD /
+// SKIPPED_MANUAL_MODE / ALREADY_EXISTS) the backend instead returns
+// `{ settlementId, outcome, reason, detail }` with success:true, so there is
+// no fixed schema here — the caller branches on whether `payoutId` is present.
+export const releaseSettlementTransfer = ({ id }) =>
+  write('post', `${BASE}/settlements/${id}/release-transfer`, { body: {} })
+
 // ---------------------------------------------------------------------------
 // Payouts
 // ---------------------------------------------------------------------------

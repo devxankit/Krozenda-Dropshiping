@@ -9,6 +9,7 @@ import { OrderFormModal } from '../../components/orders/OrderFormModal'
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { useOrderListController, useOrderWriteController } from '../../controllers/useOrderController'
 import { ORDER_COLUMNS, ORDER_FILTERS, ORDER_TABS } from '../../tableColumns/orderColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 // Reference implementation for every list screen in the panel. The whole
 // page is a controller call plus composition — the columns, the filters and
@@ -26,7 +27,7 @@ export function OrdersPage() {
         description={`${list.totalItems.toLocaleString('en-IN')} orders`}
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('orders.csv', ORDER_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.ORDERS_MANAGE}>
               <Button size="control" icon="add" onClick={() => setIsCreateOpen(true)}>
                 Create order

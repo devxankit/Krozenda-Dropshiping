@@ -674,6 +674,9 @@ function serializeProductCard(p) {
     isTrending: p.isTrending === true,
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
+    // Purely informational — a "Dropship" badge on the card. Checkout/COD
+    // rules still key off ProductFulfillmentMapping, never off this flag.
+    isDropship: p.fulfillmentProvider === 'CJ',
   };
 }
 
@@ -681,7 +684,7 @@ function serializeProductCard(p) {
 // most of the old payload, and `images` pulled every gallery entry for every
 // card just to render one thumbnail.
 const CARD_PROJECTION =
-  'name sku category brand price salePrice discountPercent stock images isFlashsale isTrending rating reviewsCount createdAt';
+  'name sku category brand price salePrice discountPercent stock images isFlashsale isTrending rating reviewsCount createdAt fulfillmentProvider';
 
 const SORT_OPTIONS = {
   newest: { createdAt: -1 },
@@ -717,6 +720,7 @@ async function listPublicProducts(req, res) {
     inStock,
     minDiscount,
     sort,
+    source,
   } = req.query;
 
   const { page, limit, skip } = readPagination(req.query, { defaultLimit: 20, maxLimit: 50 });
@@ -760,6 +764,14 @@ async function listPublicProducts(req, res) {
   }
 
   if (inStock === 'true' || inStock === true) query.stock = { $gt: 0 };
+
+  // "only dropship / only normal / all" — dropship products are the ones
+  // onboarded from CJ (Product.fulfillmentProvider === 'CJ'); everything else
+  // (seller stock and admin's own stock) is "normal". `$ne: 'CJ'` rather than
+  // an equality-to-null check so it also matches every product created
+  // before this field existed, which has no fulfillmentProvider at all.
+  if (source === 'dropship') query.fulfillmentProvider = 'CJ';
+  else if (source === 'normal') query.fulfillmentProvider = { $ne: 'CJ' };
 
   const minDiscountNum = Number(minDiscount);
   if (Number.isFinite(minDiscountNum) && minDiscountNum > 0) {
@@ -937,6 +949,7 @@ function serializePublicProduct(p) {
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
+    isDropship: p.fulfillmentProvider === 'CJ',
   };
 }
 

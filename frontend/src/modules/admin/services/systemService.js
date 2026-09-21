@@ -73,7 +73,31 @@ export const fetchGeneralSettings = one(
   '/admin/settings/general',
   fixtures.generalSettingsFixture,
   generalSettingsSchema,
+  true,
 )
+
+export async function updateGeneralSettings(payload) {
+  return mutateResource({
+    method: 'put',
+    path: '/admin/settings/general',
+    body: payload,
+    fixture: () => ({ platform: payload, toggles: [] }),
+    live: true,
+  })
+}
+
+export async function updateAdminProfile(payload) {
+  const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData
+  const { data } = await api.put('/admin/auth/profile', payload, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  })
+  return data.data
+}
+
+export async function changeAdminPassword(payload) {
+  const { data } = await api.put('/admin/auth/change-password', payload)
+  return data
+}
 export const fetchIntegrations = one(
   '/admin/settings/integrations',
   fixtures.integrationListFixture,

@@ -10,6 +10,7 @@ import {
   FORWARDED_ORDER_TABS,
 } from '../../tableColumns/dropshippingColumns'
 import { ReassignOrderModal } from '../../components/dropshipping/ReassignOrderModal'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function DropshippingOrdersPage() {
   const list = useDropshipOrdersController()
@@ -24,7 +25,7 @@ export function DropshippingOrdersPage() {
         description="Customer order buckets auto-routed to Model A dropshipping partners for packing, shipment and AWB tracking."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('forwarded-sub-orders.csv', FORWARDED_ORDER_COLUMNS, list.items)} />
             <PermissionGate permission={ADMIN_PERMISSIONS.ORDERS_MANAGE}>
               <Button size="control" icon="refresh" onClick={() => list.refetch?.()}>
                 Auto-assign queue

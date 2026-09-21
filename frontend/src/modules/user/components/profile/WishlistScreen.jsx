@@ -3,6 +3,7 @@ import { HiArrowLeft, HiHeart, HiOutlineShoppingBag, HiTrash } from 'react-icons
 import { Link, useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
+import { Footer } from '../../../../components/layout/Footer'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { EmptyResult, ProductGridSkeleton } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
@@ -201,6 +202,8 @@ export function WishlistScreen() {
           </div>
         )}
       </main>
+
+      <Footer />
 
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
         <BottomNavbar />

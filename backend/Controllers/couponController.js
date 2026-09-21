@@ -67,13 +67,11 @@ function validateCouponFields({ discountType, discountValue, startDate, endDate 
     return 'Enter a valid discount type';
   }
 
-  if (discountType !== 'FREE_SHIPPING') {
-    if (discountValue === null || discountValue <= 0) {
-      return 'Enter a valid discount value';
-    }
-    if (discountType === 'PERCENTAGE' && discountValue > 100) {
-      return 'Percentage discount cannot exceed 100';
-    }
+  if (discountValue === null || discountValue <= 0) {
+    return 'Enter a valid discount value';
+  }
+  if (discountType === 'PERCENTAGE' && discountValue > 100) {
+    return 'Percentage discount cannot exceed 100';
   }
 
   if (!startDate || !endDate) {
@@ -193,7 +191,7 @@ async function createCoupon(req, res) {
       code: normalizedCode,
       description: description ? String(description).trim() : '',
       discountType,
-      discountValue: discountType === 'FREE_SHIPPING' ? 0 : discountValueNum,
+      discountValue: discountValueNum,
       maxDiscountAmount: toNumber(maxDiscountAmount),
       minOrderAmount: toNumber(minOrderAmount, 0),
       minQuantity: toNumber(minQuantity),
@@ -282,7 +280,7 @@ async function updateCoupon(req, res) {
 
   if (description !== undefined) coupon.description = String(description).trim();
   coupon.discountType = nextDiscountType;
-  coupon.discountValue = nextDiscountType === 'FREE_SHIPPING' ? 0 : nextDiscountValue;
+  coupon.discountValue = nextDiscountValue;
   coupon.startDate = nextStart;
   coupon.endDate = nextEnd;
 
@@ -378,12 +376,7 @@ function filterEligibleItems(coupon, cartItems) {
   return cartItems.filter((item) => item[key] && idSet.has(String(item[key])));
 }
 
-function computeDiscountAmount(coupon, eligibleAmount, shippingFee) {
-  if (coupon.discountType === 'FREE_SHIPPING') {
-    const cap = coupon.maxDiscountAmount ?? shippingFee;
-    return Math.max(0, Math.min(shippingFee, cap));
-  }
-
+function computeDiscountAmount(coupon, eligibleAmount) {
   let raw =
     coupon.discountType === 'PERCENTAGE'
       ? (eligibleAmount * coupon.discountValue) / 100
@@ -446,7 +439,7 @@ async function evaluateCoupon(coupon, { userId, cartItems = [], cartTotal, shipp
     return { valid: false, reason: `Maximum quantity of ${coupon.maxQuantity} exceeded` };
   }
 
-  const discountAmount = computeDiscountAmount(coupon, eligibleAmount, shippingFee);
+  const discountAmount = computeDiscountAmount(coupon, eligibleAmount);
   if (discountAmount <= 0) {
     return { valid: false, reason: 'This coupon does not apply to your cart' };
   }

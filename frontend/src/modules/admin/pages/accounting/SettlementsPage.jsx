@@ -16,6 +16,7 @@ import {
   ADMIN_PERMISSIONS,
   PAYOUT_STATUS_LABELS,
   PAYOUT_STATUS_TONE,
+  SETTLEMENT_HOLD_REASON_LABELS,
 } from '../../constants'
 import * as columns from '../../tableColumns/accountingColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
@@ -37,6 +38,24 @@ const MANAGE = ADMIN_PERMISSIONS.ACCOUNTING_SETTLEMENT_MANAGE
 const PAYOUT_MANAGE = ADMIN_PERMISSIONS.ACCOUNTING_PAYOUT_MANAGE
 
 const PAYABLE_STATUSES = ['ELIGIBLE', 'PENDING', 'AWAITING_APPROVAL', 'FAILED']
+
+// Human-readable form of Settlement.holdReason. A hold reason that isn't in
+// this map (an older, hand-typed reason from before the automation existed)
+// is shown as-is rather than hidden.
+function holdReasonLabel(reason) {
+  if (!reason) return null
+  return SETTLEMENT_HOLD_REASON_LABELS[reason] || reason
+}
+
+// There is no join to Payout data on the settlements list or detail fetch
+// today, so there is no reliable client-side signal for "this settlement has
+// a Razorpay Route transfer sitting PROCESSING/held". Rather than restructure
+// that fetch for this button alone, the action is shown whenever a
+// settlement could plausibly still need a transfer, and the backend's own
+// no-op response (already released/completed, on hold, manual mode, no
+// payment to transfer against, …) is what actually tells the operator
+// whether anything happened — surfaced via the mutation's toast.
+const RELEASE_TRANSFER_STATUSES = ['ELIGIBLE', 'PENDING', 'AWAITING_APPROVAL', 'PROCESSING', 'FAILED']
 
 export function AccountingSettlementsPage() {
   const list = useSettlementListController()
@@ -66,8 +85,15 @@ export function AccountingSettlementsPage() {
           disabled: row.status !== 'ON_HOLD',
           onSelect: () => writer.release.run({ id: row.id }),
         },
+        {
+          label: 'Release transfer',
+          icon: 'send',
+          permission: MANAGE,
+          disabled: !RELEASE_TRANSFER_STATUSES.includes(row.status),
+          onSelect: () => writer.releaseTransfer.run({ id: row.id }),
+        },
       ]),
-    [writer.release],
+    [writer.release, writer.releaseTransfer],
   )
 
   function exportCsv() {
@@ -218,6 +244,19 @@ export function AccountingSettlementDetailPage() {
                 </PermissionGate>
               )
             )}
+            {RELEASE_TRANSFER_STATUSES.includes(data.status) && (
+              <PermissionGate permission={MANAGE}>
+                <Button
+                  variant="secondary"
+                  size="control"
+                  icon="send"
+                  isLoading={settlementWriter.releaseTransfer.isSubmitting}
+                  onClick={() => settlementWriter.releaseTransfer.run({ id: data.id })}
+                >
+                  Release transfer
+                </Button>
+              </PermissionGate>
+            )}
             {canPay && (
               <PermissionGate permission={PAYOUT_MANAGE}>
                 <Button size="control" icon="send" onClick={() => setPaying(true)}>
@@ -231,7 +270,8 @@ export function AccountingSettlementDetailPage() {
 
       {data.status === 'ON_HOLD' && (
         <InlineAlert tone="warning" title="This settlement is on hold">
-          {data.holdReason || 'No reason was recorded.'} Nothing can be paid out until it is released.
+          {holdReasonLabel(data.holdReason) || 'No reason was recorded.'} Nothing can be paid out until
+          it is released.
         </InlineAlert>
       )}
 

@@ -340,6 +340,8 @@ function serializeConfig(config) {
     shippingRevenueBearer: config.shippingRevenueBearer,
     settlementHoldDays: config.settlementHoldDays,
     requireCodRemittanceBeforeSettlement: config.requireCodRemittanceBeforeSettlement,
+    sellerSettlementMode: config.sellerSettlementMode,
+    sellerSettlementWindowDays: config.sellerSettlementWindowDays,
     currency: config.currency,
     updatedAt: config.updatedAt,
   };
@@ -390,6 +392,22 @@ async function updateAccountingConfig(req, res) {
 
   if (req.body.requireCodRemittanceBeforeSettlement !== undefined) {
     update.requireCodRemittanceBeforeSettlement = Boolean(req.body.requireCodRemittanceBeforeSettlement);
+  }
+
+  if (req.body.sellerSettlementMode !== undefined) {
+    const value = String(req.body.sellerSettlementMode).toUpperCase();
+    if (!['AUTO', 'MANUAL'].includes(value)) {
+      return res.status(400).json({ success: false, message: 'sellerSettlementMode must be AUTO or MANUAL' });
+    }
+    update.sellerSettlementMode = value;
+  }
+
+  if (req.body.sellerSettlementWindowDays !== undefined) {
+    const value = Number(req.body.sellerSettlementWindowDays);
+    if (!Number.isFinite(value) || value < 0) {
+      return res.status(400).json({ success: false, message: 'Enter a non-negative number of days for sellerSettlementWindowDays' });
+    }
+    update.sellerSettlementWindowDays = value;
   }
 
   if (Object.keys(update).length === 0) {

@@ -24,6 +24,7 @@ import {
   fetchCjProductDetail,
   onboardCjProduct,
   fetchOnboardedCjProducts,
+  fetchCjProductCategorySummary,
   updateCjMarkupSettings,
   bulkAdjustCjPricing,
   bulkOnboardCjProducts,
@@ -149,6 +150,14 @@ export function useCjBulkOnboardingController() {
 export function useCjOnboardedProductsController(params) {
   const query = useQuery({ queryKey: ['admin', 'cj', 'products', params], queryFn: () => fetchOnboardedCjProducts(params) })
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
+
+export function useCjProductCategorySummaryController() {
+  const query = useQuery({
+    queryKey: ['admin', 'cj', 'products', 'category-summary'],
+    queryFn: fetchCjProductCategorySummary,
+  })
+  return { categories: query.data || [], isLoading: query.isLoading, error: query.error, refetch: query.refetch }
 }
 
 export function useCjBulkPricingController() {

@@ -1,8 +1,9 @@
 import { Badge, Icon } from '../../../../components/ui'
 import { KeyValueList, SectionCard } from '../display'
 import { ReviewProgress } from './KycDecision'
+import { RazorpaySyncPanel } from './RazorpaySyncPanel'
 
-export function KycMetaRail({ application }) {
+export function KycMetaRail({ application, vendorId }) {
   const { business, payout, policyAcceptances, documents } = application
 
   return (
@@ -48,6 +49,8 @@ export function KycMetaRail({ application }) {
           exists — the platform may not hold and disburse vendor funds itself.
         </p>
       </SectionCard>
+
+      <RazorpaySyncPanel vendorId={vendorId || application.vendorId} routeLinkedHint={payout.routeLinked} />
 
       <SectionCard title="Policy acceptances">
         <ul className="flex flex-col gap-2.5 px-4 py-3.5">

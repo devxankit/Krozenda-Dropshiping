@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Badge,
   Button,
@@ -7,16 +7,17 @@ import {
   Modal,
   Pagination,
   Select,
-  Table,
+  Skeleton,
   Icon,
 } from '../../../../components/ui'
 import { ADMIN_ROUTES } from '../../../../config/routes'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, NoData } from '../../components/feedback'
 import { SectionCard } from '../../components/display'
-import { CJ_PRODUCT_COLUMNS, USD_TO_INR_RATE } from '../../tableColumns/cjColumns'
+import { USD_TO_INR_RATE } from '../../tableColumns/cjColumns'
 import {
   useCjOnboardedProductsController,
+  useCjProductCategorySummaryController,
   useCjBulkPricingController,
 } from '../../controllers/useCjController'
 
@@ -24,13 +25,11 @@ const PAGE_SIZE = 20
 
 const CJ_NAV_ITEMS = [
   { label: 'Dashboard', to: ADMIN_ROUTES.CJ_DASHBOARD, icon: 'dashboard' },
-  { label: 'Settings', to: ADMIN_ROUTES.CJ_SETTINGS, icon: 'settings' },
-  { label: 'Catalogue', to: ADMIN_ROUTES.CJ_CATALOGUE, icon: 'catalog' },
+  { label: 'Category', to: ADMIN_ROUTES.CJ_CATEGORY, icon: 'catalog' },
   { label: 'Products', to: ADMIN_ROUTES.CJ_PRODUCTS, icon: 'products' },
   { label: 'Orders', to: ADMIN_ROUTES.CJ_ORDERS, icon: 'orders' },
-  { label: 'Shipments', to: ADMIN_ROUTES.CJ_SHIPMENTS, icon: 'shipments' },
-  { label: 'Disputes', to: ADMIN_ROUTES.CJ_DISPUTES, icon: 'returns' },
-  { label: 'Sync Logs', to: ADMIN_ROUTES.CJ_SYNC_LOGS, icon: 'refresh' },
+  { label: 'Onboard Products', to: ADMIN_ROUTES.CJ_CATALOGUE, icon: 'add' },
+  { label: 'Settings', to: ADMIN_ROUTES.CJ_SETTINGS, icon: 'settings' },
 ]
 
 function applyClientRounding(rawPrice, rounding) {
@@ -327,12 +326,113 @@ function BulkPricingModal({
   )
 }
 
+const SYNC_TONE = { IDLE: 'success', SYNCING: 'brand', FAILED: 'danger' }
+const PRICING_TONE = { MANUAL: 'neutral', AUTOMATIC: 'brand' }
+
+function ProductCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <Skeleton className="aspect-square w-full" />
+      <div className="space-y-2 p-3">
+        <Skeleton className="h-3.5 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-3 w-1/3" />
+      </div>
+    </div>
+  )
+}
+
+// Every field an admin needs to judge one onboarded CJ product at a glance —
+// image, category, price, stock, pricing mode and sync health — in one card,
+// so this screen no longer requires a dense-table read to answer "is this
+// product okay?".
+function CjProductCard({ row, isSelected, onToggleSelect }) {
+  const product = row.product || {}
+  const image = product.images?.[0] || null
+  const productId = product._id || row._id
+
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-xl border bg-surface transition-all hover:shadow-sm ${
+        isSelected ? 'border-brand-400 ring-1 ring-brand-400' : 'border-border hover:border-brand-200'
+      }`}
+    >
+      <label className="absolute left-2 top-2 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border border-border bg-surface/90 shadow-xs backdrop-blur">
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5"
+          checked={isSelected}
+          onChange={() => onToggleSelect(productId)}
+          aria-label={`Select ${product.name || row.cjProductName || 'product'}`}
+        />
+      </label>
+
+      <div className="aspect-square w-full overflow-hidden bg-surface-muted">
+        {image ? (
+          <img src={image} alt={product.name || ''} className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-ink-faint">
+            <Icon name="catalog" className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5 p-3">
+        <p className="truncate text-xs font-semibold text-slate-900" title={product.name || row.cjProductName}>
+          {product.name || row.cjProductName || row.cjProductId}
+        </p>
+        <p className="text-2xs text-ink-muted">CJ #{row.cjProductId}</p>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {product.category?.name && (
+            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-medium text-ink-subtle">
+              {product.category.name}
+            </span>
+          )}
+          <Badge tone={PRICING_TONE[row.pricingMode] || 'neutral'} size="sm">
+            {row.pricingMode}
+          </Badge>
+          <Badge tone={SYNC_TONE[row.syncStatus] || 'neutral'} size="sm">
+            {row.syncStatus}
+          </Badge>
+        </div>
+
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-sm font-bold text-slate-900">
+            {product.price != null ? `₹${product.price.toLocaleString('en-IN')}` : '—'}
+          </span>
+          <span className={`text-2xs font-semibold ${product.stock > 0 ? 'text-ink-muted' : 'text-danger-600'}`}>
+            {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CjProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const categoryId = searchParams.get('categoryId') || ''
   const [pageNum, setPageNum] = useState(1)
+  const { categories } = useCjProductCategorySummaryController()
   const { data, isLoading, error, refetch } = useCjOnboardedProductsController({
     pageNum,
     pageSize: PAGE_SIZE,
+    ...(categoryId ? { categoryId } : {}),
   })
+
+  const handleCategoryChange = (value) => {
+    setPageNum(1)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) next.set('categoryId', value)
+        else next.delete('categoryId')
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   const [selectedKeys, setSelectedKeys] = useState([])
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
@@ -442,33 +542,61 @@ export function CjProductsPage() {
         title="Onboarded Products"
         description={`${total} total product(s) linked to CJ fulfillment.`}
         actions={
-          total > 0 && (
-            <span className="text-2xs text-ink-muted">
-              Select products to adjust profit margins in bulk
-            </span>
-          )
+          <div className="flex items-center gap-3">
+            <Select
+              id="cjProductCategoryFilter"
+              aria-label="Filter by category"
+              size="control"
+              value={categoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              options={[
+                { value: '', label: 'All categories' },
+                ...categories.map((cat) => ({
+                  value: cat.categoryId || '',
+                  label: `${cat.name} (${cat.productCount})`,
+                })),
+              ]}
+            />
+            {total > 0 && (
+              <span className="text-2xs text-ink-muted whitespace-nowrap">
+                Select products to adjust profit margins in bulk
+              </span>
+            )}
+          </div>
         }
       >
         {error ? (
           <ErrorState error={error} onRetry={refetch} />
+        ) : isLoading ? (
+          <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: PAGE_SIZE }, (_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <NoData
+            message="No CJ products onboarded yet"
+            hint="Browse the live CJ catalogue and onboard a product to see it here."
+          />
         ) : (
           <>
-            <Table
-              columns={CJ_PRODUCT_COLUMNS}
-              data={list}
-              getRowKey={(row) => row.product?._id || row._id}
-              selectable
-              selectedKeys={selectedKeys}
-              onSelectionChange={setSelectedKeys}
-              isLoading={isLoading}
-              density="compact"
-              emptyState={
-                <NoData
-                  message="No CJ products onboarded yet"
-                  hint="Browse the live CJ catalogue and onboard a product to see it here."
-                />
-              }
-            />
+            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {list.map((row) => {
+                const key = row.product?._id || row._id
+                return (
+                  <CjProductCard
+                    key={key}
+                    row={row}
+                    isSelected={selectedKeys.includes(key)}
+                    onToggleSelect={(id) =>
+                      setSelectedKeys((prev) =>
+                        prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id],
+                      )
+                    }
+                  />
+                )
+              })}
+            </div>
             {total > 0 && (
               <div className="border-t border-border-subtle p-3">
                 <Pagination

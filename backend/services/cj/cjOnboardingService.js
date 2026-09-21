@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../../Models/Product');
 const Category = require('../../Models/Category');
 const CjCategoryMapping = require('../../Models/CjCategoryMapping');
@@ -248,6 +249,7 @@ async function onboardProduct(
     description: description || cleanCjDescription(detail.description) || detail.productNameEn || '',
     variants: productVariants,
     isActive: true,
+    fulfillmentProvider: 'CJ',
   });
 
   // Back-fill the Krozenda variant _ids CJ has no concept of, now that
@@ -280,17 +282,84 @@ async function onboardProduct(
   return { product, mapping };
 }
 
-async function listOnboardedProducts({ pageNum = 1, pageSize = 20 } = {}) {
+// `categoryId` filters to CJ products onboarded into that Krozenda category —
+// the mapping table has no category of its own (only CJ's raw
+// `cjCategoryId`), so the filter has to run on Product first and then narrow
+// the mapping query to that set of product ids.
+//
+// Filtered on Product.category directly (not fulfillmentProvider) — every row
+// here is already scoped to `provider: 'CJ'` mappings, so re-checking the
+// denormalized flag would just make this depend on it being backfilled for
+// product's onboarded before that field existed.
+async function listOnboardedProducts({ pageNum = 1, pageSize = 20, categoryId = null } = {}) {
   const skip = (pageNum - 1) * pageSize;
+  const filter = { provider: 'CJ' };
+
+  if (categoryId) {
+    if (!mongoose.isValidObjectId(categoryId)) {
+      return { list: [], pageNum, pageSize, total: 0 };
+    }
+    const productIds = await Product.find({ category: categoryId }).distinct('_id');
+    filter.product = { $in: productIds };
+  }
+
   const [rows, total] = await Promise.all([
-    ProductFulfillmentMapping.find({ provider: 'CJ' })
+    ProductFulfillmentMapping.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
-      .populate('product', 'name price stock images isActive variants'),
-    ProductFulfillmentMapping.countDocuments({ provider: 'CJ' }),
+      .populate({
+        path: 'product',
+        select: 'name price stock images isActive variants category',
+        populate: { path: 'category', select: 'name' },
+      }),
+    ProductFulfillmentMapping.countDocuments(filter),
   ]);
   return { list: rows, pageNum, pageSize, total };
+}
+
+// Krozenda categories that currently hold at least one onboarded CJ product,
+// with a count each — backs the admin "Category" screen's cards and the
+// "Products" screen's category filter.
+//
+// Driven off ProductFulfillmentMapping (provider: 'CJ' is the real,
+// always-correct signal for "this product is CJ-fulfilled") rather than
+// Product.fulfillmentProvider — that field is only a browse-time
+// denormalization set at onboarding, and reading it here would silently
+// under-count every product onboarded before that field existed.
+async function getOnboardedCategorySummary() {
+  const rows = await ProductFulfillmentMapping.aggregate([
+    { $match: { provider: 'CJ' } },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'product',
+        foreignField: '_id',
+        as: 'product',
+        pipeline: [{ $project: { category: 1 } }],
+      },
+    },
+    { $unwind: '$product' },
+    { $group: { _id: '$product.category', count: { $sum: 1 } } },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'category',
+        pipeline: [{ $project: { name: 1, image: 1 } }],
+      },
+    },
+    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+    { $sort: { count: -1 } },
+  ]);
+
+  return rows.map((row) => ({
+    categoryId: row._id ? row._id.toString() : null,
+    name: row.category?.name || 'Uncategorised',
+    image: row.category?.image || null,
+    productCount: row.count,
+  }));
 }
 
 /**
@@ -518,6 +587,7 @@ module.exports = {
   onboardProduct,
   bulkOnboardProducts,
   listOnboardedProducts,
+  getOnboardedCategorySummary,
   bulkAdjustPricing,
   computeSellingPrice,
   cleanCjDescription,

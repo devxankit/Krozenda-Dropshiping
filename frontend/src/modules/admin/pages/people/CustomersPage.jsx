@@ -8,6 +8,7 @@ import {
   CUSTOMER_TABS,
   getCustomerActionColumn,
 } from '../../tableColumns/peopleColumns'
+import { downloadTableCsv } from '../../lib/exportCsv'
 
 export function CustomersPage() {
   const list = useCustomerListController()
@@ -29,7 +30,7 @@ export function CustomersPage() {
         description="Retail buyers and B2B accounts. A B2B account resolves a different price tier at checkout."
         actions={
           <>
-            <ExportMenu onExport={() => {}} />
+            <ExportMenu onExport={() => downloadTableCsv('customers.csv', CUSTOMER_COLUMNS, list.items)} />
             <Button size="control" icon="add" onClick={() => setIsModalOpen(true)}>
               Add customer
             </Button>

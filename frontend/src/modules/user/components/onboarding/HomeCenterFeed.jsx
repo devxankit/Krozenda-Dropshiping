@@ -19,6 +19,16 @@ import { SmartImage } from '../../../../components/ui/SmartImage'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
 import { ProductCard } from '../ecommerce/ProductCard'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
+import { useProductsController } from '../../controllers/useProductsController'
+
+// All Products' Product-type toggle. 'all' is what a fresh page load shows;
+// the other two ask the API to filter by Product.fulfillmentProvider so a
+// buyer can isolate CJ-sourced stock from the seller's/admin's own stock.
+const PRODUCT_TYPE_OPTIONS = [
+  { value: 'all', label: 'All products' },
+  { value: 'dropship', label: 'Dropship only' },
+  { value: 'normal', label: 'Regular stock only' },
+]
 
 const BANNER_ICON_MAP = {
   truck: HiTruck,
@@ -88,6 +98,17 @@ export function HomeCenterFeed({
   className = '',
 }) {
   const navigate = useNavigate()
+
+  // "All Products" strip — the one place on the dashboard that mixes
+  // dropship (CJ) and regular stock together with a toggle to tell them
+  // apart, since the Hot Deals / Trending rails above only ever show
+  // whatever happens to be flagged flashSale/trending.
+  const [productType, setProductType] = useState('all')
+  const { products: allProducts, isLoading: isAllProductsLoading } = useProductsController({
+    limit: 8,
+    sort: 'newest',
+    ...(productType !== 'all' ? { source: productType } : {}),
+  })
 
   // Category horizontal scroll controls
   const categoryScrollRef = useRef(null)
@@ -507,6 +528,69 @@ export function HomeCenterFeed({
             </div>
           </motion.section>
         ) : null}
+      </SectionErrorBoundary>
+
+      {/* 4.5 ALL PRODUCTS — mixes dropship (CJ) and regular stock, with a
+          toggle to tell them apart, so a buyer isn't stuck scrolling only
+          the curated Hot Deals / Trending rails to find dropship items. */}
+      <SectionErrorBoundary label="All products">
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+          variants={sectionFadeUp}
+          className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/70 shadow-card space-y-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">All Products</h2>
+            <Link
+              to={userPath.listing(productType !== 'all' ? { source: productType } : {})}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-0.5 group shrink-0"
+            >
+              <span>View All</span>
+              <HiChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          {/* Product-type toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            {PRODUCT_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setProductType(opt.value)}
+                className={`rounded-full px-3 py-1.5 text-[11px] font-bold border transition-colors ${
+                  productType === opt.value
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {isAllProductsLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className="bg-slate-50 rounded-2xl p-3 animate-pulse space-y-2">
+                  <div className="w-full aspect-square bg-slate-200 rounded-xl" />
+                  <div className="w-3/4 h-3 bg-slate-200 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : allProducts.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+              {allProducts.map((product) => (
+                <ProductCard key={product.id || product._id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs font-semibold text-slate-500 py-6 text-center">
+              No products match this filter yet.
+            </p>
+          )}
+        </motion.section>
       </SectionErrorBoundary>
 
       {/* 5. OFFICIAL BRAND STORES */}

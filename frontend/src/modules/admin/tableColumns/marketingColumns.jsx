@@ -48,7 +48,6 @@ const REVIEW_STATUS_TONE = Object.freeze({
 const CHANNEL_ICON = Object.freeze({ push: 'notifications', sms: 'phone', email: 'mail' })
 
 function discountLabel(row) {
-  if (row.discountType === 'FREE_SHIPPING') return 'Free shipping'
   if (row.discountType === 'PERCENTAGE') return `${row.discountValue}% off`
   return `₹${(row.discountValue / 100).toLocaleString('en-IN')} off`
 }
@@ -141,7 +140,6 @@ export const COUPON_FILTERS = Object.freeze([
     options: [
       { value: 'PERCENTAGE', label: 'Percentage' },
       { value: 'FIXED', label: 'Fixed amount' },
-      { value: 'FREE_SHIPPING', label: 'Free shipping' },
     ],
   },
 ])

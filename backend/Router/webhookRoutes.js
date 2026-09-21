@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const { handleShiprocketWebhook } = require('../Controllers/shipmentWebhookController');
 const { handleRazorpayWebhook } = require('../Controllers/paymentWebhookController');
 const { handleCjWebhook } = require('../Controllers/cjWebhookController');
+const { handleRouteWebhook } = require('../Controllers/routeWebhookController');
 
 const router = express.Router();
 
@@ -36,6 +37,14 @@ router.post('/', webhookRateLimiter, handleShiprocketWebhook);
 // payload has nothing in common with Shiprocket's and genuinely signs its
 // requests, so it gets its own handler rather than being guessed at here.
 router.post('/payments', webhookRateLimiter, handleRazorpayWebhook);
+
+// Razorpay Route's own event family (transfer.processed/failed,
+// settlement.processed) — a distinct sub-path from '/payments' even though
+// both are Razorpay, because they confirm different things (a captured
+// payment vs. a seller payout transfer) and this file's own rule above is
+// that a shared endpoint would have to guess the event family from the
+// payload alone.
+router.post('/route-transfers', webhookRateLimiter, handleRouteWebhook);
 
 // CJ Dropshipping's own sub-path — genuinely signs its payloads (HMAC-SHA256
 // over the raw body), so no path-name restriction like Shiprocket's applies.
