@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { HiArrowLeft } from 'react-icons/hi2'
 import { BottomWaveGraphic } from '../../../../components/common/BottomWaveGraphic'
 import { DesktopLeftShowcase } from '../../../../components/common/DesktopLeftShowcase'
+import { sanitizeIndianPhoneNumber } from '../../../../lib/phoneUtils'
 
 export function SignupScreen1Mobile({
   onBack = () => {},
@@ -79,13 +80,21 @@ export function SignupScreen1Mobile({
 
                 <input
                   type="tel"
-                  maxLength={10}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={16}
                   placeholder="Enter mobile number"
                   value={phone}
                   onChange={(e) => {
-                    let digits = e.target.value.replace(/\D/g, '')
-                    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
-                    setPhone(digits.slice(0, 10))
+                    const val = sanitizeIndianPhoneNumber(e.target.value)
+                    setPhone(val)
+                    if (error) setError('')
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault()
+                    const pasted = e.clipboardData?.getData('text') || ''
+                    const val = sanitizeIndianPhoneNumber(pasted)
+                    setPhone(val)
                     if (error) setError('')
                   }}
                   className="w-full bg-transparent text-xs font-bold text-slate-900 focus:outline-none placeholder-slate-400"

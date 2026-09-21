@@ -8,6 +8,7 @@ import {
 } from 'react-icons/hi2'
 import { USER_ROUTES } from '../../../config/routes'
 import { useAuthStore } from '../../../lib/authStore'
+import { sanitizeIndianPhoneNumber } from '../../../lib/phoneUtils'
 import { sendCustomerOtp, verifyCustomerOtp } from '../services/customerAuthService'
 
 export function LoginPage() {
@@ -56,9 +57,15 @@ export function LoginPage() {
   }
 
   const handlePhoneChange = e => {
-    let digits = e.target.value.replace(/\D/g,'')
-    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
-    const val = digits.slice(0,10)
+    const val = sanitizeIndianPhoneNumber(e.target.value)
+    setPhoneNumber(val)
+    if (error) setError(null)
+  }
+
+  const handlePhonePaste = e => {
+    e.preventDefault()
+    const pasted = e.clipboardData?.getData('text') || ''
+    const val = sanitizeIndianPhoneNumber(pasted)
     setPhoneNumber(val)
     if (error) setError(null)
   }
@@ -289,10 +296,11 @@ export function LoginPage() {
                         type="tel"
                         inputMode="numeric"
                         autoComplete="tel"
-                        maxLength={10}
+                        maxLength={16}
                         placeholder="Enter 10-digit number"
                         value={phoneNumber}
                         onChange={handlePhoneChange}
+                        onPaste={handlePhonePaste}
                         disabled={isLoading}
                         autoFocus
                         className="lp-text-input"

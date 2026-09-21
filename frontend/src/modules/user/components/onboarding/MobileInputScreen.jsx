@@ -11,6 +11,7 @@ import {
   HiArrowRight,
   HiLockClosed,
 } from 'react-icons/hi2'
+import { sanitizeIndianPhoneNumber } from '../../../../lib/phoneUtils'
 
 export function MobileInputScreen({
   onBack = () => {},
@@ -25,9 +26,16 @@ export function MobileInputScreen({
   const [localError, setLocalError] = useState('')
 
   const handlePhoneChange = (e) => {
-    let digits = e.target.value.replace(/\D/g, '')
-    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
-    setPhone(digits.slice(0, 10))
+    const val = sanitizeIndianPhoneNumber(e.target.value)
+    setPhone(val)
+    if (localError) setLocalError('')
+  }
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault()
+    const pasted = e.clipboardData?.getData('text') || ''
+    const val = sanitizeIndianPhoneNumber(pasted)
+    setPhone(val)
     if (localError) setLocalError('')
   }
 
@@ -119,10 +127,11 @@ export function MobileInputScreen({
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel"
-                maxLength={10}
+                maxLength={16}
                 placeholder="Enter 10-digit number"
                 value={phone}
                 onChange={handlePhoneChange}
+                onPaste={handlePhonePaste}
                 disabled={isLoading}
                 autoFocus
                 className="w-full bg-transparent text-sm sm:text-base font-bold text-slate-900 focus:outline-none placeholder-slate-400 tracking-wider disabled:opacity-60"
