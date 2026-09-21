@@ -162,32 +162,17 @@ export function CampaignsPage() {
 
 export function ReviewsPage() {
   const list = useReviewListController()
-  const flagged = list.tabCounts.flagged || 0
 
   return (
     <ListScreen
-      title="Review moderation"
-      description="Ratings and reviews waiting on a decision before they appear on the storefront."
+      title="Product reviews"
+      description="Ratings and reviews across admin, vendor and dropshipping products."
       actions={<ExportMenu onExport={() => downloadTableCsv('reviews.csv', columns.REVIEW_COLUMNS, list.items)} />}
-      banner={
-        flagged > 0 && (
-          <InlineAlert tone="danger" title={`${flagged} reviews are flagged`}>
-            Flagged reviews contain contact details, abuse, or come from an account with no
-            verified purchase of the product.
-          </InlineAlert>
-        )
-      }
       controller={list}
       columns={columns.REVIEW_COLUMNS}
       filters={columns.REVIEW_FILTERS}
       tabs={columns.REVIEW_TABS}
       searchPlaceholder="Product, SKU, buyer or title…"
-      selectable
-      bulkLabel="reviews selected"
-      bulkActions={[
-        { label: 'Publish', icon: 'check', onClick: () => {} },
-        { label: 'Reject', icon: 'close', tone: 'danger', onClick: () => {} },
-      ]}
       itemLabel="reviews"
       emptyIcon="reviews"
       emptyTitle="No reviews in this view"

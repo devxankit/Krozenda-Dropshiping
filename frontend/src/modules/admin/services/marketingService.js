@@ -47,7 +47,8 @@ export async function deleteCoupon({ id }) {
   return data.data
 }
 
-export const fetchReviews = list('/admin/marketing/reviews', fixtures.reviewListFixture, reviewListSchema)
+export const fetchReviews = (query) =>
+  fetchResource({ path: '/admin/marketing/reviews', params: params(query), fixture: () => fixtures.reviewListFixture(query), schema: reviewListSchema, live: true })
 
 export const fetchOffers = () =>
   fetchResource({ path: '/admin/marketing/offers', fixture: fixtures.offerListFixture, schema: offerListSchema })

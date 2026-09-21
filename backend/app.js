@@ -111,6 +111,7 @@ app.use('/admin/marketing/coupons', require('./Router/couponRoutes'));
 app.use('/admin/marketing/cms', require('./Router/cmsRoutes'));
 app.use('/admin/marketing/faqs', require('./Router/faqRoutes'));
 app.use('/admin/marketing/campaigns', require('./Router/adminCampaignRoutes'));
+app.use('/admin/marketing/reviews', require('./Router/adminReviewRoutes'));
 app.use('/admin/customers', require('./Router/customerRoutes'));
 app.use('/admin/vendors', require('./Router/adminVendorRoutes'));
 app.use('/admin/kyc', require('./Router/adminKycRoutes'));

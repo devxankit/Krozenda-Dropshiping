@@ -34,17 +34,6 @@ const CAMPAIGN_STATUS_TONE = Object.freeze({
   failed: 'danger',
 })
 
-const REVIEW_STATUS_LABELS = Object.freeze({
-  pending: 'Awaiting moderation',
-  published: 'Published',
-  rejected: 'Rejected',
-})
-const REVIEW_STATUS_TONE = Object.freeze({
-  pending: 'warning',
-  published: 'success',
-  rejected: 'danger',
-})
-
 const CHANNEL_ICON = Object.freeze({ push: 'notifications', sms: 'phone', email: 'mail' })
 
 function discountLabel(row) {
@@ -236,14 +225,26 @@ export const CAMPAIGN_TABS = Object.freeze([
 
 function Stars({ rating }) {
   return (
-    <span className="flex items-center gap-0.5" aria-label={`${rating} out of 5`}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Icon
-          key={star}
-          name="star"
-          className={`h-3 w-3 ${star <= rating ? 'text-warning-500' : 'text-border-strong'}`}
-        />
-      ))}
+    <span className="flex items-center gap-1" aria-label={`${rating} out of 5`}>
+      <span className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Icon
+            key={star}
+            name="star"
+            className={`h-3.5 w-3.5 ${star <= rating ? 'text-warning-500' : 'text-border-strong'}`}
+          />
+        ))}
+      </span>
+      <span className="text-2xs font-semibold text-ink-muted">{rating.toFixed(1)}</span>
+    </span>
+  )
+}
+
+function BuyerAvatar({ name }) {
+  const initial = (name || '?').trim().charAt(0).toUpperCase()
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-2xs font-semibold text-brand-700">
+      {initial}
     </span>
   )
 }
@@ -252,64 +253,65 @@ export const REVIEW_COLUMNS = Object.freeze([
   {
     key: 'rating',
     header: 'Rating',
-    width: '6.5rem',
+    width: '7.5rem',
     render: (row) => <Stars rating={row.rating} />,
   },
   {
     key: 'title',
     header: 'Review',
     render: (row) => (
-      <span className="block min-w-0">
-        <span className="flex items-center gap-2">
-          <span className="truncate text-xs font-semibold text-slate-900">{row.title}</span>
-          {row.flagged && (
-            <Badge tone="danger" size="sm" dot>
-              Flagged
-            </Badge>
-          )}
+      <span className="block min-w-0 py-0.5">
+        <span className="block truncate text-xs font-semibold text-slate-900">
+          {row.title || 'No title'}
         </span>
-        <span className="block truncate text-2xs text-ink-faint">{row.body}</span>
+        <span className="mt-0.5 block truncate text-2xs leading-relaxed text-ink-faint">{row.body}</span>
       </span>
     ),
   },
   {
     key: 'product',
     header: 'Product',
-    width: '14rem',
+    width: '15rem',
     render: (row) => (
-      <PrimaryCell title={row.product} subtitle={row.sku} to={adminPath.productDetail('prd-1')} />
+      <span className="block min-w-0 space-y-1 py-0.5">
+        <PrimaryCell title={row.product} subtitle={row.sku} to={adminPath.productDetail(row.productId)} />
+        <Badge tone={PRODUCT_TYPE_TONE[row.productType]} size="sm" dot>
+          {PRODUCT_TYPE_LABELS[row.productType]}
+        </Badge>
+      </span>
     ),
   },
   {
     key: 'buyer',
     header: 'Buyer',
-    width: '10rem',
+    width: '11rem',
     render: (row) => (
-      <span className="block">
-        <span className="block truncate text-xs text-ink-muted">{row.buyer}</span>
-        {row.verifiedPurchase ? (
-          <span className="text-2xs text-success-700">Verified purchase</span>
-        ) : (
-          <span className="text-2xs text-danger-700">Not a verified purchase</span>
-        )}
+      <span className="flex items-center gap-2">
+        <BuyerAvatar name={row.buyer} />
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-medium text-ink">{row.buyer}</span>
+          {row.verifiedPurchase ? (
+            <span className="flex items-center gap-1 text-2xs text-success-700">
+              <Icon name="check" className="h-3 w-3" />
+              Verified purchase
+            </span>
+          ) : (
+            <span className="text-2xs text-danger-700">Not verified</span>
+          )}
+        </span>
       </span>
     ),
   },
-  { key: 'submittedAt', header: 'Submitted', width: '8rem', cellClassName: 'text-xs text-ink-muted' },
   {
-    key: 'status',
-    header: 'Status',
-    width: '10.5rem',
-    render: (row) => (
-      <StatusPill
-        status={row.status}
-        labels={REVIEW_STATUS_LABELS}
-        tones={REVIEW_STATUS_TONE}
-        size="sm"
-      />
-    ),
+    key: 'submittedAt',
+    header: 'Submitted',
+    width: '8rem',
+    cellClassName: 'text-xs text-ink-muted whitespace-nowrap',
   },
 ])
+
+const PRODUCT_TYPE_LABELS = Object.freeze({ admin: 'Admin', vendor: 'Vendor', dropship: 'Dropshipping' })
+const PRODUCT_TYPE_TONE = Object.freeze({ admin: 'neutral', vendor: 'brand', dropship: 'accent' })
 
 export const REVIEW_FILTERS = Object.freeze([
   {
@@ -324,10 +326,9 @@ export const REVIEW_FILTERS = Object.freeze([
 
 export const REVIEW_TABS = Object.freeze([
   { id: 'all', label: 'All reviews' },
-  { id: 'pending', label: 'Awaiting moderation' },
-  { id: 'flagged', label: 'Flagged' },
-  { id: 'published', label: 'Published' },
-  { id: 'rejected', label: 'Rejected' },
+  { id: 'admin', label: 'Admin products' },
+  { id: 'vendor', label: 'Vendor products' },
+  { id: 'dropship', label: 'Dropshipping products' },
 ])
 
 const CMS_TONE = Object.freeze({ published: 'success', draft: 'warning', archived: 'neutral' })

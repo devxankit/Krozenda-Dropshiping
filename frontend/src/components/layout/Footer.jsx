@@ -153,7 +153,7 @@ export function Footer({ showOnMobile = false }) {
   ].filter((item) => Boolean(item.href))
 
   const quickLinks = publicSettings?.quickLinks?.length ? publicSettings.quickLinks : DEFAULT_QUICK_LINKS
-  const customerLinks = publicSettings?.customerLinks?.length ? publicSettings.customerLinks : DEFAULT_CUSTOMER_LINKS
+  const customerLinks = DEFAULT_CUSTOMER_LINKS
   const legalLinks = publicSettings?.legalLinks?.length ? publicSettings.legalLinks : DEFAULT_LEGAL_LINKS
 
   return (

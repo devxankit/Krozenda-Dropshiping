@@ -161,8 +161,10 @@ export const templateListSchema = z.object({
 export const reviewListSchema = paged(
   z.object({
     id: z.string(),
+    productId: z.string(),
     product: z.string(),
     sku: z.string(),
+    productType: z.enum(['admin', 'vendor', 'dropship']),
     buyer: z.string(),
     rating: z.number().int().min(1).max(5),
     title: z.string(),
