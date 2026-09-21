@@ -159,8 +159,20 @@ export function AiChatPanel({ assistant, onClose = () => {} }) {
         {/* Header */}
         <div className="relative z-10 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
           <div className="relative shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-sm">
-              <AiSparkIcon className="h-5 w-5 text-white" accent="#FBBF24" />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-900 ring-2 ring-blue-500/30 shadow-sm">
+              <img
+                src="/images/ai_assistant_avatar.jpg"
+                alt="AI Assistant"
+                className="h-full w-full object-cover scale-[1.14]"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fallback = e.currentTarget.parentElement?.querySelector('.ai-header-fallback')
+                  if (fallback) fallback.classList.remove('hidden')
+                }}
+              />
+              <div className="ai-header-fallback hidden flex items-center justify-center">
+                <AiSparkIcon className="h-5 w-5 text-white" accent="#38BDF8" />
+              </div>
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
           </div>
@@ -203,9 +215,20 @@ export function AiChatPanel({ assistant, onClose = () => {} }) {
         <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {isEmpty && (
             <div className="flex h-full flex-col items-center justify-center px-2 text-center">
-              <div className="relative mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-[0_8px_20px_-6px_rgba(37,99,235,0.55)]">
-                <span className="pointer-events-none absolute inset-x-2 top-1 h-3.5 rounded-full bg-white/25 blur-[6px]" />
-                <AiSparkIcon className="relative h-8 w-8 text-white" accent="#FBBF24" />
+              <div className="relative mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-900 ring-4 ring-blue-500/20 shadow-[0_8px_24px_-4px_rgba(37,99,235,0.4)]">
+                <img
+                  src="/images/ai_assistant_avatar.jpg"
+                  alt="AI Assistant"
+                  className="h-full w-full object-cover scale-[1.14]"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fallback = e.currentTarget.parentElement?.querySelector('.ai-welcome-fallback')
+                    if (fallback) fallback.classList.remove('hidden')
+                  }}
+                />
+                <div className="ai-welcome-fallback hidden flex items-center justify-center">
+                  <AiSparkIcon className="h-9 w-9 text-white" accent="#38BDF8" />
+                </div>
               </div>
               <h3 className="text-base font-extrabold text-slate-900">Hi! How can I help?</h3>
               <p className="mt-1 max-w-[16rem] text-xs font-medium text-slate-500">

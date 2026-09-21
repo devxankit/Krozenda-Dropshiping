@@ -49,25 +49,30 @@ export function AiAssistantLauncher() {
           type="button"
           onClick={open}
           aria-label="Open AI Assistant"
-          // Sits ABOVE the mobile bottom navbar rather than inside it: the
-          // navbar is `md:hidden fixed bottom-0` and roughly 60px tall, so
-          // bottom-[76px] clears it with room to spare, and the md breakpoint
-          // drops the button back down once the navbar is gone. z-40 keeps it
-          // under the navbar's z-50 and well under the chat panel's z-60.
-          className="group fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-[0_8px_24px_-6px_rgba(37,99,235,0.6)] ring-1 ring-white/50 transition-all duration-200 hover:scale-105 hover:shadow-[0_10px_28px_-6px_rgba(37,99,235,0.7)] active:scale-95 md:bottom-6 md:right-6"
+          className="group fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-indigo-600 to-blue-700 p-0.5 shadow-[0_8px_24px_-4px_rgba(37,99,235,0.65)] ring-2 ring-white/90 transition-all duration-300 hover:scale-110 hover:shadow-[0_12px_32px_-4px_rgba(37,99,235,0.85)] active:scale-95 md:bottom-6 md:right-6"
         >
-          {/* Soft halo — decorative only, so it must not swallow the tap. */}
-          <span className="pointer-events-none absolute inset-0 animate-pulse-glow rounded-full bg-blue-500/30" />
+          {/* Ambient pulse halo */}
+          <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full bg-blue-400/40 blur-sm" />
 
-          {/* Top-edge sheen. Without it a flat gradient circle reads as a
-              sticker; this is what makes it look like a raised object. */}
-          <span className="pointer-events-none absolute inset-x-2 top-1 h-4 rounded-full bg-white/25 blur-[6px]" />
+          {/* 3D AI Assistant Avatar Container */}
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-slate-900">
+            <img
+              src="/images/ai_assistant_avatar.jpg"
+              alt="AI Assistant"
+              className="h-full w-full object-cover scale-[1.14] transition-transform duration-300 group-hover:scale-125"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.parentElement?.querySelector('.ai-fallback-icon')
+                if (fallback) fallback.classList.remove('hidden')
+              }}
+            />
+            <div className="ai-fallback-icon hidden flex items-center justify-center">
+              <AiSparkIcon className="h-7 w-7 text-white drop-shadow-sm" accent="#38BDF8" />
+            </div>
+          </div>
 
-          <AiSparkIcon className="relative h-7 w-7 text-white drop-shadow-sm" accent="#FBBF24" />
-
-          {/* Badge sits ON the rim rather than floating clear of it, so the
-              button still reads as one object. */}
-          <span className="absolute -right-1 -top-1 rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-[1.35] tracking-wide text-slate-900 shadow-sm ring-2 ring-white">
+          {/* Gold AI Badge */}
+          <span className="absolute -right-1 -top-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-[1px] text-[9px] font-black leading-[1.35] tracking-wide text-slate-900 shadow-sm ring-2 ring-white">
             AI
           </span>
         </button>

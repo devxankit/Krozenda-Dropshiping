@@ -302,7 +302,7 @@ export function PublicCmsPage({ defaultSlug }) {
           const fallback = FALLBACK_CONTENT[slug] || {
             title: slug.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
             version: 'v1.0',
-            updatedAt: '2026',
+            updatedAt: `${new Date(Date.now()).getFullYear()}`,
             updatedBy: 'Compliance Team',
             requiresAcceptance: false,
             content: `# ${slug.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}\n\nOfficial documentation for KroZenda Marketplace.\n\nFor inquiries, please contact compliance@krozenda.com.`,
@@ -500,7 +500,7 @@ export function PublicCmsPage({ defaultSlug }) {
                     <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 font-medium pt-1">
                       <span>
                         Effective date:{' '}
-                        <strong className="text-slate-700">{pageData.updatedAt || 'August 2026'}</strong>
+                        <strong className="text-slate-700">{pageData.updatedAt || `${new Date(Date.now()).getFullYear()}`}</strong>
                       </span>
                       <span>•</span>
                       <span>
@@ -552,7 +552,7 @@ export function PublicCmsPage({ defaultSlug }) {
       </main>
 
       {/* Global Modern Footer */}
-      <Footer />
+      <Footer showOnMobile />
     </div>
   )
 }

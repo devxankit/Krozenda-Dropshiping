@@ -52,7 +52,7 @@ export function WebHeader() {
           <img
             src="/images/logo.png"
             alt="Krozenda Logo"
-            className="h-10 sm:h-12 md:h-13 w-auto object-contain py-0.5"
+            className="h-10 sm:h-12 md:h-13 w-auto object-contain py-0.5 filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
           />
         </Link>
 

@@ -85,6 +85,59 @@ const sectionFadeUp = {
   },
 }
 
+function BrandCardLogo({ brand }) {
+  const [imgSrc, setImgSrc] = useState(brand.logo)
+  const [hasError, setHasError] = useState(!brand.logo)
+
+  useEffect(() => {
+    setImgSrc(brand.logo)
+    setHasError(!brand.logo)
+  }, [brand.logo])
+
+  const handleError = () => {
+    const cleanName = (brand.name || '').trim().toLowerCase()
+    const nameMap = {
+      boat: 'boat',
+      'boat audio': 'boat',
+      noise: 'noise',
+      'noise wearables': 'noise',
+      philips: 'philips',
+      'philips personal care': 'philips',
+      prestige: 'prestige',
+      'prestige cookware': 'prestige',
+      'wow skin science': 'wow',
+      'krozenda essentials': 'krozenda',
+      "levi's": 'levis',
+    }
+    const slug = nameMap[cleanName] || cleanName.replace(/[^a-z0-9]/g, '')
+    const localFallback = `/brands/${slug}.svg`
+
+    if (imgSrc !== localFallback) {
+      setImgSrc(localFallback)
+    } else {
+      setHasError(true)
+    }
+  }
+
+  if (hasError || !imgSrc) {
+    return (
+      <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center uppercase shadow-xs">
+        {brand.name ? brand.name.slice(0, 2).toUpperCase() : 'BR'}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt={brand.name || 'Brand logo'}
+      loading="lazy"
+      onError={handleError}
+      className="max-h-9 max-w-[85px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+    />
+  )
+}
+
 export function HomeCenterFeed({
   categories = [],
   flashSale = [],
@@ -627,19 +680,7 @@ export function HomeCenterFeed({
                   className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-card hover:shadow-card-hover hover:border-blue-300 transition-all flex flex-col items-center justify-center group"
                 >
                   <div className="w-full h-12 flex items-center justify-center p-1">
-                    {brand.logo ? (
-                      <SmartImage
-                        src={brand.logo}
-                        alt={brand.name}
-                        sizes="100px"
-                        ratio="3 / 2"
-                        className="max-h-10 object-contain !bg-transparent"
-                      />
-                    ) : (
-                      <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center uppercase">
-                        {brand.name ? brand.name.slice(0, 2).toUpperCase() : 'BR'}
-                      </span>
-                    )}
+                    <BrandCardLogo brand={brand} />
                   </div>
                   <span className="mt-1.5 text-xs font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate w-full">
                     {brand.name}

@@ -17,7 +17,7 @@ const platformSettingsSchema = new mongoose.Schema(
     },
     copyrightText: {
       type: String,
-      default: '© 2026 KroZenda Technologies Pvt Ltd. All rights reserved.',
+      default: () => `© ${new Date(Date.now()).getFullYear()} KroZenda Technologies Pvt Ltd. All rights reserved.`,
       trim: true,
     },
 

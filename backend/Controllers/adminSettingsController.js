@@ -244,9 +244,9 @@ async function getPublicSettings(req, res) {
         footerTagline:
           platform.footerTagline ||
           'B2B wholesale and dropshipping marketplace connecting retailers with direct factory prices and express delivery.',
-        copyrightText:
-          platform.copyrightText ||
-          '© 2026 KroZenda Technologies Pvt Ltd. All rights reserved.',
+        copyrightText: platform.copyrightText
+          ? platform.copyrightText.replace(/\{year\}/gi, new Date(Date.now()).getFullYear())
+          : `© ${new Date(Date.now()).getFullYear()} KroZenda Technologies Pvt Ltd. All rights reserved.`,
         socialLinks: platform.socialLinks || {
           whatsapp: 'https://whatsapp.com',
           instagram: 'https://instagram.com',

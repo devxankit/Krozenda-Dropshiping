@@ -1,51 +1,69 @@
 import React from 'react'
 
 /**
- * The assistant's mark: a solid four-point sparkle with a smaller gold one
- * riding off its shoulder.
- *
- * Drawn here rather than pulled from react-icons because the stock outline
- * sparkle is a uniform hairline — at 20-24px on a saturated blue button its
- * strokes half disappear and it reads as a smudge. A filled glyph holds its
- * shape at every size the app uses.
- *
- * The gold accent is the one Krozenda colour the rest of the AI surface does
- * not already use (the logo is blue + gold), so the mark ties to the brand
- * instead of being a generic blue-on-blue sparkle. It is a separate path so
- * it can be recoloured — or dropped via `accent={null}` — without touching
- * the main shape.
- *
- * Both paths use the concave four-point star that has become the common
- * visual shorthand for AI, so it is recognisable before it is read.
+ * Modern AI Assistant Icon:
+ * Sleek futuristic robot chatbot vector with glowing cyan visor eyes, antenna signal,
+ * friendly expression, and golden AI accent sparkle.
  */
-export function AiSparkIcon({ className = '', accent = 'currentColor', title, ...rest }) {
+export function AiSparkIcon({ className = '', accent = '#38BDF8', title, ...rest }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       className={className}
-      // Decorative by default: the buttons that use this carry their own
-      // aria-label, so announcing the glyph again would only be noise.
       role={title ? 'img' : undefined}
       aria-hidden={title ? undefined : 'true'}
       focusable="false"
+      xmlns="http://www.w3.org/2000/svg"
       {...rest}
     >
       {title ? <title>{title}</title> : null}
 
-      {/* Main sparkle — centred low-left so the accent has room top-right. */}
-      <path
-        d="M10.5 3.2c0 4.6 3.7 8.3 8.3 8.3-4.6 0-8.3 3.7-8.3 8.3 0-4.6-3.7-8.3-8.3-8.3 4.6 0 8.3-3.7 8.3-8.3Z"
+      {/* Robot Antenna with pulse ball */}
+      <circle cx="12" cy="2.5" r="1.5" fill={accent || 'currentColor'} />
+      <path d="M12 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+
+      {/* Robot Head Body */}
+      <rect
+        x="4"
+        y="6"
+        width="16"
+        height="13"
+        rx="4.5"
         fill="currentColor"
       />
 
-      {/* Accent sparkle. */}
-      {accent ? (
-        <path
-          d="M19 2.2c0 1.9 1.6 3.5 3.5 3.5-1.9 0-3.5 1.6-3.5 3.5 0-1.9-1.6-3.5-3.5-3.5 1.9 0 3.5-1.6 3.5-3.5Z"
-          fill={accent}
-        />
-      ) : null}
+      {/* Futuristic Visor Screen */}
+      <rect
+        x="6"
+        y="8.2"
+        width="12"
+        height="7.5"
+        rx="2.5"
+        fill="#0F172A"
+      />
+
+      {/* Glowing Expressive Eyes */}
+      <ellipse cx="9" cy="11.8" rx="1.5" ry="1.6" fill={accent || '#38BDF8'} />
+      <ellipse cx="15" cy="11.8" rx="1.5" ry="1.6" fill={accent || '#38BDF8'} />
+
+      {/* Friendly Smile */}
+      <path
+        d="M10.5 13.8C11 14.5 13 14.5 13.5 13.8"
+        stroke={accent || '#38BDF8'}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+
+      {/* Ear / Headphone Nodes */}
+      <rect x="2.5" y="10" width="1.5" height="5" rx="0.75" fill="currentColor" opacity="0.85" />
+      <rect x="20" y="10" width="1.5" height="5" rx="0.75" fill="currentColor" opacity="0.85" />
+
+      {/* Floating Gold AI Sparkle */}
+      <path
+        d="M20.5 2.5c0 .8.6 1.4 1.4 1.4-.8 0-1.4.6-1.4 1.4 0-.8-.6-1.4-1.4-1.4.8 0 1.4-.6 1.4-1.4Z"
+        fill="#FBBF24"
+      />
     </svg>
   )
 }

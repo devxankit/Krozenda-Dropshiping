@@ -213,7 +213,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
         </div>
       </div>
 
-      {/* GLOBAL FOOTER */}
+      {/* FOOTER (Shown on Web, hidden in App) */}
       <Footer />
 
       {/* MOBILE BOTTOM NAVBAR (For screens < md) */}

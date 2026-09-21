@@ -1,9 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   HiEnvelope,
   HiPhone,
-  HiArrowUp,
 } from 'react-icons/hi2'
 import {
   FaXTwitter,
@@ -65,10 +64,19 @@ function FooterLink({ link, onScroll }) {
   )
 }
 
-export function Footer() {
+export function Footer({ showOnMobile = false }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  // Check: In native WebView / standalone app container, footer should NOT show.
+  const isStandaloneApp =
+    !showOnMobile &&
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)')?.matches ||
+      window.navigator?.standalone === true ||
+      Boolean(window.ReactNativeWebView) ||
+      Boolean(window.flutter_inappwebview))
 
   // Fetch dynamic platform settings configured by admin
   const { data: publicSettings } = useQuery({
@@ -82,8 +90,13 @@ export function Footer() {
         return null
       }
     },
+    enabled: !isStandaloneApp,
     staleTime: 60 * 1000,
   })
+
+  if (isStandaloneApp) {
+    return null
+  }
 
   // Dynamic values with elegant defaults
   const supportEmail = publicSettings?.supportEmail || 'support@krozenda.com'
@@ -92,9 +105,11 @@ export function Footer() {
   const footerTagline =
     publicSettings?.footerTagline ||
     'B2B wholesale and dropshipping marketplace connecting retailers with direct factory prices and express delivery.'
-  const copyrightText =
-    publicSettings?.copyrightText ||
-    '© 2026 KroZenda Technologies Pvt Ltd. All rights reserved.'
+  const currentYear = new Date(Date.now()).getFullYear()
+  const rawCopyright = publicSettings?.copyrightText?.trim()
+  const copyrightText = rawCopyright
+    ? rawCopyright.replace('{year}', currentYear)
+    : `© ${currentYear} KroZenda Technologies Pvt Ltd. All rights reserved.`
 
   const socialConfig = publicSettings?.socialLinks || {}
 
@@ -142,7 +157,11 @@ export function Footer() {
   const legalLinks = publicSettings?.legalLinks?.length ? publicSettings.legalLinks : DEFAULT_LEGAL_LINKS
 
   return (
-    <footer className="w-full bg-white text-slate-600 font-sans border-t border-slate-200/90 print:hidden select-none">
+    <footer
+      className={`w-full bg-white text-slate-600 font-sans border-t border-slate-200/90 print:hidden select-none ${
+        showOnMobile ? 'block' : 'hidden md:block'
+      }`}
+    >
       {/* Main Links Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-8">
@@ -151,13 +170,13 @@ export function Footer() {
             <Link
               to={USER_ROUTES.DASHBOARD}
               onClick={scrollToTop}
-              className="inline-flex items-center transition-opacity hover:opacity-90"
+              className="inline-flex items-center transition-all hover:opacity-95 hover:scale-[1.01]"
               title="KroZenda Home"
             >
               <img
                 src="/images/logo.png"
                 alt="Krozenda Logo"
-                className="h-8 sm:h-9 w-auto object-contain"
+                className="h-11 sm:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200"
               />
             </Link>
 
@@ -247,21 +266,10 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom Sub-Bar: Copyright & Back To Top */}
-      {/* pb-24 on mobile gives safe clearance above the fixed bottom navigation bar */}
-      <div className="border-t border-slate-100 bg-slate-50/80 px-4 sm:px-6 lg:px-8 py-3.5 pb-24 md:pb-3.5 text-[11px] text-slate-500">
-        <div className="max-w-7xl mx-auto relative flex items-center justify-center">
+      {/* Bottom Sub-Bar: Centered Copyright */}
+      <div className="border-t border-slate-100 bg-slate-50/80 px-4 sm:px-6 lg:px-8 py-3.5 text-[11px] text-slate-500">
+        <div className="max-w-7xl mx-auto flex items-center justify-center">
           <p className="text-center">{copyrightText}</p>
-
-          <button
-            type="button"
-            onClick={scrollToTop}
-            className="hidden sm:inline-flex absolute right-0 items-center gap-1 px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs transition-colors font-medium text-[11px]"
-            title="Back to top"
-          >
-            <span>Top</span>
-            <HiArrowUp className="w-3 h-3" />
-          </button>
         </div>
       </div>
     </footer>

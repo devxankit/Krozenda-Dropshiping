@@ -612,7 +612,7 @@ export function GeneralSettingsPage({ defaultTab }) {
                       size="control"
                       value={copyrightText}
                       onChange={(e) => setCopyrightText(e.target.value)}
-                      placeholder="© 2026 KroZenda Technologies Pvt Ltd. All rights reserved."
+                      placeholder={`© ${new Date(Date.now()).getFullYear()} KroZenda Technologies Pvt Ltd. All rights reserved.`}
                       description="Displayed at the bottom-left of the footer sub-bar"
                     />
                   </div>

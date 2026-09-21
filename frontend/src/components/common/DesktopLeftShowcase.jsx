@@ -310,7 +310,7 @@ export function DesktopLeftShowcase({
           <span className="text-slate-700">•</span>
           <span className="font-medium text-slate-400">GST Invoiced</span>
         </div>
-        <span className="text-slate-600">© 2026 KroZenda Technologies</span>
+        <span className="text-slate-600">© {new Date(Date.now()).getFullYear()} KroZenda Technologies</span>
       </div>
     </div>
   )

@@ -92,7 +92,7 @@ export function AuthShell({ title, description, children, footer, aside }) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-12 text-2xs text-ink-faint">
-          <span>© 2026 Krozenda · Operated by Appzeto</span>
+          <span>© {new Date(Date.now()).getFullYear()} Krozenda · Operated by Appzeto</span>
           {footer}
         </div>
       </div>
