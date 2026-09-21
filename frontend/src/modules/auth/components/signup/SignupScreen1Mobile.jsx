@@ -83,7 +83,9 @@ export function SignupScreen1Mobile({
                   placeholder="Enter mobile number"
                   value={phone}
                   onChange={(e) => {
-                    setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                    let digits = e.target.value.replace(/\D/g, '')
+                    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
+                    setPhone(digits.slice(0, 10))
                     if (error) setError('')
                   }}
                   className="w-full bg-transparent text-xs font-bold text-slate-900 focus:outline-none placeholder-slate-400"

@@ -25,8 +25,9 @@ export function MobileInputScreen({
   const [localError, setLocalError] = useState('')
 
   const handlePhoneChange = (e) => {
-    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10)
-    setPhone(digitsOnly)
+    let digits = e.target.value.replace(/\D/g, '')
+    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
+    setPhone(digits.slice(0, 10))
     if (localError) setLocalError('')
   }
 

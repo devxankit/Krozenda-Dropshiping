@@ -56,7 +56,9 @@ export function LoginPage() {
   }
 
   const handlePhoneChange = e => {
-    const val = e.target.value.replace(/\D/g,'').slice(0,10)
+    let digits = e.target.value.replace(/\D/g,'')
+    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2)
+    const val = digits.slice(0,10)
     setPhoneNumber(val)
     if (error) setError(null)
   }

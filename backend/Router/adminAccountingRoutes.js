@@ -1,5 +1,4 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const accounting = require('../Controllers/adminAccountingController');
 const commission = require('../Controllers/adminCommissionController');
 const settlement = require('../Controllers/adminSettlementController');
@@ -36,19 +35,6 @@ const REFUND_MANAGE = requirePermission('admin.accounting.refund.manage');
 const REPORT_VIEW = any('admin.accounting.report.view', 'admin.accounting.view');
 const ADJUSTMENT_MANAGE = requirePermission('admin.accounting.post');
 
-// Money-moving endpoints get their own throttle on top of the global one.
-// Not a substitute for the idempotency keys in services/payoutService.js —
-// those are what actually prevent a duplicate payout — but it keeps a
-// misbehaving client or a stuck retry loop from hammering them.
-const moneyMovementLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: () => process.env.ENV === 'test',
-  message: { success: false, message: 'Too many payment operations. Please slow down.' },
-});
-
 router.use(protectAdmin);
 
 // --- overview --------------------------------------------------------------
@@ -58,14 +44,14 @@ router.get('/overview', VIEW, accounting.getOverview);
 // The two static paths are declared before '/:id' so "cod-pending" is never
 // parsed as a transaction id.
 router.get('/transactions/cod-pending', TRANSACTIONS_VIEW, accounting.listPendingCod);
-router.post('/transactions/cod-remittance', moneyMovementLimiter, ADJUSTMENT_MANAGE, accounting.recordCodRemittance);
+router.post('/transactions/cod-remittance', ADJUSTMENT_MANAGE, accounting.recordCodRemittance);
 router.get('/transactions', TRANSACTIONS_VIEW, accounting.listTransactions);
 router.get('/transactions/:id', TRANSACTIONS_VIEW, accounting.getTransaction);
 
 // --- seller ledger ---------------------------------------------------------
 router.get('/seller-ledger', LEDGER_VIEW, accounting.listSellerLedgers);
 router.get('/seller-ledger/:sellerId', LEDGER_VIEW, accounting.getSellerLedger);
-router.post('/seller-ledger/:sellerId/adjustments', moneyMovementLimiter, ADJUSTMENT_MANAGE, accounting.createAdjustment);
+router.post('/seller-ledger/:sellerId/adjustments', ADJUSTMENT_MANAGE, accounting.createAdjustment);
 
 // --- commissions -----------------------------------------------------------
 router.get('/commissions/options', COMMISSION_VIEW, commission.getCommissionRuleOptions);
@@ -84,19 +70,19 @@ router.get('/settlements', SETTLEMENT_VIEW, settlement.listSettlements);
 router.get('/settlements/:id', SETTLEMENT_VIEW, settlement.getSettlement);
 router.post('/settlements/:id/hold', SETTLEMENT_MANAGE, settlement.holdSettlement);
 router.post('/settlements/:id/release', SETTLEMENT_MANAGE, settlement.releaseSettlement);
-router.post('/settlements/:id/release-transfer', moneyMovementLimiter, SETTLEMENT_MANAGE, settlement.releaseSettlementTransfer);
+router.post('/settlements/:id/release-transfer', SETTLEMENT_MANAGE, settlement.releaseSettlementTransfer);
 
 // --- payouts ---------------------------------------------------------------
 router.get('/payouts', PAYOUT_VIEW, settlement.listPayouts);
-router.post('/payouts', moneyMovementLimiter, PAYOUT_MANAGE, settlement.createPayout);
+router.post('/payouts', PAYOUT_MANAGE, settlement.createPayout);
 router.get('/payouts/:id', PAYOUT_VIEW, settlement.getPayout);
-router.patch('/payouts/:id/status', moneyMovementLimiter, PAYOUT_MANAGE, settlement.updatePayoutStatus);
+router.patch('/payouts/:id/status', PAYOUT_MANAGE, settlement.updatePayoutStatus);
 
 // --- refunds ---------------------------------------------------------------
 router.get('/refunds', REFUND_VIEW, settlement.listRefunds);
 router.get('/refunds/:id', REFUND_VIEW, settlement.getRefund);
-router.post('/refunds/:id/approve', moneyMovementLimiter, REFUND_MANAGE, settlement.approveRefund);
-router.post('/refunds/:id/reject', moneyMovementLimiter, REFUND_MANAGE, settlement.rejectRefund);
+router.post('/refunds/:id/approve', REFUND_MANAGE, settlement.approveRefund);
+router.post('/refunds/:id/reject', REFUND_MANAGE, settlement.rejectRefund);
 
 // --- reports & audit -------------------------------------------------------
 router.get('/reports', REPORT_VIEW, reports.listReports);
