@@ -57,7 +57,7 @@ export function VendorLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-modal flex lg:hidden">
           <div className="fixed inset-0 bg-slate-900/40" onClick={() => setMobileOpen(false)} />
-          <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-surface">
+          <div className="relative flex max-w-xs flex-col bg-surface shadow-overlay">
             <VendorSidebar
               collapsed={false}
               onToggle={() => setMobileOpen(false)}

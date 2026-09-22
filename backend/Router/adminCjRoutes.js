@@ -6,6 +6,7 @@ const {
   testConnection,
   refreshToken,
   updateMarkupSettings,
+  updateVisibilitySettings,
 } = require('../Controllers/adminCjController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 
@@ -19,5 +20,6 @@ router.post('/settings/disconnect', requirePermission('admin.cj.settings'), disc
 router.post('/settings/test-connection', requirePermission('admin.cj.settings'), testConnection);
 router.post('/settings/refresh-token', requirePermission('admin.cj.settings'), refreshToken);
 router.post('/settings/markup', requirePermission('admin.cj.settings'), updateMarkupSettings);
+router.post('/settings/visibility', requirePermission('admin.cj.settings'), updateVisibilitySettings);
 
 module.exports = router;

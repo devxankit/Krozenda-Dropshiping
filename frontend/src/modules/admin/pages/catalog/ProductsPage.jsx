@@ -771,8 +771,8 @@ export function ProductsPage() {
                   </div>
 
                   {/* Card Bottom Footer */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-y-2">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <div className="flex items-center gap-1.5" title="Storefront Visibility">
                         <Switch
                           id={`product-grid-active-${item.id}`}

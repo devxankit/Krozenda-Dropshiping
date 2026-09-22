@@ -93,15 +93,22 @@
     }
   }
 
-  /* An input smaller than 16px makes iOS zoom the whole page on focus, and it
-     does not zoom back out — the classic "the app is stuck zoomed in after I
-     typed in the search box" WebView bug (§100). */
-  @media (max-width: 767px) {
-    input:not([type='checkbox']):not([type='radio']),
-    select,
-    textarea {
-      font-size: 16px;
-    }
+}
+
+/* An input smaller than 16px makes iOS zoom the whole page on focus, and it
+   does not zoom back out — the classic "the app is stuck zoomed in after I
+   typed in the search box" WebView bug (§100).
+   Deliberately OUTSIDE @layer base: Tailwind's cascade layers make ANY
+   utility class (text-sm, text-xs, ...) win over a same- or higher-specificity
+   rule inside `base`, regardless of source order — so this was being silently
+   defeated on every Input/Select/Textarea that used a smaller text size
+   (i.e. almost all of them, via their `size` prop). Unlayered CSS outranks
+   every Tailwind layer, so this now actually applies. */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 

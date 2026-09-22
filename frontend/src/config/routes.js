@@ -206,6 +206,12 @@ export const ADMIN_ROUTES = Object.freeze({
   ACCOUNTING_REPORTS: '/admin/accounting/reports',
   ACCOUNTING_REPORT_DETAIL: '/admin/accounting/reports/:reportKey',
 
+  // ---- accounts MVP (separate from accounting above) ----------------------
+  ACCOUNTS_DASHBOARD: '/admin/accounts/dashboard',
+  ACCOUNTS_PAYOUTS: '/admin/accounts/payouts',
+  ACCOUNTS_TRANSACTIONS: '/admin/accounts/transactions',
+  ACCOUNTS_LEDGER: '/admin/accounts/ledger',
+
   // ---- dropshipping -------------------------------------------------------
   DROPSHIPPING_OVERVIEW: '/admin/dropshipping',
   DROPSHIPPING_PARTNERS: '/admin/dropshipping/partners',

@@ -35,6 +35,12 @@ export function OrderSummaryRail({ order, onStatusChange, isUpdatingStatus }) {
     order
   const nextOptions = NEXT_STATUS[order.status] || []
 
+  // Accounts MVP — computed client-side from the order already loaded here,
+  // no new backend endpoint. Vendor cost is the sum of each line's price *
+  // quantity (both already in paise, same as the rest of this order object).
+  const vendorCost = (order.items || []).reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const estimatedProfit = total - vendorCost
+
   return (
     <div className="flex flex-col gap-4">
       {nextOptions.length > 0 && (
@@ -62,6 +68,17 @@ export function OrderSummaryRail({ order, onStatusChange, isUpdatingStatus }) {
           <TotalRow label="Shipping" amount={shippingFee} />
           {discountAmount > 0 && <TotalRow label="Discount" amount={discountAmount} negative />}
           <TotalRow label="Total" amount={total} strong />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Financial Summary">
+        <div className="px-4 py-3">
+          <TotalRow label="Subtotal" amount={subtotal} />
+          {discountAmount > 0 && <TotalRow label="Discount" amount={discountAmount} negative />}
+          <TotalRow label="Shipping" amount={shippingFee} />
+          <TotalRow label="Total (customer paid)" amount={total} strong />
+          <TotalRow label="Vendor cost" amount={vendorCost} />
+          <TotalRow label="Estimated profit" amount={estimatedProfit} strong />
         </div>
       </SectionCard>
 

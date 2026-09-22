@@ -18,6 +18,7 @@ function serializeSettings(settings) {
     defaultMarkupType: settings.defaultMarkupType || 'PERCENT',
     defaultMarkupValue: settings.defaultMarkupValue ?? settings.defaultMarkupPercent ?? 30,
     priceRounding: settings.priceRounding || 'ROUND',
+    dropshippingEnabled: settings.dropshippingEnabled !== false,
     updatedAt: settings.updatedAt,
   };
 }
@@ -130,4 +131,42 @@ async function updateMarkupSettings(req, res) {
   });
 }
 
-module.exports = { getSettings, connect, disconnect, testConnection, refreshToken, updateMarkupSettings };
+// POST /admin/cj/settings/visibility
+// body: { dropshippingEnabled }
+//
+// The single global switch for "Show Dropshipping Products to Customers".
+// Turning it off does not touch Product data or the admin/vendor catalog —
+// it only hides CJ-fulfilled products (Product.fulfillmentProvider === 'CJ')
+// from the buyer-facing listing/detail endpoints, see productController.
+async function updateVisibilitySettings(req, res) {
+  const { dropshippingEnabled } = req.body || {};
+
+  if (typeof dropshippingEnabled !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'dropshippingEnabled must be true or false' });
+  }
+
+  const settings = await CjSettings.getSettings();
+  settings.dropshippingEnabled = dropshippingEnabled;
+  if (req.admin?._id) {
+    settings.updatedBy = req.admin._id;
+  }
+  await settings.save();
+
+  res.json({
+    success: true,
+    message: dropshippingEnabled
+      ? 'Dropshipping products are now visible to customers'
+      : 'Dropshipping products are now hidden from customers',
+    data: serializeSettings(settings),
+  });
+}
+
+module.exports = {
+  getSettings,
+  connect,
+  disconnect,
+  testConnection,
+  refreshToken,
+  updateMarkupSettings,
+  updateVisibilitySettings,
+};

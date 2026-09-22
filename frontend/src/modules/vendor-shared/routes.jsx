@@ -15,6 +15,7 @@ import { ReturnsPage } from './pages/ReturnsPage'
 import { ReviewsPage } from './pages/ReviewsPage'
 import { EarningsPage } from './pages/SettlementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { ReportsPage } from './pages/ReportsPage'
 import { TicketsPage } from './pages/TicketsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { StoreProfilePage } from './pages/StoreProfilePage'
@@ -43,6 +44,7 @@ export const vendorSharedRoutes = (
       <Route path="reviews" element={<ReviewsPage />} />
       <Route path="earnings" element={<EarningsPage />} />
       <Route path="analytics" element={<AnalyticsPage />} />
+      <Route path="reports" element={<ReportsPage />} />
       <Route path="tickets" element={<TicketsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="profile" element={<StoreProfilePage />} />

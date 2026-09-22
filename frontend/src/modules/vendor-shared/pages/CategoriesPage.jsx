@@ -88,7 +88,7 @@ export function CategoriesPage() {
   const FILTER_TABS = [
     { id: 'all', label: 'All Categories', count: totalCount },
     { id: 'approved', label: 'Approved', count: approvedCount },
-    { id: 'mine', label: 'Proposed by Me', count: mineCount },
+    { id: 'mine', label: 'Added by Me', count: mineCount },
   ]
 
   const tableColumns = [
@@ -144,7 +144,7 @@ export function CategoriesPage() {
             </span>
           </div>
         }
-        description="Pick an approved category when adding a product. Need something new? Propose it — it goes live once admin approves it."
+        description="Pick an approved category when adding a product. Need something new? Add it here — it goes live once admin approves it."
         actions={
           <button
             type="button"
@@ -152,7 +152,7 @@ export function CategoriesPage() {
             className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20"
           >
             <Icon name="add" className="h-3.5 w-3.5" />
-            <span>Propose Category</span>
+            <span>Add Category</span>
           </button>
         }
       />
@@ -287,7 +287,7 @@ export function CategoriesPage() {
             {searchQuery || statusFilter !== 'all' ? 'No matching categories' : 'No categories yet'}
           </h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm">
-            {searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter tab.' : 'Propose your first category to get started.'}
+            {searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter tab.' : 'Add your first category to get started.'}
           </p>
         </div>
       ) : viewMode === 'grid' ? (
@@ -318,7 +318,7 @@ export function CategoriesPage() {
                     <Icon name="calendar" className="h-3 w-3 text-slate-400" />
                     {formatDate(item.createdAt)}
                   </span>
-                  {item.mine && <span className="rounded-full bg-brand-50 px-1.5 py-0.5 font-semibold text-brand-700">Proposed by you</span>}
+                  {item.mine && <span className="rounded-full bg-brand-50 px-1.5 py-0.5 font-semibold text-brand-700">Added by you</span>}
                 </div>
                 {item.mine && item.approvalStatus === 'REJECTED' && item.rejectionReason && (
                   <p className="mt-1.5 text-2xs text-danger-600">{item.rejectionReason}</p>

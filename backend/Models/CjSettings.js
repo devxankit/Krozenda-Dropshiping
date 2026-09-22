@@ -43,6 +43,13 @@ const cjSettingsSchema = new mongoose.Schema(
       default: 'ROUND',
     },
 
+    // Global storefront kill-switch for CJ-fulfilled products (Product.fulfillmentProvider
+    // === 'CJ'). When false, listPublicProducts/getPublicProduct/listRelatedProducts
+    // (productController) exclude those products from the customer-facing site, same as
+    // any other "not publicly visible" product — the products themselves, their vendor
+    // records and the admin/vendor catalog screens are untouched.
+    dropshippingEnabled: { type: Boolean, default: true },
+
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }

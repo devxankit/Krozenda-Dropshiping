@@ -24,6 +24,7 @@ import {
   fetchVendorOrders,
   fetchVendorPayouts,
   fetchVendorProducts,
+  fetchVendorReports,
   fetchVendorReturns,
   recommendOnVendorReturn,
   fetchVendorReviews,
@@ -230,6 +231,10 @@ export function useVendorEarningsController() {
 
 export function useVendorAnalyticsController() {
   return useResource(['vendor', 'analytics'], fetchVendorAnalytics)
+}
+
+export function useVendorReportsController(range) {
+  return useResource(['vendor', 'reports', range.from, range.to], () => fetchVendorReports(range))
 }
 
 export function useVendorNotificationsController() {

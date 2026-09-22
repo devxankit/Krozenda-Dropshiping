@@ -8,6 +8,7 @@ import {
   Select,
   Modal,
   Icon,
+  Switch,
 } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, PageSkeleton, PermissionGate } from '../../components/feedback'
@@ -57,6 +58,19 @@ export function CjSettingsPage() {
   const [markupValue, setMarkupValue] = useState(() => controller.data?.defaultMarkupValue ?? controller.data?.defaultMarkupPercent ?? 30)
   const [priceRounding, setPriceRounding] = useState(() => controller.data?.priceRounding || 'ROUND')
   const [markupNotice, setMarkupNotice] = useState('')
+
+  const [visibilityNotice, setVisibilityNotice] = useState('')
+
+  const handleToggleVisibility = async (e) => {
+    const next = e.target.checked
+    try {
+      await controller.updateVisibility({ dropshippingEnabled: next })
+      setVisibilityNotice(next ? 'Dropshipping products are now visible to customers.' : 'Dropshipping products are now hidden from customers.')
+      setTimeout(() => setVisibilityNotice(''), 3500)
+    } catch {
+      // Handled by controller.updateVisibilityError
+    }
+  }
 
   useEffect(() => {
     if (controller.data) {
@@ -271,6 +285,35 @@ export function CjSettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* ── STOREFRONT VISIBILITY ── */}
+      <SectionCard
+        title="Storefront Visibility"
+        description="Single global switch: show or hide every CJ-fulfilled product on the customer-facing site."
+        actions={
+          visibilityNotice ? (
+            <Badge tone="success" dot size="sm">
+              {visibilityNotice}
+            </Badge>
+          ) : null
+        }
+      >
+        <div className="p-4 sm:p-5">
+          {controller.updateVisibilityError && (
+            <InlineAlert tone="danger" title="Could not update visibility">
+              {controller.updateVisibilityError?.response?.data?.message || controller.updateVisibilityError.message}
+            </InlineAlert>
+          )}
+          <Switch
+            id="dropshipping-visibility"
+            checked={settings?.dropshippingEnabled !== false}
+            disabled={controller.isUpdatingVisibility}
+            onChange={handleToggleVisibility}
+            label="Show Dropshipping Products to Customers"
+            description="When off, CJ-sourced products disappear from listings, search, related products and product pages on the storefront. Admin and vendor catalog screens are unaffected."
+          />
+        </div>
+      </SectionCard>
 
       {/* ── AUTOMATED PRICING & AUTO-MARKUP RULES ── */}
       <SectionCard

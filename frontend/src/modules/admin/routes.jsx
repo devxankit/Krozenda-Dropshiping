@@ -74,6 +74,10 @@ import { AccountingSettlementsPage, AccountingSettlementDetailPage } from './pag
 import { PayoutsPage, PayoutDetailPage } from './pages/accounting/PayoutsPage'
 import { AccountingRefundsPage } from './pages/accounting/RefundsPage'
 import { AccountingReportsPage, AccountingReportRunnerPage } from './pages/accounting/ReportsPage'
+import { AccountsDashboardPage } from './pages/accounts/AccountsDashboardPage'
+import { VendorPayoutsPage } from './pages/accounts/VendorPayoutsPage'
+import { TransactionsPage as AccountsTransactionsPage } from './pages/accounts/TransactionsPage'
+import { LedgerPage } from './pages/accounts/LedgerPage'
 import { CouponsPage, CampaignsPage, ReviewsPage } from './pages/marketing/MarketingListPages'
 import { OffersPage, CmsPagesPage, TemplatesPage } from './pages/marketing/ContentPages'
 import { BannersPage } from './pages/marketing/BannersPage'
@@ -354,6 +358,13 @@ export default function AdminRoutes() {
                 path={rel(ADMIN_ROUTES.ACCOUNTING_REPORT_DETAIL)}
                 element={<AccountingReportRunnerPage />}
               />
+
+              {/* Accounts MVP — separate, minimal money screens (not the
+                Accounting module above). */}
+              <Route path={rel(ADMIN_ROUTES.ACCOUNTS_DASHBOARD)} element={<AccountsDashboardPage />} />
+              <Route path={rel(ADMIN_ROUTES.ACCOUNTS_PAYOUTS)} element={<VendorPayoutsPage />} />
+              <Route path={rel(ADMIN_ROUTES.ACCOUNTS_TRANSACTIONS)} element={<AccountsTransactionsPage />} />
+              <Route path={rel(ADMIN_ROUTES.ACCOUNTS_LEDGER)} element={<LedgerPage />} />
 
               {/* Marketing, content & reports */}
               <Route path={rel(ADMIN_ROUTES.COUPONS)} element={<CouponsPage />} />

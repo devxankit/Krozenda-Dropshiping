@@ -121,6 +121,9 @@ app.use('/admin/support/tickets', require('./Router/adminTicketRoutes'));
 app.use('/admin/system/backups', require('./Router/adminBackupRoutes'));
 app.use('/admin/finance', require('./Router/adminFinanceRoutes'));
 app.use('/admin/accounting', require('./Router/adminAccountingRoutes'));
+// Accounts MVP — separate, minimal order-level financials + vendor payout
+// log + gateway transaction log. Not the accounting module above.
+app.use('/admin/accounts', require('./Router/accountsRoutes'));
 app.use('/admin', require('./Router/adminFulfilmentRoutes'));
 // Carrier-backed shipments live under /admin/shipping, NOT /admin/shipments.
 // That path is already taken: adminFulfilmentRoutes above declares GET
@@ -157,6 +160,7 @@ app.use('/vendor/reviews', require('./Router/vendorReviewRoutes'));
 app.use('/vendor/returns', require('./Router/vendorReturnRoutes'));
 app.use('/vendor/earnings', require('./Router/vendorEarningsRoutes'));
 app.use('/vendor/analytics', require('./Router/vendorAnalyticsRoutes'));
+app.use('/vendor/reports', require('./Router/vendorReportsRoutes'));
 app.use('/vendor/settings', require('./Router/vendorSettingsRoutes'));
 app.use('/vendor/catalog', require('./Router/vendorCatalogRoutes'));
 app.use('/vendor/shipping', require('./Router/vendorShippingRoutes'));

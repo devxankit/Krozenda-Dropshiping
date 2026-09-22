@@ -6,6 +6,13 @@ import { useAdminLoginController } from '../../controllers/useAdminAuthControlle
 import { adminLoginSchema } from '../../schemas/authSchema'
 import { zodResolver } from '../../lib/zodResolver'
 
+// Matches backend/.env's ADMIN_EMAIL/ADMIN_PASSWORD (seedAdmin.js bootstraps
+// this account on first boot). Prefilled for demo convenience at the
+// explicit request of the project owner, who was told this ships the
+// super-admin password in the public bundle — swap or remove before any
+// real deployment.
+const DEMO_ADMIN = { email: 'admin@example.com', password: 'Krozenda@Admin123' }
+
 export function LoginPage() {
   const { submit, isSubmitting, error } = useAdminLoginController()
 
@@ -15,6 +22,7 @@ export function LoginPage() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(adminLoginSchema),
+    defaultValues: DEMO_ADMIN,
   })
 
   return (

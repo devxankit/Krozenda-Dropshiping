@@ -71,6 +71,11 @@ export async function updateCjMarkupSettings(body) {
   return data.data
 }
 
+export async function updateCjDropshippingVisibility(body) {
+  const { data } = await api.post('/admin/cj/settings/visibility', body)
+  return data.data
+}
+
 export async function bulkAdjustCjPricing(body) {
   const { data } = await api.post('/admin/cj/products/bulk-pricing', body)
   return data

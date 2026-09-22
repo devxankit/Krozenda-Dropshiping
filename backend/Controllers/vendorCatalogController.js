@@ -2,6 +2,7 @@ const Category = require('../Models/Category');
 const Brand = require('../Models/Brand');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
+const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 
 function serializeCategory(cat) {
   return {
@@ -38,7 +39,7 @@ function serializeBrand(b) {
 async function listMyCategories(req, res) {
   const categories = await Category.find({
     isActive: true,
-    $or: [{ approvalStatus: 'APPROVED' }, { createdByVendor: req.vendor._id }],
+    $or: [{ approvalStatus: PUBLIC_APPROVAL_FILTER }, { createdByVendor: req.vendor._id }],
   })
     .sort({ isTopCategory: -1, name: 1 })
     .lean();
@@ -76,7 +77,7 @@ async function createMyCategory(req, res) {
 async function listMyBrands(req, res) {
   const brands = await Brand.find({
     isActive: true,
-    $or: [{ approvalStatus: 'APPROVED' }, { createdByVendor: req.vendor._id }],
+    $or: [{ approvalStatus: PUBLIC_APPROVAL_FILTER }, { createdByVendor: req.vendor._id }],
   })
     .sort({ name: 1 })
     .lean();

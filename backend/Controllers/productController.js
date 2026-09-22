@@ -3,10 +3,22 @@ const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
+const CjSettings = require('../Models/CjSettings');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 const { isValidEan13, renderBarcodePng } = require('../utils/barcode');
+
+// Admin > CJ Dropshipping > Settings > "Show Dropshipping Products to
+// Customers" (CjSettings.dropshippingEnabled). A CJ-fulfilled product
+// (Product.fulfillmentProvider === 'CJ') is otherwise a perfectly normal,
+// approved, in-stock product — this is the one platform-wide switch that
+// pulls all of them out of the buyer-facing catalog at once, independent of
+// approvalStatus/isActive. It never touches the admin or vendor catalog.
+async function isDropshippingVisibleToCustomers() {
+  const settings = await CjSettings.getSettings();
+  return settings.dropshippingEnabled !== false;
+}
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -765,13 +777,21 @@ async function listPublicProducts(req, res) {
 
   if (inStock === 'true' || inStock === true) query.stock = { $gt: 0 };
 
+  const dropshippingEnabled = await isDropshippingVisibleToCustomers();
+
+  // The admin's global "Show Dropshipping Products to Customers" switch. When
+  // it's off, CJ-fulfilled products are withheld from the storefront entirely
+  // — including an explicit `?source=dropship` request, which can only ever
+  // ask for products that are, by definition, hidden right now.
+  if (!dropshippingEnabled && source === 'dropship') return emptyPage();
+
   // "only dropship / only normal / all" — dropship products are the ones
   // onboarded from CJ (Product.fulfillmentProvider === 'CJ'); everything else
   // (seller stock and admin's own stock) is "normal". `$ne: 'CJ'` rather than
   // an equality-to-null check so it also matches every product created
   // before this field existed, which has no fulfillmentProvider at all.
   if (source === 'dropship') query.fulfillmentProvider = 'CJ';
-  else if (source === 'normal') query.fulfillmentProvider = { $ne: 'CJ' };
+  else if (source === 'normal' || !dropshippingEnabled) query.fulfillmentProvider = { $ne: 'CJ' };
 
   const minDiscountNum = Number(minDiscount);
   if (Number.isFinite(minDiscountNum) && minDiscountNum > 0) {
@@ -969,6 +989,15 @@ async function getPublicProduct(req, res) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
+  // Same global switch as listPublicProducts: a CJ-fulfilled product is
+  // otherwise a normal, approved, active product, so a shopper who already
+  // has this id (bookmark, direct link, cart) is told the same "not found" a
+  // deactivated or unapproved product would give — not a different error
+  // that would leak that dropshipping exists but is switched off.
+  if (product.fulfillmentProvider === 'CJ' && !(await isDropshippingVisibleToCustomers())) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
   res.json({ success: true, message: 'Product fetched successfully', data: serializePublicProduct(product) });
 }
 
@@ -997,6 +1026,13 @@ async function listRelatedProducts(req, res) {
     approvalStatus: PUBLIC_APPROVAL_FILTER,
     stock: { $gt: 0 },
   };
+
+  // Same global switch as listPublicProducts/getPublicProduct: never surface
+  // a CJ-fulfilled product in a "similar products" rail while the admin has
+  // dropshipping visibility switched off.
+  if (!(await isDropshippingVisibleToCustomers())) {
+    base.fulfillmentProvider = { $ne: 'CJ' };
+  }
 
   // Same category first, then same brand to top up when the category is thin —
   // rather than one $or query, which would rank brand matches above category

@@ -26,6 +26,7 @@ import {
   fetchOnboardedCjProducts,
   fetchCjProductCategorySummary,
   updateCjMarkupSettings,
+  updateCjDropshippingVisibility,
   bulkAdjustCjPricing,
   bulkOnboardCjProducts,
 } from '../services/cjService'
@@ -47,6 +48,7 @@ export function useCjSettingsController() {
   const testMutation = useMutation({ mutationFn: testCjConnection, onSuccess: invalidate })
   const refreshMutation = useMutation({ mutationFn: refreshCjToken, onSuccess: invalidate })
   const markupMutation = useMutation({ mutationFn: updateCjMarkupSettings, onSuccess: invalidate })
+  const visibilityMutation = useMutation({ mutationFn: updateCjDropshippingVisibility, onSuccess: invalidate })
 
   return {
     data: query.data,
@@ -71,6 +73,10 @@ export function useCjSettingsController() {
     updateMarkupSettings: markupMutation.mutateAsync,
     isUpdatingMarkup: markupMutation.isPending,
     updateMarkupError: markupMutation.error,
+
+    updateVisibility: visibilityMutation.mutateAsync,
+    isUpdatingVisibility: visibilityMutation.isPending,
+    updateVisibilityError: visibilityMutation.error,
   }
 }
 

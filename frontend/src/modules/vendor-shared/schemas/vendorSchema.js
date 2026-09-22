@@ -279,6 +279,28 @@ export const vendorAnalyticsSchema = z.object({
   productsActive: z.number().int(),
 })
 
+export const vendorReportsSchema = z.object({
+  range: z.object({ from: z.string(), to: z.string() }),
+  totals: z.object({
+    revenue: z.number(),
+    orders: z.number().int(),
+    units: z.number().int(),
+    avgOrderValue: z.number(),
+  }),
+  dailySales: z.array(
+    z.object({ date: z.string(), revenue: z.number(), orders: z.number().int(), units: z.number().int() })
+  ),
+  productPerformance: z.array(
+    z.object({
+      productId: z.string().nullable(),
+      name: z.string(),
+      unitsSold: z.number().int(),
+      revenue: z.number(),
+    })
+  ),
+  orderStatusBreakdown: z.record(z.string(), z.number()),
+})
+
 export const vendorNotificationSchema = z.object({
   id: z.string(),
   type: z.string(),

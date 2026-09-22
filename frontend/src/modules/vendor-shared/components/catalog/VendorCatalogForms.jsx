@@ -24,9 +24,9 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
     <FormDrawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Propose a new category"
-      description="Name and image — admin reviews this before it appears on the storefront or in any seller's product form."
-      submitLabel="Submit for review"
+      title="Add Category"
+      description="Name and image — admin reviews this before it appears on the storefront or in product forms."
+      submitLabel="Add Category"
       isSubmitting={isSubmitting}
       error={issue ? { message: issue } : null}
       onSubmit={handleSubmit}
@@ -111,9 +111,9 @@ export function VendorBrandFormDrawer({ isOpen, onClose, onSubmit, isSubmitting 
     <FormDrawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Propose a new brand"
-      description="Name and logo — admin reviews this before it appears on the storefront or in any seller's product form."
-      submitLabel="Submit for review"
+      title="Add Brand"
+      description="Name and logo — admin reviews this before it appears on the storefront or in product forms."
+      submitLabel="Add Brand"
       isSubmitting={isSubmitting}
       error={issue ? { message: issue } : null}
       onSubmit={handleSubmit}

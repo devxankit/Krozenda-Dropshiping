@@ -14,6 +14,7 @@ import {
   vendorOrderSchema,
   vendorProductListSchema,
   vendorProductSchema,
+  vendorReportsSchema,
   vendorReturnListSchema,
   vendorReturnSchema,
   vendorReviewListSchema,
@@ -113,6 +114,14 @@ export const fetchVendorPayouts = () =>
 
 export const fetchVendorAnalytics = () =>
   fetchResource({ path: '/vendor/analytics/summary', schema: vendorAnalyticsSchema, live: true })
+
+export const fetchVendorReports = (range = {}) =>
+  fetchResource({
+    path: '/vendor/reports/sales',
+    params: { from: range.from, to: range.to },
+    schema: vendorReportsSchema,
+    live: true,
+  })
 
 export const fetchVendorNotifications = () =>
   fetchResource({ path: '/vendor/notifications', schema: vendorNotificationListSchema, live: true })

@@ -265,7 +265,7 @@ export function CategoriesPage() {
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <Icon name="add" className="h-3.5 w-3.5" />
-                  <span>New Category</span>
+                  <span>Add Category</span>
                 </button>
               </PermissionGate>
             </div>

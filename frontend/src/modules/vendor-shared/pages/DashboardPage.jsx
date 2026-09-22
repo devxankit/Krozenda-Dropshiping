@@ -1,32 +1,109 @@
 import { Link } from 'react-router-dom'
 import { Badge, Button, Table } from '../../../components/ui'
 import { Skeleton } from '../../../components/ui'
-import { useVendorDashboardController, useVendorOrdersController } from '../controllers/useVendorController'
+import { useVendorAnalyticsController, useVendorDashboardController, useVendorOrdersController } from '../controllers/useVendorController'
 import { VENDOR_ORDER_STATUS_TONE, VENDOR_STATUS_LABELS } from '../constants'
 import { MoneyCell, StatusPill } from '../../admin/components/display/cells'
-import { StatTile } from '../../admin/components/StatTile'
 import { SectionCard } from '../../admin/components/display'
 import { InlineAlert } from '../../admin/components/feedback'
+import { PageBody, PageHeader } from '../../admin/components/shell'
+import { KpiGrid, OrderPipeline } from '../../admin/components/dashboard'
+import { AreaTrend, ChartFrame, formatAxisRupees } from '../../admin/components/charts'
+import { formatMoney } from '../../admin/components/display'
+
+// Order lifecycle stages shown in the funnel, in the order they occur. Not
+// every vendor status enum shows up here — CANCELLED is an exception branch,
+// not a stage, same split the admin dashboard's pipeline uses.
+const PIPELINE_STAGES = [
+  { status: 'PENDING', label: 'Pending' },
+  { status: 'PROCESSING', label: 'Processing' },
+  { status: 'SHIPPED', label: 'Shipped' },
+  { status: 'DELIVERED', label: 'Delivered' },
+]
+
+const REVENUE_SERIES = [{ key: 'revenue', label: 'Revenue' }]
+
+function shortDate(dateStr) {
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+}
 
 export function VendorDashboardPage() {
   const { data: summary, isLoading, isError, error } = useVendorDashboardController()
+  const { data: analytics, isLoading: isAnalyticsLoading } = useVendorAnalyticsController()
   const orders = useVendorOrdersController()
 
-  if (isLoading) {
+  if (isLoading || isAnalyticsLoading) {
     return (
-      <div className="flex flex-col gap-4">
+      <PageBody>
         <Skeleton className="h-40 w-full" />
-      </div>
+      </PageBody>
     )
   }
 
   if (isError) {
     return (
-      <div className="p-4 rounded-lg bg-danger-50 text-danger-700 text-xs">
-        <p className="font-semibold">{error?.message || 'Failed to load vendor dashboard'}</p>
-      </div>
+      <PageBody>
+        <div className="p-4 rounded-lg bg-danger-50 text-danger-700 text-xs">
+          <p className="font-semibold">{error?.message || 'Failed to load vendor dashboard'}</p>
+        </div>
+      </PageBody>
     )
   }
+
+  const salesTrend = analytics?.salesTrend ?? []
+  const statusBreakdown = analytics?.orderStatusBreakdown ?? {}
+
+  const revenueTrend = salesTrend.map((point) => ({ value: point.revenue }))
+  const ordersTrend = salesTrend.map((point) => ({ value: point.orders }))
+
+  const kpis = [
+    {
+      key: 'revenue',
+      label: 'Delivered Revenue',
+      value: summary.totalRevenue,
+      format: 'money',
+      tone: 'brand',
+      caption: 'From delivered orders',
+      trend: revenueTrend,
+    },
+    {
+      key: 'pending',
+      label: 'Pending Orders',
+      value: summary.pendingOrdersCount,
+      caption: 'Awaiting processing or shipping',
+      trend: ordersTrend,
+    },
+    {
+      key: 'products',
+      label: 'Live Products',
+      value: summary.liveSkusCount,
+      caption: 'Active on buyer apps',
+    },
+    {
+      key: 'payout',
+      label: 'Due for Payout',
+      value: summary.availablePayout,
+      format: 'money',
+      tone: 'brand',
+      caption: 'In a settlement batch, not yet transferred',
+      trend: revenueTrend,
+    },
+  ]
+
+  const pipeline = PIPELINE_STAGES.map((stage) => ({
+    status: stage.status,
+    label: stage.label,
+    count: statusBreakdown[stage.status] || 0,
+  }))
+
+  const exceptions = [
+    { label: 'Cancelled', count: statusBreakdown.CANCELLED || 0, tone: 'danger' },
+  ]
+
+  const chartData = salesTrend.map((point) => ({ label: shortDate(point.date), revenue: point.revenue }))
+  const hasRevenue = chartData.some((point) => point.revenue > 0)
 
   const columns = [
     {
@@ -61,31 +138,29 @@ export function VendorDashboardPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-surface p-5 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">{summary.storeName}</h1>
-            <Badge tone="brand" size="sm">
-              {VENDOR_STATUS_LABELS[summary.status] ?? summary.status}
-            </Badge>
-          </div>
-          <p className="text-xs text-ink-subtle mt-0.5">Seller Operations Dashboard</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link to="../kyc-documents">
-            <Button variant="secondary" size="sm">
-              KYC Documents
-            </Button>
-          </Link>
-          <Link to="../products">
-            <Button size="sm" icon="add">
-              Add Product
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <PageBody>
+      <PageHeader
+        title={summary.storeName}
+        description="Seller Operations Dashboard"
+        actions={
+          <>
+            <Link to="../kyc-documents">
+              <Button variant="secondary" size="sm">
+                KYC Documents
+              </Button>
+            </Link>
+            <Link to="../products">
+              <Button size="sm" icon="add">
+                Add Product
+              </Button>
+            </Link>
+          </>
+        }
+      >
+        <Badge tone="brand" size="sm">
+          {VENDOR_STATUS_LABELS[summary.status] ?? summary.status}
+        </Badge>
+      </PageHeader>
 
       {summary.kycStatus !== 'approved' && (
         <InlineAlert tone="warning" title="KYC Verification Required">
@@ -93,16 +168,31 @@ export function VendorDashboardPage() {
         </InlineAlert>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Delivered Revenue" value={`₹${(summary.totalRevenue / 100).toLocaleString('en-IN')}`} tone="brand" />
-        <StatTile label="Pending Orders" value={summary.pendingOrdersCount} caption="Awaiting processing or shipping" />
-        <StatTile label="Live Products" value={summary.liveSkusCount} caption="Active on buyer apps" />
-        <StatTile
-          label="Due for Payout"
-          value={`₹${(summary.availablePayout / 100).toLocaleString('en-IN')}`}
-          caption="In a settlement batch, not yet transferred"
-          tone="brand"
-        />
+      <KpiGrid kpis={kpis} columns={4} />
+
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <ChartFrame
+          title="Revenue trend"
+          description="Daily gross revenue, last 30 days"
+          series={REVENUE_SERIES}
+          height={280}
+        >
+          {hasRevenue ? (
+            <AreaTrend
+              data={chartData}
+              series={REVENUE_SERIES}
+              formatAxis={formatAxisRupees}
+              formatValue={(value) => formatMoney(value, { compact: true })}
+              stacked={false}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-ink-subtle">
+              No revenue in the last 30 days
+            </div>
+          )}
+        </ChartFrame>
+
+        <OrderPipeline pipeline={pipeline} exceptions={exceptions} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -137,6 +227,6 @@ export function VendorDashboardPage() {
       >
         <Table className="rounded-none border-0 border-t" columns={columns} data={orders.items.slice(0, 5)} getRowKey={(row) => row.id} density="compact" />
       </SectionCard>
-    </div>
+    </PageBody>
   )
 }
