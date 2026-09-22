@@ -19,7 +19,7 @@ import { SmartImage } from '../../../../components/ui/SmartImage'
 import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundary'
 import { ProductCard } from '../ecommerce/ProductCard'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
-import { useProductsController } from '../../controllers/useProductsController'
+import { useProductsController, useCatalogSettingsController } from '../../controllers/useProductsController'
 
 // All Products' Product-type toggle. 'all' is what a fresh page load shows;
 // the other two ask the API to filter by Product.fulfillmentProvider so a
@@ -156,11 +156,18 @@ export function HomeCenterFeed({
   // dropship (CJ) and regular stock together with a toggle to tell them
   // apart, since the Hot Deals / Trending rails above only ever show
   // whatever happens to be flagged flashSale/trending.
+  //
+  // The toggle itself only renders when dropshippingEnabled is true
+  // (Admin > CJ Dropshipping > Settings). When it's off, CJ products are
+  // already excluded server-side, so the toggle would just be a dead control
+  // that leaks the existence of a "dropship" feature to every customer.
+  const { dropshippingEnabled } = useCatalogSettingsController()
   const [productType, setProductType] = useState('all')
+  const effectiveProductType = dropshippingEnabled ? productType : 'all'
   const { products: allProducts, isLoading: isAllProductsLoading } = useProductsController({
     limit: 8,
     sort: 'newest',
-    ...(productType !== 'all' ? { source: productType } : {}),
+    ...(effectiveProductType !== 'all' ? { source: effectiveProductType } : {}),
   })
 
   // Category horizontal scroll controls
@@ -597,7 +604,7 @@ export function HomeCenterFeed({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">All Products</h2>
             <Link
-              to={userPath.listing(productType !== 'all' ? { source: productType } : {})}
+              to={userPath.listing(effectiveProductType !== 'all' ? { source: effectiveProductType } : {})}
               className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-0.5 group shrink-0"
             >
               <span>View All</span>
@@ -605,23 +612,26 @@ export function HomeCenterFeed({
             </Link>
           </div>
 
-          {/* Product-type toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            {PRODUCT_TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setProductType(opt.value)}
-                className={`rounded-full px-3 py-1.5 text-[11px] font-bold border transition-colors ${
-                  productType === opt.value
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {/* Product-type toggle — only shown when dropshipping is enabled
+              platform-wide; see dropshippingEnabled above. */}
+          {dropshippingEnabled && (
+            <div className="flex flex-wrap items-center gap-2">
+              {PRODUCT_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setProductType(opt.value)}
+                  className={`rounded-full px-3 py-1.5 text-[11px] font-bold border transition-colors ${
+                    productType === opt.value
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {isAllProductsLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">

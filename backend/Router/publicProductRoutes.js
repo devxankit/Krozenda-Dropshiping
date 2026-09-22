@@ -3,12 +3,15 @@ const {
   listPublicProducts,
   getPublicProduct,
   listRelatedProducts,
+  getPublicCatalogSettings,
 } = require('../Controllers/productController');
 const { checkProductDelivery } = require('../Controllers/deliveryCheckController');
 
 const router = express.Router();
 
 router.get('/', listPublicProducts);
+// Must come before '/:id' so the literal path is not swallowed as an id.
+router.get('/settings', getPublicCatalogSettings);
 router.get('/:id', getPublicProduct);
 router.get('/:id/related', listRelatedProducts);
 

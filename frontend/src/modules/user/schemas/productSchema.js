@@ -155,3 +155,10 @@ export const deliveryCheckSchema = z.object({
   estimatedDays: z.number().nullable().optional(),
   estimatedDeliveryDate: z.string().nullable().optional(),
 })
+
+// Storefront-wide catalog flags. Currently just the dropshipping visibility
+// kill-switch (Admin > CJ Dropshipping > Settings), so the UI can hide any
+// mention of it — filter option, badges — instead of showing a dead control.
+export const catalogSettingsSchema = z.object({
+  dropshippingEnabled: z.boolean().default(true),
+})

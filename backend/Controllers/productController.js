@@ -718,6 +718,20 @@ function objectIdFilter(value) {
   return values.length === 1 ? values[0] : { $in: values };
 }
 
+// Read-only, unauthenticated: the one flag the storefront needs before it can
+// decide whether to even mention dropshipping (product-type filter, badges).
+// Non-sensitive — mirrors the same switch listPublicProducts/getPublicProduct
+// already enforce server-side; this just lets the UI stop asking for what it
+// knows will come back empty/filtered.
+async function getPublicCatalogSettings(req, res) {
+  const dropshippingEnabled = await isDropshippingVisibleToCustomers();
+  res.json({
+    success: true,
+    message: 'Catalog settings fetched successfully',
+    data: { dropshippingEnabled },
+  });
+}
+
 async function listPublicProducts(req, res) {
   const {
     flashSale,
@@ -1073,6 +1087,7 @@ async function listRelatedProducts(req, res) {
 module.exports = {
   listProducts,
   listPublicProducts,
+  getPublicCatalogSettings,
   serializeProductCard,
   getPublicProduct,
   listRelatedProducts,

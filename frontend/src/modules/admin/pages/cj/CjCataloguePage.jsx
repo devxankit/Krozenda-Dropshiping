@@ -675,6 +675,8 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
 }
 
 function ProductCard({ product, isSelected, onToggleSelect, onView }) {
+  const isOnboarded = product.isOnboarded === true
+
   return (
     <div
       onClick={onView}
@@ -682,24 +684,38 @@ function ProductCard({ product, isSelected, onToggleSelect, onView }) {
         isSelected
           ? 'border-primary-500 ring-2 ring-primary-500 bg-primary-50/10 shadow-md'
           : 'border-border bg-surface hover:shadow-md hover:border-slate-300'
-      }`}
+      } ${isOnboarded ? 'opacity-75' : ''}`}
     >
-      {/* Checkbox overlay button with stopPropagation */}
+      {/* Checkbox overlay button with stopPropagation — disabled once a
+          product is already onboarded, so it can't be selected for bulk
+          onboarding again (backend rejects it anyway, this just avoids the
+          round trip and confusion of a guaranteed "already onboarded" error). */}
       <div
-        className="absolute top-2.5 left-2.5 z-10 flex items-center justify-center rounded-md bg-white/95 p-1 shadow-sm backdrop-blur-sm transition-opacity"
+        className={`absolute top-2.5 left-2.5 z-10 flex items-center justify-center rounded-md bg-white/95 p-1 shadow-sm backdrop-blur-sm transition-opacity ${
+          isOnboarded ? 'cursor-not-allowed' : ''
+        }`}
         onClick={(e) => {
           e.stopPropagation()
-          onToggleSelect()
+          if (!isOnboarded) onToggleSelect()
         }}
       >
         <input
           type="checkbox"
           id={`select-cj-${product.externalProductId}`}
           checked={isSelected}
+          disabled={isOnboarded}
           onChange={() => {}}
-          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer pointer-events-none"
+          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
+
+      {isOnboarded && (
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <Badge tone="neutral" size="sm">
+            Already onboarded
+          </Badge>
+        </div>
+      )}
 
       <div className="aspect-square w-full bg-surface-muted overflow-hidden">
         {product.primaryImage && (
@@ -797,22 +813,30 @@ export function CjCataloguePage() {
   const items = data?.items || []
   const pagination = data?.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 }
 
-  const allCurrentPageSelected = items.length > 0 && items.every((p) => selectedProductIds.has(p.externalProductId))
-  const someCurrentPageSelected = items.some((p) => selectedProductIds.has(p.externalProductId))
+  // Already-onboarded products (server-flagged via ProductFulfillmentMapping,
+  // see adminCjCatalogueController.searchProducts) are excluded from
+  // "select all" and can't be individually selected — see ProductCard's
+  // disabled checkbox.
+  const selectableItems = items.filter((p) => !p.isOnboarded)
+  const allCurrentPageSelected =
+    selectableItems.length > 0 && selectableItems.every((p) => selectedProductIds.has(p.externalProductId))
+  const someCurrentPageSelected = selectableItems.some((p) => selectedProductIds.has(p.externalProductId))
 
   function toggleSelectAllCurrentPage() {
     setSelectedProductIds((prev) => {
       const next = new Set(prev)
       if (allCurrentPageSelected) {
-        items.forEach((p) => next.delete(p.externalProductId))
+        selectableItems.forEach((p) => next.delete(p.externalProductId))
       } else {
-        items.forEach((p) => next.add(p.externalProductId))
+        selectableItems.forEach((p) => next.add(p.externalProductId))
       }
       return next
     })
   }
 
   function toggleProductSelect(id) {
+    const product = items.find((p) => p.externalProductId === id)
+    if (product?.isOnboarded) return
     setSelectedProductIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -882,7 +906,7 @@ export function CjCataloguePage() {
                 onChange={toggleSelectAllCurrentPage}
                 className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
               />
-              <span>Select all on this page ({items.length})</span>
+              <span>Select all on this page ({selectableItems.length})</span>
             </label>
 
             {selectedProductIds.size > 0 && (

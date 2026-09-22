@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { HiCheck, HiMagnifyingGlass, HiXMark } from 'react-icons/hi2'
+import { useCatalogSettingsController } from '../../controllers/useProductsController'
 
 // Filter panel shared by the listing screen (sidebar on desktop) and the
 // mobile filter sheet.
@@ -41,6 +42,12 @@ export function CatalogFilterPanel({
   showCategories = true,
 }) {
   const [brandQuery, setBrandQuery] = useState('')
+  // "Product type" (dropship vs regular stock) only makes sense — and only
+  // gets shown — while dropshipping is enabled platform-wide (Admin > CJ
+  // Dropshipping > Settings). Otherwise CJ products never appear in results
+  // anyway, so the control would just be a dead giveaway that the feature
+  // exists but was turned off.
+  const { dropshippingEnabled } = useCatalogSettingsController()
 
   const applied = useMemo(
     () => ({
@@ -275,26 +282,28 @@ export function CatalogFilterPanel({
           ))}
         </fieldset>
 
-        <fieldset className="space-y-1">
-          <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
-            Product type
-          </legend>
-          {SOURCE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => patch({ source: option.value })}
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
-                draft.source === option.value
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <span>{option.label}</span>
-              {draft.source === option.value && <HiCheck className="h-4 w-4" aria-hidden="true" />}
-            </button>
-          ))}
-        </fieldset>
+        {dropshippingEnabled && (
+          <fieldset className="space-y-1">
+            <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+              Product type
+            </legend>
+            {SOURCE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => patch({ source: option.value })}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
+                  draft.source === option.value
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>{option.label}</span>
+                {draft.source === option.value && <HiCheck className="h-4 w-4" aria-hidden="true" />}
+              </button>
+            ))}
+          </fieldset>
+        )}
 
         <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 px-3 py-3">
           <span className="text-xs font-bold text-slate-800">In stock only</span>

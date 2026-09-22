@@ -1,6 +1,7 @@
 const cjProductService = require('../services/cj/cjProductService');
 const cjAuthService = require('../services/cj/cjAuthService');
 const cjProductCache = require('../services/cj/cjProductCache');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const {
   normalizeSearchItem,
   normalizeProductDetail,
@@ -72,6 +73,22 @@ async function searchProducts(req, res) {
     );
 
     const items = (result.list || []).map(normalizeSearchItem).filter(Boolean);
+
+    // Duplicate-guard for the browse grid (not just the onboard endpoint):
+    // an admin should never see an "onboard" checkbox on something already
+    // in the store. ProductFulfillmentMapping.cjProductId is the same
+    // linkage field cjOnboardingService checks before creating a new
+    // Product — reused here rather than inventing a second signal.
+    if (items.length > 0) {
+      const mappedIds = await ProductFulfillmentMapping.find({
+        provider: 'CJ',
+        cjProductId: { $in: items.map((i) => i.externalProductId) },
+      }).distinct('cjProductId');
+      const onboardedSet = new Set(mappedIds.map(String));
+      items.forEach((item) => {
+        item.isOnboarded = onboardedSet.has(item.externalProductId);
+      });
+    }
 
     res.json({
       success: true,

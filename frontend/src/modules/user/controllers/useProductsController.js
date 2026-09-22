@@ -8,6 +8,7 @@ import {
   fetchRelatedProducts,
   fetchCategories,
   fetchBrands,
+  fetchCatalogSettings,
 } from '../services/productService'
 
 // Server-side paging, filtering and sorting.
@@ -90,4 +91,22 @@ export function useBrandsController() {
     gcTime: 30 * 60_000,
   })
   return { brands: query.data ?? [], isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
+
+// Whether dropshipping products are visible to customers at all (Admin > CJ
+// Dropshipping > Settings). Defaults to `true` while loading/on error so the
+// filter doesn't flash in and out — it only ever needs to hide something, and
+// briefly showing it during the first load is harmless since the server-side
+// filter (productController) already enforces the real restriction.
+export function useCatalogSettingsController() {
+  const query = useQuery({
+    queryKey: ['catalog', 'settings'],
+    queryFn: ({ signal }) => fetchCatalogSettings({ signal }),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+  })
+  return {
+    dropshippingEnabled: query.data?.dropshippingEnabled ?? true,
+    isLoading: query.isLoading,
+  }
 }

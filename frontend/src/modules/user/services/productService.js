@@ -8,6 +8,7 @@ import {
   categoryListSchema,
   brandListSchema,
   deliveryCheckSchema,
+  catalogSettingsSchema,
 } from '../schemas/productSchema'
 
 // `signal` is threaded through to axios so a superseded search (or a screen
@@ -42,6 +43,14 @@ export async function fetchCategories({ signal } = {}) {
 export async function fetchBrands({ signal } = {}) {
   const response = await api.get('/catalog/brands', { signal })
   return brandListSchema.parse(response.data.data.items)
+}
+
+// Read-only storefront flags — currently just whether dropshipping products
+// are visible to customers, so the UI can hide the product-type filter and
+// any "Dropship" wording entirely rather than show a dead control.
+export async function fetchCatalogSettings({ signal } = {}) {
+  const response = await api.get('/catalog/products/settings', { signal })
+  return catalogSettingsSchema.parse(response.data.data)
 }
 
 // Delivery availability and price for one product at one PIN code.

@@ -33,8 +33,8 @@ export const ORDER_COLUMNS = Object.freeze([
     header: 'Customer',
     render: (order) => (
       <PrimaryCell
-        title={order.customer.name || 'Unknown customer'}
-        subtitle={order.customer.mobileNumber || order.customer.email}
+        title={order.customer.mobileNumber || order.customer.email || 'Guest'}
+        subtitle={order.customer.name || 'Guest'}
       />
     ),
   },
