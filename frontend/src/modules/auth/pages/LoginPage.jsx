@@ -44,7 +44,7 @@ export function LoginPage() {
 
   const changeStep = (next) => {
     setStepVisible(false)
-    setTimeout(() => { setCurrentStep(next); setStepVisible(true) }, 260)
+    setTimeout(() => { setCurrentStep(next); setStepVisible(true) }, 350)
   }
 
   const goBack = () => {
@@ -195,7 +195,7 @@ export function LoginPage() {
               {/* ════════════ STEP 1: WELCOME SCREEN ════════════ */}
               {currentStep === 1 && (
                 <div className="lp-step-container lp-step-welcome">
-                  <div className="lp-welcome-hero-avatar">
+                  <div className="lp-welcome-hero-avatar lp-stagger-1">
                     <div className="lp-hero-pulse-ring-outer" />
                     <div className="lp-hero-pulse-ring-inner" />
                     <div className="lp-hero-logo-box">
@@ -203,21 +203,21 @@ export function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="lp-verified-badge">
+                  <div className="lp-verified-badge lp-stagger-2">
                     <HiSparkles className="lp-sparkle-icon" />
                     <span>India's #1 B2B & B2C Dropshipping Platform</span>
                   </div>
 
-                  <h1 className="lp-hero-title">
+                  <h1 className="lp-hero-title lp-stagger-3">
                     Direct Factory Wholesale &amp; Commerce
                   </h1>
 
-                  <p className="lp-hero-desc">
+                  <p className="lp-hero-desc lp-stagger-4">
                     Connect directly with top manufacturers. Single unit wholesale pricing, zero inventory holding, pan-India 24-48hr dispatch.
                   </p>
 
-                  <div className="lp-action-stack">
-                    <button className="lp-primary-btn lp-btn-shine" onClick={() => changeStep(2)}>
+                  <div className="lp-action-stack lp-stagger-5">
+                    <button className="lp-primary-btn lp-btn-shine lp-btn-active-glow" onClick={() => changeStep(2)}>
                       <span>Sign In with Mobile</span>
                       <HiArrowRight className="lp-btn-icon-slide" />
                     </button>
@@ -230,7 +230,7 @@ export function LoginPage() {
                     </button>
                   </div>
 
-                  <p className="lp-terms-notice">
+                  <p className="lp-terms-notice lp-stagger-5">
                     By continuing, you agree to our{' '}
                     <Link to="/terms" target="_blank">Terms of Service</Link> &amp;{' '}
                     <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>
@@ -242,7 +242,7 @@ export function LoginPage() {
               {currentStep === 2 && (
                 <div className="lp-step-container">
                   {/* Stepper Progress */}
-                  <div className="lp-stepper-bar">
+                  <div className="lp-stepper-bar lp-stagger-1">
                     <div className="lp-stepper-item lp-stepper-active">
                       <div className="lp-step-circle">1</div>
                       <span className="lp-step-label">Mobile</span>
@@ -259,30 +259,20 @@ export function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Brand Icon & Live Status */}
-                  <div className="lp-avatar-center">
-                    <div className="lp-avatar-glow-ring" />
-                    <div className="lp-avatar-box">
-                      <img src="/images/logo.png" alt="KroZenda" className="lp-avatar-img" />
-                    </div>
-                    <div className="lp-live-pill">
-                      <span className="lp-live-dot" />
-                      <span>Live Wholesale Access</span>
-                    </div>
+                  {/* Brand Icon */}
+                  <div className="lp-avatar-center lp-stagger-2">
+                    <img src="/images/logo.png" alt="KroZenda" className="lp-avatar-img-simple" />
                   </div>
 
                   {/* Screen Title */}
-                  <div className="lp-title-group">
+                  <div className="lp-title-group lp-stagger-3">
                     <h1 className="lp-main-title">Enter Your Mobile</h1>
-                    <p className="lp-subtitle">
-                      Enter your 10-digit number. We'll send a 6-digit OTP — no passwords required.
-                    </p>
                   </div>
 
                   {error && <ErrorAlert msg={error} />}
 
                   {/* Mobile Input Form */}
-                  <form onSubmit={handleMobileSubmit} className="lp-phone-form">
+                  <form onSubmit={handleMobileSubmit} className="lp-phone-form lp-stagger-4">
                     <div className={`lp-input-container ${error ? 'lp-input-error' : ''} ${isPhoneValid ? 'lp-input-valid' : ''}`}>
                       <div className="lp-country-badge">
                         <IndianFlag />
@@ -331,9 +321,6 @@ export function LoginPage() {
                           )
                         })}
                       </div>
-                      <span className={`lp-digit-counter ${isPhoneValid ? 'lp-counter-done' : ''}`}>
-                        {isPhoneValid ? '✓ 10 Digits Complete' : `${phoneNumber.length}/10 digits`}
-                      </span>
                     </div>
 
                     {/* Terms Checkbox */}
@@ -416,7 +403,7 @@ export function LoginPage() {
               {currentStep === 3 && (
                 <div className="lp-step-container">
                   {/* Stepper Progress */}
-                  <div className="lp-stepper-bar">
+                  <div className="lp-stepper-bar lp-stagger-1">
                     <div className="lp-stepper-item lp-stepper-done">
                       <div className="lp-step-circle"><HiCheck /></div>
                       <span className="lp-step-label">Mobile</span>
@@ -431,7 +418,7 @@ export function LoginPage() {
                   </div>
 
                   {/* Active Phone Badge with Edit Action */}
-                  <div className="lp-verified-phone-pill">
+                  <div className="lp-verified-phone-pill lp-stagger-2">
                     <div className="lp-pill-prefix">
                       <IndianFlag />
                       <span className="lp-pill-number">+91 {phoneNumber}</span>
@@ -447,29 +434,9 @@ export function LoginPage() {
                   </div>
 
                   {/* Screen Title */}
-                  <div className="lp-title-group">
+                  <div className="lp-title-group lp-stagger-3">
                     <h1 className="lp-main-title">Enter Verification Code</h1>
-                    <p className="lp-subtitle">
-                      We sent a 6-digit one-time password to your mobile number.
-                    </p>
                   </div>
-
-                  {/* Account Status Badge */}
-                  {isRegistered !== null && (
-                    <div className={`lp-member-status-chip ${isRegistered ? 'lp-chip-member' : 'lp-chip-new'}`}>
-                      {isRegistered ? (
-                        <>
-                          <HiShieldCheck className="lp-chip-icon" />
-                          <span>Existing Member • Welcome back</span>
-                        </>
-                      ) : (
-                        <>
-                          <HiSparkles className="lp-chip-icon" />
-                          <span>New Account • Free Wholesale Access Activated</span>
-                        </>
-                      )}
-                    </div>
-                  )}
 
                   {error && <ErrorAlert msg={error} />}
 
@@ -481,7 +448,7 @@ export function LoginPage() {
                   )}
 
                   {/* 6-Digit OTP Boxes */}
-                  <div className="lp-otp-wrapper" onPaste={handleOtpPaste}>
+                  <div className={`lp-otp-wrapper ${otp.every(d => d !== '') ? 'lp-otp-all-filled' : ''} lp-stagger-4`} onPaste={handleOtpPaste}>
                     {otp.map((digit, i) => (
                       <input
                         key={i}
@@ -502,7 +469,7 @@ export function LoginPage() {
 
                   {/* Verify & Login Button */}
                   <button
-                    className={`lp-primary-btn lp-btn-shine ${!isOtpComplete || isLoading ? 'lp-btn-disabled' : 'lp-btn-active-glow'}`}
+                    className={`lp-primary-btn lp-btn-shine ${!isOtpComplete || isLoading ? 'lp-btn-disabled' : 'lp-btn-active-glow'} ${isLoading ? 'lp-btn-loading' : ''} lp-stagger-5`}
                     disabled={isLoading || !isOtpComplete}
                     onClick={() => verifyOtpCode(otp.join(''))}
                   >
@@ -520,7 +487,7 @@ export function LoginPage() {
                   </button>
 
                   {/* Resend & Edit Navigation */}
-                  <div className="lp-resend-row">
+                  <div className="lp-resend-row lp-stagger-5">
                     {timer > 0 ? (
                       <div className="lp-timer-badge">
                         <span className="lp-timer-text">Resend code in</span>
@@ -548,7 +515,7 @@ export function LoginPage() {
               {/* ════════════ STEP 4: SUCCESS CONFIRMATION ════════════ */}
               {currentStep === 4 && (
                 <div className="lp-step-container lp-step-success">
-                  <div className="lp-success-visual">
+                  <div className="lp-success-visual lp-stagger-1">
                     <div className="lp-success-halo lp-halo-outer" />
                     <div className="lp-success-halo lp-halo-inner" />
                     <div className="lp-success-badge-icon">
@@ -556,22 +523,22 @@ export function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="lp-verified-pill-success">
+                  <div className="lp-verified-pill-success lp-stagger-2">
                     <HiSparkles className="lp-sparkle-icon" />
                     <span>{isNewUser ? 'Welcome to KroZenda!' : 'Welcome Back!'}</span>
                   </div>
 
-                  <h1 className="lp-main-title">
+                  <h1 className="lp-main-title lp-stagger-3">
                     {userProfile?.name ? `Hello, ${userProfile.name}!` : 'Verification Complete!'}
                   </h1>
 
-                  <p className="lp-subtitle">
+                  <p className="lp-subtitle lp-stagger-4">
                     Successfully verified for <strong style={{ color: '#0f172a' }}>+91 {phoneNumber}</strong>.
                     <br />You have unlocked full factory wholesale pricing and order management.
                   </p>
 
                   <button
-                    className="lp-success-cta-btn lp-btn-shine"
+                    className="lp-success-cta-btn lp-btn-shine lp-stagger-5"
                     onClick={() => navigate(returnUrl, { replace: true })}
                   >
                     <HiShoppingBag className="lp-shopping-icon" />
@@ -605,6 +572,20 @@ export function LoginPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* CSS VARIABLES FOR CONSISTENT TIMING */
+        :root {
+          --timing-fast: 150ms;
+          --timing-normal: 250ms;
+          --timing-slow: 350ms;
+          --timing-entrance: 500ms;
+          --easing-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+          --color-primary: #4f46e5;
+          --color-primary-light: #6366f1;
+          --color-primary-dark: #4338ca;
+          --color-success: #10b981;
+          --color-error: #ef4444;
+        }
+
         /* RESET & BASE */
         .lp-root {
           min-height: 100vh;
@@ -612,27 +593,27 @@ export function LoginPage() {
           display: flex;
           flex-direction: column;
           font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          background: #f8fafc;
+          background: linear-gradient(180deg, #fafbfc 0%, #f1f5f9 50%, #f8fafc 100%);
           color: #0f172a;
           position: relative;
           overflow-x: hidden;
           -webkit-font-smoothing: antialiased;
         }
 
-        /* AMBIENT BACKGROUND GLOW & DOT GRID */
+        /* AMBIENT BACKGROUND GLOW & DOT GRID - ENHANCED */
         .lp-ambient-bg {
           position: fixed;
           inset: 0;
           pointer-events: none;
           z-index: 0;
           overflow: hidden;
-          background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+          background: linear-gradient(180deg, #fafbfc 0%, #f1f5f9 50%, #f8fafc 100%);
         }
         .lp-orb {
           position: absolute;
           border-radius: 50%;
           filter: blur(100px);
-          opacity: 0.65;
+          opacity: 0.55;
           animation: lpOrbFloat 20s ease-in-out infinite alternate;
         }
         .lp-orb-primary {
@@ -641,6 +622,7 @@ export function LoginPage() {
           background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(79, 70, 229, 0.05) 70%, transparent 100%);
           top: -160px;
           left: -120px;
+          animation-duration: 22s;
         }
         .lp-orb-cyan {
           width: 480px;
@@ -649,6 +631,7 @@ export function LoginPage() {
           bottom: -100px;
           right: -100px;
           animation-delay: -7s;
+          animation-duration: 18s;
         }
         .lp-orb-violet {
           width: 380px;
@@ -658,6 +641,7 @@ export function LoginPage() {
           left: 50%;
           transform: translate(-50%, -50%);
           animation-delay: -14s;
+          animation-duration: 21s;
         }
         .lp-dot-pattern {
           position: absolute;
@@ -665,20 +649,76 @@ export function LoginPage() {
           background-image: radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px);
           background-size: 24px 24px;
           opacity: 0.7;
+          animation: lpDotGridPulse 12s ease-in-out infinite;
         }
         @keyframes lpOrbFloat {
           0% { transform: translateY(0px) scale(1); }
           50% { transform: translateY(-30px) scale(1.06); }
           100% { transform: translateY(20px) scale(0.96); }
         }
+        @keyframes lpDotGridPulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.6; }
+        }
 
-        /* HEADER */
+        /* ENHANCED STAGGER ANIMATIONS */
+        @keyframes lpFadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lpSlideOutUp {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(-16px); }
+        }
+        @keyframes lpSlideOutDown {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(16px); }
+        }
+        @keyframes lpSlideInDown {
+          from { opacity: 0; transform: translateY(-16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lpSlideInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lpOtpCellPop {
+          0% { transform: scale(0.85); opacity: 0; }
+          50% { transform: scale(1.12); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes lpGlowPulse {
+          0%, 100% { box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.45); }
+          50% { box-shadow: 0 12px 32px -4px rgba(79, 70, 229, 0.65); }
+        }
+        @keyframes lpSuccessRipple {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* STAGGER CLASSES */
+        .lp-stagger-1 { animation: lpFadeInUp var(--timing-entrance) var(--easing-smooth) both; animation-delay: 60ms; }
+        .lp-stagger-2 { animation: lpFadeInUp var(--timing-entrance) var(--easing-smooth) both; animation-delay: 120ms; }
+        .lp-stagger-3 { animation: lpFadeInUp var(--timing-entrance) var(--easing-smooth) both; animation-delay: 180ms; }
+        .lp-stagger-4 { animation: lpFadeInUp var(--timing-entrance) var(--easing-smooth) both; animation-delay: 240ms; }
+        .lp-stagger-5 { animation: lpFadeInUp var(--timing-entrance) var(--easing-smooth) both; animation-delay: 300ms; }
+
+        /* REDUCED MOTION SUPPORT */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+
+        /* HEADER - ENHANCED GLASSMORPHISM */
         .lp-header {
           position: relative;
           z-index: 30;
-          background: rgba(255, 255, 255, 0.88);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           border-bottom: 1px solid rgba(226, 232, 240, 0.8);
           box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
         }
@@ -795,19 +835,19 @@ export function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 24px 16px 32px;
+          padding: 24px 16px 40px;
         }
         .lp-card-wrapper {
           width: 100%;
-          max-width: 440px;
+          max-width: 480px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
         }
 
-        /* MODERN CARD */
+        /* MODERN CARD - ENHANCED */
         .lp-card {
-          background: #ffffff;
+          background: #fafbfc;
           border-radius: 28px;
           border: 1px solid rgba(226, 232, 240, 0.85);
           box-shadow:
@@ -841,9 +881,9 @@ export function LoginPage() {
           100% { background-position: 200% 0%; }
         }
 
-        /* STEP BODY ANIMATION */
+        /* STEP BODY ANIMATION - DIRECTIONAL TRANSITIONS */
         .lp-card-body {
-          transition: opacity 0.25s ease, transform 0.25s ease;
+          transition: opacity 0.35s ease, transform 0.35s ease;
         }
         .lp-visible {
           opacity: 1;
@@ -853,17 +893,29 @@ export function LoginPage() {
           opacity: 0;
           transform: translateY(8px);
         }
+        .lp-hidden.lp-exit-up {
+          transform: translateY(-16px);
+        }
+        .lp-visible.lp-enter-down {
+          animation: lpSlideInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .lp-hidden.lp-exit-down {
+          transform: translateY(16px);
+        }
+        .lp-visible.lp-enter-up {
+          animation: lpSlideInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
 
         /* STEP CONTAINER */
         .lp-step-container {
           padding: 28px 24px 32px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
         }
-        @media (min-width: 440px) {
+        @media (min-width: 480px) {
           .lp-step-container {
-            padding: 34px 32px 36px;
+            padding: 36px 40px 40px;
           }
         }
 
@@ -980,20 +1032,16 @@ export function LoginPage() {
           height: 40px;
           object-fit: contain;
         }
+        .lp-avatar-img-simple {
+          width: 124px;
+          height: 124px;
+          object-fit: contain;
+          animation: lpFadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
 
         /* LIVE STATUS PILL */
         .lp-live-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          border-radius: 999px;
-          background: #ecfdf5;
-          border: 1px solid #a7f3d0;
-          color: #065f46;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.02em;
+          display: none;
         }
         .lp-live-dot {
           width: 6px;
@@ -1013,25 +1061,25 @@ export function LoginPage() {
           text-align: center;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
         .lp-main-title {
           font-size: 24px;
           font-weight: 800;
           letter-spacing: -0.03em;
           color: #0f172a;
-          line-height: 1.2;
+          line-height: 1.15;
           margin: 0;
         }
-        @media (min-width: 440px) {
+        @media (min-width: 480px) {
           .lp-main-title {
-            font-size: 26px;
+            font-size: 28px;
           }
         }
         .lp-subtitle {
-          font-size: 13.5px;
+          font-size: 14px;
           color: #64748b;
-          line-height: 1.55;
+          line-height: 1.6;
           margin: 0;
           font-weight: 500;
         }
@@ -1040,11 +1088,11 @@ export function LoginPage() {
         .lp-phone-form {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
           width: 100%;
         }
 
-        /* PHONE INPUT CONTAINER */
+        /* PHONE INPUT CONTAINER - ENHANCED */
         .lp-input-container {
           display: flex;
           align-items: center;
@@ -1060,15 +1108,20 @@ export function LoginPage() {
         .lp-input-container:focus-within {
           border-color: #4f46e5;
           background: #ffffff;
-          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12), 0 4px 14px rgba(79, 70, 229, 0.08);
-          transform: translateY(-1px);
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), 0 4px 16px rgba(79, 70, 229, 0.12);
+          transform: translateY(-2px);
+          animation: lpInputFocus 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes lpInputFocus {
+          0% { transform: scale(0.998); }
+          100% { transform: scale(1); }
         }
         .lp-input-valid {
           border-color: #818cf8;
         }
         .lp-input-error {
           border-color: #ef4444 !important;
-          box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12) !important;
+          box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15) !important;
         }
 
         .lp-country-badge {
@@ -1132,9 +1185,9 @@ export function LoginPage() {
         .lp-digit-indicator-wrap {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: center;
           padding: 0 4px;
-          margin-top: -6px;
+          margin-top: -4px;
         }
         .lp-digit-dots-row {
           display: flex;
@@ -1218,13 +1271,13 @@ export function LoginPage() {
           text-decoration: underline;
         }
 
-        /* PRIMARY CTA BUTTON & SHINE EFFECT */
+        /* PRIMARY CTA BUTTON - ENHANCED */
         .lp-primary-btn {
           width: 100%;
           height: 52px;
           border-radius: 16px;
           border: none;
-          background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #4338ca 100%);
+          background: linear-gradient(135deg, #5b51e8 0%, #6d66f3 50%, #4e45d9 100%);
           color: #ffffff;
           font-size: 15px;
           font-weight: 700;
@@ -1241,13 +1294,18 @@ export function LoginPage() {
         }
         .lp-btn-active-glow {
           box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.45), 0 2px 6px rgba(15, 23, 42, 0.06);
+          animation: none;
         }
         .lp-btn-active-glow:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 30px -4px rgba(79, 70, 229, 0.55), 0 4px 10px rgba(15, 23, 42, 0.08);
+          transform: translateY(-3px);
+          box-shadow: 0 12px 32px -4px rgba(79, 70, 229, 0.6), 0 6px 16px rgba(15, 23, 42, 0.1);
         }
         .lp-btn-active-glow:active {
-          transform: scale(0.98);
+          transform: scale(0.97);
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+        .lp-btn-active-glow.lp-btn-loading {
+          animation: lpGlowPulse 1.5s ease-in-out infinite;
         }
         .lp-btn-disabled {
           background: #f1f5f9 !important;
@@ -1255,9 +1313,10 @@ export function LoginPage() {
           box-shadow: none !important;
           cursor: not-allowed !important;
           border: 1px solid #e2e8f0;
+          opacity: 0.5;
         }
 
-        /* SHINE SWEEP */
+        /* SHINE SWEEP - ENHANCED */
         .lp-btn-shine::after {
           content: '';
           position: absolute;
@@ -1265,16 +1324,16 @@ export function LoginPage() {
           left: -120%;
           width: 80%;
           height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-          transform: skewX(-20deg);
-          animation: lpBtnSweep 3.5s infinite;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+          transform: skewX(-25deg);
+          animation: lpBtnSweep 2.8s ease-in-out infinite;
         }
         .lp-btn-disabled::after {
           display: none;
         }
         @keyframes lpBtnSweep {
           0% { left: -120%; }
-          30% { left: 140%; }
+          20% { left: 140%; }
           100% { left: 140%; }
         }
 
@@ -1289,7 +1348,7 @@ export function LoginPage() {
         .lp-spin-icon {
           width: 18px;
           height: 18px;
-          animation: lpSpinAnim 0.75s linear infinite;
+          animation: lpSpinAnim 0.6s linear infinite;
         }
         @keyframes lpSpinAnim {
           from { transform: rotate(0deg); }
@@ -1432,7 +1491,7 @@ export function LoginPage() {
           height: 14px;
         }
 
-        /* 6-DIGIT OTP BOXES */
+        /* 6-DIGIT OTP BOXES - ENHANCED */
         .lp-otp-wrapper {
           display: flex;
           align-items: center;
@@ -1446,13 +1505,13 @@ export function LoginPage() {
           }
         }
         .lp-otp-input-cell {
-          width: 46px;
-          height: 56px;
-          border-radius: 14px;
+          width: 42px;
+          height: 48px;
+          border-radius: 12px;
           border: 1.5px solid #cbd5e1;
           background: #ffffff;
           text-align: center;
-          font-size: 22px;
+          font-size: 20px;
           font-weight: 800;
           color: #0f172a;
           outline: none;
@@ -1462,30 +1521,37 @@ export function LoginPage() {
         }
         @media (min-width: 400px) {
           .lp-otp-input-cell {
-            width: 52px;
-            height: 62px;
-            font-size: 24px;
+            width: 46px;
+            height: 52px;
+            font-size: 22px;
           }
         }
         .lp-otp-input-cell:focus {
           border-color: #4f46e5;
           background: #ffffff;
-          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.18), 0 4px 12px rgba(79, 70, 229, 0.1);
           transform: translateY(-2px);
         }
         .lp-otp-cell-filled {
           border-color: #4f46e5 !important;
           background: #f8faff !important;
           color: #4f46e5 !important;
-          animation: lpOtpFillPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes lpOtpFillPop {
-          0% { transform: scale(0.92); }
-          50% { transform: scale(1.08); }
-          100% { transform: scale(1); }
+          animation: lpOtpCellPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+          box-shadow: 0 0 8px rgba(79, 70, 229, 0.4);
         }
         .lp-otp-cell-loading {
-          opacity: 0.6;
+          opacity: 0.7;
+        }
+
+        /* OTP Complete Ripple Effect */
+        .lp-otp-all-filled .lp-otp-input-cell:last-child::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 12px;
+          background: rgba(79, 70, 229, 0.3);
+          animation: lpSuccessRipple 0.6s ease-out forwards;
+          pointer-events: none;
         }
 
         .lp-resend-row {
@@ -1605,7 +1671,7 @@ export function LoginPage() {
           height: 52px;
           border-radius: 16px;
           border: none;
-          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           color: #ffffff;
           font-size: 15px;
           font-weight: 700;
@@ -1621,12 +1687,20 @@ export function LoginPage() {
           font-family: inherit;
         }
         .lp-success-cta-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.55);
+          transform: translateY(-3px);
+          box-shadow: 0 12px 32px -4px rgba(16, 185, 129, 0.6), 0 6px 16px rgba(15, 23, 42, 0.1);
+        }
+        .lp-success-cta-btn:active {
+          transform: scale(0.97);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
         .lp-shopping-icon {
           width: 18px;
           height: 18px;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .lp-success-cta-btn:hover .lp-shopping-icon {
+          transform: scale(1.1);
         }
 
         /* ═══════════ STEP 1: WELCOME SCREEN STYLING ═══════════ */
