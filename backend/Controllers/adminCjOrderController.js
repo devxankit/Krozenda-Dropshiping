@@ -1,4 +1,5 @@
 const CjOrder = require('../Models/CjOrder');
+const Order = require('../Models/Order');
 const cjOrderService = require('../services/cj/cjOrderService');
 
 // GET /admin/cj/orders?status=&pageNum=&pageSize=
@@ -30,12 +31,13 @@ async function getOrder(req, res) {
 // POST /admin/cj/orders/:id/refresh-status
 async function refreshStatus(req, res) {
   const order = await CjOrder.findById(req.params.id);
-  if (!order?.cjOrderId) {
-    return res.status(400).json({ success: false, message: 'This CJ order has no cjOrderId yet' });
+  const identifier = order?.cjOrderId || order?.krozendaSubOrderId;
+  if (!identifier) {
+    return res.status(400).json({ success: false, message: 'This CJ order has no identifier yet' });
   }
 
   try {
-    const updated = await cjOrderService.refreshOrderStatus(order.cjOrderId);
+    const updated = await cjOrderService.refreshOrderStatus(identifier);
     res.json({ success: true, message: 'Status refreshed', data: updated });
   } catch (err) {
     res.status(err.status || 502).json({ success: false, message: err.message });

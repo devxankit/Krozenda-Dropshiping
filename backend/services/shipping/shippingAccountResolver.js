@@ -121,17 +121,15 @@ async function ensurePlatformIntegration() {
 // the vendor here rather than trusted from the caller — this is the point
 // where a supplied id could otherwise become an IDOR (task §17).
 async function resolvePickupLocation({ vendorId, pickupLocationId }) {
-  if (!vendorId) return null;
-
   if (pickupLocationId) {
     return PickupLocation.findOne({
       _id: pickupLocationId,
-      vendor: vendorId,
+      vendor: vendorId || null,
       isActive: true,
     });
   }
 
-  return PickupLocation.findOne({ vendor: vendorId, isActive: true }).sort({
+  return PickupLocation.findOne({ vendor: vendorId || null, isActive: true }).sort({
     isDefault: -1,
     createdAt: 1,
   });

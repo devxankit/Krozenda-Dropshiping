@@ -20,7 +20,7 @@ const REGISTRATION_STATUSES = [
 
 const pickupLocationSchema = new mongoose.Schema(
   {
-    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
+    vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
 
     // Seller-facing label ("Indore Warehouse").
     nickname: { type: String, required: true, trim: true, maxlength: 60 },

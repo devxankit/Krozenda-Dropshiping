@@ -106,8 +106,9 @@ async function createOrder({ krozendaOrderId, krozendaSubOrderId, items, shippin
       },
     });
 
-    const data = body?.data || {};
-    cjOrder.cjOrderId = data.orderId || data.cjOrderId;
+    const data = body?.data;
+    const resolvedCjOrderId = typeof data === 'string' ? data : (data?.orderId || data?.cjOrderId || data?.cjOrderCode);
+    cjOrder.cjOrderId = resolvedCjOrderId || cjOrder.cjOrderId;
     cjOrder.cjOrderNumber = orderNumber;
     cjOrder.status = 'CONFIRMED';
     cjOrder.lastError = '';
@@ -138,13 +139,19 @@ async function createOrder({ krozendaOrderId, krozendaSubOrderId, items, shippin
 }
 
 async function refreshOrderStatus(cjOrderId) {
-  const cjOrder = await CjOrder.findOne({ cjOrderId });
+  const cjOrder = await CjOrder.findOne({
+    $or: [
+      { cjOrderId },
+      { cjOrderNumber: cjOrderId },
+      { krozendaSubOrderId: cjOrderId },
+    ],
+  });
   if (!cjOrder) throw new CjOrderError('CJ order not found', { status: 404 });
 
   const { body } = await authenticatedCall({
     method: 'GET',
     path: ORDER_DETAIL_PATH,
-    query: { orderId: cjOrderId },
+    query: { orderId: cjOrder.cjOrderId || cjOrderId },
     idempotent: true,
   });
 
@@ -155,8 +162,43 @@ async function refreshOrderStatus(cjOrderId) {
   if (data?.paymentStatus) {
     cjOrder.paymentStatus = data.paymentStatus === 'PAID' ? 'PAID' : cjOrder.paymentStatus;
   }
-  if (typeof data?.logisticPrice === 'number') cjOrder.shippingCost = data.logisticPrice;
+  const shippingCost = typeof data?.postageAmount === 'number' ? data.postageAmount : data?.logisticPrice;
+  if (typeof shippingCost === 'number') cjOrder.shippingCost = shippingCost;
+  if (typeof data?.productAmount === 'number') cjOrder.totalCost = data.productAmount;
   await cjOrder.save();
+
+  // If CJ assigned tracking information, sync CjShipment and parent order
+  if (data?.trackNumber) {
+    try {
+      const CjShipment = require('../../Models/CjShipment');
+      const Order = require('../../Models/Order');
+      let shipment = await CjShipment.findOne({ cjOrder: cjOrder._id });
+      if (!shipment) {
+        shipment = new CjShipment({ cjOrder: cjOrder._id, cjOrderId: cjOrder.cjOrderId });
+      }
+      shipment.trackingNumber = data.trackNumber;
+      shipment.carrier = data.logisticName || shipment.carrier;
+      shipment.status = cjOrder.status === 'DELIVERED' ? 'DELIVERED' : 'SHIPPED';
+      shipment.lastSyncedAt = new Date();
+      await shipment.save();
+
+      if (cjOrder.krozendaOrderId) {
+        await Order.updateOne(
+          { _id: cjOrder.krozendaOrderId },
+          {
+            $set: {
+              'items.$[elem].courierName': data.logisticName || 'CJ Dropshipping',
+              'items.$[elem].trackingNumber': data.trackNumber,
+              'items.$[elem].status': cjOrder.status === 'DELIVERED' ? 'DELIVERED' : 'SHIPPED',
+            },
+          },
+          { arrayFilters: [{ 'elem.status': { $nin: ['DELIVERED', 'CANCELLED'] } }] }
+        );
+      }
+    } catch (shipErr) {
+      console.error('[refreshOrderStatus] tracking sync error:', shipErr.message);
+    }
+  }
 
   return cjOrder;
 }

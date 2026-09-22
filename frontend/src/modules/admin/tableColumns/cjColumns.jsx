@@ -119,7 +119,7 @@ export const CJ_ORDER_COLUMNS = Object.freeze([
     key: 'cjOrderId',
     header: 'CJ Order',
     render: (row) => (
-      <PrimaryCell title={row.cjOrderId || 'Pending creation'} subtitle={`Sub-order: ${row.krozendaSubOrderId}`} />
+      <PrimaryCell title={row.cjOrderId || row.cjOrderNumber || 'Pending creation'} subtitle={`Sub-order: ${row.krozendaSubOrderId}`} />
     ),
   },
   {

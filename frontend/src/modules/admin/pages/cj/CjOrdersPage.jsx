@@ -45,7 +45,7 @@ export function CjOrdersPage() {
           <Button
             variant="secondary"
             size="sm"
-            disabled={!row.cjOrderId || isRefreshing}
+            disabled={(!row.cjOrderId && !row.krozendaSubOrderId) || isRefreshing}
             onClick={() => refreshStatus(row._id)}
           >
             Refresh
