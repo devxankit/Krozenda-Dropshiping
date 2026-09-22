@@ -14,10 +14,10 @@ import {
   vendorAnalyticsSchema,
 } from '../schemas/analyticsSchema'
 
-// `live` marks the endpoints the backend actually serves. Sales is
-// implemented (Controllers/adminAnalyticsController.js); the other three
-// still read from fixtures, so flipping VITE_USE_MOCKS is not what decides
-// which screens work.
+// `live` marks the endpoints the backend actually serves. All four are now
+// implemented (Controllers/adminAnalyticsController.js) — fixtures stay
+// wired as the fetch fallback, but flipping VITE_USE_MOCKS is not what
+// decides whether a screen shows real figures.
 const ENDPOINTS = {
   sales: {
     path: '/admin/analytics/sales',
@@ -25,9 +25,24 @@ const ENDPOINTS = {
     schema: salesAnalyticsSchema,
     live: true,
   },
-  vendors: { path: '/admin/analytics/vendors', fixture: vendorAnalyticsFixture, schema: vendorAnalyticsSchema },
-  catalog: { path: '/admin/analytics/catalog', fixture: catalogAnalyticsFixture, schema: catalogAnalyticsSchema },
-  customers: { path: '/admin/analytics/customers', fixture: customerAnalyticsFixture, schema: customerAnalyticsSchema },
+  vendors: {
+    path: '/admin/analytics/vendors',
+    fixture: vendorAnalyticsFixture,
+    schema: vendorAnalyticsSchema,
+    live: true,
+  },
+  catalog: {
+    path: '/admin/analytics/catalog',
+    fixture: catalogAnalyticsFixture,
+    schema: catalogAnalyticsSchema,
+    live: true,
+  },
+  customers: {
+    path: '/admin/analytics/customers',
+    fixture: customerAnalyticsFixture,
+    schema: customerAnalyticsSchema,
+    live: true,
+  },
 }
 
 export function fetchAnalytics(kind, range = '30d') {

@@ -117,6 +117,7 @@ const ICONS = Object.freeze({
   customers: FiUsers,
   kyc: FiUserCheck,
   finance: FiTrendingUp,
+  accounting: FiDollarSign,
   settlements: FiCreditCard,
   ledger: FiBookOpen,
   tax: FiPercent,

@@ -65,7 +65,7 @@ export function OrderPlacedScreen() {
                 <dt className="font-medium text-slate-500">Order total</dt>
                 <dd className="text-base font-black text-blue-700">
                   {'₹'}
-                  {amount.toLocaleString('en-IN')}
+                  {(amount ?? 0).toLocaleString('en-IN')}
                 </dd>
               </div>
               {paymentStatus && (

@@ -51,10 +51,8 @@ import { VendorsPage } from './pages/people/VendorsPage'
 import { KycQueuePage } from './pages/people/KycQueuePage'
 import { KycReviewPage } from './pages/people/KycReviewPage'
 import { PolicyAcceptancesPage } from './pages/people/PolicyAcceptancesPage'
-import { StaffPage } from './pages/people/StaffPage'
 import { RolesManagementPage } from './pages/people/RolesManagementPage'
 import { UserManagementPage } from './pages/people/UserManagementPage'
-import { RoleDetailPage } from './pages/people/RoleDetailPage'
 import { TransactionsPage, RefundsPage } from './pages/finance/FinanceListPages'
 import { SettlementsPage, VendorLedgersPage } from './pages/finance/SettlementListPages'
 import { SettlementBatchPage } from './pages/finance/SettlementBatchPage'
@@ -287,10 +285,8 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.KYC_QUEUE)} element={<KycQueuePage />} />
               <Route path={rel(ADMIN_ROUTES.KYC_REVIEW)} element={<KycReviewPage />} />
               <Route path={rel(ADMIN_ROUTES.POLICY_ACCEPTANCES)} element={<PolicyAcceptancesPage />} />
-              <Route path={rel(ADMIN_ROUTES.STAFF)} element={<StaffPage />} />
               <Route path={rel(ADMIN_ROUTES.USER_MANAGEMENT)} element={<UserManagementPage />} />
               <Route path={rel(ADMIN_ROUTES.ROLES)} element={<RolesManagementPage />} />
-              <Route path={rel(ADMIN_ROUTES.ROLE_DETAIL)} element={<RoleDetailPage />} />
 
               {/* Finance & accounting */}
               <Route

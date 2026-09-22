@@ -45,7 +45,7 @@ export function PaymentScreen() {
   // deep link (§111, §112).
   const subtotal = cartSummary?.subtotal ?? cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
   const discount = appliedCoupon?.discountAmount || 0
-  const { quote } = useShippingQuoteController({
+  const { quote, isLoading: isQuoteLoading } = useShippingQuoteController({
     addressId: selectedAddressId,
     paymentMethod: selectedMethod,
     couponCode: appliedCoupon?.code,
@@ -284,8 +284,14 @@ export function PaymentScreen() {
                 <div className="flex justify-between border-t border-slate-200 pt-2 text-xs font-bold text-slate-700">
                   <dt>Grand Total</dt>
                   <dd className="text-sm font-black text-blue-700">
-                    {'₹'}
-                    {Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    {isQuoteLoading ? (
+                      <span className="inline-block h-4 w-16 animate-pulse rounded bg-blue-100 align-middle" />
+                    ) : (
+                      <>
+                        {'₹'}
+                        {Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -309,7 +315,7 @@ export function PaymentScreen() {
               <button
                 type="button"
                 onClick={handlePay}
-                disabled={isPlacingOrder || amount <= 0}
+                disabled={isPlacingOrder || isQuoteLoading || amount <= 0}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-4 text-xs font-bold tracking-wide text-white shadow-md transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60"
               >
                 <span>

@@ -1,6 +1,17 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const User = require('../Models/User');
+const AdminPasswordReset = require('../Models/AdminPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { updateLanguageFor } = require('./languageController');
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — matches ForgotPasswordPage copy.
+const MAX_RESET_ATTEMPTS = 5;
+const isProduction = process.env.ENV === 'production';
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 async function login(req, res) {
   const { email, password } = req.body;
@@ -60,6 +71,95 @@ async function me(req, res) {
       permissions: req.permissions,
     },
   });
+}
+
+// POST /admin/auth/forgot-password — always answers the same way whether or
+// not the email belongs to an admin/staff account, so this endpoint can't be
+// used to enumerate accounts. Mirrors vendorAuthController.forgotPassword;
+// the only difference is a link-style token (this UI promises a "reset
+// link") instead of a typed OTP.
+async function forgotPassword(req, res) {
+  const { email } = req.body;
+
+  if (!email?.trim()) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail, isDeleted: false });
+
+  let devToken;
+  if (user) {
+    const token = generateResetToken();
+    const tokenHash = await bcrypt.hash(token, 10);
+    await AdminPasswordReset.findOneAndUpdate(
+      { email: normalizedEmail },
+      { tokenHash, attempts: 0, expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+      { upsert: true }
+    );
+
+    if (!isProduction) {
+      console.log(`[dev-only] Admin password reset token for ${normalizedEmail}: ${token}`);
+      devToken = token;
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'If an account exists for this email, a reset link has been sent.',
+    // Only ever present outside production, where there is no real email
+    // gateway configured yet — never echoed once one is wired up.
+    data: devToken ? { token: devToken } : undefined,
+  });
+}
+
+// POST /admin/auth/reset-password
+async function resetPassword(req, res) {
+  const { email, token, password, confirmPassword } = req.body;
+
+  if (!email?.trim() || !token?.trim()) {
+    return res.status(400).json({ success: false, message: 'Email and reset token are required' });
+  }
+  if (!password || password.length < 12 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be at least 12 characters and include a capital letter and a number',
+    });
+  }
+  if (confirmPassword !== undefined && password !== confirmPassword) {
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const resetRequest = await AdminPasswordReset.findOne({ email: normalizedEmail });
+
+  if (!resetRequest || resetRequest.expiresAt < new Date()) {
+    return res.status(400).json({ success: false, message: 'This reset link has expired. Request a new one.' });
+  }
+
+  if (resetRequest.attempts >= MAX_RESET_ATTEMPTS) {
+    await AdminPasswordReset.deleteOne({ _id: resetRequest._id });
+    return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Request a new link.' });
+  }
+
+  const isMatch = await bcrypt.compare(token.trim(), resetRequest.tokenHash);
+  if (!isMatch) {
+    resetRequest.attempts += 1;
+    await resetRequest.save();
+    return res.status(400).json({ success: false, message: 'Incorrect or expired reset link' });
+  }
+
+  const user = await User.findOne({ email: normalizedEmail, isDeleted: false });
+  if (!user) {
+    await AdminPasswordReset.deleteOne({ _id: resetRequest._id });
+    return res.status(404).json({ success: false, message: 'Account not found' });
+  }
+
+  user.password = password;
+  await user.save();
+  await AdminPasswordReset.deleteOne({ _id: resetRequest._id });
+
+  res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
 }
 
 // PUT /admin/auth/language
@@ -172,5 +272,5 @@ async function changePassword(req, res) {
   }
 }
 
-module.exports = { login, me, updateLanguage, updateProfile, changePassword };
+module.exports = { login, me, updateLanguage, updateProfile, changePassword, forgotPassword, resetPassword };
 

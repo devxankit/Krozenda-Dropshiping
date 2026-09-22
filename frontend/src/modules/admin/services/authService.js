@@ -76,6 +76,7 @@ export function requestPasswordReset(body) {
   return mutateResource({
     path: '/admin/auth/forgot-password',
     body,
+    live: true,
     fixture: () => ({ sent: true }),
   })
 }
@@ -84,6 +85,7 @@ export function submitPasswordReset(body) {
   return mutateResource({
     path: '/admin/auth/reset-password',
     body,
+    live: true,
     fixture: () => ({ reset: true }),
   })
 }

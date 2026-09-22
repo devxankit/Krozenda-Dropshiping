@@ -1,4 +1,5 @@
 import { useForm } from 'react-hook-form'
+import { useSearchParams } from 'react-router-dom'
 import { Button, Icon, Input } from '../../../../components/ui'
 import { AuthShell } from '../../components/auth/AuthShell'
 import { InlineAlert } from '../../components/feedback'
@@ -14,6 +15,11 @@ const RULES = Object.freeze([
 
 export function ResetPasswordPage() {
   const { submit, isSubmitting, error } = useResetPasswordController()
+  const [searchParams] = useSearchParams()
+  // The reset link emailed by forgot-password carries these two — the form
+  // itself only ever collects the new password.
+  const email = searchParams.get('email') || ''
+  const token = searchParams.get('token') || ''
 
   const {
     register,
@@ -32,7 +38,11 @@ export function ResetPasswordPage() {
       title="Choose a new password"
       description="Admin passwords are held to a higher bar than buyer accounts, and all active sessions are signed out once this is saved."
     >
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit(submit)} noValidate>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={handleSubmit((values) => submit({ ...values, email, token }))}
+        noValidate
+      >
         {error && (
           <InlineAlert tone="danger" title="That did not work">
             {error.message}

@@ -32,6 +32,7 @@ export const fetchDropshipOverview = () =>
       recentOrders: RECENT_FORWARDED_ORDERS,
     }),
     schema: dropshipOverviewSchema,
+    live: true,
   })
 
 export const fetchDropshipPartners = (query) =>
@@ -40,6 +41,7 @@ export const fetchDropshipPartners = (query) =>
     params: params(query),
     fixture: () => dropshipPartnerListFixture(query),
     schema: dropshipPartnerListSchema,
+    live: true,
   })
 
 export const fetchDropshipProducts = (query) =>
@@ -56,6 +58,7 @@ export const fetchForwardedOrders = (query) =>
     params: params(query),
     fixture: () => forwardedOrderListFixture(query),
     schema: forwardedOrderListSchema,
+    live: true,
   })
 
 export const fetchDropshipMarginRules = () =>
@@ -63,4 +66,5 @@ export const fetchDropshipMarginRules = () =>
     path: '/admin/dropshipping/margins',
     fixture: () => dropshipMarginRulesFixture(),
     schema: marginRuleListSchema,
+    live: true,
   })
