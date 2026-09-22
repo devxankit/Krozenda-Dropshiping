@@ -7,6 +7,7 @@ import {
   Icon,
   Input,
   PasswordInput,
+  Switch,
 } from '../../../../components/ui'
 import { FormSection } from '../../components/forms'
 import { InlineAlert } from '../../components/feedback'
@@ -19,13 +20,17 @@ import {
   updateAdminProfile,
   updateGeneralSettings,
 } from '../../services/systemService'
+import { usePaymentSettingsController } from '../../controllers/usePaymentSettingsController'
 
 const SETTINGS_TABS = [
   { id: 'general', label: 'General & Profile', icon: 'settings' },
+  { id: 'payments', label: 'Payment Methods', icon: 'settlements' },
   { id: 'footer', label: 'Footer & Social Links', icon: 'layout' },
   { id: 'security', label: 'Security & Password', icon: 'lock' },
   { id: 'commission_gst', label: 'Commission & GST', icon: 'currency' },
 ]
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 export function GeneralSettingsPage({ defaultTab }) {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -35,6 +40,7 @@ export function GeneralSettingsPage({ defaultTab }) {
   const setUser = useAuthStore((state) => state.setUser)
 
   const controller = useGeneralSettingsController()
+  const paymentController = usePaymentSettingsController()
   const fileInputRef = useRef(null)
 
   // Tab 1 state: Profile & Store details
@@ -612,7 +618,7 @@ export function GeneralSettingsPage({ defaultTab }) {
                       size="control"
                       value={copyrightText}
                       onChange={(e) => setCopyrightText(e.target.value)}
-                      placeholder={`© ${new Date(Date.now()).getFullYear()} KroZenda Technologies Pvt Ltd. All rights reserved.`}
+                      placeholder={`© ${CURRENT_YEAR} KroZenda Technologies Pvt Ltd. All rights reserved.`}
                       description="Displayed at the bottom-left of the footer sub-bar"
                     />
                   </div>
@@ -912,6 +918,127 @@ export function GeneralSettingsPage({ defaultTab }) {
                 </div>
               </SectionCard>
             </form>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB: PAYMENT METHODS                                              */}
+          {/* ================================================================= */}
+          {activeTab === 'payments' && (
+            <div className="flex flex-col gap-5">
+              {paymentController.saveSuccess && (
+                <InlineAlert tone="success" title="Payment settings saved">
+                  Payment method availability updated successfully and is live on checkout.
+                </InlineAlert>
+              )}
+
+              {paymentController.saveError && (
+                <InlineAlert tone="danger" title="Could not save">
+                  {paymentController.saveError?.message || 'The change was rejected.'}
+                </InlineAlert>
+              )}
+
+              <SectionCard
+                title="Payment Methods"
+                description="Toggle payment methods ON or OFF. At least one must stay on, or buyers cannot check out."
+              >
+                <div className="p-4 sm:p-5 flex flex-col gap-4">
+                  {paymentController.isLoading ? (
+                    <div className="py-8 text-center text-xs text-ink-muted">Loading payment settings...</div>
+                  ) : paymentController.settings ? (
+                    <>
+                      <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
+                        {/* 1. Cash on Delivery (COD) */}
+                        <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                          <div className="flex flex-col gap-1 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">Cash on Delivery (COD)</span>
+                              <Badge tone={paymentController.settings.codEnabled ? 'success' : 'neutral'}>
+                                {paymentController.settings.codEnabled ? 'Active' : 'Disabled'}
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-ink-muted">
+                              Buyer pays the courier in cash when parcel arrives at delivery destination.
+                            </span>
+                          </div>
+                          <Switch
+                            id="codEnabled"
+                            checked={paymentController.settings.codEnabled}
+                            onChange={(e) => paymentController.update('codEnabled', e.target.checked)}
+                          />
+                        </div>
+
+                        {/* 2. Online Payment (Razorpay) */}
+                        <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                          <div className="flex flex-col gap-1 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">Online Payment (Razorpay)</span>
+                              <Badge tone={paymentController.settings.razorpayEnabled ? 'success' : 'neutral'}>
+                                {paymentController.settings.razorpayEnabled ? 'Active' : 'Disabled'}
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-ink-muted">
+                              UPI, Credit/Debit Cards, NetBanking, and Wallets via Razorpay gateway.
+                            </span>
+                          </div>
+                          <Switch
+                            id="razorpayEnabled"
+                            checked={paymentController.settings.razorpayEnabled}
+                            onChange={(e) => paymentController.update('razorpayEnabled', e.target.checked)}
+                          />
+                        </div>
+
+                        {/* 3. In-App Wallet */}
+                        <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                          <div className="flex flex-col gap-1 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">In-App Wallet</span>
+                              <Badge tone={paymentController.settings.walletEnabled ? 'success' : 'neutral'}>
+                                {paymentController.settings.walletEnabled ? 'Active' : 'Disabled'}
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-ink-muted">
+                              Allows buyers to pay directly from their Krozenda account wallet balance.
+                            </span>
+                          </div>
+                          <Switch
+                            id="walletEnabled"
+                            checked={paymentController.settings.walletEnabled}
+                            onChange={(e) => paymentController.update('walletEnabled', e.target.checked)}
+                          />
+                        </div>
+                      </div>
+
+                      {paymentController.changed.length > 0 && (
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-brand-700 font-semibold">
+                            You have unsaved changes to payment methods.
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="quiet"
+                              size="control"
+                              onClick={paymentController.discard}
+                              disabled={paymentController.isSaving}
+                            >
+                              Discard
+                            </Button>
+                            <Button
+                              type="button"
+                              size="control"
+                              onClick={() => paymentController.save()}
+                              isLoading={paymentController.isSaving}
+                            >
+                              Save changes
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              </SectionCard>
+            </div>
           )}
         </div>
       )}

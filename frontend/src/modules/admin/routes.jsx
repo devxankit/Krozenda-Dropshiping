@@ -87,10 +87,8 @@ import {
   GeneralSettingsPage,
   TaxSettingsPage,
   PoliciesPage,
-  PaymentSettingsPage,
   NotificationSettingsPage,
   IntegrationHealthPage,
-  SecuritySettingsPage,
   ApiWebhooksPage,
 } from './pages/system/SettingsPages'
 import { AuditLogPage, BackupsPage, SupportTicketsPage, AdminProfilePage } from './pages/system/SystemPages'
@@ -378,11 +376,14 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.REPORT_RUNNER)} element={<ReportRunnerPage />} />
 
               {/* Settings & system */}
+              <Route path="settings" element={<Navigate to={ADMIN_ROUTES.SETTINGS_GENERAL} replace />} />
+              <Route path="payments" element={<Navigate to={ADMIN_ROUTES.SETTINGS_PAYMENTS} replace />} />
+              <Route path="payment-methods" element={<Navigate to={ADMIN_ROUTES.SETTINGS_PAYMENTS} replace />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_GENERAL)} element={<GeneralSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_BUSINESS_RULES)} element={<BusinessRulesPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_TAXES)} element={<TaxSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_POLICIES)} element={<PoliciesPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTINGS_PAYMENTS)} element={<PaymentSettingsPage />} />
+              <Route path={rel(ADMIN_ROUTES.SETTINGS_PAYMENTS)} element={<GeneralSettingsPage defaultTab="payments" />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_LOGISTICS)} element={<LogisticsSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_NOTIFICATIONS)} element={<NotificationSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_INTEGRATIONS)} element={<IntegrationHealthPage />} />
