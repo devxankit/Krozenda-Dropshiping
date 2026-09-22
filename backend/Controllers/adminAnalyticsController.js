@@ -741,4 +741,532 @@ async function getSalesAnalytics(req, res) {
   });
 }
 
-module.exports = { getDashboard, getDashboardSummary, getSalesAnalytics };
+// ---------------------------------------------------------------------------
+// GET /admin/analytics/vendors?range=7d|30d|90d|fy
+// ---------------------------------------------------------------------------
+//
+// Field-availability notes (so the proxies below don't get mistaken for
+// invented numbers):
+//   - acceptanceRate: Order.items.acceptedAt is set the moment a seller moves
+//     a line PENDING -> PROCESSING. Acceptance = lines with acceptedAt set,
+//     over every line assigned to that vendor in the window.
+//   - avgDispatchHours: there is no explicit "dispatched" timestamp; the
+//     closest real signal is the line's own `statusHistory` (orderItemSchema)
+//     reaching SHIPPED. Dispatch time = hours between acceptedAt and the
+//     first SHIPPED entry in that line's statusHistory.
+//   - rtoRate: this platform has no RTO (return-to-origin) concept in
+//     ReturnRequest (only REPLACEMENT/REFUND) or in Order.status. The closest
+//     real proxy is the return-request rate: approved returns raised against
+//     a vendor's lines, over delivered lines for that vendor in the window.
+//   - rating: Vendor has no rating field. The closest real proxy is the
+//     average `Product.rating` across that vendor's catalog (0 for products
+//     with no reviews yet, which can pull a small catalog's average down —
+//     noted here rather than hidden).
+async function vendorLineFacts(start, end) {
+  const rows = await Order.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end } } },
+    ...ATTRIBUTE_LINES,
+    { $match: { vendorId: { $ne: null } } },
+    {
+      $set: {
+        shippedAt: {
+          $first: {
+            $map: {
+              input: { $filter: { input: '$items.statusHistory', cond: { $eq: ['$$this.status', 'SHIPPED'] } } },
+              as: 's',
+              in: '$$s.at',
+            },
+          },
+        },
+      },
+    },
+    {
+      $set: {
+        dispatchHours: {
+          $cond: [
+            { $and: ['$items.acceptedAt', '$shippedAt'] },
+            { $divide: [{ $subtract: ['$shippedAt', '$items.acceptedAt'] }, 3600000] },
+            null,
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: '$vendorId',
+        vendorName: { $first: '$vendorDoc.name' },
+        vendorBusiness: { $first: '$vendorDoc.businessName' },
+        model: { $first: '$model' },
+        orderIds: { $addToSet: '$_id' },
+        lines: { $sum: 1 },
+        acceptedLines: { $sum: { $cond: ['$items.acceptedAt', 1, 0] } },
+        revenue: { $sum: '$lineRevenue' },
+        avgDispatchHours: { $avg: '$dispatchHours' },
+        byDay: { $push: { day: dayExpr, dispatchHours: '$dispatchHours' } },
+      },
+    },
+    { $set: { orders: { $size: '$orderIds' } } },
+  ]);
+
+  return rows;
+}
+
+// Approved return requests in the window, resolved to the vendor who owned
+// the returned line, against delivered lines for that vendor — see the
+// rtoRate note above.
+async function vendorReturnFacts(start, end) {
+  return ReturnRequest.aggregate([
+    { $match: { status: 'APPROVED', resolvedAt: { $gte: start, $lt: end } } },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'product',
+        foreignField: '_id',
+        as: 'productDoc',
+        pipeline: [{ $project: { vendor: 1 } }],
+      },
+    },
+    { $set: { productDoc: { $first: '$productDoc' } } },
+    { $match: { 'productDoc.vendor': { $ne: null } } },
+    { $group: { _id: '$productDoc.vendor', returns: { $sum: 1 } } },
+  ]);
+}
+
+async function vendorProductRatings() {
+  return Product.aggregate([
+    { $match: { vendor: { $ne: null } } },
+    { $group: { _id: '$vendor', avgRating: { $avg: '$rating' } } },
+  ]);
+}
+
+async function getVendorAnalytics(req, res) {
+  const range = resolveRange(req.query.range);
+  const { buckets, indexByDay } = buildBuckets(range);
+
+  const [rows, returnRows, ratingRows, activeVendors, totalVendors] = await Promise.all([
+    vendorLineFacts(range.start, range.end),
+    vendorReturnFacts(range.start, range.end),
+    vendorProductRatings(),
+    Vendor.countDocuments({ isActive: true }),
+    Vendor.countDocuments({}),
+  ]);
+
+  const returnsByVendor = keyBy(returnRows.map((r) => ({ _id: r._id.toString(), returns: r.returns })));
+  const ratingByVendor = keyBy(ratingRows.map((r) => ({ _id: r._id.toString(), avgRating: r.avgRating })));
+
+  const vendors = rows
+    .map((row) => {
+      const id = row._id.toString();
+      const acceptanceRate = rate(row.acceptedLines, row.lines);
+      const deliveredLines = row.acceptedLines; // closest available denominator for a return rate
+      const returns = returnsByVendor.get(id)?.returns || 0;
+      const rtoRate = rate(returns, deliveredLines || row.lines);
+      const rating = Number((ratingByVendor.get(id)?.avgRating || 0).toFixed(1));
+
+      return {
+        id,
+        name: row.vendorBusiness || row.vendorName || 'Unnamed seller',
+        model: BUSINESS_MODEL_LABELS[row.model] || row.model,
+        orders: row.orders,
+        revenue: toPaise(row.revenue),
+        acceptanceRate,
+        avgDispatchHours: row.avgDispatchHours ? Number(row.avgDispatchHours.toFixed(1)) : 0,
+        rtoRate,
+        rating,
+      };
+    })
+    .sort((left, right) => right.revenue - left.revenue);
+
+  const totalLines = rows.reduce((sum, row) => sum + row.lines, 0);
+  const totalAccepted = rows.reduce((sum, row) => sum + row.acceptedLines, 0);
+  const overallAcceptance = rate(totalAccepted, totalLines);
+  const dispatchSamples = rows.filter((row) => row.avgDispatchHours);
+  const overallDispatch = dispatchSamples.length
+    ? dispatchSamples.reduce((sum, row) => sum + row.avgDispatchHours, 0) / dispatchSamples.length
+    : 0;
+
+  const dayRows = rows.flatMap((row) =>
+    row.byDay.filter((entry) => entry.dispatchHours !== null).map((entry) => ({
+      day: entry.day,
+      dispatchHoursSum: entry.dispatchHours,
+      dispatchHoursCount: 1,
+    })),
+  );
+  const bucketed = buckets.map(() => ({ sum: 0, n: 0 }));
+  dayRows.forEach((row) => {
+    const index = indexByDay.get(row.day);
+    if (index === undefined) return;
+    bucketed[index].sum += row.dispatchHoursSum;
+    bucketed[index].n += 1;
+  });
+  const fulfilmentSpeed = buckets.map((bucket, index) => ({
+    label: bucket.label,
+    dispatchHours: bucketed[index].n ? Number((bucketed[index].sum / bucketed[index].n).toFixed(1)) : 0,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      updatedAt: new Date().toISOString(),
+      range: range.id,
+      rangeLabel: range.label,
+      granularity: range.granularity,
+
+      kpis: [
+        {
+          key: 'active',
+          label: 'Active sellers',
+          value: activeVendors,
+          format: 'count',
+          delta: null,
+          caption: `${count(totalVendors - activeVendors)} inactive or pending`,
+        },
+        {
+          key: 'acceptance',
+          label: 'Acceptance rate',
+          value: overallAcceptance,
+          format: 'percent',
+          delta: null,
+          caption: 'orders accepted by vendors',
+        },
+        {
+          key: 'dispatch',
+          label: 'Average dispatch',
+          value: Number(overallDispatch.toFixed(1)),
+          format: 'ratio',
+          delta: null,
+          caption: 'hours from accept to shipped',
+        },
+        {
+          key: 'rto',
+          label: 'Return rate',
+          value: rate(
+            returnRows.reduce((sum, row) => sum + row.returns, 0),
+            totalAccepted || totalLines,
+          ),
+          format: 'percent',
+          delta: null,
+          caption: 'approved returns, proxy for RTO',
+        },
+      ],
+
+      fulfilmentSpeed,
+      vendors,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// GET /admin/analytics/catalog?range=7d|30d|90d|fy
+// ---------------------------------------------------------------------------
+async function productSalesFacts(start, end) {
+  return Order.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end }, status: { $ne: 'CANCELLED' } } },
+    ...ATTRIBUTE_LINES,
+    {
+      $group: {
+        _id: '$items.product',
+        units: { $sum: '$items.quantity' },
+        revenue: { $sum: '$lineRevenue' },
+      },
+    },
+  ]);
+}
+
+async function productReturnFacts(start, end) {
+  return ReturnRequest.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end } } },
+    { $group: { _id: '$product', returns: { $sum: 1 } } },
+  ]);
+}
+
+async function getCatalogAnalytics(req, res) {
+  const range = resolveRange(req.query.range);
+
+  const [categoryRows, salesRows, returnRows, totalSkus, lowStockProducts, pendingApprovals] =
+    await Promise.all([
+      categoryRevenue(range.start, range.end),
+      productSalesFacts(range.start, range.end),
+      productReturnFacts(range.start, range.end),
+      Product.countDocuments({}),
+      // daysCover proxy: with no per-product sales-velocity table, "days of
+      // cover" is estimated from units sold IN THIS RANGE (see below); the
+      // low-stock candidate pool itself is just current on-hand stock.
+      Product.find({ isActive: true }).sort({ stock: 1 }).limit(20).select('name sku stock').lean(),
+      Product.countDocuments({ approvalStatus: 'PENDING' }),
+    ]);
+
+  const returnsByProduct = keyBy(
+    returnRows.filter((r) => r._id).map((r) => ({ _id: r._id.toString(), returns: r.returns })),
+  );
+  const salesByProduct = keyBy(salesRows.map((r) => ({ _id: r._id.toString(), units: r.units, revenue: r.revenue })));
+
+  const rangeDays = Math.max(range.days.length, 1);
+  const catalogRevenue = salesRows.reduce((sum, row) => sum + row.revenue, 0);
+  const skusWithSale = salesRows.length;
+
+  const topProductRows = await Product.find({
+    _id: { $in: salesRows.map((r) => r._id).filter(Boolean) },
+  })
+    .select('name sku')
+    .lean();
+  const productById = keyBy(topProductRows.map((p) => ({ _id: p._id.toString(), name: p.name, sku: p.sku })));
+
+  const topProducts = salesRows
+    .slice()
+    .sort((left, right) => right.revenue - left.revenue)
+    .slice(0, 5)
+    .map((row) => {
+      const id = row._id ? row._id.toString() : 'unknown';
+      const product = productById.get(id);
+      const returns = returnsByProduct.get(id)?.returns || 0;
+      return {
+        id,
+        name: product?.name || 'Deleted product',
+        sku: product?.sku || '',
+        units: row.units,
+        revenue: toPaise(row.revenue),
+        returnRate: rate(returns, row.units),
+      };
+    });
+
+  const totalReturns = returnRows.reduce((sum, row) => sum + row.returns, 0);
+  const totalUnits = salesRows.reduce((sum, row) => sum + row.units, 0);
+
+  const stockRisk = lowStockProducts
+    .map((product) => {
+      const id = product._id.toString();
+      const unitsInRange = salesByProduct.get(id)?.units || 0;
+      const dailyVelocity = unitsInRange / rangeDays;
+      // No velocity in this window -> nothing to divide by, so cover is
+      // reported as the stock figure itself rather than a fabricated ratio.
+      const daysCover = dailyVelocity > 0 ? Math.round(product.stock / dailyVelocity) : product.stock;
+      return {
+        id,
+        name: product.name,
+        sku: product.sku || '',
+        onHand: product.stock,
+        daysCover,
+      };
+    })
+    .sort((left, right) => left.daysCover - right.daysCover)
+    .slice(0, 4);
+
+  res.json({
+    success: true,
+    data: {
+      updatedAt: new Date().toISOString(),
+      range: range.id,
+      rangeLabel: range.label,
+      granularity: range.granularity,
+
+      kpis: [
+        {
+          key: 'live',
+          label: 'Live SKUs',
+          value: totalSkus,
+          format: 'count',
+          delta: null,
+          caption: `${count(pendingApprovals)} awaiting approval`,
+        },
+        {
+          key: 'pending',
+          label: 'Awaiting approval',
+          value: pendingApprovals,
+          format: 'count',
+          delta: null,
+          caption: 'marketplace + dropship',
+        },
+        {
+          key: 'sellThrough',
+          label: 'Sell-through',
+          value: rate(skusWithSale, totalSkus),
+          format: 'percent',
+          delta: null,
+          caption: `SKUs with a sale in this ${range.shortLabel}`,
+        },
+        {
+          key: 'returnRate',
+          label: 'Return rate',
+          value: rate(totalReturns, totalUnits),
+          format: 'percent',
+          delta: null,
+          caption: 'return requests over units sold',
+        },
+      ],
+
+      categoryRevenue: categoryRows.map((row) => ({ label: row.label, revenue: toPaise(row.revenue) })),
+      topProducts,
+      stockRisk,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// GET /admin/analytics/customers?range=7d|30d|90d|fy
+// ---------------------------------------------------------------------------
+function newCustomersByDay(start, end) {
+  return Customer.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end }, isDeleted: false } },
+    { $group: { _id: dayExpr, newBuyers: { $sum: 1 } } },
+  ]);
+}
+
+// Every customer's very first order date, ever — the only real signal for
+// "is this a new or returning buyer", since Customer carries no order-count
+// field of its own.
+function firstOrderByCustomer() {
+  return Order.aggregate([
+    { $group: { _id: '$user', firstOrderAt: { $min: '$createdAt' } } },
+  ]);
+}
+
+function ordersByDayAndCustomer(start, end) {
+  return Order.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end }, status: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: { day: dayExpr, user: '$user' },
+        orders: { $sum: 1 },
+      },
+    },
+  ]);
+}
+
+function ordersByCity(start, end) {
+  return Order.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end }, status: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: '$shippingAddress.city',
+        orders: { $sum: 1 },
+        revenue: { $sum: '$total' },
+      },
+    },
+    { $sort: { revenue: -1 } },
+    { $limit: 6 },
+  ]);
+}
+
+async function getCustomerAnalytics(req, res) {
+  const range = resolveRange(req.query.range);
+  const { buckets, indexByDay } = buildBuckets(range);
+
+  const [newByDay, firstOrders, ordersByDayCustomer, cityRows, totalCustomers, newInRange, facts] =
+    await Promise.all([
+      newCustomersByDay(range.start, range.end),
+      firstOrderByCustomer(),
+      ordersByDayAndCustomer(range.start, range.end),
+      ordersByCity(range.start, range.end),
+      Customer.countDocuments({ isDeleted: false }),
+      Customer.countDocuments({ isDeleted: false, createdAt: { $gte: range.start, $lt: range.end } }),
+      orderFacts(range.start, range.end).then(normaliseFacts),
+    ]);
+
+  const firstOrderAtByCustomer = keyBy(
+    firstOrders.map((row) => ({ _id: row._id ? row._id.toString() : null, firstOrderAt: row.firstOrderAt })),
+  );
+
+  // Split each day's ordering customers into new (this order was their very
+  // first ever) vs returning (they had ordered before).
+  const acquisitionRows = [];
+  const distinctCustomers = new Set();
+  const returningCustomers = new Set();
+  let newCustomerOrders = 0;
+  let returningCustomerOrders = 0;
+
+  ordersByDayCustomer.forEach((row) => {
+    const userId = row._id.user ? row._id.user.toString() : null;
+    const day = row._id.day;
+    const firstOrderAt = userId ? firstOrderAtByCustomer.get(userId)?.firstOrderAt : null;
+    const dayStart = new Date(`${day}T00:00:00.000+05:30`);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const isFirstOrderThisDay = firstOrderAt && firstOrderAt >= dayStart && firstOrderAt < dayEnd;
+
+    if (userId) distinctCustomers.add(userId);
+    if (isFirstOrderThisDay) {
+      acquisitionRows.push({ day, newBuyers: 1, returningBuyers: 0 });
+      newCustomerOrders += 1;
+    } else {
+      acquisitionRows.push({ day, newBuyers: 0, returningBuyers: 1 });
+      returningCustomerOrders += 1;
+      if (userId) returningCustomers.add(userId);
+    }
+  });
+
+  const acquisition = toSeries(buckets, indexByDay, acquisitionRows, ['newBuyers', 'returningBuyers']);
+
+  const totalOrderingCustomers = distinctCustomers.size;
+  // Share of ordering CUSTOMERS who are returning buyers, not a share of
+  // orders — dividing returning order-count by customer count (the previous
+  // formula) could exceed 100% whenever a returning customer ordered more
+  // than once in the window. Counting each such customer once fixes that.
+  const repeatRate = rate(returningCustomers.size, totalOrderingCustomers || 1);
+
+  const buyerMix = [
+    { label: 'New', value: newCustomerOrders },
+    { label: 'Returning', value: returningCustomerOrders },
+  ].filter((slice) => slice.value > 0);
+
+  const topCities = cityRows
+    .filter((row) => row._id)
+    .map((row) => ({ label: row._id, orders: row.orders, revenue: toPaise(row.revenue) }));
+
+  res.json({
+    success: true,
+    data: {
+      updatedAt: new Date().toISOString(),
+      range: range.id,
+      rangeLabel: range.label,
+      granularity: range.granularity,
+
+      kpis: [
+        {
+          key: 'total',
+          label: 'Registered buyers',
+          value: totalCustomers,
+          format: 'count',
+          delta: null,
+          caption: `${count(newInRange)} new in this ${range.shortLabel}`,
+        },
+        {
+          key: 'repeat',
+          label: 'Repeat rate',
+          value: repeatRate,
+          format: 'percent',
+          delta: null,
+          caption: 'two or more orders',
+        },
+        {
+          key: 'orderingCustomers',
+          label: 'Ordering buyers',
+          value: totalOrderingCustomers,
+          format: 'count',
+          delta: null,
+          caption: `in this ${range.shortLabel}`,
+        },
+        {
+          key: 'basket',
+          label: 'Items per order',
+          value: facts.orders ? Number((facts.units / facts.orders).toFixed(1)) : 0,
+          format: 'ratio',
+          delta: null,
+          caption: `${count(facts.orders)} orders in this ${range.shortLabel}`,
+        },
+      ],
+
+      acquisition,
+      buyerMix,
+      topCities,
+    },
+  });
+}
+
+module.exports = {
+  getDashboard,
+  getDashboardSummary,
+  getSalesAnalytics,
+  getVendorAnalytics,
+  getCatalogAnalytics,
+  getCustomerAnalytics,
+};

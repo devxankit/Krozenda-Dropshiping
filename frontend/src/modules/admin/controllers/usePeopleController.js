@@ -11,9 +11,6 @@ import {
   fetchKycApplication,
   fetchKycQueue,
   fetchPolicyAcceptances,
-  fetchRoleDetail,
-  fetchRoles,
-  fetchStaff,
   fetchVendors,
   setVendorActive,
   syncVendorRazorpay,
@@ -71,9 +68,6 @@ function useResource(key, queryFn, enabled = true) {
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
 }
 
-export const useStaffController = () => useResource(['admin', 'staff'], fetchStaff)
-export const useRolesController = () => useResource(['admin', 'roles'], fetchRoles)
-
 export const useKycApplicationController = (applicationId) =>
   useResource(
     ['admin', 'kyc', applicationId],
@@ -110,6 +104,3 @@ export const useVendorRazorpaySyncController = ({ onDone } = {}) =>
       `${result.razorpay.onboardingStatus} · ${result.razorpay.isSettlementEligible ? 'Eligible for settlement' : 'Not eligible yet'}`,
     onDone,
   })
-
-export const useRoleDetailController = (roleId) =>
-  useResource(['admin', 'roles', roleId], () => fetchRoleDetail(roleId), Boolean(roleId))

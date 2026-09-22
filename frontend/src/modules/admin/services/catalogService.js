@@ -60,6 +60,7 @@ export function fetchAttributes() {
     path: '/admin/catalog/attributes',
     fixture: attributeListFixture,
     schema: attributeListSchema,
+    live: true,
   })
 }
 
@@ -232,13 +233,13 @@ export async function deleteBrand({ id }) {
 }
 
 export const createAttribute = (body) =>
-  mutateResource({ path: '/admin/catalog/attributes', body, fixture: fixtures.createAttributeFixture, schema: attributeSchema })
+  mutateResource({ path: '/admin/catalog/attributes', body, fixture: fixtures.createAttributeFixture, schema: attributeSchema, live: true })
 
 export const updateAttribute = ({ id, ...body }) =>
-  mutateResource({ method: 'put', path: `/admin/catalog/attributes/${id}`, body, fixture: (p) => fixtures.updateAttributeFixture(id, p), schema: attributeSchema })
+  mutateResource({ method: 'put', path: `/admin/catalog/attributes/${id}`, body, fixture: (p) => fixtures.updateAttributeFixture(id, p), schema: attributeSchema, live: true })
 
 export const deleteAttribute = ({ id }) =>
-  mutateResource({ method: 'delete', path: `/admin/catalog/attributes/${id}`, fixture: () => fixtures.deleteAttributeFixture(id), schema: deletedSchema })
+  mutateResource({ method: 'delete', path: `/admin/catalog/attributes/${id}`, fixture: () => fixtures.deleteAttributeFixture(id), schema: deletedSchema, live: true })
 
 export const adjustInventory = ({ id, onHand, reason }) =>
   mutateResource({

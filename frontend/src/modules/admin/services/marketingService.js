@@ -84,14 +84,17 @@ export async function deleteCmsPage({ id }) {
 export const fetchTemplates = () =>
   fetchResource({ path: '/admin/marketing/templates', fixture: fixtures.templateListFixture, schema: templateListSchema })
 
+// --- Reports (real backend — dynamic) --------------------------------------
+
 export const fetchReportCatalogue = () =>
-  fetchResource({ path: '/admin/reports', fixture: fixtures.reportCatalogueFixture, schema: reportCatalogueSchema })
+  fetchResource({ path: '/admin/reports', fixture: fixtures.reportCatalogueFixture, schema: reportCatalogueSchema, live: true })
 
 export const fetchReportRun = (reportKey) =>
   fetchResource({
     path: `/admin/reports/${reportKey}`,
     fixture: () => fixtures.reportRunFixture(reportKey),
     schema: reportRunSchema,
+    live: true,
   })
 
 // --- banners (real backend — no mocks) -------------------------------------

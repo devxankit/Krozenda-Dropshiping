@@ -102,6 +102,7 @@ export const fetchIntegrations = one(
   '/admin/settings/integrations',
   fixtures.integrationListFixture,
   integrationListSchema,
+  true,
 )
 export const fetchSecuritySettings = one(
   '/admin/settings/security',
@@ -122,6 +123,7 @@ export const fetchTaxSettings = one(
   '/admin/settings/taxes',
   fixtures.taxSettingsFixture,
   taxSettingsSchema,
+  true,
 )
 export const fetchBackups = one('/admin/system/backups', fixtures.backupFixture, backupSchema, true)
 

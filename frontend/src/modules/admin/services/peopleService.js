@@ -7,9 +7,6 @@ import {
   kycApplicationFixture,
   kycQueueFixture,
   policyAcceptanceFixture,
-  roleDetailFixture,
-  roleListFixture,
-  staffListFixture,
   vendorListFixture,
 } from '../fixtures/people'
 import {
@@ -17,9 +14,6 @@ import {
   kycApplicationSchema,
   kycQueueSchema,
   policyAcceptanceListSchema,
-  roleDetailSchema,
-  roleListSchema,
-  staffListSchema,
   vendorListSchema,
   vendorRazorpaySyncSchema,
   vendorSchema,
@@ -173,17 +167,4 @@ export const fetchPolicyAcceptances = (query) =>
     params: params(query),
     fixture: () => policyAcceptanceFixture(query),
     schema: policyAcceptanceListSchema,
-  })
-
-export const fetchStaff = () =>
-  fetchResource({ path: '/admin/staff', fixture: staffListFixture, schema: staffListSchema })
-
-export const fetchRoles = () =>
-  fetchResource({ path: '/admin/roles', fixture: roleListFixture, schema: roleListSchema })
-
-export const fetchRoleDetail = (roleId) =>
-  fetchResource({
-    path: `/admin/roles/${roleId}`,
-    fixture: () => roleDetailFixture(roleId),
-    schema: roleDetailSchema,
   })

@@ -67,8 +67,7 @@ export const SCREEN_GROUPS = Object.freeze([
       { to: ADMIN_ROUTES.KYC_QUEUE, name: 'KYC queue' },
       { to: adminPath.kycReview('kyc-2184'), name: 'KYC review' },
       { to: ADMIN_ROUTES.POLICY_ACCEPTANCES, name: 'Policy acceptances' },
-      { to: ADMIN_ROUTES.STAFF, name: 'Staff & roles' },
-      { to: adminPath.roleDetail('finance_manager'), name: 'Permission matrix' },
+      { to: ADMIN_ROUTES.USER_MANAGEMENT, name: 'Staff & roles' },
     ],
   },
   {
