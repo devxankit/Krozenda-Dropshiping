@@ -3,7 +3,10 @@ const Product = require('../Models/Product');
 const Vendor = require('../Models/Vendor');
 const PickupLocation = require('../Models/PickupLocation');
 const ShippingSettings = require('../Models/ShippingSettings');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const serviceabilityService = require('../services/shipping/serviceabilityService');
+const cjLogisticsService = require('../services/cj/cjLogisticsService');
+const { usdToInr } = require('../services/cj/cjPricing');
 const { suggestPackage } = require('../utils/packaging');
 const { publiclyVisible } = require('../utils/publicVisibility');
 
@@ -105,6 +108,57 @@ async function checkProductDelivery(req, res) {
       success: true,
       message: 'Delivery check unavailable',
       data: { available: false, reason: 'SHIPPING_DISABLED', pincode },
+    });
+  }
+
+  // If this product is fulfilled by CJ Dropshipping, quote via CJ Logistics
+  // (origin: China warehouse) rather than domestic Shiprocket.
+  const cjMapping = await ProductFulfillmentMapping.findOne({ product: product._id, provider: 'CJ' }).lean();
+  if (cjMapping) {
+    const vMapping = cjMapping.variants?.[0];
+    const cjVariantId = vMapping?.cjVariantId || cjMapping.cjProductId;
+    const fallbackShippingUsd = vMapping?.providerShippingCost || 4.49;
+
+    let charge = Math.round(usdToInr(fallbackShippingUsd) * 100) / 100;
+    let days = 14;
+
+    try {
+      const options = await cjLogisticsService.calculateFreight({
+        startCountryCode: 'CN',
+        endCountryCode: 'IN',
+        zip: pincode,
+        items: [{ cjVariantId, quantity: 1 }],
+      });
+
+      if (Array.isArray(options) && options.length > 0) {
+        const cheapest = options[0];
+        const usdPrice = cheapest.logisticPrice ?? cheapest.totalPostageFee ?? fallbackShippingUsd;
+        charge = Math.round(usdToInr(usdPrice) * 100) / 100;
+
+        if (typeof cheapest.logisticAging === 'string') {
+          const parts = cheapest.logisticAging.split('-');
+          const maxDays = Number(parts[parts.length - 1]);
+          if (Number.isFinite(maxDays) && maxDays > 0) days = maxDays;
+        }
+      }
+    } catch (err) {
+      log({ event: 'CJ_DELIVERY_CHECK_FALLBACK', error: err.message, productId: id, pincode });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Delivery available via CJ Dropshipping (International)',
+      data: {
+        available: true,
+        pincode,
+        serviceable: true,
+        prepaid: { available: true, charge },
+        cod: { available: settings.codEnabled, charge },
+        estimatedDays: days,
+        estimatedDeliveryDate: estimateDate(days),
+        isInternational: true,
+        courier: 'CJPacket International',
+      },
     });
   }
 

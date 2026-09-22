@@ -26,6 +26,8 @@ const {
 } = require('../utils/pricing');
 const accounting = require('../services/accountingPosting');
 const { readPagination, buildPagination } = require('../utils/pagination');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
+const cjOrderService = require('../services/cj/cjOrderService');
 
 // Accounting is posted alongside the order, never in front of it. A ledger
 // write must never be able to fail a customer's checkout or a cancellation —
@@ -678,12 +680,62 @@ async function createOrder(req, res) {
 
   await notifyVendorsOfNewOrder(items, order._id);
 
+  // CJ Dropshipping auto-fulfillment & order tracking:
+  // If any line in the order is backed by a CJ product, create the CjOrder
+  // row and dispatch the order to CJ's system. Wrapped so external network
+  // failure never rejects a customer's placed order.
+  await processCjOrderFulfillment(order, items);
+
   // A prepaid order's money is in hand right now, so its sale, commission and
   // gateway fee post immediately. A COD order posts nothing yet — the cash is
   // still with the courier until an admin records the remittance (task §12).
   await postAccounting('order sale', () => accounting.postOrderSale(order.toObject()));
 
   res.status(201).json({ success: true, message: 'Order placed successfully', data: serializeOrder(order) });
+}
+
+async function processCjOrderFulfillment(order, items) {
+  try {
+    const cjItems = [];
+    for (const item of items) {
+      const productId = item.product || item.productId;
+      const mapping = await ProductFulfillmentMapping.findOne({ product: productId, provider: 'CJ' });
+      if (mapping) {
+        const vMapping =
+          mapping.variants?.find((v) => String(v.krozendaVariantId) === String(item.variantId)) ||
+          mapping.variants?.[0];
+        cjItems.push({
+          product: productId,
+          cjProductId: mapping.cjProductId,
+          cjVariantId: vMapping?.cjVariantId || mapping.cjProductId,
+          quantity: item.quantity,
+          unitCost: vMapping?.providerCost || 0,
+        });
+      }
+    }
+
+    if (cjItems.length > 0) {
+      await cjOrderService.createOrder({
+        krozendaOrderId: order._id,
+        krozendaSubOrderId: `CJ-${order._id.toString()}`,
+        items: cjItems,
+        shippingAddress: {
+          countryCode: 'IN',
+          country: order.shippingAddress?.country || 'India',
+          province: order.shippingAddress?.state || '',
+          city: order.shippingAddress?.city || '',
+          line: [order.shippingAddress?.line1, order.shippingAddress?.line2].filter(Boolean).join(', '),
+          name: order.shippingAddress?.fullName || '',
+          zip: order.shippingAddress?.pincode || '',
+          phone: order.shippingAddress?.phone || '',
+          fromCountryCode: 'CN',
+          logisticName: 'CJPacket Eub',
+        },
+      });
+    }
+  } catch (err) {
+    console.error('CJ Dropshipping order creation notice:', err.message);
+  }
 }
 
 // A list row only needs enough to render the card — who it was, what it cost,

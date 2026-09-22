@@ -1,7 +1,10 @@
 const PickupLocation = require('../../Models/PickupLocation');
 const Vendor = require('../../Models/Vendor');
 const ShippingSettings = require('../../Models/ShippingSettings');
+const ProductFulfillmentMapping = require('../../Models/ProductFulfillmentMapping');
 const serviceabilityService = require('./serviceabilityService');
+const cjLogisticsService = require('../cj/cjLogisticsService');
+const { usdToInr } = require('../cj/cjPricing');
 const { suggestPackage } = require('../../utils/packaging');
 
 // What shipping costs for a whole cart, at checkout.
@@ -108,6 +111,79 @@ async function quoteGroup({ vendorId, entries, deliveryPincode, cod, settings })
   };
 }
 
+// CJ Dropshipping parcel: international freight quote from China warehouse to customer PIN.
+async function quoteCjGroup({ entries, deliveryPincode, mappingsByProduct }) {
+  const cjItems = [];
+  let fallbackUsd = 0;
+
+  for (const entry of entries) {
+    const pId = String(entry.product._id || entry.product.id);
+    const mapping = mappingsByProduct.get(pId);
+    if (!mapping) continue;
+
+    const vId = entry.variantId || entry.variant?._id || entry.variant?.id;
+    const vMapping =
+      mapping.variants?.find((v) => String(v.krozendaVariantId) === String(vId)) ||
+      mapping.variants?.[0];
+
+    const cjVariantId = vMapping?.cjVariantId || mapping.cjProductId;
+    cjItems.push({
+      cjVariantId,
+      quantity: entry.quantity,
+    });
+
+    const itemShippingUsd = vMapping?.providerShippingCost || 4.49;
+    fallbackUsd += itemShippingUsd * entry.quantity;
+  }
+
+  if (cjItems.length === 0) {
+    return { ok: false, reason: 'NO_CJ_ITEMS', vendorId: 'CJ_DROPSHIPPING' };
+  }
+
+  try {
+    const options = await cjLogisticsService.calculateFreight({
+      startCountryCode: 'CN',
+      endCountryCode: 'IN',
+      zip: deliveryPincode,
+      items: cjItems,
+    });
+
+    if (Array.isArray(options) && options.length > 0) {
+      const cheapest = options[0];
+      const usdPrice = cheapest.logisticPrice ?? cheapest.totalPostageFee ?? fallbackUsd;
+      const inrPrice = Math.round(usdToInr(usdPrice) * 100) / 100;
+
+      let estimatedDeliveryDays = 14;
+      if (typeof cheapest.logisticAging === 'string') {
+        const parts = cheapest.logisticAging.split('-');
+        const maxDays = Number(parts[parts.length - 1]);
+        if (Number.isFinite(maxDays) && maxDays > 0) estimatedDeliveryDays = maxDays;
+      }
+
+      return {
+        ok: true,
+        vendorId: 'CJ_DROPSHIPPING',
+        charge: inrPrice > 0 ? inrPrice : Math.round(usdToInr(fallbackUsd || 4.49) * 100) / 100,
+        courierName: cheapest.logisticName || 'CJPacket Eub',
+        estimatedDeliveryDays,
+        weightKg: 0.5,
+      };
+    }
+  } catch (err) {
+    log({ event: 'CJ_FREIGHT_CALCULATE_FALLBACK', error: err.message, deliveryPincode });
+  }
+
+  const fallbackInr = Math.round(usdToInr(fallbackUsd > 0 ? fallbackUsd : 4.49) * 100) / 100;
+  return {
+    ok: true,
+    vendorId: 'CJ_DROPSHIPPING',
+    charge: fallbackInr,
+    courierName: 'CJPacket International',
+    estimatedDeliveryDays: 14,
+    weightKg: 0.5,
+  };
+}
+
 // The whole cart.
 //
 // `entries` are the SAME validated cart entries computeCheckoutTotals already
@@ -132,17 +208,43 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
     return { ok: false, code: 'COD_DISABLED', message: 'Cash on delivery is not available right now.' };
   }
 
-  // One group per seller. `null` is the platform's own catalog, which is a
-  // group of its own rather than being lumped in with a seller's.
+  // Separate cart items:
+  // - CJ Dropshipping products ship internationally from China via CJ Logistics.
+  // - Domestic products ship via Shiprocket from Indian vendor/platform warehouses.
+  const productIds = entries.map((e) => e.product._id || e.product.id).filter(Boolean);
+  const cjMappings = await ProductFulfillmentMapping.find({
+    product: { $in: productIds },
+    provider: 'CJ',
+  }).lean();
+  const cjMappingByProductId = new Map(cjMappings.map((m) => [String(m.product), m]));
+
+  const cjEntries = [];
   const byVendor = new Map();
   for (const entry of entries) {
-    const key = entry.product.vendor ? String(entry.product.vendor) : 'PLATFORM';
-    if (!byVendor.has(key)) byVendor.set(key, []);
-    byVendor.get(key).push(entry);
+    const pId = String(entry.product._id || entry.product.id);
+    if (cjMappingByProductId.has(pId)) {
+      cjEntries.push(entry);
+    } else {
+      const key = entry.product.vendor ? String(entry.product.vendor) : 'PLATFORM';
+      if (!byVendor.has(key)) byVendor.set(key, []);
+      byVendor.get(key).push(entry);
+    }
   }
 
-  const groups = await Promise.all(
-    [...byVendor.entries()].map(([key, groupEntries]) =>
+  const groupPromises = [];
+
+  if (cjEntries.length > 0) {
+    groupPromises.push(
+      quoteCjGroup({
+        entries: cjEntries,
+        deliveryPincode,
+        mappingsByProduct: cjMappingByProductId,
+      })
+    );
+  }
+
+  for (const [key, groupEntries] of byVendor.entries()) {
+    groupPromises.push(
       quoteGroup({
         vendorId: key === 'PLATFORM' ? null : key,
         entries: groupEntries,
@@ -150,8 +252,10 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
         cod,
         settings,
       })
-    )
-  );
+    );
+  }
+
+  const groups = await Promise.all(groupPromises);
 
   const undeliverable = groups.find((g) => !g.ok && g.reason === 'NOT_SERVICEABLE');
   if (undeliverable) {

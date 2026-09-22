@@ -86,13 +86,16 @@ async function createOrder({ krozendaOrderId, krozendaSubOrderId, items, shippin
       idempotent: false, // an order-creation POST is NEVER blindly retried by the HTTP layer
       body: {
         orderNumber,
-        shippingCountryCode: shippingAddress?.countryCode,
+        shippingCountryCode: shippingAddress?.countryCode || 'IN',
+        shippingCountry: shippingAddress?.country || 'India',
         shippingProvince: shippingAddress?.province,
         shippingCity: shippingAddress?.city,
         shippingAddress: shippingAddress?.line,
         shippingCustomerName: shippingAddress?.name,
         shippingZip: shippingAddress?.zip,
         shippingPhone: shippingAddress?.phone,
+        fromCountryCode: shippingAddress?.fromCountryCode || 'CN',
+        logisticName: shippingAddress?.logisticName || 'CJPacket Eub',
         // CJ's payType conventions include a create-only/balance-payment mode
         // (master plan §15) — PAY_BALANCE means "create and pay from CJ
         // account balance immediately"; a create-only flow would use a
