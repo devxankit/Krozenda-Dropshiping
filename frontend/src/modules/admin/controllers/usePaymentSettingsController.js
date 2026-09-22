@@ -14,12 +14,15 @@ export function usePaymentSettingsController() {
   const query = useQuery({ queryKey: SETTINGS_KEY, queryFn: fetchPaymentSettings })
 
   const [draft, setDraft] = useState(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const saveMutation = useMutation({
     mutationFn: savePaymentSettings,
     onSuccess: () => {
       setDraft(null)
+      setSaveSuccess(true)
       queryClient.invalidateQueries({ queryKey: SETTINGS_KEY })
+      setTimeout(() => setSaveSuccess(false), 4000)
     },
   })
 
@@ -27,7 +30,10 @@ export function usePaymentSettingsController() {
   const settings = draft ?? saved
 
   const update = useCallback(
-    (field, value) => setDraft((current) => ({ ...(current ?? saved), [field]: value })),
+    (field, value) => {
+      setDraft((current) => ({ ...(current ?? saved), [field]: value }))
+      setSaveSuccess(false)
+    },
     [saved]
   )
 
@@ -53,5 +59,6 @@ export function usePaymentSettingsController() {
     save: () => saveMutation.mutateAsync(Object.fromEntries(changed.map((key) => [key, settings[key]]))),
     isSaving: saveMutation.isPending,
     saveError: saveMutation.error,
+    saveSuccess,
   }
 }

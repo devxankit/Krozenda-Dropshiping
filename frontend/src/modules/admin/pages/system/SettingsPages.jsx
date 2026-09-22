@@ -6,7 +6,6 @@ import { SettingsShell } from '../../components/system/SettingsShell'
 import { IntegrationCard } from '../../components/system/IntegrationCard'
 import { POLICY_COLUMNS, SLAB_COLUMNS } from '../../tableColumns/systemColumns'
 import {
-  useGeneralSettingsController,
   useIntegrationsController,
   usePolicySettingsController,
   useSecuritySettingsController,
@@ -139,6 +138,12 @@ export function PaymentSettingsPage() {
 
         return (
           <>
+            {controller.saveSuccess && (
+              <InlineAlert tone="success" title="Payment settings saved">
+                Payment method availability updated successfully and is live on checkout.
+              </InlineAlert>
+            )}
+
             {controller.saveError && (
               <InlineAlert tone="danger" title="Could not save">
                 {controller.saveError?.message || 'The change was rejected.'}
@@ -147,30 +152,67 @@ export function PaymentSettingsPage() {
 
             <FormSection
               title="Payment methods"
-              description="At least one must stay on, or nobody can check out."
+              description="Toggle payment methods ON or OFF. At least one must stay on, or buyers cannot check out."
               columns={1}
             >
-              <Switch
-                id="codEnabled"
-                checked={settings.codEnabled}
-                onChange={(e) => controller.update('codEnabled', e.target.checked)}
-                label="Cash on delivery"
-                description="Buyer pays the courier when the parcel arrives."
-              />
-              <Switch
-                id="razorpayEnabled"
-                checked={settings.razorpayEnabled}
-                onChange={(e) => controller.update('razorpayEnabled', e.target.checked)}
-                label="Online (Razorpay)"
-                description="Card, UPI and netbanking, via Razorpay."
-              />
-              <Switch
-                id="walletEnabled"
-                checked={settings.walletEnabled}
-                onChange={(e) => controller.update('walletEnabled', e.target.checked)}
-                label="Wallet"
-                description="Pay from the buyer's in-app wallet balance."
-              />
+              <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
+                <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                  <div className="flex flex-col gap-1 pr-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">Cash on Delivery (COD)</span>
+                      <Badge tone={settings.codEnabled ? 'success' : 'neutral'}>
+                        {settings.codEnabled ? 'Active' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-ink-muted">
+                      Buyer pays the courier in cash when the parcel arrives at delivery destination.
+                    </span>
+                  </div>
+                  <Switch
+                    id="codEnabled"
+                    checked={settings.codEnabled}
+                    onChange={(e) => controller.update('codEnabled', e.target.checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                  <div className="flex flex-col gap-1 pr-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">Online Payment (Razorpay)</span>
+                      <Badge tone={settings.razorpayEnabled ? 'success' : 'neutral'}>
+                        {settings.razorpayEnabled ? 'Active' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-ink-muted">
+                      UPI, Credit/Debit Cards, NetBanking, and Wallets via Razorpay gateway.
+                    </span>
+                  </div>
+                  <Switch
+                    id="razorpayEnabled"
+                    checked={settings.razorpayEnabled}
+                    onChange={(e) => controller.update('razorpayEnabled', e.target.checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 transition-colors hover:bg-surface-muted/40">
+                  <div className="flex flex-col gap-1 pr-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">In-App Wallet</span>
+                      <Badge tone={settings.walletEnabled ? 'success' : 'neutral'}>
+                        {settings.walletEnabled ? 'Active' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-ink-muted">
+                      Allows buyers to pay directly from their Krozenda account wallet balance.
+                    </span>
+                  </div>
+                  <Switch
+                    id="walletEnabled"
+                    checked={settings.walletEnabled}
+                    onChange={(e) => controller.update('walletEnabled', e.target.checked)}
+                  />
+                </div>
+              </div>
 
               {allOff && (
                 <InlineAlert tone="danger" title="No payment method is on">

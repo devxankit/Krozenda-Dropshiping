@@ -160,7 +160,15 @@ function OrderFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
             id="shippingAddress.phone"
             label="Phone"
             required
-            {...register('shippingAddress.phone', { required: 'Required' })}
+            placeholder="10-digit mobile number"
+            maxLength={10}
+            {...register('shippingAddress.phone', {
+              required: 'Required',
+              pattern: {
+                value: /^[6-9]\d{9}$/,
+                message: 'Enter a valid 10-digit mobile number',
+              },
+            })}
             error={errors.shippingAddress?.phone?.message}
           />
         </div>
@@ -191,7 +199,15 @@ function OrderFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
             id="shippingAddress.pincode"
             label="Pincode"
             required
-            {...register('shippingAddress.pincode', { required: 'Required' })}
+            placeholder="6-digit pincode"
+            maxLength={6}
+            {...register('shippingAddress.pincode', {
+              required: 'Required',
+              pattern: {
+                value: /^[1-9]\d{5}$/,
+                message: 'Enter a valid 6-digit pincode',
+              },
+            })}
             error={errors.shippingAddress?.pincode?.message}
           />
         </div>

@@ -497,6 +497,7 @@ export const SETTINGS_NAV = Object.freeze([
     label: 'Platform',
     items: [
       { label: 'General', to: ADMIN_ROUTES.SETTINGS_GENERAL },
+      { label: 'Payments', to: ADMIN_ROUTES.SETTINGS_PAYMENTS },
       { label: 'Security', to: ADMIN_ROUTES.SETTINGS_SECURITY },
       { label: 'Commission & business rules', to: ADMIN_ROUTES.SETTINGS_BUSINESS_RULES },
       { label: 'Taxes & GST', to: ADMIN_ROUTES.SETTINGS_TAXES },

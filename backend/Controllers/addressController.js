@@ -32,6 +32,17 @@ function validateFields(body) {
   if (body.type && !Address.TYPES.includes(body.type)) {
     return 'Invalid address type';
   }
+
+  const cleanPhone = String(body.phone).replace(/\D/g, '').slice(-10);
+  if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+    return 'Please enter a valid 10-digit mobile number';
+  }
+
+  const cleanPincode = String(body.pincode).trim();
+  if (!/^[1-9]\d{5}$/.test(cleanPincode)) {
+    return 'Please enter a valid 6-digit pincode';
+  }
+
   return null;
 }
 
@@ -50,16 +61,19 @@ async function createAddress(req, res) {
     await Address.updateMany({ user: req.user._id }, { $set: { isDefault: false } });
   }
 
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  const cleanPincode = String(pincode).trim();
+
   const address = await Address.create({
     user: req.user._id,
     type: type || 'home',
     fullName: fullName.trim(),
-    phone: phone.trim(),
+    phone: cleanPhone,
     line1: line1.trim(),
     line2: line2 ? line2.trim() : '',
     city: city.trim(),
     state: state.trim(),
-    pincode: pincode.trim(),
+    pincode: cleanPincode,
     country: country ? country.trim() : 'India',
     isDefault: shouldBeDefault,
   });
@@ -87,12 +101,12 @@ async function updateAddress(req, res) {
 
   if (type !== undefined) address.type = type;
   if (fullName !== undefined) address.fullName = fullName.trim();
-  if (phone !== undefined) address.phone = phone.trim();
+  if (phone !== undefined) address.phone = String(phone).replace(/\D/g, '').slice(-10);
   if (line1 !== undefined) address.line1 = line1.trim();
   if (line2 !== undefined) address.line2 = line2.trim();
   if (city !== undefined) address.city = city.trim();
   if (state !== undefined) address.state = state.trim();
-  if (pincode !== undefined) address.pincode = pincode.trim();
+  if (pincode !== undefined) address.pincode = String(pincode).trim();
   if (country !== undefined) address.country = country.trim();
 
   if (isDefault === true && !address.isDefault) {

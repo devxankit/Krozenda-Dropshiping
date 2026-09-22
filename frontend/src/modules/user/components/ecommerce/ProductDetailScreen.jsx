@@ -49,28 +49,30 @@ export function ProductDetailScreen() {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [activeTab, setActiveTab] = useState('description')
   const [addState, setAddState] = useState('idle') // idle | adding | added
-  // Which option the buyer has picked. Null until they choose; a product with
-  // variants cannot be added to the cart until this is set, which the server
-  // enforces too (cartController.validateLine).
+  // Which option the buyer has picked. If null, defaults to first available in-stock variant.
   const [selectedVariantId, setSelectedVariantId] = useState(null)
+  const [variantError, setVariantError] = useState(false)
+  const [buyNowState, setBuyNowState] = useState('idle') // idle | buying
 
   const isWishlisted = useWishlistStore((state) => state.items.some((item) => item.id === productId))
   const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
   const addToCart = useCartStore((state) => state.addItem)
-  // How many of THIS product are already in the cart. Selected narrowly so the
-  // screen re-renders when this line changes, not on every cart change.
-  // How many of the SELECTED line are already in the cart. Matching on product
-  // alone would show the Red/L count while the buyer is looking at Blue/M.
-  const cartQuantity = useCartStore(
-    (state) =>
-      state.items.find((i) => i.id === productId && (i.variantId ?? null) === selectedVariantId)?.quantity ?? 0,
-  )
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const images = product?.images?.length ? product.images : []
   const variants = product?.variants ?? []
   const hasVariants = variants.length > 0
-  const selectedVariant = hasVariants ? variants.find((v) => v.id === selectedVariantId) ?? null : null
+
+  // Defaults to the first in-stock variant if none explicitly picked
+  const activeVariantId =
+    selectedVariantId ?? (variants.find((v) => v.stock > 0)?.id ?? variants[0]?.id ?? null)
+  const selectedVariant = hasVariants ? variants.find((v) => v.id === activeVariantId) ?? null : null
+
+  // How many of the SELECTED line are already in the cart.
+  const cartQuantity = useCartStore(
+    (state) =>
+      state.items.find((i) => i.id === productId && (i.variantId ?? null) === activeVariantId)?.quantity ?? 0,
+  )
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   // Price and stock both come from the chosen variant once there is one. A
   // product with variants and none chosen shows the cheapest option as a
@@ -100,6 +102,11 @@ export function ProductDetailScreen() {
   const lowStock = inStock && availableStock <= LOW_STOCK_THRESHOLD
   const needsVariantChoice = hasVariants && !selectedVariant
   const moq = product?.moq ?? 1
+
+  const handleSelectVariant = (id) => {
+    setSelectedVariantId(id)
+    setVariantError(false)
+  }
 
   const structuredData = useMemo(
     () =>
@@ -182,10 +189,11 @@ export function ProductDetailScreen() {
 
   const handleAddToCart = async () => {
     if (needsVariantChoice) {
+      setVariantError(true)
       document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (!inStock || addState === 'adding') return
+    if (!inStock || addState === 'adding' || buyNowState === 'buying') return
     setAddState('adding')
     const result = await addToCart(cartLineItem(), addQuantity)
     setAddState(result?.ok ? 'added' : 'idle')
@@ -194,17 +202,19 @@ export function ProductDetailScreen() {
 
   const handleBuyNow = async () => {
     if (needsVariantChoice) {
+      setVariantError(true)
       document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (!inStock || addState === 'adding') return
-    setAddState('adding')
+    if (!inStock || addState === 'adding' || buyNowState === 'buying') return
+    setBuyNowState('buying')
     const result = await addToCart(cartLineItem(), addQuantity)
-    setAddState('idle')
-    if (!result?.ok) return
-    // A signed-out buyer sent straight to checkout hits the auth guard and
-    // loses their place; send them to the cart, which works either way.
-    navigate(isAuthenticated ? USER_ROUTES.CART : USER_ROUTES.CART)
+    if (!result?.ok) {
+      setBuyNowState('idle')
+      return
+    }
+    // Direct checkout: navigate directly to address selection screen
+    navigate(USER_ROUTES.CHECKOUT_ADDRESS)
   }
 
   const handleToggleWishlist = () =>
@@ -535,8 +545,9 @@ export function ProductDetailScreen() {
 
             <VariantPicker
               variants={variants}
-              selectedId={selectedVariantId}
-              onSelect={setSelectedVariantId}
+              selectedId={activeVariantId}
+              onSelect={handleSelectVariant}
+              hasError={variantError}
               fallbackPrice={product.salePrice ?? product.price}
             />
 
@@ -574,10 +585,10 @@ export function ProductDetailScreen() {
               <button
                 type="button"
                 onClick={handleBuyNow}
-                disabled={!inStock || addState === 'adding'}
+                disabled={!inStock || addState === 'adding' || buyNowState === 'buying'}
                 className="w-full rounded-2xl bg-blue-700 px-4 py-4 text-xs font-extrabold tracking-wide text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Buy Now
+                {buyNowState === 'buying' ? 'Proceeding…' : 'Buy Now'}
               </button>
             </div>
           </div>
@@ -861,15 +872,29 @@ function ProductDetailSkeleton() {
 // An out-of-stock option stays visible but unselectable: hiding it makes the
 // product look like it was never offered in that size, which is the question
 // the buyer came to answer.
-function VariantPicker({ variants, selectedId, onSelect, fallbackPrice }) {
+function VariantPicker({ variants, selectedId, onSelect, hasError, fallbackPrice }) {
   if (!variants || variants.length === 0) return null
 
   return (
-    <div id="pdp-variant-picker" className="border-t border-slate-100 pt-4">
-      <p className="text-xs font-bold text-slate-900">
-        Choose an option
-        {!selectedId && <span className="ml-1.5 font-semibold text-red-600">Required</span>}
-      </p>
+    <div
+      id="pdp-variant-picker"
+      className={`rounded-2xl transition-all ${
+        hasError
+          ? 'border-2 border-red-500 bg-red-50/50 p-3.5 ring-2 ring-red-200'
+          : 'border-t border-slate-100 pt-4'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-slate-900">
+          Choose an option
+          {!selectedId && <span className="ml-1.5 font-semibold text-red-600">Required</span>}
+        </p>
+        {hasError && (
+          <span className="text-[11px] font-bold text-red-600">
+            Please choose an option to continue
+          </span>
+        )}
+      </div>
 
       <div className="mt-2.5 flex flex-wrap gap-2">
         {variants.map((variant) => {
