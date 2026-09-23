@@ -4,12 +4,6 @@ import {
   HiOutlineShoppingBag,
   HiOutlineHeart,
   HiUser,
-  HiBell,
-  HiBars3,
-  HiSparkles,
-  HiChevronDown,
-  HiMapPin,
-  HiBolt,
 } from 'react-icons/hi2'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { USER_ROUTES, AUTH_ROUTES, userPath } from '../../config/routes'
@@ -18,6 +12,7 @@ import { useCartCount } from '../../lib/cartStore'
 import { useWishlistCount } from '../../lib/wishlistStore'
 import { useUnreadNotificationCount } from '../../lib/notificationStore'
 import { useCategoriesController } from '../../modules/user/controllers/useProductsController'
+import { LanguageSwitcher } from '../common/LanguageSwitcher'
 
 export function WebHeader() {
   const navigate = useNavigate()
@@ -81,38 +76,12 @@ export function WebHeader() {
           </button>
         </form>
 
-        {/* Deliver to Location Indicator */}
-        <div
-          onClick={() => navigate(isAuthenticated ? USER_ROUTES.ADDRESSES : AUTH_ROUTES.LOGIN)}
-          className="hidden lg:flex items-center space-x-2 shrink-0 cursor-pointer p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
-          title="Select Delivery Location"
-        >
-          <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200/70 flex items-center justify-center text-blue-600 shrink-0">
-            <HiMapPin className="w-4 h-4" />
-          </div>
-          <div className="text-left leading-tight">
-            <span className="text-[10px] text-slate-400 font-medium block">Deliver to</span>
-            <div className="flex items-center space-x-0.5">
-              <span className="text-xs font-bold text-slate-800 max-w-[130px] truncate">
-                {user?.city || user?.address || 'Select City / Pin'}
-              </span>
-              <HiChevronDown className="w-3 h-3 text-slate-400" />
-            </div>
-          </div>
-        </div>
+        {/* Right Actions: Language -> Like (Wishlist) -> Cart -> Profile */}
+        <div className="flex items-center gap-4 sm:gap-5 text-slate-700 font-medium text-xs">
+          {/* 1. Language Switcher */}
+          <LanguageSwitcher variant="compact" />
 
-        {/* SLA Speed Badge */}
-        <div className="hidden xl:flex items-center space-x-2 shrink-0 bg-blue-50/70 border border-blue-200/80 px-3 py-1.5 rounded-full shadow-2xs">
-          <HiBolt className="w-4 h-4 text-blue-600 fill-blue-600" />
-          <div className="text-left leading-tight">
-            <span className="text-[10px] text-slate-500 font-medium block">Dispatch in</span>
-            <span className="text-xs font-extrabold text-blue-900">24–48 hrs</span>
-          </div>
-        </div>
-
-        {/* Right Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-3 text-slate-700 font-medium text-xs">
-          {/* Wishlist */}
+          {/* 2. Like Icon (Wishlist) */}
           <button
             type="button"
             onClick={() => navigate(USER_ROUTES.WISHLIST)}
@@ -127,7 +96,26 @@ export function WebHeader() {
             )}
           </button>
 
-          {/* User Account / Profile */}
+          {/* 3. Cart with Badge Count */}
+          <button
+            type="button"
+            onClick={() => navigate(USER_ROUTES.CART)}
+            aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
+            className="relative p-2 rounded-full hover:bg-blue-50 bg-slate-100/80 border border-slate-200 text-slate-900 transition-colors flex items-center justify-center"
+          >
+            <HiOutlineShoppingBag className="w-5 h-5 text-slate-800" aria-hidden="true" />
+            {cartCount > 0 ? (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white shadow-2xs">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            ) : (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-slate-300 text-slate-700 text-[10px] font-bold rounded-full flex items-center justify-center border border-white">
+                0
+              </span>
+            )}
+          </button>
+
+          {/* 4. User Account / Profile */}
           {isAuthenticated ? (
             <button
               type="button"
@@ -151,25 +139,6 @@ export function WebHeader() {
               <span>Sign In</span>
             </button>
           )}
-
-          {/* Cart with Blue/Red Badge Count */}
-          <button
-            type="button"
-            onClick={() => navigate(USER_ROUTES.CART)}
-            aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
-            className="relative p-2 rounded-full hover:bg-blue-50 bg-slate-100/80 border border-slate-200 text-slate-900 transition-colors flex items-center justify-center"
-          >
-            <HiOutlineShoppingBag className="w-5 h-5 text-slate-800" aria-hidden="true" />
-            {cartCount > 0 ? (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white shadow-2xs">
-                {cartCount > 9 ? '9+' : cartCount}
-              </span>
-            ) : (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-slate-300 text-slate-700 text-[10px] font-bold rounded-full flex items-center justify-center border border-white">
-                0
-              </span>
-            )}
-          </button>
         </div>
       </div>
     </header>

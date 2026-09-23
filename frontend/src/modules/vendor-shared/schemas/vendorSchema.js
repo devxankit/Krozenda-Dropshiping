@@ -121,7 +121,7 @@ const vendorOrderItemSchema = z.object({
 export const vendorOrderSchema = z.object({
   id: z.string(),
   orderId: z.string(),
-  customer: z.object({ name: z.string(), mobileNumber: z.string() }),
+  customer: z.object({ name: z.string().default(''), mobileNumber: z.string().default('') }).nullable().optional().transform((val) => val ?? { name: '', mobileNumber: '' }),
   shippingAddress: z.record(z.string(), z.any()),
   items: z.array(vendorOrderItemSchema),
   itemsValue: z.number().int(),
@@ -187,7 +187,7 @@ export const vendorReturnSchema = z.object({
   productId: z.string(),
   productName: z.string(),
   productImage: z.string().nullable(),
-  customer: z.object({ name: z.string(), mobileNumber: z.string() }),
+  customer: z.object({ name: z.string().default(''), mobileNumber: z.string().default('') }).nullable().optional().transform((val) => val ?? { name: '', mobileNumber: '' }),
   requestType: z.string(),
   reason: z.string(),
   photos: z.array(z.string()),

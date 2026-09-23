@@ -11,11 +11,13 @@ const paymentStatus = z.enum(Object.values(ORDER_PAYMENT_STATUS))
 const paymentMethod = z.enum(['COD', 'WALLET', 'RAZORPAY'])
 
 export const orderCustomerSchema = z.object({
-  id: z.string().nullable(),
-  name: z.string(),
-  mobileNumber: z.string(),
-  email: z.string(),
+  id: z.string().nullable().optional(),
+  name: z.string().default(''),
+  mobileNumber: z.string().default(''),
+  email: z.string().default(''),
 })
+
+const defaultCustomer = { id: null, name: '', mobileNumber: '', email: '' }
 
 export const orderItemSchema = z.object({
   productId: z.string(),
@@ -53,7 +55,7 @@ const orderBaseSchema = z.object({
   deliveredAt: z.string().nullable(),
   statusHistory: z.array(z.object({ status: orderStatus, at: z.string() })),
   createdAt: z.string(),
-  customer: orderCustomerSchema,
+  customer: orderCustomerSchema.nullable().optional().transform((val) => val ?? defaultCustomer),
 })
 
 export const orderListItemSchema = orderBaseSchema

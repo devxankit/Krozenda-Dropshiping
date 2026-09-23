@@ -308,7 +308,8 @@ async function updateOrderStatus(req, res) {
     });
   }
 
-  res.json({ success: true, message: 'Order status updated', data: serializeOrder(order) });
+  const populated = await order.populate('user', 'name mobileNumber email');
+  res.json({ success: true, message: 'Order status updated', data: withCustomer(populated) });
 }
 
 module.exports = { listOrders, getOrder, createOrder, updateOrderStatus };

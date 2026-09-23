@@ -13,6 +13,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Footer } from '../../../../components/layout/Footer'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
+import { LanguageSwitcher } from '../../../../components/common/LanguageSwitcher'
 import { useCartCount } from '../../../../lib/cartStore'
 import { useUnreadNotificationCount } from '../../../../lib/notificationStore'
 import { usePageMeta } from '../../../../lib/usePageMeta'
@@ -151,7 +152,8 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               />
             </form>
 
-            <div className="flex items-center space-x-1 shrink-0">
+            <div className="flex items-center space-x-1.5 shrink-0">
+              <LanguageSwitcher variant="compact" />
               <button
                 type="button"
                 onClick={() => navigate(USER_ROUTES.NOTIFICATIONS)}
