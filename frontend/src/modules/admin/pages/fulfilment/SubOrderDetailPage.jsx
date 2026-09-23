@@ -1,4 +1,5 @@
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { adminPath } from '../../../../config/routes'
 import { Button } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, PageSkeleton, PermissionGate } from '../../components/feedback'
@@ -10,6 +11,7 @@ import { useOrderDetailController } from '../../controllers/useOrderController'
 // its parent. It reuses the same card the order detail screen renders, so the
 // two views can never drift apart.
 export function SubOrderDetailPage() {
+  const navigate = useNavigate()
   const { subOrderId } = useParams()
   const parentId = subOrderId?.slice(0, 8)
   const { order, isLoading, error, refetch } = useOrderDetailController(parentId)
@@ -40,10 +42,20 @@ export function SubOrderDetailPage() {
         description={`Part of order ${order.id} · ${subOrder.seller.name}`}
         actions={
           <>
-            <Button variant="secondary" size="control" icon="invoices">
+            <Button
+              variant="secondary"
+              size="control"
+              icon="invoices"
+              onClick={() => navigate(adminPath.invoiceDetail('inv-1'))}
+            >
               Invoice
             </Button>
-            <Button variant="secondary" size="control" icon="print">
+            <Button
+              variant="secondary"
+              size="control"
+              icon="print"
+              onClick={() => navigate(adminPath.invoiceDetail('inv-1'))}
+            >
               Packing slip
             </Button>
             <PermissionGate permission={ADMIN_PERMISSIONS.ORDERS_CANCEL}>

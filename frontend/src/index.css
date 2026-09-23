@@ -248,3 +248,67 @@
 .vendor-auth legend {
   color: theme('colors.slate.300');
 }
+
+/* ---------------------------------------------------------------------------
+   Print Styles: Clean A4 document printing for Invoices, Labels & Slips
+   --------------------------------------------------------------------------- */
+@media print {
+  html, body, #root {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print\:hidden,
+  .print-hidden,
+  nav,
+  aside,
+  header:not(.print-include),
+  /* Hide all toast notifications and overlays during print */
+  [role="status"],
+  [role="alert"],
+  .toaster,
+  #toaster,
+  div:has(> [role="status"]),
+  div:has(> [role="alert"]),
+  div[style*="position: fixed"][style*="z-index"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  .admin-root,
+  .admin-scroll,
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    background: transparent !important;
+  }
+
+  #printable-invoice,
+  .printable-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+}
+

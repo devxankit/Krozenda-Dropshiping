@@ -61,8 +61,8 @@ export function AdminLayout() {
     isDashboardOrRoot && firstAccessibleRoute ? firstAccessibleRoute : ADMIN_ROUTES.FORBIDDEN
 
   return (
-    <div className="admin-root flex h-screen overflow-hidden bg-surface-muted">
-      <div className="hidden lg:flex">
+    <div className="admin-root flex h-screen overflow-hidden bg-surface-muted print:h-auto print:overflow-visible print:bg-white">
+      <div className="hidden lg:flex print:hidden">
         <AdminSidebar
           groups={groups}
           collapsed={sidebarCollapsed}
@@ -72,17 +72,19 @@ export function AdminLayout() {
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <AdminTopbar
-          user={user}
-          unreadCount={notifications.filter((item) => !item.read).length}
-          onOpenSearch={() => setCommandPaletteOpen(true)}
-          onOpenNotifications={() => setNotificationsOpen(true)}
-          onOpenMobileNav={() => setMobileNavOpen(true)}
-          onSignOut={handleSignOut}
-        />
+      <div className="flex min-w-0 flex-1 flex-col print:w-full print:block">
+        <div className="print:hidden">
+          <AdminTopbar
+            user={user}
+            unreadCount={notifications.filter((item) => !item.read).length}
+            onOpenSearch={() => setCommandPaletteOpen(true)}
+            onOpenNotifications={() => setNotificationsOpen(true)}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            onSignOut={handleSignOut}
+          />
+        </div>
 
-        <main className="admin-scroll flex-1 overflow-y-auto">
+        <main className="admin-scroll flex-1 overflow-y-auto print:overflow-visible print:h-auto print:p-0">
           {isAuthorizedForRoute ? (
             <Outlet />
           ) : (
