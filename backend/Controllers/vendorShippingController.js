@@ -26,22 +26,32 @@ async function getMyIntegration(req, res) {
     ShippingIntegration.findOne({ vendor: req.vendor._id, provider: 'SHIPROCKET', isActive: true }),
   ]);
 
+  // In single-admin Shiprocket mode, the platform Admin Shiprocket account is active for all sellers
+  let integrationPayload = null;
+  if (!settings.sellerOwnAccountEnabled) {
+    integrationPayload = {
+      provider: 'SHIPROCKET',
+      accountType: 'PLATFORM',
+      status: 'CONNECTED',
+      isActive: true,
+      label: 'Admin Shiprocket Account (Connected)',
+      connected: true,
+      lastSuccessfulAt: new Date(),
+    };
+  } else if (integration) {
+    integrationPayload = integration.toSafeJSON();
+  }
+
   res.json({
     success: true,
     message: 'Shipping integration fetched successfully',
     data: {
-      // toSafeJSON is the only shape allowed out — see the model.
-      integration: integration ? integration.toSafeJSON() : null,
-      // What the seller is ALLOWED to do, so the UI can explain itself rather
-      // than showing a form that will be ignored.
+      integration: integrationPayload,
       policy: {
         sellerOwnAccountEnabled: settings.sellerOwnAccountEnabled,
         platformFallbackEnabled: settings.platformFallbackEnabled,
         shippingEnabled: settings.shippingEnabled,
       },
-      // False when the server has no encryption key, which means seller
-      // credentials cannot be stored at all. Better to say so than to accept
-      // a password and fail on save.
       canStoreCredentials: isConfigured(),
       capabilities: shiprocketService.CAPABILITIES,
     },
@@ -213,7 +223,16 @@ function validateLocation({ nickname, contactName, phone, addressLine1, city, st
 
   required(nickname, 'Nickname', 60);
   required(contactName, 'Contact name', 120);
-  required(addressLine1, 'Address', 200);
+
+  const cleanAddr1 = String(addressLine1 || '').trim();
+  if (!cleanAddr1) {
+    errors.push('Address line 1 is required.');
+  } else if (cleanAddr1.length < 10) {
+    errors.push('Address line 1 must be at least 10 characters and include House/Flat/Road no.');
+  } else if (cleanAddr1.length > 200) {
+    errors.push('Address line 1 is too long.');
+  }
+
   required(city, 'City', 100);
   required(state, 'State', 100);
 
@@ -230,7 +249,7 @@ function validateLocation({ nickname, contactName, phone, addressLine1, city, st
 
 // GET /vendor/shipping/pickup-locations
 async function listPickupLocations(req, res) {
-  const locations = await PickupLocation.find({ vendor: req.vendor._id }).sort({
+  const locations = await PickupLocation.find({ vendor: req.vendor._id, isActive: { $ne: false } }).sort({
     isDefault: -1,
     createdAt: 1,
   });
@@ -259,7 +278,7 @@ async function createPickupLocation(req, res) {
 
   // A seller's first location becomes their default automatically — otherwise
   // they would have a location and still be blocked for not having a default.
-  const existingCount = await PickupLocation.countDocuments({ vendor: req.vendor._id });
+  const existingCount = await PickupLocation.countDocuments({ vendor: req.vendor._id, isActive: { $ne: false } });
 
   try {
     const location = await PickupLocation.create({
@@ -321,7 +340,9 @@ async function registerPickupLocation(req, res) {
 
   const result = await pickupLocationService.registerLocation(location, { actor: 'SELLER' });
 
-  res.status(result.ok ? 200 : 502).json({
+  const statusCode = result.ok ? 200 : 400;
+
+  res.status(statusCode).json({
     success: result.ok,
     message: result.ok
       ? result.alreadyRegistered
@@ -422,28 +443,24 @@ async function deactivatePickupLocation(req, res) {
     return res.status(404).json({ success: false, message: 'Pickup location not found' });
   }
 
-  // Refuse to leave a seller with no usable pickup point while they still have
-  // shipping enabled — they would find out at the worst moment, mid-shipment.
-  const remaining = await PickupLocation.countDocuments({
-    vendor: req.vendor._id,
-    isActive: true,
-    _id: { $ne: location._id },
-  });
-  if (remaining === 0) {
-    return res.status(400).json({
-      success: false,
-      message: 'This is your only active pickup location. Add another before removing this one.',
-    });
+  // Check if any existing shipment references this location
+  const Shipment = mongoose.model('Shipment');
+  const hasShipments = await Shipment.exists({ pickupLocation: location._id });
+
+  if (hasShipments) {
+    // Soft-deactivate to preserve historical shipment and manifest records
+    location.isActive = false;
+    location.isDefault = false;
+    location.nickname = `${location.nickname} (deleted-${Date.now().toString().slice(-4)})`;
+    await location.save();
+  } else {
+    // If never used in any shipment, remove document completely
+    await PickupLocation.deleteOne({ _id: location._id });
   }
 
-  location.isActive = false;
-  location.isDefault = false;
-  await location.save();
-
-  // If that was the default, promote the oldest remaining one so the seller is
-  // never left without a default.
-  const hasDefault = await PickupLocation.exists({ vendor: req.vendor._id, isActive: true, isDefault: true });
-  if (!hasDefault) {
+  // If there are other active locations left, ensure one is marked default
+  const remainingDefault = await PickupLocation.findOne({ vendor: req.vendor._id, isActive: true, isDefault: true });
+  if (!remainingDefault) {
     const next = await PickupLocation.findOne({ vendor: req.vendor._id, isActive: true }).sort({ createdAt: 1 });
     if (next) {
       next.isDefault = true;
@@ -451,7 +468,7 @@ async function deactivatePickupLocation(req, res) {
     }
   }
 
-  res.json({ success: true, message: 'Pickup location removed', data: { id: location._id.toString() } });
+  res.json({ success: true, message: 'Pickup location deleted successfully', data: { id: location._id.toString() } });
 }
 
 // ---------------------------------------------------------------------------

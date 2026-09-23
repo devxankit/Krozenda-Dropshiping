@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Input, PasswordInput, Skeleton } from '../../../components/ui'
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Input, Modal, Skeleton } from '../../../components/ui'
 import { PageBody } from '../../admin/components/shell/PageBody'
 import { PageHeader } from '../../admin/components/shell/PageHeader'
 import { InlineAlert } from '../../admin/components/feedback'
 import { FormDrawer } from '../../admin/components/forms/FormDrawer'
 import { usePickupLocationsController, useShippingIntegrationController } from '../controllers/useShippingController'
-import { integrationStatusPresentation, pickupStatusPresentation, formatDateTime } from '../../../lib/shipping/presentation'
+import { pickupStatusPresentation } from '../../../lib/shipping/presentation'
 import { toast } from '../../../lib/toast'
 
 // Seller > Shipping > Settings: which carrier account ships this store's
@@ -18,14 +18,15 @@ import { toast } from '../../../lib/toast'
 export function ShippingSettingsPage() {
   const account = useShippingIntegrationController()
   const pickups = usePickupLocationsController()
-  const [isConnectOpen, setConnectOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [deleting, setDeleting] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   if (account.isLoading) {
     return (
       <PageBody>
-        <PageHeader title="Shipping" description="Your courier account and pickup addresses." />
-        <Skeleton className="h-40 w-full rounded-xl" />
+        <PageHeader title="Shipping & Warehouses" description="Courier status and pickup addresses." />
+        <Skeleton className="h-28 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </PageBody>
     )
@@ -34,284 +35,117 @@ export function ShippingSettingsPage() {
   return (
     <PageBody>
       <PageHeader
-        title="Shipping"
-        description="Connect a courier account and tell us where we collect your parcels from."
+        title="Shipping & Pickup Addresses"
+        description="Shiprocket courier is connected by Admin. Add and manage your pickup warehouses below."
       />
 
-      <ShippingStatusBanner account={account} />
-
-      <CarrierAccountCard
-        account={account}
-        onConnect={() => setConnectOpen(true)}
-      />
+      <ShiprocketStatusCard />
 
       <PickupLocationsCard
         pickups={pickups}
         onAdd={() => setEditing({})}
         onEdit={(location) => setEditing(location)}
-      />
-
-      <ConnectDrawer
-        isOpen={isConnectOpen}
-        onClose={() => setConnectOpen(false)}
-        account={account}
+        onDelete={(location) => setDeleting(location)}
       />
 
       <PickupLocationDrawer
         location={editing}
         onClose={() => setEditing(null)}
         pickups={pickups}
+        onDelete={(location) => setDeleting(location)}
       />
-    </PageBody>
-  )
-}
 
-// The single sentence that answers "can I ship right now, and on whose
-// account?" — which is the only question this page really exists to answer.
-function ShippingStatusBanner({ account }) {
-  const { effectiveAccount, policy, isUnhealthy } = account
-
-  if (effectiveAccount === 'DISABLED') {
-    return (
-      <InlineAlert tone="warning" title="Shipping is turned off">
-        The marketplace has shipping disabled. You cannot create new shipments until an administrator enables it.
-        Existing parcels remain trackable.
-      </InlineAlert>
-    )
-  }
-
-  if (effectiveAccount === 'NONE') {
-    return (
-      <InlineAlert tone="danger" title="You cannot create shipments yet">
-        {policy?.sellerOwnAccountEnabled
-          ? 'Connect your own Shiprocket account below. The platform account is not available as a fallback for this marketplace.'
-          : 'Seller accounts are turned off and no platform fallback is available. Contact the marketplace administrator.'}
-      </InlineAlert>
-    )
-  }
-
-  if (isUnhealthy) {
-    return (
-      <InlineAlert tone="danger" title="Your Shiprocket account is not responding">
-        The last call to Shiprocket failed. Reconnect below — until then, new shipments will be refused.
-      </InlineAlert>
-    )
-  }
-
-  if (effectiveAccount === 'PLATFORM') {
-    return (
-      <InlineAlert tone="info" title="Shipping on the platform account">
-        Your parcels currently ship on the marketplace&apos;s courier account. Connect your own Shiprocket account
-        below to use your own rates and pickup addresses.
-      </InlineAlert>
-    )
-  }
-
-  return (
-    <InlineAlert tone="success" title="Shipping on your own Shiprocket account">
-      New parcels use your account, your rates and your registered pickup addresses.
-    </InlineAlert>
-  )
-}
-
-function CarrierAccountCard({ account, onConnect }) {
-  const { integration, canStoreCredentials, policy, disconnect, isDisconnecting } = account
-  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false)
-
-  if (!policy?.sellerOwnAccountEnabled) {
-    return (
-      <Card>
-        <CardHeader title="Courier account" description="Managed by the marketplace." />
-        <CardBody>
-          <p className="text-sm text-ink-subtle">
-            This marketplace ships every order on its own Shiprocket account. There is nothing to configure here.
-          </p>
-        </CardBody>
-      </Card>
-    )
-  }
-
-  if (!canStoreCredentials) {
-    return (
-      <Card>
-        <CardHeader title="Courier account" />
-        <CardBody>
-          <InlineAlert tone="warning" title="Not available on this server">
-            This server is not configured to store courier credentials securely, so your own account cannot be connected
-            yet. Ask the marketplace administrator to set this up.
-          </InlineAlert>
-        </CardBody>
-      </Card>
-    )
-  }
-
-  const presentation = integration ? integrationStatusPresentation(integration.status) : null
-
-  return (
-    <Card>
-      <CardHeader
-        title="Your Shiprocket account"
-        description="Used for your rates, your pickup addresses and your invoices."
-        actions={
-          integration?.isActive ? (
-            <div className="flex gap-2">
-              <Button variant="quiet" size="control" onClick={onConnect}>
-                Reconnect
+      {deleting && (
+        <Modal
+          isOpen={Boolean(deleting)}
+          onClose={() => !isDeleting && setDeleting(null)}
+          title="Delete Pickup Address?"
+          size="sm"
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="quiet" size="control" onClick={() => setDeleting(null)} disabled={isDeleting}>
+                Cancel
               </Button>
               <Button
                 variant="danger"
                 size="control"
-                onClick={() => setConfirmingDisconnect(true)}
-                isLoading={isDisconnecting}
+                isLoading={isDeleting}
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true)
+                    await pickups.removeLocation(deleting.id)
+                    toast.success('Pickup Location Deleted', `"${deleting.nickname}" was removed.`)
+                    setDeleting(null)
+                  } catch (err) {
+                    const msg = err?.response?.data?.message || err?.message || 'Could not delete address.'
+                    toast.error('Could not delete address', msg)
+                  } finally {
+                    setIsDeleting(false)
+                  }
+                }}
               >
-                Disconnect
+                Delete address
               </Button>
             </div>
-          ) : (
-            <Button size="control" onClick={onConnect}>
-              Connect account
-            </Button>
-          )
-        }
-      />
-      <CardBody>
-        {!integration?.isActive ? (
-          <p className="text-sm text-ink-subtle">
-            No account connected. Until you connect one,{' '}
-            {policy.platformFallbackEnabled
-              ? "your parcels ship on the marketplace's account."
-              : 'you will not be able to create shipments.'}
-          </p>
-        ) : (
-          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-            <Field label="Status">
-              <Badge tone={presentation.tone} dot>
-                {presentation.label}
-              </Badge>
-            </Field>
-            <Field label="Account">
-              <span className="font-mono text-xs">{integration.email || '—'}</span>
-            </Field>
-            <Field label="Last verified">{formatDateTime(integration.lastSuccessfulAt)}</Field>
-            <Field label="Connected on">{formatDateTime(integration.createdAt)}</Field>
-            {integration.failureReason && (
-              <div className="sm:col-span-2">
-                <InlineAlert tone="danger" title="Last failure">
-                  {integration.failureReason}
-                </InlineAlert>
-              </div>
-            )}
-          </dl>
-        )}
-      </CardBody>
-
-      <FormDrawer
-        isOpen={confirmingDisconnect}
-        onClose={() => setConfirmingDisconnect(false)}
-        title="Disconnect Shiprocket?"
-        submitLabel="Disconnect"
-        submitTone="danger"
-        isSubmitting={isDisconnecting}
-        onSubmit={async () => {
-          try {
-            await disconnect()
-            toast.info('Shiprocket Disconnected', 'Your credentials were removed.')
-            setConfirmingDisconnect(false)
-          } catch (err) {
-            toast.error('Could not disconnect Shiprocket', err)
           }
-        }}
-      >
-        <div className="flex flex-col gap-3 text-sm text-ink-subtle">
-          <p>
-            Your stored password will be deleted. Parcels already shipped stay trackable on the account that created
-            them.
-          </p>
-          <p>
-            {account.policy?.platformFallbackEnabled
-              ? "New parcels will ship on the marketplace's account instead."
-              : 'You will not be able to create new shipments until you reconnect.'}
-          </p>
+        >
+          <div className="p-5 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-danger-50 text-danger-600 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">{deleting.nickname}</h4>
+                <p className="text-xs text-ink-subtle mt-0.5">{deleting.addressLine1}, {deleting.city}</p>
+              </div>
+            </div>
+            <p className="text-xs text-ink-muted">
+              Are you sure you want to remove this pickup address? It will no longer be used for courier parcel collections.
+            </p>
+          </div>
+        </Modal>
+      )}
+    </PageBody>
+  )
+}
+
+function ShiprocketStatusCard() {
+  return (
+    <Card>
+      <CardBody className="p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="font-semibold text-slate-900 text-base">Shiprocket Logistics</h3>
+                <Badge tone="success" dot size="sm">
+                  Connected
+                </Badge>
+              </div>
+              <p className="text-xs text-ink-subtle mt-0.5">
+                Admin Shiprocket account is active. Courier booking, AWB assignment, and live tracking are centrally managed by the platform.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto rounded-lg bg-surface-muted px-3 py-1.5 border border-border text-2xs text-ink-muted">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-medium text-slate-700">Platform Active</span>
+          </div>
         </div>
-      </FormDrawer>
+      </CardBody>
     </Card>
   )
 }
 
-function ConnectDrawer({ isOpen, onClose, account }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [failure, setFailure] = useState('')
-
-  const close = () => {
-    // The password never outlives the drawer, even in component state.
-    setEmail('')
-    setPassword('')
-    setFailure('')
-    onClose()
-  }
-
-  const submit = async () => {
-    setFailure('')
-    try {
-      await account.connect({ email: email.trim(), password })
-      toast.success('Shiprocket Connected', 'Your account credentials have been verified.')
-      close()
-    } catch (error) {
-      const msg = error?.message || 'Could not connect that account.'
-      setFailure(msg)
-      toast.error('Connection Failed', error)
-      setPassword('')
-    }
-  }
-
-  return (
-    <FormDrawer
-      isOpen={isOpen}
-      onClose={close}
-      title="Connect your Shiprocket account"
-      description="We verify the credentials with Shiprocket before saving them."
-      submitLabel="Verify and connect"
-      isSubmitting={account.isConnecting}
-      canSubmit={email.trim().length > 0 && password.length > 0 && !account.isConnecting}
-      onSubmit={submit}
-    >
-      <div className="flex flex-col gap-4">
-        <InlineAlert tone="info" title="Use an API user, not your panel login">
-          In Shiprocket, go to <strong>Settings → API → Configure</strong> and create an API user. Those are the
-          credentials to enter here.
-        </InlineAlert>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-700">Shiprocket email</span>
-          <Input
-            type="email"
-            value={email}
-            autoComplete="off"
-            placeholder="api-user@yourstore.com"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-700">Shiprocket password</span>
-          <PasswordInput value={password} autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} />
-          <span className="text-2xs text-ink-faint">
-            Stored encrypted. It is never shown again, and never sent back to this screen.
-          </span>
-        </label>
-
-        {failure && (
-          <InlineAlert tone="danger" title="Could not connect">
-            {failure}
-          </InlineAlert>
-        )}
-      </div>
-    </FormDrawer>
-  )
-}
-
-function PickupLocationsCard({ pickups, onAdd, onEdit }) {
+function PickupLocationsCard({ pickups, onAdd, onEdit, onDelete }) {
   if (pickups.isLoading) return <Skeleton className="h-64 w-full rounded-xl" />
 
   return (
@@ -380,11 +214,14 @@ function PickupLocationsCard({ pickups, onAdd, onEdit }) {
                       {location.contactName} · {location.phone}
                     </p>
                     {location.registrationError && (
-                      <p className="mt-1 text-2xs text-danger-600">{location.registrationError}</p>
+                      <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-2xs text-blue-800">
+                        <span className="font-semibold shrink-0">Note:</span>
+                        <span>{location.registrationError}</span>
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {/* Only a REGISTERED address can ship, so retrying a
                         failed registration is the most useful action here. */}
                     {location.registrationStatus !== 'REGISTERED' && (
@@ -394,7 +231,10 @@ function PickupLocationsCard({ pickups, onAdd, onEdit }) {
                           pickups
                             .register(location.id)
                             .then(() => toast.success('Registered with Courier', 'Pickup address registered successfully.'))
-                            .catch((err) => toast.error('Registration Failed', err))
+                            .catch((err) => {
+                              const msg = err?.response?.data?.message || err?.message || 'Please check address details.'
+                              toast.info('Address Information Required', msg)
+                            })
                         }}
                         isLoading={pickups.isRegistering}
                       >
@@ -417,6 +257,13 @@ function PickupLocationsCard({ pickups, onAdd, onEdit }) {
                     )}
                     <Button variant="quiet" size="control" onClick={() => onEdit(location)}>
                       Edit
+                    </Button>
+                    <Button
+                      variant="dangerOutline"
+                      size="control"
+                      onClick={() => onDelete?.(location)}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -441,7 +288,7 @@ const EMPTY_LOCATION = {
   pincode: '',
 }
 
-function PickupLocationDrawer({ location, onClose, pickups }) {
+function PickupLocationDrawer({ location, onClose, pickups, onDelete }) {
   const isOpen = location !== null
   const isEdit = Boolean(location?.id)
   const [form, setForm] = useState(EMPTY_LOCATION)
@@ -464,7 +311,8 @@ function PickupLocationDrawer({ location, onClose, pickups }) {
     onClose()
   }
 
-  const submit = async () => {
+  const submit = async (e) => {
+    e?.preventDefault?.()
     setFailure('')
     const body = {
       nickname: form.nickname.trim(),
@@ -487,15 +335,21 @@ function PickupLocationDrawer({ location, onClose, pickups }) {
       }
       close()
     } catch (error) {
-      setFailure(error?.message || 'Could not save this address.')
-      toast.error('Could not save address', error)
+      const errorMsg = error?.response?.data?.message || error?.message || 'Could not save this address.'
+      setFailure(errorMsg)
+      if (errorMsg.toLowerCase().includes('character') || errorMsg.toLowerCase().includes('house') || errorMsg.toLowerCase().includes('flat') || errorMsg.toLowerCase().includes('road') || errorMsg.toLowerCase().includes('address')) {
+        toast.info('Address Information Required', errorMsg)
+      } else {
+        toast.error('Could not save address', errorMsg)
+      }
     }
   }
 
+  const isAddress1Valid = form.addressLine1.trim().length >= 10
   const canSubmit =
     form.nickname.trim() &&
     form.contactName.trim() &&
-    form.addressLine1.trim() &&
+    isAddress1Valid &&
     form.city.trim() &&
     form.state.trim() &&
     /^[6-9]\d{9}$/.test(form.phone.replace(/\D/g, '').slice(-10)) &&
@@ -506,7 +360,7 @@ function PickupLocationDrawer({ location, onClose, pickups }) {
       isOpen={isOpen}
       onClose={close}
       title={isEdit ? 'Edit pickup address' : 'Add pickup address'}
-      description="This is where the courier collects. It must match what Shiprocket has on file."
+      description="This is where couriers collect customer parcels. It is registered directly with Shiprocket."
       submitLabel={isEdit ? 'Save address' : 'Add address'}
       isSubmitting={pickups.isSaving}
       canSubmit={Boolean(canSubmit) && !pickups.isSaving}
@@ -514,25 +368,57 @@ function PickupLocationDrawer({ location, onClose, pickups }) {
     >
       <div className="flex flex-col gap-4">
         <Row>
-          <LabeledInput label="Nickname" value={form.nickname} onChange={set('nickname')} placeholder="Indore warehouse" />
-          <LabeledInput label="Contact name" value={form.contactName} onChange={set('contactName')} />
+          <LabeledInput label="Nickname" value={form.nickname} onChange={set('nickname')} placeholder="e.g. Main Hub" />
+          <LabeledInput label="Contact name" value={form.contactName} onChange={set('contactName')} placeholder="e.g. Rehan Multani" />
         </Row>
         <Row>
-          <LabeledInput label="Mobile" value={form.phone} onChange={set('phone')} placeholder="10 digits" inputMode="numeric" />
-          <LabeledInput label="Email (optional)" type="email" value={form.email} onChange={set('email')} />
+          <LabeledInput label="Mobile" value={form.phone} onChange={set('phone')} placeholder="10-digit mobile" inputMode="numeric" />
+          <LabeledInput label="Email (optional)" type="email" value={form.email} onChange={set('email')} placeholder="warehouse@example.com" />
         </Row>
-        <LabeledInput label="Address line 1" value={form.addressLine1} onChange={set('addressLine1')} />
-        <LabeledInput label="Address line 2 (optional)" value={form.addressLine2} onChange={set('addressLine2')} />
+        
+        <div className="flex flex-col gap-1">
+          <LabeledInput
+            label="Address line 1"
+            value={form.addressLine1}
+            onChange={set('addressLine1')}
+            placeholder="House/Shop no., Building/Street name (min 10 characters)"
+          />
+          <div className="flex items-center justify-between text-2xs">
+            <span className="text-ink-subtle">Must include House/Flat/Road no. (min 10 characters for Shiprocket)</span>
+            <span className={form.addressLine1.trim().length < 10 && form.addressLine1.trim().length > 0 ? 'text-danger-600 font-semibold' : 'text-ink-faint'}>
+              {form.addressLine1.trim().length}/10 min
+            </span>
+          </div>
+        </div>
+
+        <LabeledInput label="Address line 2 (optional)" value={form.addressLine2} onChange={set('addressLine2')} placeholder="Apartment, suite, landmark, etc." />
         <Row>
-          <LabeledInput label="City" value={form.city} onChange={set('city')} />
-          <LabeledInput label="State" value={form.state} onChange={set('state')} />
+          <LabeledInput label="City" value={form.city} onChange={set('city')} placeholder="e.g. Indore" />
+          <LabeledInput label="State" value={form.state} onChange={set('state')} placeholder="e.g. Madhya Pradesh" />
         </Row>
-        <LabeledInput label="PIN code" value={form.pincode} onChange={set('pincode')} inputMode="numeric" placeholder="6 digits" />
+        <LabeledInput label="PIN code" value={form.pincode} onChange={set('pincode')} inputMode="numeric" placeholder="6 digits (e.g. 452009)" />
 
         {failure && (
           <InlineAlert tone="danger" title="Could not save">
             {failure}
           </InlineAlert>
+        )}
+
+        {isEdit && (
+          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+            <span className="text-xs text-ink-subtle">No longer need this pickup address?</span>
+            <Button
+              type="button"
+              variant="dangerOutline"
+              size="sm"
+              onClick={() => {
+                close()
+                onDelete?.(location)
+              }}
+            >
+              Delete Address
+            </Button>
+          </div>
         )}
       </div>
     </FormDrawer>

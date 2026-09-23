@@ -28,12 +28,12 @@ const shippingSettingsSchema = new mongoose.Schema(
     // --- master switch ----------------------------------------------------
     // Off means no shipment may be created through any carrier. Existing
     // shipments stay readable and trackable.
-    shippingEnabled: { type: Boolean, default: false },
+    shippingEnabled: { type: Boolean, default: true },
     provider: { type: String, enum: ['SHIPROCKET'], default: 'SHIPROCKET' },
 
     // --- account routing (task §16) ---------------------------------------
-    // May a seller ship on their OWN carrier account?
-    sellerOwnAccountEnabled: { type: Boolean, default: true },
+    // May a seller ship on their OWN carrier account? (Disabled for single-admin Shiprocket flow)
+    sellerOwnAccountEnabled: { type: Boolean, default: false },
     // When a seller has no working account of their own, may the platform's
     // account be used on their behalf? Off means shipment creation is BLOCKED
     // with a configuration error rather than quietly billed to the platform.
@@ -102,11 +102,24 @@ const shippingSettingsSchema = new mongoose.Schema(
 // goes through this rather than findOne, so the document is guaranteed to
 // exist and the defaults above are the real starting policy.
 shippingSettingsSchema.statics.getSettings = async function getSettings() {
-  const existing = await this.findOne({ key: 'GLOBAL' });
-  if (existing) return existing;
+  let existing = await this.findOne({ key: 'GLOBAL' });
+  if (existing) {
+    // If shippingEnabled is false or sellerOwnAccountEnabled is true by old default, align with platform policy
+    if (existing.sellerOwnAccountEnabled !== false && !existing.updatedBy) {
+      existing.sellerOwnAccountEnabled = false;
+      existing.shippingEnabled = true;
+      await existing.save();
+    }
+    return existing;
+  }
 
   try {
-    return await this.create({ key: 'GLOBAL' });
+    return await this.create({
+      key: 'GLOBAL',
+      shippingEnabled: true,
+      sellerOwnAccountEnabled: false,
+      platformFallbackEnabled: true,
+    });
   } catch (err) {
     // Two concurrent first-requests can both miss the read; the unique index
     // turns the loser into a duplicate-key error rather than a second row.

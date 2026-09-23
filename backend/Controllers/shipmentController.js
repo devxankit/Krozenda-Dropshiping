@@ -163,11 +163,24 @@ function respondToFailure(res, result) {
 
 // POST /vendor/shipments   |   POST /admin/shipments
 async function createShipment(req, res) {
-  const { orderId, pickupLocationId, package: confirmedPackage } = req.body;
+  const { orderId, pickupLocationId, package: confirmedPackage, vendorId: bodyVendorId } = req.body;
+
+  let vendorId = req.vendor ? req.vendor._id : (bodyVendorId || null);
+
+  // If Admin caller and vendorId wasn't passed, check if the order has items belonging to a single vendor
+  if (!vendorId && req.admin && orderId && mongoose.isValidObjectId(orderId)) {
+    const order = await mongoose.model('Order').findById(orderId).select('items').lean();
+    if (order && Array.isArray(order.items)) {
+      const vendorIds = [...new Set(order.items.map((i) => i.vendor ? i.vendor.toString() : null).filter(Boolean))];
+      if (vendorIds.length === 1) {
+        vendorId = vendorIds[0];
+      }
+    }
+  }
 
   const result = await shipmentService.createShipment({
     orderId,
-    vendorId: scopeFor(req),
+    vendorId,
     pickupLocationId,
     confirmedPackage,
     // Accepted from the standard header or the body, so a WebView client that

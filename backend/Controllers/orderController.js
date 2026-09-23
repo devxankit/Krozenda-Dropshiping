@@ -709,12 +709,48 @@ async function createOrder(req, res) {
   // failure never rejects a customer's placed order.
   await processCjOrderFulfillment(order, items);
 
+  // Shiprocket auto-dispatch for domestic multi-vendor items:
+  // Partitions items seller-wise and creates separate Shiprocket shipments
+  // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
+  await autoCreateShipmentsForOrder(order, items);
+
   // A prepaid order's money is in hand right now, so its sale, commission and
   // gateway fee post immediately. A COD order posts nothing yet — the cash is
   // still with the courier until an admin records the remittance (task §12).
   await postAccounting('order sale', () => accounting.postOrderSale(order.toObject()));
 
   res.status(201).json({ success: true, message: 'Order placed successfully', data: serializeOrder(order) });
+}
+
+async function autoCreateShipmentsForOrder(order, items) {
+  try {
+    const shipmentService = require('../services/shipping/shipmentService');
+    const vendorIds = [...new Set(items.filter((i) => i.vendor).map((i) => i.vendor.toString()))];
+
+    for (const vendorId of vendorIds) {
+      const vendorItems = items.filter((i) => i.vendor?.toString() === vendorId);
+      const firstItemProductId = vendorItems[0]?.product || vendorItems[0]?.productId;
+      const isCj = await ProductFulfillmentMapping.exists({ product: firstItemProductId, provider: 'CJ' });
+      if (isCj) continue; // Handled by CJ dropshipping pipeline
+
+      try {
+        const res = await shipmentService.createShipment({
+          orderId: order._id,
+          vendorId,
+          actor: 'SYSTEM',
+        });
+        if (res.ok) {
+          console.log(`[SHIPPING] Auto-created Shiprocket shipment ${res.shipment?._id} for order ${order._id}, vendor ${vendorId}`);
+        } else {
+          console.warn(`[SHIPPING] Shiprocket auto-shipment skipped for order ${order._id}, vendor ${vendorId}: ${res.reason || res.message}`);
+        }
+      } catch (shipmentErr) {
+        console.error(`[SHIPPING] Error creating auto-shipment for order ${order._id}, vendor ${vendorId}:`, shipmentErr.message);
+      }
+    }
+  } catch (err) {
+    console.error(`[SHIPPING] autoCreateShipmentsForOrder failed for order ${order._id}:`, err.message);
+  }
 }
 
 async function processCjOrderFulfillment(order, items) {

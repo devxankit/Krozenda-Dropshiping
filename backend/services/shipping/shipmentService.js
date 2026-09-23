@@ -471,9 +471,26 @@ function safeCarrierMessage(err, subject = 'shipment') {
       return err.message;
     default:
       if (err.status === 422 || err.status === 400) {
-        // The carrier's validation message IS useful here — it names the field
-        // it rejected — and contains nothing sensitive.
-        return `Shiprocket rejected the ${subject}: ${err.message}`;
+        let rawMsg = err.message || '';
+        try {
+          // Shiprocket often returns JSON strings like {"address":["Address line 1 can't be less than 10 characters."]}
+          const parsed = JSON.parse(rawMsg);
+          if (parsed && typeof parsed === 'object') {
+            const extracted = [];
+            for (const key of Object.keys(parsed)) {
+              const val = parsed[key];
+              if (Array.isArray(val)) {
+                extracted.push(...val);
+              } else if (typeof val === 'string') {
+                extracted.push(val);
+              }
+            }
+            if (extracted.length > 0) {
+              return extracted.join(' ');
+            }
+          }
+        } catch (_) {}
+        return `Shiprocket rejected the ${subject}: ${rawMsg}`;
       }
       return `Could not complete the ${subject} with Shiprocket. Please try again.`;
   }
