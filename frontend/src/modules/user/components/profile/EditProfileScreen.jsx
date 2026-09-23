@@ -44,7 +44,13 @@ export function EditProfileScreen({ onBack }) {
     changePasswordError,
   } = useProfileController()
 
-  const [form, setForm] = useState({ name: '', email: '', dob: '', mobileNumber: '' })
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    dob: '',
+    mobileNumber: '',
+    business: { companyName: '', gstin: '', pan: '', tradeType: '' },
+  })
   const [savedMessage, setSavedMessage] = useState(false)
   const [passwordForm, setPasswordForm] = useState(EMPTY_PASSWORD_FORM)
   const [passwordSaved, setPasswordSaved] = useState(false)
@@ -64,10 +70,24 @@ export function EditProfileScreen({ onBack }) {
       email: profile.email || '',
       dob: toDateInputValue(profile.dob),
       mobileNumber: profile.mobileNumber || '',
+      business: {
+        companyName: profile.business?.companyName || '',
+        gstin: profile.business?.gstin || '',
+        pan: profile.business?.pan || '',
+        tradeType: profile.business?.tradeType || '',
+      },
     })
   }
 
   const update = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const updateBusiness = (field) => (e) =>
+    setForm((prev) => ({
+      ...prev,
+      business: {
+        ...prev.business,
+        [field]: field === 'gstin' || field === 'pan' ? e.target.value.toUpperCase() : e.target.value,
+      },
+    }))
 
   const handlePickImage = async (e) => {
     const file = e.target.files?.[0]
@@ -230,6 +250,51 @@ export function EditProfileScreen({ onBack }) {
                 disabled
                 helperText="Mobile number cannot be changed as it is linked to your account login."
               />
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">Business & GST Information (B2B)</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Save your GSTIN and Company details for automatic B2B tax invoicing at checkout.
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">B2B Input Tax</span>
+              </div>
+
+              <Field
+                label="Company / Firm Name"
+                placeholder="e.g. Apex Traders Pvt Ltd"
+                value={form.business?.companyName || ''}
+                onChange={updateBusiness('companyName')}
+              />
+
+              <Field
+                label="GSTIN (15-digit GST Number)"
+                placeholder="e.g. 27AAAAA0000A1Z5"
+                value={form.business?.gstin || ''}
+                onChange={updateBusiness('gstin')}
+                maxLength={15}
+                helperText="Required on invoices to claim input tax credit (ITC)."
+              />
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Business / Trade Type</label>
+                <select
+                  value={form.business?.tradeType || ''}
+                  onChange={updateBusiness('tradeType')}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                >
+                  <option value="">Select Business Type (Optional)</option>
+                  <option value="Retailer">Retailer / Shopkeeper</option>
+                  <option value="Wholesaler">Wholesaler</option>
+                  <option value="Distributor">Distributor / Dealer</option>
+                  <option value="Trader">Trader</option>
+                  <option value="Manufacturer">Manufacturer</option>
+                  <option value="Other">Other Corporate Entity</option>
+                </select>
+              </div>
             </div>
 
             {updateError && (

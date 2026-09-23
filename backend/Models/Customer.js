@@ -42,6 +42,13 @@ const customerSchema = new mongoose.Schema(
     // devices at once, so each entry carries the platform it registered from.
     // Deduped on `token` by pushTokenController.
     fcmTokens: { type: [fcmTokenSchema], default: [] },
+    // --- B2B Commercial Details ---------------------------------------------
+    business: {
+      companyName: { type: String, trim: true, default: '' },
+      gstin: { type: String, trim: true, uppercase: true, default: '' },
+      pan: { type: String, trim: true, uppercase: true, default: '' },
+      tradeType: { type: String, trim: true, default: '' },
+    },
     isActive: { type: Boolean, default: true },
     isDeleted: { type: Boolean, default: false },
   },

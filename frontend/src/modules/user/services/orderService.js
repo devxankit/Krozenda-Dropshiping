@@ -33,6 +33,11 @@ export async function cancelOrder(id) {
   return response.data
 }
 
+export async function reorderOrder(id) {
+  const response = await api.post(`/user/orders/${id}/reorder`)
+  return response.data
+}
+
 // Unvalidated, error-swallowing variant kept for existing callers (e.g.
 // RaiseTicketModal's "link this ticket to an order" picker) that just want a
 // best-effort list without failing their own flow if it errors.

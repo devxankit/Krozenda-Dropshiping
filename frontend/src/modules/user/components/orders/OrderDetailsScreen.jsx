@@ -1,4 +1,14 @@
-import { HiArrowLeft, HiArrowDownTray, HiTruck, HiMapPin, HiCreditCard, HiArrowPath } from 'react-icons/hi2'
+import { useState } from 'react'
+import {
+  HiArrowLeft,
+  HiArrowDownTray,
+  HiTruck,
+  HiMapPin,
+  HiCreditCard,
+  HiArrowPath,
+  HiShoppingCart,
+  HiBuildingOffice2,
+} from 'react-icons/hi2'
 import { useNavigate, useParams } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
@@ -7,6 +17,8 @@ import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrderController } from '../../controllers/useOrdersController'
+import { reorderOrder } from '../../services/orderService'
+import { useCartStore } from '../../../../lib/cartStore'
 
 const STATUS_META = {
   PENDING: { label: 'Pending', color: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -20,15 +32,10 @@ const PAYMENT_METHOD_LABEL = { COD: 'Cash on Delivery', WALLET: 'Krozenda Wallet
 
 export function OrderDetailsScreen() {
   const navigate = useNavigate()
-  // From the path. This is what lets a push notification deep-link straight to
-  // an order, and what lets the screen survive a WebView reload — both
-  // impossible while the id lived in router state (§110, §126).
-  //
-  // Authorization is NOT a client concern: the API scopes every order lookup
-  // to the authenticated buyer, so pasting somebody else's order id here
-  // returns 404, not their order.
   const { orderId } = useParams()
   const { order, isLoading, isError, error, refetch } = useOrderController(orderId)
+  const [reordering, setReordering] = useState(false)
+  const [reorderMessage, setReorderMessage] = useState(null)
 
   usePageMeta({ title: order ? `Order #${order.id.slice(-8).toUpperCase()}` : 'Order', noindex: true })
 
@@ -36,6 +43,25 @@ export function OrderDetailsScreen() {
   const onDownloadInvoice = (o) => navigate(userPath.orderInvoice(o.id))
   const onTrackShipment = (o) => navigate(userPath.orderTrack(o.id))
   const onRequestReturn = () => navigate(USER_ROUTES.RETURNS)
+
+  const handleReorder = async () => {
+    if (!order) return
+    try {
+      setReordering(true)
+      setReorderMessage(null)
+      const res = await reorderOrder(order.id)
+      await useCartStore.getState().hydrate()
+      if (res.data?.addedCount > 0) {
+        navigate(USER_ROUTES.CART)
+      } else {
+        setReorderMessage(res.message || 'Items from this order are currently out of stock')
+      }
+    } catch (err) {
+      setReorderMessage(err?.response?.data?.message || 'Could not reorder items from this order')
+    } finally {
+      setReordering(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -103,7 +129,16 @@ export function OrderDetailsScreen() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2">
+            <button
+              onClick={handleReorder}
+              disabled={reordering}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs transition-colors flex items-center space-x-1.5"
+            >
+              <HiShoppingCart className="w-4 h-4" />
+              <span>{reordering ? 'Adding to Cart…' : 'Reorder Items'}</span>
+            </button>
+
             {order.status !== 'CANCELLED' && (
               <button
                 onClick={() => onTrackShipment(order)}
@@ -135,6 +170,15 @@ export function OrderDetailsScreen() {
             )}
           </div>
         </div>
+
+        {reorderMessage && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-2xl text-xs flex items-center justify-between shadow-xs">
+            <span>{reorderMessage}</span>
+            <button onClick={() => setReorderMessage(null)} className="text-amber-900 font-bold ml-3 hover:underline">
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -179,6 +223,31 @@ export function OrderDetailsScreen() {
           </div>
 
           <div className="lg:col-span-1 space-y-6">
+            {order.b2b?.isB2B && (
+              <div className="bg-white rounded-3xl border border-blue-200/90 p-5 sm:p-6 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center space-x-2 text-blue-700 font-bold text-xs">
+                    <HiBuildingOffice2 className="w-4 h-4" />
+                    <span>B2B Tax Invoice</span>
+                  </div>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                    ITC Eligible
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  <p className="font-black text-slate-900 text-sm">
+                    {order.b2b.companyName || address.fullName}
+                  </p>
+                  <p className="text-[11px] font-medium text-slate-700">
+                    Buyer GSTIN: <span className="font-mono font-bold text-blue-700">{order.b2b.gstin}</span>
+                  </p>
+                  <p className="text-[10px] text-slate-500 pt-1 leading-normal">
+                    Input Tax Credit (ITC) has been claimed for this transaction under GST regulations.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-4">
               <div className="flex items-center space-x-2 text-blue-700 font-bold text-xs border-b border-slate-100 pb-3">
                 <HiMapPin className="w-4 h-4" />

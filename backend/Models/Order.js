@@ -131,6 +131,12 @@ const orderSchema = new mongoose.Schema(
       default: () => [{ status: 'PENDING', at: new Date() }],
       _id: false,
     },
+    // --- B2B Business Invoicing --------------------------------------------
+    b2b: {
+      isB2B: { type: Boolean, default: false },
+      companyName: { type: String, trim: true, default: '' },
+      gstin: { type: String, trim: true, uppercase: true, default: '' },
+    },
   },
   { timestamps: true }
 );

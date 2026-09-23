@@ -39,7 +39,7 @@ export function useCheckoutController() {
     // No `shippingFee`: the server quotes it from the carrier for this cart,
     // address and payment method. Sending one was the old hole — any value in
     // [0, 99, 199] was accepted, so a buyer could choose 0.
-    async ({ addressId, paymentMethod, couponCode, prefill }) => {
+    async ({ addressId, paymentMethod, couponCode, b2b, prefill }) => {
       if (inFlightRef.current) {
         // Not an error the user should see — it is the second half of a double
         // tap. The first call is still running and will resolve.
@@ -69,6 +69,7 @@ export function useCheckoutController() {
             addressId,
             paymentMethod,
             couponCode,
+            b2b,
             idempotencyKey,
           })
           return finish(order)
@@ -98,6 +99,7 @@ export function useCheckoutController() {
           addressId,
           paymentMethod,
           couponCode,
+          b2b,
           idempotencyKey,
           razorpay_order_id: response.razorpay_order_id,
           razorpay_payment_id: response.razorpay_payment_id,

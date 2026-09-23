@@ -51,6 +51,7 @@ export const useCheckoutStore = create(
       selectedAddressId: null,
       paymentMethod: 'RAZORPAY',
       appliedCoupon: null, // { code, discountAmount }
+      b2b: { isB2B: false, companyName: '', gstin: '' },
 
       setSelectedAddressId: (addressId) => set({ selectedAddressId: addressId }),
 
@@ -63,7 +64,21 @@ export const useCheckoutStore = create(
       setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
       clearCoupon: () => set({ appliedCoupon: null }),
 
-      reset: () => set({ selectedAddressId: null, paymentMethod: 'RAZORPAY', appliedCoupon: null }),
+      setB2B: (b2b) =>
+        set((state) => ({
+          b2b: {
+            ...state.b2b,
+            ...b2b,
+          },
+        })),
+
+      reset: () =>
+        set({
+          selectedAddressId: null,
+          paymentMethod: 'RAZORPAY',
+          appliedCoupon: null,
+          b2b: { isB2B: false, companyName: '', gstin: '' },
+        }),
     }),
     {
       name: 'krozenda.checkout',

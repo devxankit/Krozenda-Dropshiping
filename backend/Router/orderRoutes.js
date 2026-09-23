@@ -8,6 +8,7 @@ const {
   getOrderTracking,
   getShippingQuote,
   getPaymentMethods,
+  reorder,
 } = require('../Controllers/orderController');
 const { protectUser } = require('../Middlewares/userAuthMiddleware');
 
@@ -27,6 +28,7 @@ router.post('/shipping-quote', getShippingQuote);
 router.post('/razorpay-order', createRazorpayOrder);
 router.post('/', createOrder);
 router.get('/:id', getOrder);
+router.post('/:id/reorder', reorder);
 router.patch('/:id/cancel', cancelOrder);
 // Reads the stored timeline only; it never calls the carrier, so a buyer
 // refreshing this screen cannot spend the seller's carrier rate limit.

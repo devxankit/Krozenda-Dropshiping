@@ -8,6 +8,10 @@ export const orderItemSchema = z.object({
   price: z.number(),
   quantity: z.number(),
   variant: z.string(),
+  hsnCode: z.string().optional().default(''),
+  gstRate: z.number().optional().default(0),
+  taxableValue: z.number().optional().default(0),
+  taxAmount: z.number().optional().default(0),
 })
 
 export const shippingAddressSnapshotSchema = z.object({
@@ -40,6 +44,14 @@ export const orderSchema = z.object({
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
   deliveredAt: z.string().nullable(),
   statusHistory: z.array(orderStatusHistoryEntrySchema),
+  b2b: z
+    .object({
+      isB2B: z.boolean().default(false),
+      companyName: z.string().default(''),
+      gstin: z.string().default(''),
+    })
+    .nullable()
+    .optional(),
   createdAt: z.string(),
 })
 

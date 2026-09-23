@@ -72,6 +72,10 @@ function serializeOrder(o) {
       quantity: item.quantity,
       variant: item.variant || '',
       vendorId: item.vendor ? item.vendor.toString() : null,
+      hsnCode: item.hsnCode || '',
+      gstRate: item.gstRate || 0,
+      taxableValue: item.taxableValue || 0,
+      taxAmount: item.taxAmount || 0,
     })),
     shippingAddress: o.shippingAddress,
     subtotal: o.subtotal,
@@ -84,6 +88,13 @@ function serializeOrder(o) {
     status: o.status,
     deliveredAt: o.deliveredAt,
     statusHistory: (o.statusHistory || []).map((entry) => ({ status: entry.status, at: entry.at })),
+    b2b: o.b2b
+      ? {
+          isB2B: Boolean(o.b2b.isB2B),
+          companyName: o.b2b.companyName || '',
+          gstin: o.b2b.gstin || '',
+        }
+      : null,
     createdAt: o.createdAt,
   };
 }
@@ -460,6 +471,7 @@ async function createOrder(req, res) {
     addressId,
     paymentMethod,
     couponCode,
+    b2b,
     razorpay_order_id: razorpayOrderId,
     razorpay_payment_id: razorpayPaymentId,
     razorpay_signature: razorpaySignature,
@@ -598,6 +610,17 @@ async function createOrder(req, res) {
       razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
       razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
       idempotencyKey,
+      b2b: b2b && b2b.isB2B
+        ? {
+            isB2B: true,
+            companyName: typeof b2b.companyName === 'string' ? b2b.companyName.trim() : '',
+            gstin: typeof b2b.gstin === 'string' ? b2b.gstin.trim().toUpperCase() : '',
+          }
+        : {
+            isB2B: false,
+            companyName: '',
+            gstin: '',
+          },
       status: 'PENDING',
     });
   } catch (err) {
@@ -1027,6 +1050,85 @@ async function getPaymentMethods(req, res) {
   });
 }
 
+// POST /user/orders/:id/reorder — B2B/quick repeat purchase: reads items from
+// an existing order, checks current stock and availability, and merges all
+// available items into the buyer's cart.
+async function reorder(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid order id' });
+  }
+
+  const order = await Order.findOne({ _id: id, user: req.user._id });
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Order not found' });
+  }
+
+  if (!order.items || order.items.length === 0) {
+    return res.status(400).json({ success: false, message: 'This order has no items to reorder' });
+  }
+
+  let cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+    cart = await Cart.create({ user: req.user._id, items: [] });
+  }
+
+  let addedCount = 0;
+  const skippedItems = [];
+
+  for (const item of order.items) {
+    const product = await Product.findOne({ _id: item.product, isActive: true });
+    if (!product) {
+      skippedItems.push({ name: item.name, reason: 'Product is no longer available' });
+      continue;
+    }
+
+    const variantId = item.variantId ? item.variantId.toString() : null;
+    const availableStock = resolveStock(product, variantId);
+
+    if (availableStock <= 0) {
+      skippedItems.push({ name: item.name, reason: 'Out of stock' });
+      continue;
+    }
+
+    const qtyToAdd = Math.min(item.quantity, availableStock);
+
+    const existingIndex = cart.items.findIndex(
+      (entry) =>
+        entry.product.toString() === product._id.toString() &&
+        String(entry.variantId || '') === String(variantId || '')
+    );
+
+    if (existingIndex > -1) {
+      cart.items[existingIndex].quantity = Math.min(availableStock, cart.items[existingIndex].quantity + qtyToAdd);
+    } else {
+      cart.items.push({
+        product: product._id,
+        quantity: qtyToAdd,
+        variantId: variantId || null,
+        variant: item.variant || '',
+        priceAtAdd: resolveUnitPrice(product, { variantId, quantity: qtyToAdd }).unitPrice,
+      });
+    }
+    addedCount++;
+  }
+
+  await cart.save();
+
+  res.json({
+    success: true,
+    message:
+      addedCount > 0
+        ? `${addedCount} item(s) added to cart`
+        : 'None of the items from this order are currently available',
+    data: {
+      addedCount,
+      skippedItems,
+      cartItemCount: cart.items.length,
+    },
+  });
+}
+
 module.exports = {
   getShippingQuote,
   getPaymentMethods,
@@ -1040,8 +1142,10 @@ module.exports = {
   getOrder,
   cancelOrder,
   getOrderTracking,
+  reorder,
   serializeOrder,
   releaseStock,
   reserveStock,
   notifyVendorsOfNewOrder,
 };
+

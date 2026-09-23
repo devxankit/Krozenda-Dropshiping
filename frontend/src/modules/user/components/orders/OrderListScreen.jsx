@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { HiChevronRight, HiMagnifyingGlass } from 'react-icons/hi2'
-import { Link, useSearchParams } from 'react-router-dom'
+import { HiChevronRight, HiMagnifyingGlass, HiShoppingCart } from 'react-icons/hi2'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { SmartImage } from '../../../../components/ui/SmartImage'
@@ -9,6 +9,8 @@ import { EmptyResult, ErrorState, ListSkeleton } from '../../../../components/ui
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrdersController } from '../../controllers/useOrdersController'
+import { reorderOrder } from '../../services/orderService'
+import { useCartStore } from '../../../../lib/cartStore'
 
 const TABS = [
   { label: 'All', value: '' },
@@ -37,12 +39,35 @@ export function OrderListScreen() {
   // Tab and page live in the URL, so a buyer who taps into an order and comes
   // back with the Android back button lands on the same tab and page they
   // left — rather than being reset to "All, page 1" every time.
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const status = searchParams.get('status') || ''
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
 
   const [searchDraft, setSearchDraft] = useState(searchParams.get('q') || '')
   const query = searchParams.get('q') || ''
+  const [reorderingId, setReorderingId] = useState(null)
+  const [reorderError, setReorderError] = useState(null)
+
+  const handleReorderClick = async (e, orderId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      setReorderingId(orderId)
+      setReorderError(null)
+      const res = await reorderOrder(orderId)
+      await useCartStore.getState().hydrate()
+      if (res.data?.addedCount > 0) {
+        navigate(USER_ROUTES.CART)
+      } else {
+        setReorderError(res.message || 'Items from this order are currently out of stock')
+      }
+    } catch (err) {
+      setReorderError(err?.response?.data?.message || 'Could not reorder items')
+    } finally {
+      setReorderingId(null)
+    }
+  }
 
   usePageMeta({ title: 'My Orders', noindex: true })
 
@@ -184,6 +209,15 @@ export function OrderListScreen() {
           />
         ) : (
           <>
+            {reorderError && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-2xl text-xs flex items-center justify-between shadow-xs">
+                <span>{reorderError}</span>
+                <button onClick={() => setReorderError(null)} className="text-amber-900 font-bold ml-3 hover:underline">
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             <div
               className={`space-y-4 transition-opacity ${isFetching ? 'opacity-60' : 'opacity-100'}`}
               aria-busy={isFetching}
@@ -257,11 +291,22 @@ export function OrderListScreen() {
                           {order.total.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-blue-600 transition-transform group-hover:translate-x-1">
-                        <span className="hidden sm:inline">View order details</span>
-                        <span className="sm:hidden">Details</span>
-                        <HiChevronRight className="h-4 w-4" aria-hidden="true" />
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleReorderClick(e, order.id)}
+                          disabled={reorderingId === order.id}
+                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1"
+                        >
+                          <HiShoppingCart className="w-3.5 h-3.5" />
+                          <span>{reorderingId === order.id ? 'Adding…' : 'Reorder'}</span>
+                        </button>
+                        <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-blue-600 transition-transform group-hover:translate-x-1">
+                          <span className="hidden sm:inline">View details</span>
+                          <span className="sm:hidden">Details</span>
+                          <HiChevronRight className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                      </div>
                     </div>
                   </Link>
                 )

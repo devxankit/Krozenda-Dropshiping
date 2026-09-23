@@ -11,10 +11,12 @@ import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { useApplyCouponController } from '../../controllers/useCouponsController'
+import { useProfileController } from '../../controllers/useProfileController'
 import { CheckoutStepper } from './CheckoutStepper'
 
 export function OrderSummaryScreen() {
   const navigate = useNavigate()
+  const { profile } = useProfileController()
   const cartItems = useCartStore((s) => s.items)
   const summary = useCartStore((s) => s.summary)
   const hydrateCart = useCartStore((s) => s.hydrate)
@@ -24,9 +26,12 @@ export function OrderSummaryScreen() {
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const setAppliedCoupon = useCheckoutStore((s) => s.setAppliedCoupon)
   const clearCoupon = useCheckoutStore((s) => s.clearCoupon)
+  const b2b = useCheckoutStore((s) => s.b2b)
+  const setB2B = useCheckoutStore((s) => s.setB2B)
 
   const { applyCoupon, isApplying, error: couponError, reset: resetCouponError } = useApplyCouponController()
   const [couponInput, setCouponInput] = useState('')
+  const [b2bError, setB2bError] = useState('')
 
   usePageMeta({ title: 'Order Summary - Checkout', noindex: true })
 
@@ -260,9 +265,84 @@ export function OrderSummaryScreen() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-3.5 rounded-2xl border border-blue-100 flex items-center space-x-2 text-[11px] font-semibold text-blue-800">
-                <HiShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
-                <span>GST Tax Invoice included for input tax credit claiming</span>
+              {/* B2B Tax Invoice & GSTIN Section */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+                <label className="flex items-start space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(b2b.isB2B)}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setB2B({
+                        isB2B: checked,
+                        companyName: checked ? (b2b.companyName || profile?.business?.companyName || '') : '',
+                        gstin: checked ? (b2b.gstin || profile?.business?.gstin || '') : '',
+                      })
+                      if (!checked) setB2bError('')
+                    }}
+                    className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-900">Buying for business? (B2B)</span>
+                    <span className="text-[11px] text-slate-500">Get GST tax invoice for 100% input tax credit (ITC)</span>
+                  </div>
+                </label>
+
+                {b2b.isB2B && (
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Company / Business Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Apex Traders Pvt Ltd"
+                        value={b2b.companyName}
+                        onChange={(e) => {
+                          setB2B({ companyName: e.target.value })
+                          if (b2bError) setB2bError('')
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        GSTIN (15-digit) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={15}
+                        placeholder="e.g. 27AAAAA0000A1Z5"
+                        value={b2b.gstin}
+                        onChange={(e) => {
+                          setB2B({ gstin: e.target.value.toUpperCase() })
+                          if (b2bError) setB2bError('')
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold uppercase text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                    </div>
+
+                    {profile?.business?.gstin && b2b.gstin !== profile.business.gstin && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setB2B({
+                            companyName: profile.business.companyName || '',
+                            gstin: profile.business.gstin || '',
+                          })
+                        }
+                        className="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline block text-left"
+                      >
+                        Auto-fill from saved profile ({profile.business.gstin})
+                      </button>
+                    )}
+
+                    {b2bError && (
+                      <p className="text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">{b2bError}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {priceChangedItems.length > 0 && (
@@ -291,7 +371,20 @@ export function OrderSummaryScreen() {
               )}
 
               <button
-                onClick={() => navigate(USER_ROUTES.CHECKOUT_PAYMENT)}
+                onClick={() => {
+                  if (b2b.isB2B) {
+                    if (!b2b.companyName?.trim()) {
+                      setB2bError('Please enter your Company / Business name for B2B invoice')
+                      return
+                    }
+                    const gstinClean = (b2b.gstin || '').trim().toUpperCase()
+                    if (!gstinClean || !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstinClean)) {
+                      setB2bError('Please enter a valid 15-character GSTIN (e.g. 27AAAAA0000A1Z5)')
+                      return
+                    }
+                  }
+                  navigate(USER_ROUTES.CHECKOUT_PAYMENT)
+                }}
                 disabled={cartItems.length === 0 || !selectedAddress || blockedItems.length > 0}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >

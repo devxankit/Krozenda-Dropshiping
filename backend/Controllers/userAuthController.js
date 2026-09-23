@@ -74,6 +74,12 @@ function serializeCustomer(user) {
     // account has never chosen", and adopts whatever the visitor had picked
     // before signing in rather than resetting them to English.
     language: user.language || null,
+    business: {
+      companyName: user.business?.companyName || '',
+      gstin: user.business?.gstin || '',
+      pan: user.business?.pan || '',
+      tradeType: user.business?.tradeType || '',
+    },
     createdAt: user.createdAt,
   };
 }
@@ -307,7 +313,7 @@ async function getMe(req, res) {
 // by OTP here; a user with one already set can never move to a different
 // number through this endpoint.
 async function updateProfile(req, res) {
-  const { name, email, dob, gender, mobileNumber } = req.body;
+  const { name, email, dob, gender, mobileNumber, business } = req.body;
 
   if (email !== undefined && email) {
     if (!EMAIL_RE.test(String(email).trim())) {
@@ -340,6 +346,18 @@ async function updateProfile(req, res) {
   if (email !== undefined) req.user.email = email ? email.toLowerCase().trim() : undefined;
   if (dob !== undefined) req.user.dob = dob ? new Date(dob) : null;
   if (gender !== undefined) req.user.gender = gender || undefined;
+  if (business !== undefined && business) {
+    const gstin = typeof business.gstin === 'string' ? business.gstin.trim().toUpperCase() : '';
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 15-character GSTIN' });
+    }
+    req.user.business = {
+      companyName: typeof business.companyName === 'string' ? business.companyName.trim() : req.user.business?.companyName || '',
+      gstin: gstin || req.user.business?.gstin || '',
+      pan: typeof business.pan === 'string' ? business.pan.trim().toUpperCase() : req.user.business?.pan || '',
+      tradeType: typeof business.tradeType === 'string' ? business.tradeType.trim() : req.user.business?.tradeType || '',
+    };
+  }
 
   await req.user.save();
 

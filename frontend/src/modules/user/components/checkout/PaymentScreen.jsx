@@ -29,6 +29,7 @@ export function PaymentScreen() {
   const chosenMethod = useCheckoutStore((s) => s.paymentMethod)
   const setPaymentMethod = useCheckoutStore((s) => s.setPaymentMethod)
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
+  const b2b = useCheckoutStore((s) => s.b2b)
   const resetCheckout = useCheckoutStore((s) => s.reset)
 
   const { payAndPlaceOrder, isPlacingOrder, error } = useCheckoutController()
@@ -100,6 +101,7 @@ export function PaymentScreen() {
         addressId: selectedAddressId,
         paymentMethod: activeMethod,
         couponCode: appliedCoupon?.code || undefined,
+        b2b,
         prefill: { name: profile?.name, email: profile?.email, contact: profile?.mobileNumber },
       })
 
