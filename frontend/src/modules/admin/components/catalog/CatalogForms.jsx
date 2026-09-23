@@ -1,11 +1,4 @@
 import { useId, useState } from 'react'
-import {
-  CollapsibleSection,
-  PriceTierEditor,
-  ShippingFields,
-  TaxFields,
-  VariantEditor,
-} from '../../../../components/catalog/ProductAdvancedFields'
 import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
 import { InlineAlert } from '../feedback'
@@ -485,44 +478,33 @@ function blockNegativeKeys(event) {
   }
 }
 
+const GST_RATE_OPTIONS = [
+  { value: '', label: 'Select GST slab (optional)' },
+  { value: '0', label: '0% (Exempt)' },
+  { value: '5', label: '5%' },
+  { value: '12', label: '12%' },
+  { value: '18', label: '18%' },
+  { value: '28', label: '28%' },
+]
+
 export function ProductFormDrawer({ isOpen, onClose, product, categories = [], brands = [], writer }) {
   const editing = Boolean(product)
 
   const [form, setForm] = useState(() => ({
     name: product?.name ?? '',
     sku: product?.sku ?? '',
-    category: product?.category?.id ?? '',
-    brand: product?.brand?.id ?? '',
-    price: product?.price != null ? String(product.price) : '',
-    salePrice: product?.salePrice != null ? String(product.salePrice) : '',
-    discountType: 'percentage',
-    discountValue: product?.discountPercent ? String(product.discountPercent) : '',
-    stock: product?.stock != null ? String(product.stock) : '0',
-    weight: product?.weight != null ? String(product.weight) : '',
-    // Shipping, tax and B2B. Mirrors the seller panel's form exactly — both
-    // render the same components from components/catalog.
-    dimensions: {
-      lengthCm: product?.dimensions?.lengthCm != null ? String(product.dimensions.lengthCm) : '',
-      breadthCm: product?.dimensions?.breadthCm != null ? String(product.dimensions.breadthCm) : '',
-      heightCm: product?.dimensions?.heightCm != null ? String(product.dimensions.heightCm) : '',
-    },
-    hsnCode: product?.hsnCode ?? '',
-    gstRate: product?.gstRate != null ? String(product.gstRate) : '',
-    moq: product?.moq != null ? String(product.moq) : '1',
-    priceTiers: (product?.priceTiers ?? []).map((t) => ({ minQty: String(t.minQty), price: String(t.price) })),
-    // Existing variants keep their id, so editing one does not orphan the
-    // carts and orders pointing at it.
-    variants: (product?.variants ?? []).map((v) => ({
-      id: v.id,
-      name: v.name ?? '',
-      sku: v.sku ?? '',
-      price: v.price != null ? String(v.price) : '',
-      salePrice: v.salePrice != null ? String(v.salePrice) : '',
-      stock: v.stock != null ? String(v.stock) : '0',
-      isActive: v.isActive !== false,
-    })),
+    category: product?.category?.id ?? (typeof product?.category === 'string' ? product.category : ''),
+    brand: product?.brand?.id ?? (typeof product?.brand === 'string' ? product.brand : ''),
+    shortDescription: product?.shortDescription ?? '',
     description: product?.description ?? '',
-    isActive: product?.isActive ?? true,
+    price: product?.price != null ? String(product.price) : '',
+    mrp: product?.mrp != null ? String(product.mrp) : '',
+    costPrice: product?.costPrice != null ? String(product.costPrice) : '',
+    gstRate: product?.gstRate != null ? String(product.gstRate) : '',
+    stock: product?.stock != null ? String(product.stock) : '0',
+    lowStockThreshold: product?.lowStockThreshold != null ? String(product.lowStockThreshold) : '',
+    weight: product?.weight != null ? String(product.weight) : '',
+    status: product?.status ?? (product?.isActive === false ? 'Inactive' : 'Active'),
     isFlashsale: product?.isFlashsale ?? false,
     isTrending: product?.isTrending ?? false,
   }))
@@ -535,94 +517,21 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
 
   function updateField(key, rawValue) {
     setForm((current) => {
-      // Switching % <-> ₹ converts the entered discount so Sale Price doesn't jump.
-      if (key === 'discountType') {
-        const price = Number(current.price) || 0
-        const currentValue = current.discountValue === '' ? null : Number(current.discountValue)
-        let discountValue = current.discountValue
-        if (price > 0 && currentValue != null) {
-          discountValue =
-            rawValue === 'flat'
-              ? String(round2((currentValue / 100) * price))
-              : String(Math.round((currentValue / price) * 100))
-        }
-        return { ...current, discountType: rawValue, discountValue }
+      if (key === 'status') {
+        return { ...current, status: rawValue }
       }
-
       if (key === 'stock') {
         return { ...current, stock: sanitizeIntegerInput(rawValue) }
       }
-
+      if (key === 'lowStockThreshold') {
+        return { ...current, lowStockThreshold: sanitizeIntegerInput(rawValue) }
+      }
       if (key === 'weight') {
         return { ...current, weight: sanitizeDecimalInput(rawValue) }
       }
-
-      // Regular Price: Sale Price can never exceed it, so clamp Sale Price
-      // down along with it and recompute the discount from the new numbers.
-      if (key === 'price') {
-        const value = sanitizeDecimalInput(rawValue)
-        const price = Number(value) || 0
-        const next = { ...current, price: value }
-
-        if (price > 0 && current.salePrice !== '') {
-          next.salePrice = clampDecimalText(current.salePrice, price)
-        }
-
-        const sp = next.salePrice === '' ? null : Number(next.salePrice)
-        if (price > 0 && sp != null && sp <= price) {
-          next.discountValue =
-            current.discountType === 'flat'
-              ? String(round2(price - sp))
-              : String(Math.round(((price - sp) / price) * 100))
-        }
-
-        return next
+      if (key === 'price' || key === 'mrp' || key === 'costPrice') {
+        return { ...current, [key]: sanitizeDecimalInput(rawValue) }
       }
-
-      // Sale Price: can never be typed above the Regular Price.
-      if (key === 'salePrice') {
-        const price = Number(current.price) || 0
-        let value = sanitizeDecimalInput(rawValue)
-        if (price > 0) value = clampDecimalText(value, price)
-        const next = { ...current, salePrice: value }
-
-        const sp = value === '' ? null : Number(value)
-        if (price > 0 && sp != null) {
-          next.discountValue =
-            current.discountType === 'flat'
-              ? String(round2(price - sp))
-              : String(Math.round(((price - sp) / price) * 100))
-        } else if (sp == null) {
-          next.discountValue = ''
-        }
-
-        return next
-      }
-
-      // Discount: percentage caps at 100, flat amount caps at the Regular
-      // Price (a flat discount bigger than the price makes no sense).
-      if (key === 'discountValue') {
-        const price = Number(current.price) || 0
-        const max = current.discountType === 'percentage' ? 100 : price
-        let value = sanitizeDecimalInput(rawValue)
-        if (price > 0 || current.discountType === 'percentage') {
-          value = clampDecimalText(value, max)
-        }
-        const next = { ...current, discountValue: value }
-
-        const dv = value === '' ? null : Number(value)
-        if (price > 0 && dv != null) {
-          next.salePrice =
-            current.discountType === 'flat'
-              ? String(round2(price - dv))
-              : String(round2(price - (price * dv) / 100))
-        } else if (dv == null) {
-          next.salePrice = ''
-        }
-
-        return next
-      }
-
       return { ...current, [key]: rawValue }
     })
   }
@@ -644,26 +553,28 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
   function handleSubmit(event) {
     event.preventDefault()
 
-    const priceNum = Number(form.price)
-    const salePriceNum = form.salePrice.trim() === '' ? null : Number(form.salePrice)
-    // discountPercent is always derived from price/salePrice, not typed directly —
-    // that keeps it correct whether the admin entered a % or a flat ₹ amount.
-    const discountNum =
-      salePriceNum != null && priceNum > 0 && salePriceNum < priceNum
-        ? Math.round(((priceNum - salePriceNum) / priceNum) * 100)
-        : 0
-    const stockNum = Number(form.stock)
-    const weightNum = form.weight.trim() === '' ? null : Number(form.weight)
+    const priceNum = form.price.trim() === '' ? NaN : Number(form.price)
+    const mrpNum = form.mrp.trim() === '' ? null : Number(form.mrp)
+    const costPriceNum = form.costPrice.trim() === '' ? null : Number(form.costPrice)
+    const stockNum = form.stock.trim() === '' ? NaN : Number(form.stock)
+    const lowStockThresholdNum = form.lowStockThreshold.trim() === '' ? null : Number(form.lowStockThreshold)
+    const weightNum = form.weight.trim() === '' ? NaN : Number(form.weight)
 
     const payload = {
       name: form.name.trim(),
+      sku: form.sku.trim(),
       category: form.category,
+      brand: form.brand || null,
+      shortDescription: form.shortDescription.trim(),
+      description: form.description.trim(),
       price: priceNum,
-      salePrice: salePriceNum,
-      discountPercent: discountNum,
+      mrp: mrpNum,
+      costPrice: costPriceNum,
       stock: stockNum,
+      lowStockThreshold: lowStockThresholdNum,
       weight: weightNum,
-      isActive: form.isActive,
+      status: form.status,
+      isActive: form.status === 'Active',
       isFlashsale: form.isFlashsale,
       isTrending: form.isTrending,
     }
@@ -675,46 +586,16 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     }
 
     if (totalImages === 0) {
-      setIssue('Add at least one product image')
+      setIssue('Main image is required. Please add at least one product image.')
       return
     }
 
     setIssue(null)
 
-    const dims = form.dimensions
     const body = {
       ...payload,
-      sku: form.sku.trim(),
-      brand: form.brand,
-      description: form.description,
       images: newFiles,
-
-      hsnCode: form.hsnCode.trim(),
-      // '' is a real choice here ("not classified"), so it is sent rather
-      // than omitted — omitting it would leave a stale rate in place.
       gstRate: form.gstRate,
-      moq: form.moq,
-      // All three or none: the server stores a partial set as null anyway.
-      dimensions:
-        dims.lengthCm && dims.breadthCm && dims.heightCm
-          ? { lengthCm: Number(dims.lengthCm), breadthCm: Number(dims.breadthCm), heightCm: Number(dims.heightCm) }
-          : null,
-      priceTiers: form.priceTiers
-        .filter((t) => t.minQty && t.price)
-        .map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
-      variants: form.variants
-        .filter((v) => v.name?.trim())
-        .map((v) => ({
-          ...(v.id ? { id: v.id } : {}),
-          name: v.name.trim(),
-          sku: v.sku || '',
-          // Empty means "inherit the parent's price", which is not the same
-          // as zero.
-          price: v.price === '' ? null : Number(v.price),
-          salePrice: v.salePrice === '' ? null : Number(v.salePrice),
-          stock: Number(v.stock) || 0,
-          isActive: v.isActive !== false,
-        })),
     }
 
     if (editing) {
@@ -725,7 +606,6 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     }
   }
 
-  // Cover image preview source for Live Preview
   const previewCover =
     newFiles.length > 0 && keptImages.length === 0
       ? URL.createObjectURL(newFiles[0])
@@ -734,13 +614,11 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
   const selectedCategory = categories.find((c) => c.id === form.category)
   const selectedBrand = brands.find((b) => b.id === form.brand)
 
-  // Recomputed straight from price/salePrice, independent of discountType —
-  // matches what handleSubmit actually sends.
   const previewPrice = Number(form.price) || 0
-  const previewSalePrice = Number(form.salePrice) || 0
-  const previewDiscountPercent =
-    previewPrice > 0 && previewSalePrice > 0 && previewSalePrice < previewPrice
-      ? Math.round(((previewPrice - previewSalePrice) / previewPrice) * 100)
+  const previewMrp = Number(form.mrp) || 0
+  const previewDiscount =
+    previewMrp > 0 && previewPrice > 0 && previewPrice < previewMrp
+      ? Math.round(((previewMrp - previewPrice) / previewMrp) * 100)
       : 0
 
   return (
@@ -748,32 +626,122 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
       isOpen={isOpen}
       onClose={onClose}
       title={editing ? `Edit: ${product.name}` : 'Create New Product'}
-      description="Images, specifications, pricing and stock management."
+      description="Manage all core product details, images, pricing, inventory, shipping and status."
       submitLabel={editing ? 'Save changes' : 'Create product'}
       isSubmitting={mutation.isSubmitting}
       error={issue ? { message: issue } : mutation.error}
       onSubmit={handleSubmit}
       width="lg"
     >
-      {/* Product Images Gallery */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
-            Product Images & Gallery ({totalImages}/{MAX_PRODUCT_IMAGES})
-          </label>
-          <span className="text-2xs text-slate-400 font-medium">First image will be the primary cover</span>
+      {/* SECTION 1: BASIC DETAILS */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+            1
+          </span>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Basic Details
+          </h3>
         </div>
 
-        <div className="flex flex-wrap gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors hover:border-brand-400">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            id="product-name"
+            label="Product Name"
+            required
+            placeholder="e.g. Wireless ANC Noise Cancelling Headphones"
+            value={form.name}
+            onChange={(event) => updateField('name', event.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+
+          <Input
+            id="product-sku"
+            label="SKU Identifier"
+            required
+            placeholder="e.g. PROD-SKU-001"
+            value={form.sku}
+            onChange={(event) => updateField('sku', event.target.value)}
+          />
+
+          <Select
+            id="product-category"
+            label="Category"
+            required
+            placeholder="Select category"
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            value={form.category}
+            onChange={(event) => updateField('category', event.target.value)}
+          />
+
+          <Select
+            id="product-brand"
+            label="Brand (Optional)"
+            options={[{ value: '', label: 'No brand' }, ...brands.map((b) => ({ value: b.id, label: b.name }))]}
+            value={form.brand}
+            onChange={(event) => updateField('brand', event.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+
+          <Textarea
+            id="product-short-description"
+            label="Short Description (Optional)"
+            rows={2}
+            placeholder="Quick 1-2 sentence highlight of the product..."
+            value={form.shortDescription}
+            onChange={(event) => updateField('shortDescription', event.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+
+          <Textarea
+            id="product-description"
+            label="Description (Optional)"
+            rows={4}
+            placeholder="Detailed features, specifications, box contents..."
+            value={form.description}
+            onChange={(event) => updateField('description', event.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+        </div>
+      </div>
+
+      {/* SECTION 2: IMAGES */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+                2
+              </span>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                Images & Gallery <span className="text-rose-500">*</span>
+              </h3>
+            </div>
+            <p className="mt-0.5 text-2xs text-slate-500">
+              The first image is the <strong className="text-slate-700">Main Image (Cover)</strong>. At least 1 image is required.
+            </p>
+          </div>
+          <span className="text-2xs font-semibold text-slate-400">
+            {totalImages}/{MAX_PRODUCT_IMAGES}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-3.5 transition-colors hover:border-brand-400">
           {keptImages.map((url, index) => (
             <div
               key={url}
-              className="group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs"
+              className={`group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
+                index === 0 ? 'border-brand-500 ring-2 ring-brand-200' : 'border-slate-200'
+              }`}
             >
               <img src={url} alt="" className="h-full w-full object-cover" />
-              {index === 0 && (
-                <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
-                  Cover
+              {index === 0 ? (
+                <span className="absolute bottom-1 left-1 rounded bg-brand-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-xs">
+                  ★ Main Cover
+                </span>
+              ) : (
+                <span className="absolute bottom-1 left-1 rounded bg-slate-900/70 px-1 py-0.5 text-[8px] font-medium text-white">
+                  Gallery
                 </span>
               )}
               <button
@@ -792,12 +760,18 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
             return (
               <div
                 key={`${file.name}-${index}`}
-                className="group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border border-brand-300 bg-white shadow-xs ring-2 ring-brand-100"
+                className={`group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
+                  isCover ? 'border-brand-500 ring-2 ring-brand-200' : 'border-slate-200'
+                }`}
               >
                 <img src={URL.createObjectURL(file)} alt="" className="h-full w-full object-cover" />
-                {isCover && (
-                  <span className="absolute bottom-1 left-1 rounded bg-brand-600 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
-                    Cover
+                {isCover ? (
+                  <span className="absolute bottom-1 left-1 rounded bg-brand-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-xs">
+                    ★ Main Cover
+                  </span>
+                ) : (
+                  <span className="absolute bottom-1 left-1 rounded bg-slate-900/70 px-1 py-0.5 text-[8px] font-medium text-white">
+                    Gallery
                   </span>
                 )}
                 <button
@@ -815,7 +789,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
           {totalImages < MAX_PRODUCT_IMAGES && (
             <label className="flex h-22 w-22 shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-white text-slate-500 hover:border-brand-500 hover:text-brand-600 hover:bg-brand-50/40 transition-all">
               <Icon name="upload" className="h-5 w-5" />
-              <span className="text-2xs font-semibold">Upload</span>
+              <span className="text-2xs font-semibold">{totalImages === 0 ? 'Add Main' : 'Add Image'}</span>
               <input
                 type="file"
                 accept="image/*"
@@ -829,128 +803,203 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
             </label>
           )}
         </div>
-        <p className="text-2xs text-slate-400">High-resolution PNG, JPG or WebP. Square 1:1 or 4:3 aspect ratio recommended.</p>
+        <p className="text-2xs text-slate-400">Supported formats: PNG, JPG, WebP. Recommended ratio 1:1 square or 4:3.</p>
       </div>
 
-      {/* Product Name */}
-      <Input
-        id="product-name"
-        label="Product Name"
-        required
-        placeholder="e.g. Wireless ANC Noise Cancelling Headphones"
-        value={form.name}
-        onChange={(event) => updateField('name', event.target.value)}
-      />
-
-      {/* Category & Brand */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Select
-          id="product-category"
-          label="Category"
-          required
-          placeholder="Select a category"
-          options={categories.map((c) => ({ value: c.id, label: c.name }))}
-          value={form.category}
-          onChange={(event) => updateField('category', event.target.value)}
-        />
-        <Select
-          id="product-brand"
-          label="Brand"
-          options={[{ value: '', label: 'No brand' }, ...brands.map((b) => ({ value: b.id, label: b.name }))]}
-          value={form.brand}
-          onChange={(event) => updateField('brand', event.target.value)}
-        />
-      </div>
-
-      {/* Pricing: Price, Sale Price, Discount */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">
-            Discount Type
-          </label>
-          <SegmentedControl
-            items={DISCOUNT_TYPE_OPTIONS}
-            activeId={form.discountType}
-            onChange={(id) => updateField('discountType', id)}
-          />
+      {/* SECTION 3: PRICING */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+            3
+          </span>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Pricing & Tax
+          </h3>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input
             id="product-price"
-            label="Regular Price (₹)"
+            label="Selling Price (₹)"
             required
             type="number"
             min="0"
             step="0.01"
-            placeholder="e.g. 4999"
+            placeholder="e.g. 1999"
             value={form.price}
             onKeyDown={blockNegativeKeys}
             onChange={(event) => updateField('price', event.target.value)}
           />
           <Input
-            id="product-sale-price"
-            label="Sale Price (₹)"
+            id="product-mrp"
+            label="MRP (₹, Optional)"
             type="number"
             min="0"
-            max={form.price || undefined}
             step="0.01"
             placeholder="e.g. 2999"
-            description="Can't be higher than the regular price"
-            value={form.salePrice}
+            description="Max Retail Price / Strike-through"
+            value={form.mrp}
             onKeyDown={blockNegativeKeys}
-            onChange={(event) => updateField('salePrice', event.target.value)}
+            onChange={(event) => updateField('mrp', event.target.value)}
           />
           <Input
-            id="product-discount"
-            label={form.discountType === 'flat' ? 'Discount Amount (₹)' : 'Discount %'}
+            id="product-cost-price"
+            label="Cost Price (₹, Optional)"
             type="number"
             min="0"
-            max={form.discountType === 'flat' ? form.price || undefined : 100}
             step="0.01"
-            placeholder={form.discountType === 'flat' ? 'e.g. 500' : 'e.g. 40'}
-            value={form.discountValue}
+            placeholder="e.g. 1200"
+            description="Base supplier / production cost"
+            value={form.costPrice}
             onKeyDown={blockNegativeKeys}
-            onChange={(event) => updateField('discountValue', event.target.value)}
+            onChange={(event) => updateField('costPrice', event.target.value)}
+          />
+          <Select
+            id="product-gst"
+            label="Tax / GST (Optional)"
+            options={GST_RATE_OPTIONS}
+            value={form.gstRate}
+            onChange={(event) => updateField('gstRate', event.target.value)}
           />
         </div>
       </div>
 
-      {/* Inventory, SKU & Weight */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Input
-          id="product-stock"
-          label="Stock / Quantity"
-          required
-          type="number"
-          min="0"
-          step="1"
-          placeholder="0"
-          value={form.stock}
-          onKeyDown={blockNegativeKeys}
-          onChange={(event) => updateField('stock', event.target.value)}
-        />
-        <Input
-          id="product-sku"
-          label="SKU Identifier"
-          placeholder="e.g. BOAT-ANC-001"
-          value={form.sku}
-          onChange={(event) => updateField('sku', event.target.value)}
-        />
+      {/* SECTION 4: INVENTORY */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+            4
+          </span>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Inventory
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            id="product-stock"
+            label="Stock Quantity"
+            required
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            value={form.stock}
+            onKeyDown={blockNegativeKeys}
+            onChange={(event) => updateField('stock', event.target.value)}
+          />
+          <Input
+            id="product-low-stock-threshold"
+            label="Low Stock Threshold (Optional)"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="e.g. 10"
+            description="Alert trigger when inventory falls below this"
+            value={form.lowStockThreshold}
+            onKeyDown={blockNegativeKeys}
+            onChange={(event) => updateField('lowStockThreshold', event.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* SECTION 5: SHIPPING */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+            5
+          </span>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Shipping
+          </h3>
+        </div>
+
         <Input
           id="product-weight"
           label="Weight (kg)"
+          required
           type="number"
-          min="0"
+          min="0.001"
           step="0.01"
           placeholder="e.g. 0.35"
+          description="Parcel dead-weight in kilograms used for courier shipping calculation"
           value={form.weight}
           onKeyDown={blockNegativeKeys}
           onChange={(event) => updateField('weight', event.target.value)}
         />
       </div>
 
-      {/* Assigned automatically on creation — see Models/Product.js — so a
-          brand new product has none to show until it has been saved once. */}
+      {/* SECTION 6: PRODUCT STATUS */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+              6
+            </span>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+              Product Status <span className="text-rose-500">*</span>
+            </h3>
+          </div>
+          <Badge tone={form.status === 'Active' ? 'success' : form.status === 'Draft' ? 'warning' : 'neutral'} dot size="sm">
+            {form.status}
+          </Badge>
+        </div>
+
+        <SegmentedControl
+          items={[
+            { id: 'Active', label: 'Active (Live)' },
+            { id: 'Draft', label: 'Draft' },
+            { id: 'Inactive', label: 'Inactive' },
+          ]}
+          activeId={form.status}
+          onChange={(statusId) => updateField('status', statusId)}
+        />
+        <p className="text-2xs text-slate-500">
+          {form.status === 'Active' && 'Active: Visible and purchasable across the storefront.'}
+          {form.status === 'Draft' && 'Draft: Stored as unpublished draft. Invisible to customers.'}
+          {form.status === 'Inactive' && 'Inactive: Disabled from catalog browsing and customer checkout.'}
+        </p>
+      </div>
+
+      {/* FEATURED / SPOTLIGHT TOGGLES */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 to-orange-50/30 p-3.5 transition-all">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="product-flashsale"
+              checked={form.isFlashsale}
+              onChange={(event) => updateField('isFlashsale', event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+            />
+            <div className="flex-1">
+              <span className="text-xs font-bold text-slate-900">🔥 Flash Sale Deal</span>
+              <p className="mt-0.5 text-2xs text-slate-600">
+                Highlight in countdown deals and urgent flash promotions.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <div className="rounded-xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 to-purple-50/30 p-3.5 transition-all">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="product-trending"
+              checked={form.isTrending}
+              onChange={(event) => updateField('isTrending', event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <div className="flex-1">
+              <span className="text-xs font-bold text-slate-900">📈 Trending Product</span>
+              <p className="mt-0.5 text-2xs text-slate-600">
+                Feature in Trending Picks and high-margin showcases.
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
       {editing && product.barcode && (
         <ProductBarcode
           code={product.barcode}
@@ -959,131 +1008,13 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
         />
       )}
 
-      {/* Description */}
-      <Textarea
-        id="product-description"
-        label="Description & Specifications"
-        rows={4}
-        placeholder="Product overview, key features, technical specifications, and box contents…"
-        value={form.description}
-        onChange={(event) => updateField('description', event.target.value)}
-      />
-
-      {/* Shipping, tax and B2B. Collapsed and rendered from the shared
-          components/catalog set, so this drawer and the seller panel's Add
-          Product modal cannot drift on validation or wording. */}
-      <CollapsibleSection
-        title="Shipping"
-        description="Weight and dimensions — these decide what a courier charges."
-        badge={form.weight || form.dimensions.lengthCm ? 'Set' : null}
-      >
-        <ShippingFields value={form} onChange={(next) => setForm(next)} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Tax"
-        description="HSN code and GST rate for invoicing."
-        badge={form.hsnCode || form.gstRate ? 'Set' : null}
-      >
-        <TaxFields value={form} onChange={(next) => setForm(next)} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Bulk & wholesale pricing"
-        description="Minimum order quantity and per-unit price breaks."
-        badge={form.priceTiers.length > 0 || form.moq !== '1' ? 'Set' : null}
-      >
-        <div className="flex flex-col gap-3">
-          <Input
-            id="product-moq"
-            label="Minimum order quantity"
-            type="number"
-            min="1"
-            value={form.moq}
-            onChange={(event) => updateField('moq', event.target.value)}
-            description="1 means no minimum. Buyers cannot check out below this."
-            containerClassName="sm:max-w-xs"
-          />
-          <PriceTierEditor
-            tiers={form.priceTiers}
-            basePrice={form.salePrice || form.price}
-            onChange={(priceTiers) => updateField('priceTiers', priceTiers)}
-          />
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Options & variants"
-        description="Sizes, colours or pack sizes with their own price and stock."
-        badge={form.variants.length > 0 ? `${form.variants.length}` : null}
-      >
-        <VariantEditor variants={form.variants} onChange={(variants) => updateField('variants', variants)} />
-      </CollapsibleSection>
-
-      {/* Flash Sale Deal Feature Flag */}
-      <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-yellow-50/30 p-4 transition-all">
-        <label className="flex items-start gap-3.5 cursor-pointer">
-          <input
-            type="checkbox"
-            id="product-flashsale"
-            checked={form.isFlashsale}
-            onChange={(event) => updateField('isFlashsale', event.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">Flash Sale Deal (Limited Time / Spotlight)</span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-300/60">
-                🔥 Flash Sale
-              </span>
-            </div>
-            <p className="mt-0.5 text-2xs text-slate-600">
-              Highlight this product prominently in Flash Sale deals, countdown banners, and special high-urgency promotional sections.
-            </p>
-          </div>
-        </label>
-      </div>
-
-      {/* Trending Product Feature Flag */}
-      <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 via-purple-50/40 to-violet-50/30 p-4 transition-all">
-        <label className="flex items-start gap-3.5 cursor-pointer">
-          <input
-            type="checkbox"
-            id="product-trending"
-            checked={form.isTrending}
-            onChange={(event) => updateField('isTrending', event.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">Trending Product (High Reseller Demand)</span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800 ring-1 ring-indigo-300/60">
-                📈 Trending
-              </span>
-            </div>
-            <p className="mt-0.5 text-2xs text-slate-600">
-              Feature this product in Trending Picks, B2B wholesale high-margin showcases, and top-seller recommendation carousels.
-            </p>
-          </div>
-        </label>
-      </div>
-
-      {/* Active Checkbox */}
-      <Checkbox
-        id="product-active"
-        label="Active in Storefront"
-        description="Active products are visible and purchasable across the store."
-        checked={form.isActive}
-        onChange={(event) => updateField('isActive', event.target.checked)}
-      />
-
       {/* Real-time Live Catalog Preview Card */}
       <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
         <div className="flex items-center justify-between">
           <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">
             Live Catalog Preview
           </span>
-          <span className="text-2xs text-slate-400">Preview of listing in customer search</span>
+          <span className="text-2xs text-slate-400">Preview in customer search</span>
         </div>
         <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
           {previewCover ? (
@@ -1113,23 +1044,24 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
               <span>{selectedCategory?.name || 'Category'}</span>
               {selectedBrand?.name && <span>• {selectedBrand.name}</span>}
               {form.sku && <span>• SKU: {form.sku}</span>}
+              {form.weight && <span>• {form.weight} kg</span>}
             </div>
             <div className="mt-1.5 flex items-center gap-2.5">
               <span className="font-bold text-slate-900 text-sm tabular">
-                ₹{Number(form.salePrice || form.price || 0).toLocaleString('en-IN')}
+                ₹{Number(form.price || 0).toLocaleString('en-IN')}
               </span>
-              {form.salePrice && form.price && Number(form.salePrice) < Number(form.price) && (
+              {previewMrp > previewPrice && (
                 <span className="text-2xs text-slate-400 line-through tabular">
-                  ₹{Number(form.price).toLocaleString('en-IN')}
+                  ₹{previewMrp.toLocaleString('en-IN')}
                 </span>
               )}
-              {previewDiscountPercent > 0 && (
+              {previewDiscount > 0 && (
                 <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-2xs font-semibold text-emerald-700">
-                  {previewDiscountPercent}% OFF
+                  {previewDiscount}% OFF
                 </span>
               )}
-              <Badge tone={form.isActive ? 'success' : 'neutral'} dot size="sm" className="ml-auto">
-                {form.isActive ? 'Active' : 'Hidden'}
+              <Badge tone={form.status === 'Active' ? 'success' : form.status === 'Draft' ? 'warning' : 'neutral'} dot size="sm" className="ml-auto">
+                {form.status}
               </Badge>
             </div>
           </div>

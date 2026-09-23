@@ -41,6 +41,7 @@ function normaliseError(error) {
       isRetryable: status === 502 || status === 503 || status === 504,
       isOffline: false,
       isTimeout: false,
+      response: error.response,
     }
   }
   if (error.request) {

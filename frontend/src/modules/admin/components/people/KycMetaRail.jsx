@@ -45,8 +45,7 @@ export function KycMetaRail({ application, vendorId }) {
           />
         </div>
         <p className="border-t border-border-subtle px-4 py-2.5 text-2xs leading-relaxed text-ink-faint">
-          A Razorpay Route linked account is created on approval. Settlements cannot run until it
-          exists — the platform may not hold and disburse vendor funds itself.
+          All customer payments are collected via Admin's Razorpay gateway. Seller earnings are transferred directly to this bank account (Razorpay Route / NEFT). Sellers do not require their own Razorpay credentials.
         </p>
       </SectionCard>
 

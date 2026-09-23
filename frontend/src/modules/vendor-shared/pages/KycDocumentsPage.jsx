@@ -41,7 +41,7 @@ export function KycDocumentsPage() {
     <PageBody>
       <PageHeader
         title="KYC Verification & Compliance"
-        description="Submit GSTIN, PAN, and Bank proof for Razorpay Route automated payout enablement."
+        description="Submit GSTIN, PAN, and Bank proof for automated bank payout enablement."
         actions={
           <div className="flex items-center gap-2">
             {canSubmit && (

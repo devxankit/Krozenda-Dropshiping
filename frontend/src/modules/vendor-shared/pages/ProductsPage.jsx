@@ -5,7 +5,6 @@ import { useVendorProductsController } from '../controllers/useVendorController'
 import { VENDOR_PRODUCT_COLUMNS, VENDOR_PRODUCT_TABS } from '../tableColumns/vendorColumns'
 import { AddVendorProductModal } from '../components/modals/AddVendorProductModal'
 import { EditVendorProductModal } from '../components/modals/EditVendorProductModal'
-import { ImportProductsModal } from '../components/modals/ImportProductsModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
 import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
 import { downloadTableCsv } from '../../admin/lib/exportCsv'
@@ -29,7 +28,6 @@ export function VendorProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
 
   const items = list.items || []
@@ -121,15 +119,6 @@ export function VendorProductsPage() {
               >
                 <Icon name="search" className="h-3.5 w-3.5" />
                 <span>Scan barcode</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                title="Bulk import products from CSV"
-              >
-                <Icon name="upload" className="h-3.5 w-3.5" />
-                <span>Import CSV</span>
               </button>
               <button
                 type="button"
@@ -521,13 +510,6 @@ export function VendorProductsPage() {
         onAddProduct={list.addProduct}
       />
 
-      <ImportProductsModal
-        isOpen={importOpen}
-        onClose={() => setImportOpen(false)}
-        // The list is server-paged, so a refetch is the only way the new rows
-        // appear — there is nothing local to append them to.
-        onImported={() => list.refetch?.()}
-      />
 
       <UpdateStockModal
         key={selectedProduct?.id}

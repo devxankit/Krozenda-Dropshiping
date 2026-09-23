@@ -22,6 +22,14 @@ export function appendAdvancedFields(body, form) {
     .map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) }))
   if (tiers.length > 0) body.append('priceTiers', JSON.stringify(tiers))
 
+  if (form.mrp !== undefined && form.mrp !== null && form.mrp !== '') body.append('mrp', form.mrp)
+  if (form.costPrice !== undefined && form.costPrice !== null && form.costPrice !== '') body.append('costPrice', form.costPrice)
+  if (form.lowStockThreshold !== undefined && form.lowStockThreshold !== null && form.lowStockThreshold !== '') {
+    body.append('lowStockThreshold', form.lowStockThreshold)
+  }
+  if (form.shortDescription) body.append('shortDescription', form.shortDescription)
+  if (form.status) body.append('status', form.status)
+
   const variants = (form.variants || [])
     .filter((v) => v.name?.trim())
     .map((v) => ({

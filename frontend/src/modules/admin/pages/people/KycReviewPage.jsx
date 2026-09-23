@@ -23,6 +23,7 @@ export function KycReviewPage() {
     onDone: () => {
       setAppDecision(null)
       setAppReason('')
+      refetch()
     },
   })
 
@@ -48,12 +49,6 @@ export function KycReviewPage() {
   const approveApplication = () =>
     decisions.decideApplication.run({ vendorId: application.vendorId, verificationStatus: 'APPROVED' })
 
-  const requestChanges = () =>
-    decisions.decideApplication.run({
-      vendorId: application.vendorId,
-      verificationStatus: 'UNDER_REVIEW',
-    })
-
   return (
     <PageBody>
       <PageHeader
@@ -61,26 +56,36 @@ export function KycReviewPage() {
         trail={[{ label: application.vendorName }]}
         actions={
           <PermissionGate permission={ADMIN_PERMISSIONS.KYC_REVIEW}>
-            <Button
-              variant="secondary"
-              size="control"
-              icon="send"
-              onClick={requestChanges}
-              isLoading={decisions.decideApplication.isSubmitting && appDecision === null}
-            >
-              Mark under review
-            </Button>
-            <Button variant="dangerOutline" size="control" onClick={() => setAppDecision('REJECTED')}>
-              Reject application
-            </Button>
-            <Button
-              size="control"
-              icon="check"
-              onClick={approveApplication}
-              isLoading={decisions.decideApplication.isSubmitting}
-            >
-              Approve seller
-            </Button>
+            {application.status === 'approved' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-300 px-3.5 py-1.5 text-xs font-bold text-emerald-800 shadow-2xs">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                Seller Approved
+              </span>
+            ) : application.status === 'rejected' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 border border-rose-300 px-3.5 py-1.5 text-xs font-bold text-rose-800 shadow-2xs">
+                <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+                Application Rejected
+              </span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="dangerOutline"
+                  size="control"
+                  onClick={() => setAppDecision('REJECTED')}
+                  disabled={decisions.decideApplication.isSubmitting}
+                >
+                  Reject application
+                </Button>
+                <Button
+                  size="control"
+                  icon="check"
+                  onClick={approveApplication}
+                  isLoading={decisions.decideApplication.isSubmitting}
+                >
+                  Approve seller
+                </Button>
+              </div>
+            )}
           </PermissionGate>
         }
       >

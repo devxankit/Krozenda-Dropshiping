@@ -86,12 +86,19 @@ function SellerLoginPage() {
       toast.success('Signed in', `Welcome back, ${vendor.name}.`)
       navigate('/seller/dashboard')
     } catch (err) {
-      const message = err?.response?.data?.message || 'Invalid email or password'
-      const code = err?.response?.data?.code || null
+      const message =
+        err?.message ||
+        err?.response?.data?.message ||
+        'Unable to sign in. Please verify your credentials or check your account status.'
+      const code = err?.code || err?.response?.data?.code || null
       setError(message)
       setErrorCode(code)
       if (code === 'VERIFICATION_PENDING') {
         toast.warning('Account Under Review', message)
+      } else if (code === 'VERIFICATION_REJECTED') {
+        toast.error('Application Rejected', message)
+      } else if (code === 'ACCOUNT_INACTIVE') {
+        toast.error('Account Deactivated', message)
       } else {
         toast.error('Sign in failed', message)
       }
@@ -208,20 +215,42 @@ function SellerLoginPage() {
         {/* Error Alert */}
         {error && (
           <div
-            className={`p-3 rounded-xl border text-xs flex items-start space-x-2.5 ${
+            className={`p-3.5 rounded-xl border text-xs flex items-start space-x-2.5 ${
               errorCode === 'VERIFICATION_PENDING'
-                ? 'bg-amber-50 border-amber-200 text-amber-900'
-                : 'bg-red-50 border-red-200 text-red-700'
+                ? 'bg-amber-50 border-amber-300 text-amber-900'
+                : errorCode === 'VERIFICATION_REJECTED'
+                  ? 'bg-rose-50 border-rose-300 text-rose-900'
+                  : errorCode === 'ACCOUNT_INACTIVE'
+                    ? 'bg-slate-100 border-slate-300 text-slate-800'
+                    : 'bg-red-50 border-red-200 text-red-700'
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
-                errorCode === 'VERIFICATION_PENDING' ? 'bg-amber-500' : 'bg-red-600'
+                errorCode === 'VERIFICATION_PENDING'
+                  ? 'bg-amber-500'
+                  : errorCode === 'VERIFICATION_REJECTED'
+                    ? 'bg-rose-500'
+                    : errorCode === 'ACCOUNT_INACTIVE'
+                      ? 'bg-slate-500'
+                      : 'bg-red-600'
               }`}
             />
             <div className="flex-1">
               {errorCode === 'VERIFICATION_PENDING' && (
-                <strong className="font-bold block text-xs mb-0.5">Account Under Review</strong>
+                <strong className="font-bold block text-xs mb-0.5 text-amber-900">
+                  Account Under Review
+                </strong>
+              )}
+              {errorCode === 'VERIFICATION_REJECTED' && (
+                <strong className="font-bold block text-xs mb-0.5 text-rose-900">
+                  Application Needs Attention
+                </strong>
+              )}
+              {errorCode === 'ACCOUNT_INACTIVE' && (
+                <strong className="font-bold block text-xs mb-0.5 text-slate-900">
+                  Account Deactivated
+                </strong>
               )}
               <span className="leading-relaxed block">{error}</span>
             </div>
@@ -277,7 +306,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
       toast.success('Reset code sent', 'Check your email for the 6-digit code.')
       setStep('reset')
     } catch (err) {
-      setError(err?.response?.data?.message || 'Could not send reset code')
+      setError(err?.message || err?.response?.data?.message || 'Could not send reset code')
     }
   }
 
@@ -289,7 +318,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
       toast.success('Password reset', 'Sign in with your new password.')
       onDone(email)
     } catch (err) {
-      setError(err?.response?.data?.message || 'Could not reset password')
+      setError(err?.message || err?.response?.data?.message || 'Could not reset password')
     }
   }
 

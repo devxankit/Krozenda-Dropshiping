@@ -1,44 +1,34 @@
 import { useEffect, useState } from 'react'
-import { Badge, Button, Icon, Input, Modal, Select, Textarea } from '../../../../components/ui'
+import { Badge, Button, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
 import { api } from '../../../../lib/axios'
-import {
-  CollapsibleSection,
-  PriceTierEditor,
-  ShippingFields,
-  TaxFields,
-  VariantEditor,
-} from '../../../../components/catalog/ProductAdvancedFields'
-import { appendAdvancedFields } from '../../../../components/catalog/productFormPayload'
+
+const GST_RATE_OPTIONS = [
+  { value: '', label: 'Select GST slab (optional)' },
+  { value: '0', label: '0% (Exempt)' },
+  { value: '5', label: '5%' },
+  { value: '12', label: '12%' },
+  { value: '18', label: '18%' },
+  { value: '28', label: '28%' },
+]
 
 const EMPTY_FORM = {
   name: '',
   sku: '',
   category: '',
   brand: '',
-  price: '',
-  salePrice: '',
-  stock: '100',
+  shortDescription: '',
   description: '',
-  // Shipping. Blank falls back to the seller's default package, which is why
-  // these are optional rather than required.
-  weight: '',
-  dimensions: { lengthCm: '', breadthCm: '', heightCm: '' },
-  // Tax.
-  hsnCode: '',
+  price: '',
+  mrp: '',
+  costPrice: '',
   gstRate: '',
-  // B2B. moq of 1 means no minimum.
-  moq: '1',
-  priceTiers: [],
-  // Buyable options. Non-empty makes the product itself unbuyable - see
-  // VariantEditor's warning copy.
-  variants: [],
+  stock: '100',
+  lowStockThreshold: '',
+  weight: '',
+  status: 'Active',
 }
 
-// A seller only picks from the admin-created catalog — no ad-hoc category/
-// brand creation here (per platform rule: sellers get product CRUD, not
-// taxonomy CRUD) — so this loads the real, live lists from the public
-// catalog endpoints rather than a hand-authored dropdown.
 export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [files, setFiles] = useState([])
@@ -49,13 +39,6 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
 
   useEffect(() => {
     if (!isOpen) return
-    // Only APPROVED entries are selectable — a category/brand the seller just
-    // proposed isn't usable for a product until admin approves it (see
-    // CategoriesPage for where that pending status is tracked).
-    // Server already excludes PENDING/REJECTED (see PUBLIC_APPROVAL_FILTER) and
-    // treats a missing approvalStatus as approved — legacy catalog rows never
-    // got that field backfilled, so re-filtering here with strict equality
-    // would silently drop them again.
     api.get('/vendor/catalog/categories').then(({ data }) => setCategories(data.data.items.filter((c) => c.approvalStatus !== 'PENDING' && c.approvalStatus !== 'REJECTED'))).catch(() => {})
     api.get('/vendor/catalog/brands').then(({ data }) => setBrands(data.data.items.filter((b) => b.approvalStatus !== 'PENDING' && b.approvalStatus !== 'REJECTED'))).catch(() => {})
   }, [isOpen])
@@ -74,27 +57,61 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.category || !formData.price) {
-      toast.error('Missing Required Fields', 'Please fill in product title, category and price.')
+
+    if (!formData.name.trim()) {
+      toast.error('Missing Product Name', 'Please enter a product title.')
+      return
+    }
+    if (!formData.sku.trim()) {
+      toast.error('Missing SKU', 'Please enter a unique SKU identifier.')
+      return
+    }
+    if (!formData.category) {
+      toast.error('Missing Category', 'Please select a product category.')
+      return
+    }
+    if (!formData.price || Number(formData.price) < 0) {
+      toast.error('Invalid Selling Price', 'Please enter a valid selling price.')
+      return
+    }
+    if (formData.stock === '' || Number(formData.stock) < 0) {
+      toast.error('Invalid Stock', 'Please enter a valid stock quantity.')
+      return
+    }
+    if (!formData.weight || Number(formData.weight) <= 0) {
+      toast.error('Missing Weight', 'Please enter a shipping weight greater than 0 kg.')
+      return
+    }
+    if (files.length === 0) {
+      toast.error('Missing Main Image', 'Main image is required. Please upload at least one image.')
       return
     }
 
     const body = new FormData()
     body.append('name', formData.name.trim())
-    if (formData.sku.trim()) body.append('sku', formData.sku.trim())
+    body.append('sku', formData.sku.trim())
     body.append('category', formData.category)
     if (formData.brand) body.append('brand', formData.brand)
+    if (formData.shortDescription) body.append('shortDescription', formData.shortDescription.trim())
+    if (formData.description) body.append('description', formData.description.trim())
     body.append('price', formData.price)
-    if (formData.salePrice) body.append('salePrice', formData.salePrice)
+    if (formData.mrp) body.append('mrp', formData.mrp)
+    if (formData.costPrice) body.append('costPrice', formData.costPrice)
+    if (formData.gstRate) body.append('gstRate', formData.gstRate)
     body.append('stock', formData.stock || '0')
-    body.append('description', formData.description)
-    appendAdvancedFields(body, formData)
+    if (formData.lowStockThreshold) body.append('lowStockThreshold', formData.lowStockThreshold)
+    body.append('weight', formData.weight)
+    body.append('status', formData.status || 'Active')
+
     files.forEach((f) => body.append('images', f))
 
     setIsSubmitting(true)
     try {
       const newProduct = await onAddProduct(body)
-      toast.success('Product Submitted for Review', `${newProduct.name} was queued for admin approval.`)
+      toast.success(
+        formData.status === 'Draft' ? 'Product Saved as Draft' : 'Product Submitted',
+        `${newProduct.name} was ${formData.status === 'Draft' ? 'saved as draft.' : 'queued for review.'}`
+      )
       onClose()
       setFormData(EMPTY_FORM)
       setFiles([])
@@ -111,7 +128,7 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
       isOpen={isOpen}
       onClose={onClose}
       title="Add New Product"
-      description="New products go live only after admin approval — pick a category from the platform's catalog."
+      description="New products go live once approved by admin — select a category from the platform's catalog."
       size="lg"
       footer={
         <>
@@ -119,17 +136,27 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
             Cancel
           </Button>
           <Button onClick={handleSubmit} icon="add" disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting…' : 'Submit product for review'}
+            {isSubmitting ? 'Submitting…' : formData.status === 'Draft' ? 'Save Draft' : 'Submit product for review'}
           </Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 max-h-[60vh] overflow-y-auto admin-scroll pr-1.5">
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-subtle p-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto admin-scroll pr-1.5">
+        {/* SECTION 1: IMAGES */}
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-subtle p-3.5">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-semibold text-slate-900">Product Photos</h4>
-              <p className="text-2xs text-ink-subtle">First uploaded image will be the primary thumbnail.</p>
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+                  1
+                </span>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  Images & Photos <span className="text-rose-500">*</span>
+                </h4>
+              </div>
+              <p className="mt-0.5 text-2xs text-ink-subtle">
+                First image will be the <strong className="text-slate-700">Main Image (Cover)</strong>. At least 1 image is required.
+              </p>
             </div>
             {previews.length > 0 && (
               <Badge tone="brand" size="xs">
@@ -140,18 +167,22 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
 
           <label className="flex items-center justify-center gap-2 cursor-pointer rounded-md border border-dashed border-border bg-surface p-2.5 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/50">
             <Icon name="upload" className="h-4 w-4 text-brand-600" />
-            <span className="text-xs font-medium text-slate-900">Choose Image Files</span>
+            <span className="text-xs font-medium text-slate-900">{previews.length === 0 ? 'Upload Main Image' : 'Add More Photos'}</span>
             <input type="file" accept="image/*" multiple onChange={handleFileUpload} className="hidden" />
           </label>
 
           {previews.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {previews.map((img, idx) => (
-                <div key={img} className="relative group h-14 w-14 overflow-hidden rounded-md border border-border bg-surface shadow-2xs">
+                <div key={img} className={`relative group h-16 w-16 overflow-hidden rounded-lg border bg-surface shadow-2xs ${idx === 0 ? 'border-brand-500 ring-2 ring-brand-200' : 'border-border'}`}>
                   <img src={img} alt={`Product thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
-                  {idx === 0 && (
+                  {idx === 0 ? (
                     <span className="absolute left-0.5 top-0.5 rounded bg-brand-600 px-1 py-0.2 text-[8px] font-bold text-white shadow-2xs">
-                      Main
+                      ★ Main
+                    </span>
+                  ) : (
+                    <span className="absolute left-0.5 top-0.5 rounded bg-slate-900/70 px-1 py-0.2 text-[8px] font-medium text-white">
+                      Gallery
                     </span>
                   )}
                   <button
@@ -168,127 +199,191 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
           )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            label="Product Title"
-            placeholder="e.g. Organic Cotton Bedsheet (King)"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-          <Input
-            label="SKU (optional)"
-            placeholder="e.g. ARY-BED-KNG"
-            value={formData.sku}
-            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-          />
-        </div>
+        {/* SECTION 2: BASIC */}
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+              2
+            </span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Basic Details</h4>
+          </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Select
-            label="Category"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            placeholder="Select a category"
-            required
-          />
-          <Select
-            label="Brand (optional)"
-            value={formData.brand}
-            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            options={brands.map((b) => ({ value: b.id, label: b.name }))}
-            placeholder="No brand"
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Input
-            label="Price (₹)"
-            type="number"
-            placeholder="1799"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            required
-          />
-          <Input
-            label="Sale Price (₹, optional)"
-            type="number"
-            placeholder="1499"
-            value={formData.salePrice}
-            onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-          />
-          <Input
-            label="Initial Stock"
-            type="number"
-            placeholder="100"
-            value={formData.stock}
-            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-          />
-        </div>
-
-        <Textarea
-          label="Description"
-          placeholder="Enter product features, dimensions, material and packaging details..."
-          rows={2}
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-        />
-
-        {/* Everything below is optional and collapsed: a seller listing a
-            simple retail item should not have to scroll past four sections
-            they do not need. The badge on each header shows when one is in
-            use, so a filled-in section is never hidden silently. */}
-        <CollapsibleSection
-          title="Shipping"
-          description="Weight and dimensions — these decide what a courier charges."
-          badge={formData.weight || formData.dimensions.lengthCm ? 'Set' : null}
-        >
-          <ShippingFields value={formData} onChange={setFormData} />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          title="Tax"
-          description="HSN code and GST rate for invoicing."
-          badge={formData.hsnCode || formData.gstRate ? 'Set' : null}
-        >
-          <TaxFields value={formData} onChange={setFormData} />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          title="Bulk & wholesale pricing"
-          description="Minimum order quantity and per-unit price breaks."
-          badge={formData.priceTiers.length > 0 || formData.moq !== '1' ? 'Set' : null}
-        >
-          <div className="flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              id="vp-moq"
-              label="Minimum order quantity"
-              type="number"
-              min="1"
-              value={formData.moq}
-              onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
-              description="1 means no minimum. Buyers cannot check out below this."
-              containerClassName="sm:max-w-xs"
+              label="Product Name"
+              placeholder="e.g. Organic Cotton Bedsheet (King)"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              containerClassName="sm:col-span-2"
             />
-            <PriceTierEditor
-              tiers={formData.priceTiers}
-              basePrice={formData.salePrice || formData.price}
-              onChange={(priceTiers) => setFormData({ ...formData, priceTiers })}
+            <Input
+              label="SKU Identifier"
+              placeholder="e.g. ARY-BED-KNG"
+              value={formData.sku}
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+              required
+            />
+            <Select
+              label="Category"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              placeholder="Select category"
+              required
+            />
+            <Select
+              label="Brand (Optional)"
+              value={formData.brand}
+              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+              options={brands.map((b) => ({ value: b.id, label: b.name }))}
+              placeholder="No brand"
+              containerClassName="sm:col-span-2"
+            />
+            <Textarea
+              label="Short Description (Optional)"
+              placeholder="Key product highlights in 1-2 lines..."
+              rows={2}
+              value={formData.shortDescription}
+              onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+              containerClassName="sm:col-span-2"
+            />
+            <Textarea
+              label="Description (Optional)"
+              placeholder="Detailed features, material and packaging details..."
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              containerClassName="sm:col-span-2"
             />
           </div>
-        </CollapsibleSection>
+        </div>
 
-        <CollapsibleSection
-          title="Options & variants"
-          description="Sizes, colours or pack sizes with their own price and stock."
-          badge={formData.variants.length > 0 ? `${formData.variants.length}` : null}
-        >
-          <VariantEditor
-            variants={formData.variants}
-            onChange={(variants) => setFormData({ ...formData, variants })}
+        {/* SECTION 3: PRICING */}
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+              3
+            </span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Pricing & Tax</h4>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              label="Selling Price (₹)"
+              type="number"
+              placeholder="1799"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              required
+            />
+            <Input
+              label="MRP (₹, Optional)"
+              type="number"
+              placeholder="2499"
+              value={formData.mrp}
+              onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+            />
+            <Input
+              label="Cost Price (₹, Optional)"
+              type="number"
+              placeholder="1100"
+              value={formData.costPrice}
+              onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+            />
+            <Select
+              label="Tax / GST (Optional)"
+              options={GST_RATE_OPTIONS}
+              value={formData.gstRate}
+              onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {/* SECTION 4: INVENTORY */}
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+              4
+            </span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Inventory</h4>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Stock Quantity"
+              type="number"
+              min="0"
+              placeholder="100"
+              value={formData.stock}
+              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+              required
+            />
+            <Input
+              label="Low Stock Threshold (Optional)"
+              type="number"
+              min="0"
+              placeholder="10"
+              value={formData.lowStockThreshold}
+              onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
+              description="Alert trigger when inventory falls below this"
+            />
+          </div>
+        </div>
+
+        {/* SECTION 5: SHIPPING */}
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+              5
+            </span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Shipping</h4>
+          </div>
+
+          <Input
+            label="Weight (kg)"
+            type="number"
+            min="0.001"
+            step="0.01"
+            placeholder="0.45"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            description="Package shipping weight in kilograms used for courier calculation"
+            required
           />
-        </CollapsibleSection>
+        </div>
+
+        {/* SECTION 6: PRODUCT STATUS */}
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 ring-1 ring-brand-200">
+                6
+              </span>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                Product Status <span className="text-rose-500">*</span>
+              </h4>
+            </div>
+            <Badge tone={formData.status === 'Active' ? 'success' : formData.status === 'Draft' ? 'warning' : 'neutral'} dot size="xs">
+              {formData.status}
+            </Badge>
+          </div>
+
+          <SegmentedControl
+            items={[
+              { id: 'Active', label: 'Active (Publish)' },
+              { id: 'Draft', label: 'Draft' },
+              { id: 'Inactive', label: 'Inactive' },
+            ]}
+            activeId={formData.status}
+            onChange={(id) => setFormData({ ...formData, status: id })}
+          />
+          <p className="text-2xs text-ink-subtle">
+            {formData.status === 'Active' && 'Active products will be submitted for admin review and made live once approved.'}
+            {formData.status === 'Draft' && 'Draft products remain saved as unpublished drafts.'}
+            {formData.status === 'Inactive' && 'Inactive products remain disabled.'}
+          </p>
+        </div>
       </form>
     </Modal>
   )

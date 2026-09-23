@@ -80,9 +80,12 @@ const productSchema = new mongoose.Schema(
     approvalStatus: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'APPROVED' },
     rejectionReason: { type: String, default: '', trim: true },
     price: { type: Number, required: true, min: 0 },
+    mrp: { type: Number, default: null, min: 0 },
+    costPrice: { type: Number, default: null, min: 0 },
     salePrice: { type: Number, default: null, min: 0 },
     discountPercent: { type: Number, default: 0, min: 0, max: 100 },
     stock: { type: Number, required: true, default: 0, min: 0 },
+    lowStockThreshold: { type: Number, default: null, min: 0 },
     // Shipping weight in KILOGRAMS. Nullable, and stays nullable: Decision B
     // makes dimensions optional and falls back to a vendor default, then a
     // platform default, then the seller's own "Verify Package" measurement.
@@ -102,6 +105,7 @@ const productSchema = new mongoose.Schema(
       default: null,
     },
     images: { type: [String], default: [] },
+    shortDescription: { type: String, default: '', trim: true },
     description: { type: String, default: '', trim: true },
 
     // --- tax ---------------------------------------------------------------
@@ -124,6 +128,7 @@ const productSchema = new mongoose.Schema(
     // --- variants ----------------------------------------------------------
     // Empty on a simple product. See productVariantSchema.
     variants: { type: [productVariantSchema], default: [] },
+    status: { type: String, enum: ['Draft', 'Active', 'Inactive'], default: 'Active' },
     isActive: { type: Boolean, default: true },
     isFlashsale: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },

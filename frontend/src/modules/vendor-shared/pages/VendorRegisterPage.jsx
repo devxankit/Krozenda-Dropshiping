@@ -821,7 +821,7 @@ export function VendorRegisterPage() {
 
             <div className="space-y-2 pt-2 border-t border-slate-100">
               <span className="text-xs font-bold text-slate-900 block">Bank Account for Payouts (Optional)</span>
-              <p className="text-[11px] text-slate-500">Earnings are settled to this account. You can also update this later.</p>
+              <p className="text-[11px] text-slate-500">Customer payments are collected centrally by Admin. Your earnings are deposited directly into this bank account (no payment gateway credentials required).</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>

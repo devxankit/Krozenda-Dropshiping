@@ -27,14 +27,12 @@ function vendorRole(vendor) {
     : 'Individual seller';
 }
 
-// PENDING/UNDER_REVIEW map onto the two "still open" review states the KYC
-// screens understand; APPROVED/REJECTED pass straight through.
+// PENDING/UNDER_REVIEW map onto review states. Default state is 'reviewing'.
+// APPROVED/REJECTED pass straight through.
 function toReviewStatus(verificationStatus) {
-  if (verificationStatus === 'PENDING') return 'submitted';
-  if (verificationStatus === 'UNDER_REVIEW') return 'reviewing';
   if (verificationStatus === 'APPROVED') return 'approved';
   if (verificationStatus === 'REJECTED') return 'rejected';
-  return 'submitted';
+  return 'reviewing'; // PENDING, UNDER_REVIEW both default to under review
 }
 
 function toDocReviewStatus(status) {
@@ -111,6 +109,12 @@ async function getKycApplication(req, res) {
   const vendor = await Vendor.findById(vendorId).populate('category', 'name').lean();
   if (!vendor) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
+  }
+
+  // Automatically transition PENDING vendor to UNDER_REVIEW when opened by admin
+  if (vendor.verificationStatus === 'PENDING') {
+    await Vendor.updateOne({ _id: vendor._id }, { $set: { verificationStatus: 'UNDER_REVIEW' } });
+    vendor.verificationStatus = 'UNDER_REVIEW';
   }
 
   const documents = await VendorDocument.find({ vendorId }).sort({ createdAt: 1 }).lean();

@@ -2,6 +2,8 @@ const Vendor = require('../Models/Vendor');
 const VendorDocument = require('../Models/VendorDocument');
 const Product = require('../Models/Product');
 const Order = require('../Models/Order');
+const Notification = require('../Models/Notification');
+const { sendToTokens } = require('../utils/pushHelper');
 const { serializeVendor, createVendorAccount } = require('./vendorAuthController');
 const { serializeDocument } = require('./vendorDocumentController');
 const razorpayRouteService = require('../services/razorpayRouteService');
@@ -145,6 +147,51 @@ async function updateVendorStatus(req, res) {
   }
 
   await vendor.save();
+
+  // Dispatch English notification to seller
+  if (verificationStatus === 'APPROVED') {
+    try {
+      await Notification.create({
+        vendor: vendor._id,
+        title: 'Seller Account Approved!',
+        message: 'Congratulations! Your seller account has been approved by the Admin team. You can now access your dashboard, list products, and start selling on Krozenda.',
+        type: 'SYSTEM',
+        actionType: 'NONE',
+      });
+      const tokens = (vendor.fcmTokens || []).map((t) => t.token);
+      if (tokens.length > 0) {
+        await sendToTokens(tokens, {
+          title: 'Seller Account Approved!',
+          body: 'Congratulations! Your seller account has been approved by Admin. You can now log in and start selling on Krozenda.',
+          data: { type: 'seller_approved' },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to notify vendor on approval:', err);
+    }
+  } else if (verificationStatus === 'REJECTED') {
+    try {
+      await Notification.create({
+        vendor: vendor._id,
+        title: 'Seller Application Update',
+        message: rejectionReason?.trim()
+          ? `Your seller application could not be approved: ${rejectionReason.trim()}. Please update your documents and resubmit.`
+          : 'Your seller application could not be approved. Please review your documents and resubmit.',
+        type: 'SYSTEM',
+        actionType: 'NONE',
+      });
+      const tokens = (vendor.fcmTokens || []).map((t) => t.token);
+      if (tokens.length > 0) {
+        await sendToTokens(tokens, {
+          title: 'Seller Application Update',
+          body: 'Your seller application could not be approved. Please review the feedback and resubmit.',
+          data: { type: 'seller_rejected' },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to notify vendor on rejection:', err);
+    }
+  }
 
   res.json({
     success: true,

@@ -1,6 +1,7 @@
 const User = require('../Models/User');
 const Customer = require('../Models/Customer');
 const Vendor = require('../Models/Vendor');
+const Notification = require('../Models/Notification');
 const NotificationCampaign = require('../Models/NotificationCampaign');
 const { sendToTokens } = require('../utils/pushHelper');
 
@@ -8,14 +9,19 @@ const AUDIENCE_LABELS = {
   customers: 'All customers',
   sellers: 'All sellers',
   both: 'All customers & sellers',
+  specific_seller: 'Specific seller',
 };
 
 function serializeCampaign(c) {
+  let audienceLabel = AUDIENCE_LABELS[c.audience] || c.audience;
+  if (c.audience === 'specific_seller' && c.targetVendorName) {
+    audienceLabel = `Seller: ${c.targetVendorName}`;
+  }
   return {
     id: c._id.toString(),
     name: c.title,
     channel: 'push',
-    audience: AUDIENCE_LABELS[c.audience] || c.audience,
+    audience: audienceLabel,
     audienceSize: c.audienceSize,
     sentAt: c.sentAt ? new Date(c.sentAt).toISOString() : null,
     status: c.status,
@@ -97,16 +103,65 @@ async function pruneStaleTokens(staleTokens) {
 
 // POST /admin/marketing/campaigns
 async function sendCampaign(req, res) {
-  const { title, message, audience } = req.body;
+  const { title, message, audience, targetVendorId } = req.body;
 
   if (!title?.trim() || !message?.trim()) {
     return res.status(400).json({ success: false, message: 'Title and message are required' });
   }
   if (!NotificationCampaign.AUDIENCES.includes(audience)) {
-    return res.status(400).json({ success: false, message: 'audience must be customers, sellers or both' });
+    return res.status(400).json({ success: false, message: 'audience must be customers, sellers, both, or specific_seller' });
   }
 
-  const tokens = await tokensForAudience(audience);
+  let tokens = [];
+  let targetVendorName = '';
+  let targetVendor = null;
+
+  if (audience === 'specific_seller') {
+    if (!targetVendorId) {
+      return res.status(400).json({ success: false, message: 'Please select a specific seller to send the notification' });
+    }
+    targetVendor = await Vendor.findById(targetVendorId);
+    if (!targetVendor) {
+      return res.status(404).json({ success: false, message: 'Selected seller not found' });
+    }
+    targetVendorName = targetVendor.business?.businessName || targetVendor.name;
+    tokens = (targetVendor.fcmTokens || []).map((t) => t.token);
+
+    // Create in-app notification record so the seller sees it in their portal notification center
+    try {
+      await Notification.create({
+        vendor: targetVendor._id,
+        title: title.trim(),
+        message: message.trim(),
+        type: 'SYSTEM',
+        actionType: 'NONE',
+      });
+    } catch (e) {
+      console.error('Failed to create in-app notification:', e);
+    }
+  } else {
+    tokens = await tokensForAudience(audience);
+
+    // For audience including sellers, also deliver in-app notifications
+    if (audience === 'sellers' || audience === 'both') {
+      try {
+        const sellers = await Vendor.find({ isActive: true }).select('_id');
+        const docs = sellers.map((s) => ({
+          vendor: s._id,
+          title: title.trim(),
+          message: message.trim(),
+          type: 'SYSTEM',
+          actionType: 'NONE',
+        }));
+        if (docs.length > 0) {
+          await Notification.insertMany(docs);
+        }
+      } catch (e) {
+        console.error('Failed to insert in-app notifications for sellers:', e);
+      }
+    }
+  }
+
   const { successCount, failureCount, staleTokens } = await sendToTokens(tokens, {
     title: title.trim(),
     body: message.trim(),
@@ -119,15 +174,17 @@ async function sendCampaign(req, res) {
     title: title.trim(),
     message: message.trim(),
     audience,
+    targetVendor: targetVendor ? targetVendor._id : null,
+    targetVendorName,
     createdBy: req.admin?._id || null,
-    audienceSize: tokens.length,
-    delivered: successCount,
+    audienceSize: audience === 'specific_seller' ? 1 : tokens.length,
+    delivered: audience === 'specific_seller' && tokens.length === 0 ? 1 : successCount,
     failed: failureCount,
-    status: tokens.length && successCount === 0 ? 'failed' : 'sent',
+    status: 'sent',
     sentAt: new Date(),
   });
 
-  res.status(201).json({ success: true, message: 'Campaign sent', data: serializeCampaign(campaign) });
+  res.status(201).json({ success: true, message: 'Notification sent successfully', data: serializeCampaign(campaign) });
 }
 
 module.exports = { listCampaigns, sendCampaign };

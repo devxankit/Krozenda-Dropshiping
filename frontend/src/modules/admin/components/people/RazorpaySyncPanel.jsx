@@ -49,8 +49,8 @@ export function RazorpaySyncPanel({ vendorId, routeLinkedHint }) {
 
   return (
     <SectionCard
-      title="Razorpay Route"
-      description="Seller-settlement linked account. Synced on demand — nothing here is live until you press Sync."
+      title="Admin Settlement Routing (Razorpay Route)"
+      description="Central Admin gateway links this seller's bank account for automated payout settlements. Sellers do not need their own Razorpay account."
     >
       <div className="flex flex-col gap-3 px-4 py-3">
         {razorpay ? (
