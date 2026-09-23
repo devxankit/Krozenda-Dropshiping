@@ -8,11 +8,22 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-charts': ['recharts'],
-          'vendor-ui': ['framer-motion', 'react-icons'],
-          'vendor-utils': ['@tanstack/react-query', 'zustand', 'zod', 'axios'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts'
+            }
+            if (id.includes('framer-motion') || id.includes('react-icons')) {
+              return 'vendor-ui'
+            }
+            if (id.includes('@tanstack/react-query') || id.includes('zustand') || id.includes('zod') || id.includes('axios')) {
+              return 'vendor-utils'
+            }
+            return 'vendor-libs'
+          }
         },
       },
     },
