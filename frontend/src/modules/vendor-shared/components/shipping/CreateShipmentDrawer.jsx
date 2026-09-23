@@ -4,6 +4,7 @@ import { Drawer } from '../../../admin/components/overlay/Drawer'
 import { InlineAlert } from '../../../admin/components/feedback'
 import { useCreateShipmentController, usePickupLocationsController } from '../../controllers/useShippingController'
 import { formatWeightKg } from '../../../../lib/shipping/presentation'
+import { toast } from '../../../../lib/toast'
 
 // "Verify Package" — Decision B, as a screen.
 //
@@ -56,9 +57,11 @@ export function CreateShipmentDrawer({ orderId, isOpen, onClose, onCreated }) {
           actualWeightKg: Number(pkg.actualWeightKg),
         },
       })
+      toast.success('Shipment created successfully')
       onCreated?.(created)
       close()
     } catch (error) {
+      toast.error('Could not create shipment', error)
       setFailure(error?.message || 'The shipment could not be created.')
     }
   }

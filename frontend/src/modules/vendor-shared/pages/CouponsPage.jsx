@@ -38,7 +38,18 @@ export function CouponsPage() {
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <Button size="xs" variant="secondary" onClick={() => list.toggleStatus(row.id, !row.isActive)}>
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={async () => {
+              try {
+                await list.toggleStatus(row.id, !row.isActive)
+                toast.success(row.isActive ? 'Coupon deactivated' : 'Coupon activated')
+              } catch (err) {
+                toast.error('Could not update coupon', err?.response?.data?.message || 'Something went wrong')
+              }
+            }}
+          >
             {row.isActive ? 'Deactivate' : 'Activate'}
           </Button>
           <Button size="xs" variant="ghost" onClick={() => setRemovingCoupon(row)}>
@@ -94,8 +105,13 @@ export function CouponsPage() {
         description="This coupon will stop working immediately."
         confirmLabel="Delete coupon"
         tone="danger"
-        onConfirm={() => {
-          list.deleteCoupon(removingCoupon.id)
+        onConfirm={async () => {
+          try {
+            await list.deleteCoupon(removingCoupon.id)
+            toast.success('Coupon deleted')
+          } catch (err) {
+            toast.error('Could not delete coupon', err?.response?.data?.message || 'Something went wrong')
+          }
           setRemovingCoupon(null)
         }}
       />

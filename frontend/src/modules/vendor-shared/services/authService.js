@@ -34,9 +34,18 @@ export async function updateVendorProfile(body) {
 // need not. A new account comes back PENDING + isActive:false with a usable
 // token, which is what lets the seller straight into the status screen to
 // upload documents rather than stranding them at a "wait for approval" wall.
+export async function uploadRegistrationDocument(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post('/vendor/auth/upload-doc', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data.data
+}
+
 export async function registerVendor(payload) {
   const { data } = await api.post('/vendor/auth/register', payload)
-  return data.data
+  return data
 }
 
 // POST /vendor/auth/submit-for-verification — moves PENDING/REJECTED to

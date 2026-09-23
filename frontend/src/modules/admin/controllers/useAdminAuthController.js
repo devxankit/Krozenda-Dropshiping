@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../../lib/authStore'
 import { ADMIN_ROUTES } from '../../../config/routes'
+import { toast } from '../../../lib/toast'
 import {
   requestAdminLogin,
   requestPasswordReset,
@@ -45,7 +46,11 @@ export function useAdminLoginController() {
     mutationFn: requestAdminLogin,
     onSuccess: (session) => {
       setSession(session)
+      toast.success('Signed in', 'Welcome to Krozenda Admin Panel')
       navigate(ADMIN_ROUTES.DASHBOARD, { replace: true })
+    },
+    onError: (err) => {
+      toast.error('Sign in failed', err)
     },
   })
 
@@ -70,7 +75,11 @@ export function useAdminTwoFactorController() {
     onSuccess: (session) => {
       setSession(session)
       clearChallenge()
+      toast.success('Authentication confirmed')
       navigate(ADMIN_ROUTES.DASHBOARD, { replace: true })
+    },
+    onError: (err) => {
+      toast.error('Verification failed', err)
     },
   })
 
@@ -84,7 +93,15 @@ export function useAdminTwoFactorController() {
 }
 
 export function useForgotPasswordController() {
-  const mutation = useMutation({ mutationFn: requestPasswordReset })
+  const mutation = useMutation({
+    mutationFn: requestPasswordReset,
+    onSuccess: () => {
+      toast.success('Reset link sent', 'Check your email for password reset instructions')
+    },
+    onError: (err) => {
+      toast.error('Request failed', err)
+    },
+  })
   return {
     submit: mutation.mutate,
     isSubmitting: mutation.isPending,
@@ -98,7 +115,13 @@ export function useResetPasswordController() {
 
   const mutation = useMutation({
     mutationFn: submitPasswordReset,
-    onSuccess: () => navigate(ADMIN_ROUTES.LOGIN, { replace: true }),
+    onSuccess: () => {
+      toast.success('Password updated', 'You can now sign in with your new password')
+      navigate(ADMIN_ROUTES.LOGIN, { replace: true })
+    },
+    onError: (err) => {
+      toast.error('Could not reset password', err)
+    },
   })
 
   return {

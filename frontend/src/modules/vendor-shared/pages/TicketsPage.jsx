@@ -14,6 +14,7 @@ function TicketThread({ ticketId, onClose }) {
     if (!message.trim()) return
     try {
       await reply(message.trim())
+      toast.success('Reply sent')
       setMessage('')
     } catch (err) {
       toast.error('Could not send message', err?.response?.data?.message || 'Something went wrong')

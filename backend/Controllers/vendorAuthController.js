@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Vendor = require('../Models/Vendor');
+const VendorDocument = require('../Models/VendorDocument');
 const VendorPasswordReset = require('../Models/VendorPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
@@ -118,17 +119,39 @@ async function createVendorAccount(payload, { verificationStatus = 'PENDING', is
 }
 
 async function register(req, res) {
-  const { error, vendor } = await createVendorAccount(req.body);
+  const { documents, ...restPayload } = req.body;
+  const { error, vendor } = await createVendorAccount(restPayload, {
+    verificationStatus: 'UNDER_REVIEW',
+    isActive: false,
+  });
+
   if (error) {
     return res.status(error.status).json({ success: false, message: error.message });
   }
 
-  const token = signToken('vendor', { id: vendor._id, vendorType: vendor.vendorType });
+  // Create document records if documents were uploaded during registration
+  if (Array.isArray(documents) && documents.length > 0) {
+    for (const doc of documents) {
+      if (doc.documentUrl) {
+        await VendorDocument.create({
+          vendorId: vendor._id,
+          documentType: doc.documentType || 'OTHER',
+          documentLabel: doc.documentLabel || '',
+          documentNumber: doc.documentNumber || '',
+          documentUrl: doc.documentUrl,
+          status: 'PENDING',
+        });
+      }
+    }
+  }
 
   res.status(201).json({
     success: true,
-    message: 'Registration submitted. Continue to upload your documents.',
-    data: { token, vendor: serializeVendor(vendor) },
+    message: 'Registration submitted successfully. Your account and documents are under review by Admin. You can log in once approved.',
+    data: {
+      vendor: serializeVendor(vendor),
+      verificationStatus: vendor.verificationStatus,
+    },
   });
 }
 
@@ -143,6 +166,33 @@ async function login(req, res) {
 
   if (!vendor || !(await vendor.comparePassword(password))) {
     return res.status(401).json({ success: false, message: 'Invalid email or password' });
+  }
+
+  // Verification Gate: Admin must approve vendor before they can log in
+  if (vendor.verificationStatus === 'PENDING' || vendor.verificationStatus === 'UNDER_REVIEW') {
+    return res.status(403).json({
+      success: false,
+      code: 'VERIFICATION_PENDING',
+      message: 'Your seller account is currently under review by Admin. You will be able to log in once your account and documents are approved.',
+    });
+  }
+
+  if (vendor.verificationStatus === 'REJECTED') {
+    return res.status(403).json({
+      success: false,
+      code: 'VERIFICATION_REJECTED',
+      message: vendor.rejectionReason
+        ? `Your seller application was rejected: ${vendor.rejectionReason}`
+        : 'Your seller application was rejected by Admin. Please contact support.',
+    });
+  }
+
+  if (vendor.isActive === false) {
+    return res.status(403).json({
+      success: false,
+      code: 'ACCOUNT_INACTIVE',
+      message: 'Your seller account has been deactivated. Please contact support.',
+    });
   }
 
   const token = signToken('vendor', { id: vendor._id, vendorType: vendor.vendorType });

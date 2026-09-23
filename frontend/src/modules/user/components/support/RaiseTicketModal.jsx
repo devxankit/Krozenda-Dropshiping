@@ -13,6 +13,7 @@ import {
 import { createSupportTicket } from '../../services/ticketService'
 import { fetchUserOrders } from '../../services/orderService'
 import { useAuthStore } from '../../../../lib/authStore'
+import { toast } from '../../../../lib/toast'
 
 const CATEGORIES = [
   { id: 'Orders & Delivery', label: 'Order & Delivery', icon: HiShoppingBag, desc: 'Delay, courier tracking, wrong address' },
@@ -109,9 +110,12 @@ export function RaiseTicketModal({ isOpen, onClose, onTicketCreated }) {
       if (onTicketCreated) {
         onTicketCreated(newTicket)
       }
+      toast.success('Ticket Raised', 'Our support team has been notified.')
       onClose()
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to raise support ticket. Please try again.')
+      const msg = err.message || 'Failed to raise support ticket. Please try again.'
+      setErrorMsg(msg)
+      toast.error('Could not create ticket', err)
     } finally {
       setSubmitting(false)
     }

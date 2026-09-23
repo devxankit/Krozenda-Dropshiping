@@ -28,6 +28,7 @@ import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
 import { useAuthStore } from '../../../../lib/authStore'
 import { useProfileController } from '../../controllers/useProfileController'
 import { useWalletController } from '../../controllers/useWalletController'
+import { toast } from '../../../../lib/toast'
 
 const QUICK_AMOUNTS = [200, 500, 1000, 2000]
 
@@ -180,11 +181,22 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
 
   const handleAddMoney = (amount) =>
     topup(amount, { name: user.name, email: user.email, contact: user.mobile })
+      .then(() => toast.success('Wallet Recharged', `₹${amount.toLocaleString('en-IN')} added to your wallet.`))
+      .catch((err) => {
+        if (err?.message !== 'Payment cancelled') {
+          toast.error('Top-up Failed', err)
+        }
+      })
 
   const handleDeleteAccount = async () => {
-    await deleteAccount()
-    useAuthStore.getState().clearSession()
-    navigate(AUTH_ROUTES.LOGIN, { replace: true })
+    try {
+      await deleteAccount()
+      useAuthStore.getState().clearSession()
+      toast.info('Account Deleted', 'Your account was deleted.')
+      navigate(AUTH_ROUTES.LOGIN, { replace: true })
+    } catch (err) {
+      toast.error('Could not delete account', err)
+    }
   }
 
   const orderShortcuts = [
@@ -337,6 +349,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
                     onNavigateMenu(item.label)
                     if (item.isLogout) {
                       useAuthStore.getState().clearSession()
+                      toast.info('Signed Out', 'You have been signed out safely.')
                     }
                     navigate(item.route)
                   }}

@@ -4,6 +4,7 @@ import { Drawer } from '../../../admin/components/overlay/Drawer'
 import { FormDrawer } from '../../../admin/components/forms/FormDrawer'
 import { InlineAlert } from '../../../admin/components/feedback'
 import { useShipmentController } from '../../controllers/useShippingController'
+import { toast } from '../../../../lib/toast'
 import {
   formatCarrierRupees,
   formatDateTime,
@@ -88,9 +89,11 @@ function ConfirmCancel({ isOpen, onClose, controller }) {
     setFailure('')
     try {
       await controller.cancelShipment({ reason: reason.trim() })
+      toast.success('Shipment cancelled successfully')
       setReason('')
       onClose()
     } catch (error) {
+      toast.error('Could not cancel shipment', error)
       setFailure(error?.message || 'The courier did not accept the cancellation.')
     }
   }
@@ -145,9 +148,11 @@ function ConfirmReturn({ isOpen, onClose, controller }) {
     setFailure('')
     try {
       await controller.createReturn({ reason: reason.trim() })
+      toast.success('Return booked successfully')
       setReason('')
       onClose()
     } catch (error) {
+      toast.error('Could not book return', error)
       setFailure(error?.message || 'The courier did not accept the return.')
     }
   }
@@ -324,7 +329,23 @@ function TrackingSection({ controller }) {
     <Section
       title="Tracking"
       action={
-        <Button variant="quiet" size="sm" onClick={() => refreshTracking()} isLoading={isRefreshing}>
+        <Button
+          variant="quiet"
+          size="sm"
+          onClick={async () => {
+            try {
+              const res = await refreshTracking()
+              if (res?.newEvents > 0) {
+                toast.success(`Tracking updated: ${res.newEvents} new update${res.newEvents > 1 ? 's' : ''}`)
+              } else {
+                toast.info('Tracking is up to date')
+              }
+            } catch (err) {
+              toast.error('Failed to refresh tracking', err)
+            }
+          }}
+          isLoading={isRefreshing}
+        >
           Refresh from carrier
         </Button>
       }
@@ -447,9 +468,14 @@ function ShipmentDocuments({ controller }) {
       const result = await controller.fetchDocument({ type })
       const opened = window.open(result.url, '_blank', 'noopener,noreferrer')
       // Popup blocked — show the link instead of silently doing nothing.
-      if (!opened) setBlocked({ type, url: result.url })
-    } catch {
-      // The error is surfaced by documentError below.
+      if (!opened) {
+        setBlocked({ type, url: result.url })
+        toast.info('Popup blocked. Click the link to view the document.')
+      } else {
+        toast.success('Document opened')
+      }
+    } catch (err) {
+      toast.error('Could not get document', err)
     } finally {
       setPending(null)
     }
@@ -520,8 +546,10 @@ function NdrSection({ controller }) {
   async function answer(action) {
     try {
       await controller.actOnNdr({ action, comments })
+      toast.success(action === 'return' ? 'Return requested with courier' : 'Re-attempt requested with courier')
       setComments('')
-    } catch {
+    } catch (err) {
+      toast.error('The courier did not accept that', err)
       // Surfaced through ndrActionError below.
     }
   }
@@ -644,11 +672,33 @@ function ShipmentActions({ controller, onClose, onConfirm }) {
         {needsReconciliation ? (
           <span className="text-2xs text-danger-600">Resolve in Shiprocket first</span>
         ) : canAssignAwb ? (
-          <Button size="control" onClick={() => controller.assignAwb({})} isLoading={controller.isAssigningAwb}>
+          <Button
+            size="control"
+            onClick={async () => {
+              try {
+                await controller.assignAwb({})
+                toast.success('AWB assigned successfully')
+              } catch (err) {
+                toast.error('Failed to assign AWB', err)
+              }
+            }}
+            isLoading={controller.isAssigningAwb}
+          >
             Assign AWB
           </Button>
         ) : canSchedulePickup ? (
-          <Button size="control" onClick={() => controller.schedulePickup()} isLoading={controller.isSchedulingPickup}>
+          <Button
+            size="control"
+            onClick={async () => {
+              try {
+                await controller.schedulePickup()
+                toast.success('Pickup scheduled successfully')
+              } catch (err) {
+                toast.error('Failed to schedule pickup', err)
+              }
+            }}
+            isLoading={controller.isSchedulingPickup}
+          >
             Schedule pickup
           </Button>
         ) : null}

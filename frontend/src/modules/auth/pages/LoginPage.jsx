@@ -10,6 +10,7 @@ import { USER_ROUTES } from '../../../config/routes'
 import { useAuthStore } from '../../../lib/authStore'
 import { sanitizeIndianPhoneNumber } from '../../../lib/phoneUtils'
 import { sendCustomerOtp, verifyCustomerOtp } from '../services/customerAuthService'
+import { toast } from '../../../lib/toast'
 
 export function LoginPage() {
   const navigate  = useNavigate()
@@ -80,8 +81,13 @@ export function LoginPage() {
       const res = await sendCustomerOtp(clean)
       setIsRegistered(Boolean(res?.data?.isRegistered))
       setOtp(['','','','','','']); setTimer(45)
+      toast.success('OTP Sent', 'Check your mobile for the verification code.')
       changeStep(3)
-    } catch (err) { setError(err?.message || 'Could not send OTP. Please try again.') }
+    } catch (err) {
+      const msg = err?.message || 'Could not send OTP. Please try again.'
+      setError(msg)
+      toast.error('Could not send OTP', msg)
+    }
     finally { setIsLoading(false) }
   }
 
@@ -123,8 +129,13 @@ export function LoginPage() {
       })
       setUserProfile(res?.data?.user)
       setIsNewUser(Boolean(res?.isNewUser))
+      toast.success('Welcome back!', 'Signed in successfully.')
       changeStep(4)
-    } catch (err) { setError(err?.message || 'Invalid OTP. Please try again.') }
+    } catch (err) {
+      const msg = err?.message || 'Invalid OTP. Please try again.'
+      setError(msg)
+      toast.error('Verification failed', msg)
+    }
     finally { setIsLoading(false) }
   }
 
@@ -134,8 +145,13 @@ export function LoginPage() {
     try {
       await sendCustomerOtp(phoneNumber)
       setResendNotice('OTP resent successfully!')
+      toast.success('OTP Resent', 'A fresh code has been sent to your mobile.')
       setTimeout(() => setResendNotice(''), 3000)
-    } catch (err) { setError(err?.message || 'Failed to resend OTP.') }
+    } catch (err) {
+      const msg = err?.message || 'Failed to resend OTP.'
+      setError(msg)
+      toast.error('Resend failed', msg)
+    }
   }
 
   const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`

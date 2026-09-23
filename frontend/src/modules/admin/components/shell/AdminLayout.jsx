@@ -10,7 +10,7 @@ import { AdminTopbar } from './AdminTopbar'
 import { CommandPalette } from './CommandPalette'
 import { MobileNav } from './MobileNav'
 import { NotificationsPanel } from './NotificationsPanel'
-import { ToastViewport } from '../feedback'
+
 
 export function AdminLayout() {
   const navigate = useNavigate()
@@ -108,8 +108,7 @@ export function AdminLayout() {
         items={notifications}
         onMarkAllRead={markAllRead}
       />
-      {/* Mounted once for the whole panel — every write reports through it. */}
-      <ToastViewport />
+
     </div>
   )
 }

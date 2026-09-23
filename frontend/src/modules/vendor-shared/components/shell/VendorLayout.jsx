@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { VendorSidebar } from './VendorSidebar'
 import { VendorTopbar } from './VendorTopbar'
-import { ToastViewport } from '../../../admin/components/feedback'
+
 import { useAuthStore } from '../../../../lib/authStore'
 import { disconnectRealtime } from '../../../../lib/realtime'
 import { useVendorRealtime } from '../../controllers/useVendorController'
@@ -68,8 +68,7 @@ export function VendorLayout() {
         </div>
       )}
 
-      {/* Global Vendor Toast Viewport */}
-      <ToastViewport />
+
     </div>
   )
 }

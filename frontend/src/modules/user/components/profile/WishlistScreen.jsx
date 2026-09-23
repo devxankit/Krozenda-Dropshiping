@@ -10,6 +10,7 @@ import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
 import { useCartStore } from '../../../../lib/cartStore'
 import { usePageMeta } from '../../../../lib/usePageMeta'
+import { toast } from '../../../../lib/toast'
 
 // What a wishlisted product's availability means for the card. The screen
 // previously rendered every entry identically and hardcoded "In Stock" when
@@ -54,7 +55,10 @@ export function WishlistScreen() {
     // otherwise a failed add silently loses the item from both places.
     if (result?.ok) {
       removeFromWishlist(item.id)
+      toast.success('Moved to Bag', `${item.name} moved to your shopping cart.`)
       navigate(USER_ROUTES.CART)
+    } else {
+      toast.error('Could not move to cart', result?.error)
     }
   }
 
@@ -146,6 +150,7 @@ export function WishlistScreen() {
                       e.preventDefault()
                       e.stopPropagation()
                       removeFromWishlist(item.id)
+                      toast.info('Removed from Wishlist', `${item.name} was removed from your wishlist.`)
                     }}
                     aria-label={`Remove ${item.name} from wishlist`}
                     className="absolute right-2.5 top-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-red-500 shadow-sm transition-colors hover:bg-red-50"

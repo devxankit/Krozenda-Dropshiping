@@ -21,6 +21,7 @@ import {
   updateGeneralSettings,
 } from '../../services/systemService'
 import { usePaymentSettingsController } from '../../controllers/usePaymentSettingsController'
+import { toast } from '../../../../lib/toast'
 
 const SETTINGS_TABS = [
   { id: 'general', label: 'General & Profile', icon: 'settings' },
@@ -246,11 +247,14 @@ export function GeneralSettingsPage({ defaultTab }) {
 
       controller.refetch?.()
       setGeneralFeedback({ tone: 'success', message: 'Profile and store details saved successfully!' })
+      toast.success('Settings Saved', 'Profile and store details saved successfully.')
     } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to save general settings'
       setGeneralFeedback({
         tone: 'danger',
-        message: err?.response?.data?.message || err.message || 'Failed to save general settings',
+        message: msg,
       })
+      toast.error('Could not save settings', msg)
     } finally {
       setIsSavingGeneral(false)
     }
@@ -286,11 +290,14 @@ export function GeneralSettingsPage({ defaultTab }) {
 
       controller.refetch?.()
       setFooterFeedback({ tone: 'success', message: 'Footer, contact and social links saved successfully!' })
+      toast.success('Footer Saved', 'Footer, contact and social links saved successfully.')
     } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to save footer settings'
       setFooterFeedback({
         tone: 'danger',
-        message: err?.response?.data?.message || err.message || 'Failed to save footer settings',
+        message: msg,
       })
+      toast.error('Could not save footer', msg)
     } finally {
       setIsSavingFooter(false)
     }
@@ -325,11 +332,14 @@ export function GeneralSettingsPage({ defaultTab }) {
       setNewPassword('')
       setConfirmPassword('')
       setPasswordFeedback({ tone: 'success', message: 'Password updated successfully! Keep your credentials safe.' })
+      toast.success('Password Updated', 'Your admin password was updated successfully.')
     } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to update password'
       setPasswordFeedback({
         tone: 'danger',
-        message: err?.response?.data?.message || err.message || 'Failed to update password',
+        message: msg,
       })
+      toast.error('Could not update password', msg)
     } finally {
       setIsUpdatingPassword(false)
     }
@@ -353,11 +363,14 @@ export function GeneralSettingsPage({ defaultTab }) {
 
       controller.refetch?.()
       setFinanceFeedback({ tone: 'success', message: 'Commission and GST settings saved successfully!' })
+      toast.success('Finance Settings Saved', 'Commission and GST rates updated.')
     } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Failed to save commission & GST settings'
       setFinanceFeedback({
         tone: 'danger',
-        message: err?.response?.data?.message || err.message || 'Failed to save commission & GST settings',
+        message: msg,
       })
+      toast.error('Could not save finance settings', msg)
     } finally {
       setIsSavingFinance(false)
     }

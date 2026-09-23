@@ -5,6 +5,7 @@ import { SmartImage } from '../../../../components/ui/SmartImage'
 import { USER_ROUTES } from '../../../../config/routes'
 import { useAuthStore } from '../../../../lib/authStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
+import { toast } from '../../../../lib/toast'
 
 const MotionLink = motion(Link)
 
@@ -41,6 +42,7 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
   const handleWishlist = (e) => {
     e.preventDefault()
     e.stopPropagation()
+    const wasWishlisted = isWishlisted
     toggleWishlistItem({
       id: product.id,
       name: product.name,
@@ -50,6 +52,11 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
       price,
       originalPrice: product.price,
     })
+    if (wasWishlisted) {
+      toast.info('Removed from Wishlist', `${product.name} removed from your saved items.`)
+    } else {
+      toast.success('Saved to Wishlist', `${product.name} added to your wishlist.`)
+    }
   }
 
   const wishlistButton = isAuthenticated ? (

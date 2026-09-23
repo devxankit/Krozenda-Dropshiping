@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Toast } from '../../../../components/ui'
+import { toast } from '../../../../lib/toast'
 import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useSubmitReviewController } from '../../controllers/useSubmitReviewController'
@@ -136,14 +137,19 @@ export function RateReviewScreen() {
     // Guarded against a double tap: the submit button is disabled while the
     // mutation is pending, but a second tap can land before React re-renders.
     if (!selectedItem || isSubmitting) return
-    const review = await submitReview({
-      productId: selectedItem.productId,
-      orderId: selectedItem.orderId,
-      rating,
-      reviewText,
-      photoFiles: photos.map((photo) => photo.file),
-    })
-    onSubmitReview(review)
+    try {
+      const review = await submitReview({
+        productId: selectedItem.productId,
+        orderId: selectedItem.orderId,
+        rating,
+        reviewText,
+        photoFiles: photos.map((photo) => photo.file),
+      })
+      toast.success('Review Submitted', 'Thank you for your valuable feedback!')
+      onSubmitReview(review)
+    } catch (err) {
+      toast.error('Could not submit review', err)
+    }
   }
 
   return (

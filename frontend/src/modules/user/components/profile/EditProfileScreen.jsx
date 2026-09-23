@@ -6,6 +6,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { SmartImage } from '../../../../components/ui/SmartImage'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useProfileController } from '../../controllers/useProfileController'
+import { toast } from '../../../../lib/toast'
 
 const EMPTY_PASSWORD_FORM = { currentPassword: '', newPassword: '', confirmPassword: '' }
 
@@ -109,8 +110,11 @@ export function EditProfileScreen({ onBack }) {
 
     try {
       await uploadImage(file)
+      toast.success('Photo Updated', 'Your profile picture was uploaded successfully.')
     } catch (err) {
-      setImageError(err?.message || 'Could not upload that photo. Please try again.')
+      const msg = err?.message || 'Could not upload that photo. Please try again.'
+      setImageError(msg)
+      toast.error('Upload Failed', err)
     }
   }
 
@@ -120,13 +124,11 @@ export function EditProfileScreen({ onBack }) {
     setSavedMessage(false)
     try {
       await updateProfile(form)
-      // "Saved" is only shown once the server has actually accepted it. This
-      // used to run unconditionally, so a rejected email ("already in use")
-      // showed the error AND "Profile updated successfully" side by side.
       setSavedMessage(true)
+      toast.success('Profile Updated', 'Your personal details have been saved.')
       setTimeout(() => setSavedMessage(false), 3000)
-    } catch {
-      // updateError below carries the server's message.
+    } catch (err) {
+      toast.error('Could not save profile', err)
     }
   }
 
@@ -138,13 +140,12 @@ export function EditProfileScreen({ onBack }) {
     setPasswordSaved(false)
     try {
       await changePassword(passwordForm)
-      // Same reasoning, and the form is only cleared on success — clearing it
-      // on failure made the buyer retype everything to see what went wrong.
       setPasswordForm(EMPTY_PASSWORD_FORM)
       setPasswordSaved(true)
+      toast.success('Password Updated', 'Your password was changed successfully.')
       setTimeout(() => setPasswordSaved(false), 3000)
-    } catch {
-      // changePasswordError below carries the server's message.
+    } catch (err) {
+      toast.error('Could not update password', err)
     }
   }
 

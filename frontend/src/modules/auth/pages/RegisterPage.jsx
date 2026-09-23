@@ -7,6 +7,7 @@ import { SignupScreen4Email } from '../components/signup/SignupScreen4Email'
 import { SignupScreen5Success } from '../components/signup/SignupScreen5Success'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../config/routes'
 import { useAuthStore } from '../../../lib/authStore'
+import { toast } from '../../../lib/toast'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -55,6 +56,7 @@ export function RegisterPage() {
       user: { name: 'Registered Retailer', phone: phoneNumber || '9876543210', email },
       accessToken: 'demo-krozenda-signup-token-' + Date.now(),
     })
+    toast.success('Registration Complete', 'Welcome to Krozenda!')
     navigate(USER_ROUTES.DASHBOARD)
   }
 

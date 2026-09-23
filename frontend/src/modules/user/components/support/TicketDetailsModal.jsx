@@ -17,6 +17,7 @@ import {
   updateTicketStatus,
 } from '../../services/ticketService'
 import { useAuthStore } from '../../../../lib/authStore'
+import { toast } from '../../../../lib/toast'
 
 const STATUS_BADGES = {
   open: { label: 'Open', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
@@ -96,9 +97,12 @@ export function TicketDetailsModal({ ticketId, isOpen, onClose, onTicketUpdated 
       )
       setTicket(updated)
       setReplyText('')
+      toast.success('Message Sent', 'Your message was added to this ticket.')
       if (onTicketUpdated) onTicketUpdated(updated)
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to send message. Please try again.')
+      const msg = err.message || 'Failed to send message. Please try again.'
+      setErrorMsg(msg)
+      toast.error('Could not send message', err)
     } finally {
       setSendingReply(false)
     }
@@ -111,9 +115,12 @@ export function TicketDetailsModal({ ticketId, isOpen, onClose, onTicketUpdated 
       const updated = await updateTicketStatus(ticket.ticketId || ticket.id, newStatus, note)
       setTicket(updated)
       setShowResolveConfirm(false)
+      toast.success('Ticket Updated', `Status changed to ${newStatus}.`)
       if (onTicketUpdated) onTicketUpdated(updated)
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update ticket status.')
+      const msg = err.message || 'Failed to update ticket status.'
+      setErrorMsg(msg)
+      toast.error('Could not update status', err)
     } finally {
       setUpdatingStatus(false)
     }

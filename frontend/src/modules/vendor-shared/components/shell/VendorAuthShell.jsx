@@ -1,33 +1,67 @@
 import { HiOutlineBuildingStorefront } from 'react-icons/hi2'
+import { Link } from 'react-router-dom'
 
-// The dark card every unauthenticated vendor screen sits in — sign-in,
-// password reset and sign-up. Extracted from VendorLoginPage so the sign-up
-// flow cannot drift from the sign-in flow visually; `width` is the only thing
-// the two genuinely disagree about, since a registration form needs more than
-// one column and a login form does not.
-const WIDTHS = Object.freeze({
-  sm: 'max-w-md',
-  lg: 'max-w-2xl',
-})
+export function VendorAuthShell({
+  title,
+  subtitle,
+  width = 'sm', // 'sm' (login: ~440px) | 'lg' (register: ~640px)
+  children,
+}) {
+  const maxWidthClass = width === 'lg' ? 'max-w-2xl' : 'max-w-md'
 
-export function VendorAuthShell({ title, subtitle, width = 'sm', children }) {
   return (
-    <div className="vendor-auth min-h-screen w-full flex items-center justify-center bg-slate-950 p-4 sm:p-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-brand-900/30 via-slate-950 to-slate-950 pointer-events-none" />
-
-      <div
-        className={`relative w-full ${WIDTHS[width]} rounded-2xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-xl`}
-      >
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white text-xl shadow-lg shadow-brand-600/30">
-            <HiOutlineBuildingStorefront className="h-6 w-6" />
+    <div className="min-h-screen w-full bg-slate-50 font-sans text-slate-800 flex flex-col justify-between">
+      {/* Clean Top Navigation Bar */}
+      <header className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <Link to="/app/dashboard" className="flex items-center space-x-2.5 group">
+          <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs group-hover:bg-blue-700 transition-colors">
+            <HiOutlineBuildingStorefront className="w-5 h-5" />
           </div>
-          <h1 className="mt-4 text-xl font-bold text-white tracking-tight">{title}</h1>
-          <p className="mt-1.5 text-xs text-slate-400 max-w-xs">{subtitle}</p>
-        </div>
+          <div>
+            <div className="flex items-center space-x-1.5">
+              <span className="text-base font-black tracking-tight text-slate-900 font-sans">KROZENDA</span>
+              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                SELLER
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium">Dropshipping Supplier Portal</p>
+          </div>
+        </Link>
 
-        {children}
-      </div>
+        <Link
+          to="/app/dashboard"
+          className="text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors flex items-center space-x-1"
+        >
+          <span>Marketplace</span>
+          <span aria-hidden="true">&rarr;</span>
+        </Link>
+      </header>
+
+      {/* Main Centered Form Container */}
+      <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 my-auto flex items-center justify-center">
+        <div className={`w-full ${maxWidthClass}`}>
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-5">
+            {/* Header */}
+            <div className="border-b border-slate-100 pb-4 text-center sm:text-left">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
+              {subtitle && <p className="text-xs text-slate-500 mt-1 font-medium">{subtitle}</p>}
+            </div>
+
+            {/* Form Slot */}
+            <div>{children}</div>
+          </div>
+        </div>
+      </main>
+
+      {/* Clean Bottom Footer */}
+      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-200/60">
+        <p>&copy; {new Date().getFullYear()} Krozenda E-Commerce. All rights reserved.</p>
+        <div className="flex items-center space-x-4 text-slate-500">
+          <Link to="/app/terms" className="hover:text-slate-700 transition-colors">Terms of Service</Link>
+          <Link to="/app/privacy" className="hover:text-slate-700 transition-colors">Privacy Policy</Link>
+          <Link to="/seller/login" className="hover:text-slate-700 transition-colors">Seller Support</Link>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -19,6 +19,7 @@ import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useOrderController } from '../../controllers/useOrdersController'
 import { reorderOrder } from '../../services/orderService'
 import { useCartStore } from '../../../../lib/cartStore'
+import { toast } from '../../../../lib/toast'
 
 const STATUS_META = {
   PENDING: { label: 'Pending', color: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -52,12 +53,17 @@ export function OrderDetailsScreen() {
       const res = await reorderOrder(order.id)
       await useCartStore.getState().hydrate()
       if (res.data?.addedCount > 0) {
+        toast.success('Items Added to Cart', `${res.data.addedCount} item(s) from this order added to your cart.`)
         navigate(USER_ROUTES.CART)
       } else {
-        setReorderMessage(res.message || 'Items from this order are currently out of stock')
+        const msg = res.message || 'Items from this order are currently out of stock'
+        setReorderMessage(msg)
+        toast.warning('Reorder Unavailable', msg)
       }
     } catch (err) {
-      setReorderMessage(err?.response?.data?.message || 'Could not reorder items from this order')
+      const msg = err?.response?.data?.message || 'Could not reorder items from this order'
+      setReorderMessage(msg)
+      toast.error('Reorder Failed', err)
     } finally {
       setReordering(false)
     }

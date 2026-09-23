@@ -13,6 +13,7 @@ import { useAddressesController } from '../../controllers/useAddressesController
 import { useApplyCouponController } from '../../controllers/useCouponsController'
 import { useProfileController } from '../../controllers/useProfileController'
 import { CheckoutStepper } from './CheckoutStepper'
+import { toast } from '../../../../lib/toast'
 
 export function OrderSummaryScreen() {
   const navigate = useNavigate()
@@ -89,8 +90,9 @@ export function OrderSummaryScreen() {
     try {
       const result = await applyCoupon(couponInput.trim())
       setAppliedCoupon(result)
-    } catch {
-      // couponError below already surfaces the backend's message
+      toast.success('Coupon Applied', `Code ${result.code} applied! Saved ₹${result.discountAmount.toLocaleString('en-IN')}`)
+    } catch (err) {
+      toast.error('Invalid Coupon', err)
     }
   }
 
@@ -209,7 +211,13 @@ export function OrderSummaryScreen() {
                   <span className="text-xs font-bold text-emerald-800">
                     {'“'}{appliedCoupon.code}{'”'} applied — you saved ₹{appliedCoupon.discountAmount.toLocaleString('en-IN')}
                   </span>
-                  <button onClick={clearCoupon} className="text-emerald-700 hover:text-emerald-900">
+                  <button
+                    onClick={() => {
+                      clearCoupon()
+                      toast.info('Coupon Removed', 'Coupon discount was removed.')
+                    }}
+                    className="text-emerald-700 hover:text-emerald-900"
+                  >
                     <HiXMark className="w-4 h-4" />
                   </button>
                 </div>

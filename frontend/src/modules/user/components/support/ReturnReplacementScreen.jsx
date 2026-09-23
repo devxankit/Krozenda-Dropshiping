@@ -5,6 +5,7 @@ import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Footer } from '../../../../components/layout/Footer'
 import { USER_ROUTES } from '../../../../config/routes'
 import { useReturnsController } from '../../controllers/useReturnsController'
+import { toast } from '../../../../lib/toast'
 
 const MAX_PHOTOS = 4
 
@@ -72,16 +73,21 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
   const handleSubmit = async () => {
     if (!selectedItem || lockedStatus) return
     setSubmitted(false)
-    const request = await submitReturnRequest({
-      orderId: selectedItem.orderId,
-      productId: selectedItem.productId,
-      requestType,
-      reason: selectedReason,
-      photoFiles: photos.map((p) => p.file),
-    })
-    setPhotos([])
-    setSubmitted(true)
-    onContinue(request)
+    try {
+      const request = await submitReturnRequest({
+        orderId: selectedItem.orderId,
+        productId: selectedItem.productId,
+        requestType,
+        reason: selectedReason,
+        photoFiles: photos.map((p) => p.file),
+      })
+      setPhotos([])
+      setSubmitted(true)
+      toast.success('Request Submitted', 'Your return or replacement claim has been submitted.')
+      onContinue(request)
+    } catch (err) {
+      toast.error('Submission Failed', err)
+    }
   }
 
   return (

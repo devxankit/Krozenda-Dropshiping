@@ -9,6 +9,7 @@ import { EmptyResult } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { lineKey, MAX_LINE_QUANTITY, useCartStore } from '../../../../lib/cartStore'
 import { usePageMeta } from '../../../../lib/usePageMeta'
+import { toast } from '../../../../lib/toast'
 
 // Availability, as the server reports it. The cart previously had no concept
 // of this at all: every line rendered identically whether the product was in
@@ -239,7 +240,10 @@ export function CartPageScreen() {
 
                         <button
                           type="button"
-                          onClick={() => removeItem(key)}
+                          onClick={() => {
+                            removeItem(key)
+                            toast.info(`Removed ${item.name} from cart`)
+                          }}
                           aria-label={`Remove ${item.name} from cart`}
                           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                         >

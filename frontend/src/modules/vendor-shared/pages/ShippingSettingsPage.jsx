@@ -6,6 +6,7 @@ import { InlineAlert } from '../../admin/components/feedback'
 import { FormDrawer } from '../../admin/components/forms/FormDrawer'
 import { usePickupLocationsController, useShippingIntegrationController } from '../controllers/useShippingController'
 import { integrationStatusPresentation, pickupStatusPresentation, formatDateTime } from '../../../lib/shipping/presentation'
+import { toast } from '../../../lib/toast'
 
 // Seller > Shipping > Settings: which carrier account ships this store's
 // parcels, and which warehouses they leave from.
@@ -212,8 +213,13 @@ function CarrierAccountCard({ account, onConnect }) {
         submitTone="danger"
         isSubmitting={isDisconnecting}
         onSubmit={async () => {
-          await disconnect()
-          setConfirmingDisconnect(false)
+          try {
+            await disconnect()
+            toast.info('Shiprocket Disconnected', 'Your credentials were removed.')
+            setConfirmingDisconnect(false)
+          } catch (err) {
+            toast.error('Could not disconnect Shiprocket', err)
+          }
         }}
       >
         <div className="flex flex-col gap-3 text-sm text-ink-subtle">
@@ -249,9 +255,12 @@ function ConnectDrawer({ isOpen, onClose, account }) {
     setFailure('')
     try {
       await account.connect({ email: email.trim(), password })
+      toast.success('Shiprocket Connected', 'Your account credentials have been verified.')
       close()
     } catch (error) {
-      setFailure(error?.message || 'Could not connect that account.')
+      const msg = error?.message || 'Could not connect that account.'
+      setFailure(msg)
+      toast.error('Connection Failed', error)
       setPassword('')
     }
   }
@@ -381,14 +390,28 @@ function PickupLocationsCard({ pickups, onAdd, onEdit }) {
                     {location.registrationStatus !== 'REGISTERED' && (
                       <Button
                         size="control"
-                        onClick={() => pickups.register(location.id).catch(() => {})}
+                        onClick={() => {
+                          pickups
+                            .register(location.id)
+                            .then(() => toast.success('Registered with Courier', 'Pickup address registered successfully.'))
+                            .catch((err) => toast.error('Registration Failed', err))
+                        }}
                         isLoading={pickups.isRegistering}
                       >
                         Register with courier
                       </Button>
                     )}
                     {!location.isDefault && (
-                      <Button variant="quiet" size="control" onClick={() => pickups.makeDefault(location.id)}>
+                      <Button
+                        variant="quiet"
+                        size="control"
+                        onClick={() => {
+                          pickups
+                            .makeDefault(location.id)
+                            .then(() => toast.success('Default Pickup Set', 'Primary courier pickup address updated.'))
+                            .catch((err) => toast.error('Could not set default', err))
+                        }}
+                      >
                         Make default
                       </Button>
                     )}
@@ -455,11 +478,17 @@ function PickupLocationDrawer({ location, onClose, pickups }) {
       pincode: form.pincode.trim(),
     }
     try {
-      if (isEdit) await pickups.editLocation(location.id, body)
-      else await pickups.addLocation(body)
+      if (isEdit) {
+        await pickups.editLocation(location.id, body)
+        toast.success('Pickup Location Updated', 'Location details were saved.')
+      } else {
+        await pickups.addLocation(body)
+        toast.success('Pickup Location Added', 'New pickup address registered.')
+      }
       close()
     } catch (error) {
       setFailure(error?.message || 'Could not save this address.')
+      toast.error('Could not save address', error)
     }
   }
 

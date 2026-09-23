@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { HiXMark } from 'react-icons/hi2'
+import { toast } from '../../../../lib/toast'
 
 const TYPES = [
   { id: 'home', label: 'Home' },
@@ -175,7 +176,9 @@ export function AddressFormModal({ open, initialValues = null, onClose, onSubmit
       setFieldErrors({})
       onClose?.()
     } catch (err) {
-      setError(err?.message || 'Could not save this address. Please try again.')
+      const msg = err?.message || 'Could not save this address. Please try again.'
+      setError(msg)
+      toast.error('Could not save address', err)
     }
   }
 

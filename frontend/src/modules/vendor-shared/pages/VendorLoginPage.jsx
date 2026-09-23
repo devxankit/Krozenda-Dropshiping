@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { HiOutlineShieldCheck, HiOutlineTruck } from 'react-icons/hi2'
-import { Button, Input, PasswordInput } from '../../../components/ui'
+import {
+  HiOutlineEnvelope,
+  HiOutlineLockClosed,
+  HiOutlineBuildingOffice2,
+  HiOutlineUser,
+  HiEye,
+  HiEyeSlash,
+  HiOutlineKey,
+  HiOutlineArrowRight,
+} from 'react-icons/hi2'
 import { VendorAuthShell as VendorLoginShell } from '../components/shell/VendorAuthShell'
 import { useAuthStore } from '../../../lib/authStore'
 import { toast } from '../../admin/stores/toastStore'
@@ -12,12 +20,19 @@ import {
   useVendorResetPasswordController,
 } from '../controllers/useVendorController'
 
-// Seeded by backend/Router/seedVendors.js on boot (dev/staging only) so this
-// screen always has real, working credentials to demo both vendor types
-// against the actual login endpoint — not a fabricated session.
 const DEMO_CREDENTIALS = {
-  B2C: { email: 'b2c.demo@krozenda.com', password: 'Demo@1234', label: 'B2C · Individual seller' },
-  B2B: { email: 'b2b.demo@krozenda.com', password: 'Demo@1234', label: 'B2B · Registered business' },
+  B2C: {
+    email: 'b2c.demo@krozenda.com',
+    password: 'Demo@1234',
+    label: 'Individual Seller (B2C)',
+    badge: 'No GST Required',
+  },
+  B2B: {
+    email: 'b2b.demo@krozenda.com',
+    password: 'Demo@1234',
+    label: 'Registered Business (B2B)',
+    badge: 'GST & ITC Ready',
+  },
 }
 
 export function VendorLoginPage({ mode = 'seller' }) {
@@ -25,10 +40,6 @@ export function VendorLoginPage({ mode = 'seller' }) {
   return <SellerLoginPage />
 }
 
-// Real login against POST /vendor/auth/login. The vendor's actual type
-// (Vendor.vendorType, B2B or B2C) picks which demo account is prefilled —
-// this is the platform's real seller-type distinction, unlike the seller-vs-
-// partner split below which has no backend model behind it.
 function SellerLoginPage() {
   const navigate = useNavigate()
   const registerPushToken = useVendorPushRegistration()
@@ -36,7 +47,9 @@ function SellerLoginPage() {
   const [vendorType, setVendorType] = useState('B2C')
   const [email, setEmail] = useState(DEMO_CREDENTIALS.B2C.email)
   const [password, setPassword] = useState(DEMO_CREDENTIALS.B2C.password)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
+  const [errorCode, setErrorCode] = useState(null)
   const [view, setView] = useState('login') // 'login' | 'forgot'
 
   function handleTypeSwitch(nextType) {
@@ -44,11 +57,13 @@ function SellerLoginPage() {
     setEmail(DEMO_CREDENTIALS[nextType].email)
     setPassword(DEMO_CREDENTIALS[nextType].password)
     setError(null)
+    setErrorCode(null)
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    setErrorCode(null)
 
     try {
       const { token, vendor } = await login({ email, password })
@@ -72,14 +87,23 @@ function SellerLoginPage() {
       navigate('/seller/dashboard')
     } catch (err) {
       const message = err?.response?.data?.message || 'Invalid email or password'
+      const code = err?.response?.data?.code || null
       setError(message)
-      toast.error('Sign in failed', message)
+      setErrorCode(code)
+      if (code === 'VERIFICATION_PENDING') {
+        toast.warning('Account Under Review', message)
+      } else {
+        toast.error('Sign in failed', message)
+      }
     }
   }
 
   if (view === 'forgot') {
     return (
-      <VendorLoginShell title="Reset your password" subtitle="We'll send a reset code to your email">
+      <VendorLoginShell
+        title="Reset Password"
+        subtitle="Enter your email to receive a 6-digit recovery code"
+      >
         <ForgotPasswordFlow
           initialEmail={email}
           onDone={(resetEmail) => {
@@ -94,100 +118,149 @@ function SellerLoginPage() {
   }
 
   return (
-    <VendorLoginShell title="Krozenda Seller Portal" subtitle="For B2B businesses and B2C individual sellers">
-      <div className="mt-7 grid grid-cols-2 gap-1 rounded-xl bg-slate-950/80 p-1 border border-slate-800">
-        {['B2C', 'B2B'].map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => handleTypeSwitch(type)}
-            className={`py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${
-              vendorType === type
-                ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/20'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {type} Seller
-          </button>
-        ))}
+    <VendorLoginShell
+      title="Sign in to Seller Portal"
+      subtitle="Manage your products, orders, inventory and payouts"
+    >
+      {/* Clean Segmented Tab Switcher */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+          Seller Account Type
+        </label>
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+          {(['B2C', 'B2B']).map((type) => {
+            const isSelected = vendorType === type
+            const IconComp = type === 'B2B' ? HiOutlineBuildingOffice2 : HiOutlineUser
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleTypeSwitch(type)}
+                className={`py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 text-xs font-bold transition-all ${
+                  isSelected
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <IconComp className="w-4 h-4" />
+                <span>{type} Seller</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      <p className="mt-2.5 text-center text-2xs font-medium text-slate-500">{DEMO_CREDENTIALS[vendorType].label}</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <Input
-          label="Email Address"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+      {/* Main Login Form */}
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {/* Email Field */}
         <div>
-          <PasswordInput
-            id="vendor-login-password"
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setView('forgot')}
-            className="mt-1.5 text-2xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
-          >
-            Forgot password?
-          </button>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            Email Address <span className="text-red-500">*</span>
+          </label>
+          <div className="relative flex items-center">
+            <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seller@example.com"
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+            />
+          </div>
         </div>
 
+        {/* Password Field */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-slate-700">
+              Password <span className="text-red-500">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setView('forgot')}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+          <div className="relative flex items-center">
+            <HiOutlineLockClosed className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 text-slate-400 hover:text-slate-600 p-1"
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Error Alert */}
         {error && (
-          <p className="rounded-lg border border-danger-500/30 bg-danger-500/10 px-3 py-2.5 text-2xs font-medium text-danger-300">
-            {error}
-          </p>
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-start space-x-2.5 ${
+              errorCode === 'VERIFICATION_PENDING'
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
+                errorCode === 'VERIFICATION_PENDING' ? 'bg-amber-500' : 'bg-red-600'
+              }`}
+            />
+            <div className="flex-1">
+              {errorCode === 'VERIFICATION_PENDING' && (
+                <strong className="font-bold block text-xs mb-0.5">Account Under Review</strong>
+              )}
+              <span className="leading-relaxed block">{error}</span>
+            </div>
+          </div>
         )}
 
-        <Button
+        {/* Submit CTA */}
+        <button
           type="submit"
-          variant="primary"
-          size="md"
           disabled={isSubmitting}
-          className="mt-2 w-full justify-center bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white py-3 text-xs font-bold rounded-xl shadow-lg shadow-brand-600/25 transition-all duration-200 hover:shadow-brand-600/40 disabled:opacity-60"
+          className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 flex items-center justify-center space-x-1.5 text-xs"
         >
-          {isSubmitting ? 'Signing in…' : `Sign In as ${vendorType}`}
-        </Button>
+          {isSubmitting ? (
+            <span>Signing in…</span>
+          ) : (
+            <>
+              <span>Sign In as {vendorType} Seller</span>
+              <HiOutlineArrowRight className="w-3.5 h-3.5" />
+            </>
+          )}
+        </button>
       </form>
 
-      <p className="mt-5 text-center text-2xs text-slate-400">
-        New to Krozenda?{' '}
-        <Link to="/seller/register" className="font-semibold text-brand-400 transition-colors hover:text-brand-300">
-          Create a seller account
+      {/* Switch to Register */}
+      <div className="pt-2 text-center text-xs text-slate-600">
+        New seller on Krozenda?{' '}
+        <Link to="/seller/register" className="font-bold text-blue-600 hover:underline">
+          Create an account
         </Link>
-      </p>
-
-      <div className="mt-6 flex items-center justify-center gap-4 border-t border-slate-800/80 pt-4 text-2xs font-medium text-slate-500">
-        <span className="inline-flex items-center gap-1">
-          <HiOutlineShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Escrow protected
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <HiOutlineTruck className="h-3.5 w-3.5 text-brand-400" /> Pan-India logistics
-        </span>
       </div>
-      <p className="mt-3 text-center text-2xs text-slate-500">
-        Demo credentials are pre-filled — switch the tab above to try the other seller type.
-      </p>
     </VendorLoginShell>
   )
 }
 
-// Two-step forgot-password flow against the real endpoints: request a code
-// (POST /vendor/auth/forgot-password), then submit it with a new password
-// (POST /vendor/auth/reset-password). No email gateway is wired up yet, so
-// dev/staging echoes the code back in the response — same convention as the
-// buyer app's mobile OTP (see requestOtp in userAuthController.js) — and
-// this screen surfaces it directly so the flow is testable end to end.
 function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
   const { requestReset, isSubmitting: isRequesting } = useVendorForgotPasswordController()
   const { resetPassword, isSubmitting: isResetting } = useVendorResetPasswordController()
 
-  const [step, setStep] = useState('request') // 'request' | 'reset'
+  const [step, setStep] = useState('request')
   const [email, setEmail] = useState(initialEmail || '')
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -220,112 +293,144 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
     }
   }
 
-  if (step === 'request') {
-    return (
-      <form onSubmit={handleRequest} className="mt-6 flex flex-col gap-4">
-        <Input
-          label="Email Address"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoFocus
-        />
-
-        {error && (
-          <p className="rounded-lg border border-danger-500/30 bg-danger-500/10 px-3 py-2.5 text-2xs font-medium text-danger-300">
-            {error}
-          </p>
-        )}
-
-        <Button
-          type="submit"
-          variant="primary"
-          size="md"
-          disabled={isRequesting}
-          className="mt-1 w-full justify-center bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white py-3 text-xs font-bold rounded-xl shadow-lg shadow-brand-600/25 transition-all duration-200 disabled:opacity-60"
-        >
-          {isRequesting ? 'Sending…' : 'Send reset code'}
-        </Button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-center text-2xs font-semibold text-slate-400 hover:text-white transition-colors"
-        >
-          Back to sign in
-        </button>
-      </form>
-    )
-  }
-
   return (
-    <form onSubmit={handleReset} className="mt-6 flex flex-col gap-4">
-      {devHint && (
-        <p className="rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-2.5 text-2xs text-brand-300">
-          No email gateway is configured yet — dev reset code:{' '}
-          <span className="font-bold tabular-nums">{devHint}</span>
-        </p>
+    <div className="space-y-4">
+      {step === 'request' ? (
+        <form onSubmit={handleRequest} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Registered Email Address <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seller@example.com"
+                required
+                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+              {error}
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2 pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-1/3 py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isRequesting}
+              className="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
+            >
+              {isRequesting ? 'Sending Code…' : 'Send Reset Code'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={handleReset} className="space-y-4">
+          {devHint && (
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-center justify-between">
+              <span>Demo OTP: <strong className="font-mono text-blue-900 font-bold">{devHint}</strong></span>
+              <button
+                type="button"
+                onClick={() => setOtp(devHint)}
+                className="text-xs font-bold text-blue-700 underline"
+              >
+                Auto-fill
+              </button>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              6-Digit Code (OTP) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <HiOutlineKey className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="123456"
+                required
+                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono font-bold outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              New Password <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Confirm New Password <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+              {error}
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep('request')}
+              className="w-1/3 py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors"
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              disabled={isResetting}
+              className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
+            >
+              {isResetting ? 'Saving…' : 'Update Password'}
+            </button>
+          </div>
+        </form>
       )}
-
-      <Input
-        label="Reset code"
-        value={otp}
-        onChange={(e) => setOtp(e.target.value)}
-        placeholder="6-digit code"
-        maxLength={6}
-        required
-        autoFocus
-      />
-      <PasswordInput
-        id="vendor-reset-new-password"
-        label="New password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        required
-      />
-      <PasswordInput
-        id="vendor-reset-confirm-password"
-        label="Confirm new password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        required
-      />
-
-      {error && (
-        <p className="rounded-lg border border-danger-500/30 bg-danger-500/10 px-3 py-2.5 text-2xs font-medium text-danger-300">
-          {error}
-        </p>
-      )}
-
-      <Button
-        type="submit"
-        variant="primary"
-        size="md"
-        disabled={isResetting}
-        className="mt-1 w-full justify-center bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white py-3 text-xs font-bold rounded-xl shadow-lg shadow-brand-600/25 transition-all duration-200 disabled:opacity-60"
-      >
-        {isResetting ? 'Resetting…' : 'Reset password'}
-      </Button>
-      <button
-        type="button"
-        onClick={onCancel}
-        className="text-center text-2xs font-semibold text-slate-400 hover:text-white transition-colors"
-      >
-        Back to sign in
-      </button>
-    </form>
+    </div>
   )
 }
 
-// The dropshipping-partner login (/partner/login) has no backend model of
-// its own — Vendor only knows B2B/B2C — so it stays a client-side demo
-// session. Untouched: this file previously covered both modes with the same
-// fake flow; splitting it out kept that behaviour identical.
 function PartnerDemoLoginPage() {
   const navigate = useNavigate()
   const registerPushToken = useVendorPushRegistration()
   const [email, setEmail] = useState('partner@krozenda.com')
   const [password, setPassword] = useState('password123')
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function performLogin() {
@@ -351,33 +456,64 @@ function PartnerDemoLoginPage() {
   }
 
   return (
-    <VendorLoginShell title="Krozenda Partner Portal" subtitle="For dropshipping supply partners">
+    <VendorLoginShell
+      title="Partner Portal Sign In"
+      subtitle="For wholesale suppliers and dropshipping partners"
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault()
           performLogin()
         }}
-        className="mt-6 flex flex-col gap-4"
+        className="space-y-4 pt-1"
       >
-        <Input label="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <PasswordInput
-          id="partner-login-password"
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <Button
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            Partner Email Address <span className="text-red-500">*</span>
+          </label>
+          <div className="relative flex items-center">
+            <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            Password <span className="text-red-500">*</span>
+          </label>
+          <div className="relative flex items-center">
+            <HiOutlineLockClosed className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 text-slate-400 hover:text-slate-600 p-1"
+            >
+              {showPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        <button
           type="submit"
-          variant="primary"
-          size="md"
           disabled={isSubmitting}
-          className="mt-2 w-full justify-center bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white py-3 text-xs font-bold rounded-xl shadow-lg shadow-brand-600/25 transition-all duration-200 disabled:opacity-60"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 text-xs"
         >
-          {isSubmitting ? 'Authenticating...' : 'Sign In to Partner Panel'}
-        </Button>
+          {isSubmitting ? 'Signing In…' : 'Sign In to Partner Portal'}
+        </button>
       </form>
     </VendorLoginShell>
   )
 }
-

@@ -43,7 +43,7 @@ export function useAdminMutation({
       onDone?.(data, variables)
     },
     onError: (error) => {
-      toast.error('That did not save', error?.message || 'The change was not applied.')
+      toast.error('That did not save', error)
       onFail?.(error)
     },
   })

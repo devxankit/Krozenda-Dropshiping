@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { Toast } from '../../../../components/ui'
+import { toast } from '../../../../lib/toast'
 import { USER_ROUTES } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
 import { useShippingQuoteController } from '../../controllers/useShippingQuoteController'
@@ -113,6 +114,7 @@ export function PaymentScreen() {
       // keeps the local view in step without a second round trip.
       useCartStore.setState({ items: [], summary: null })
       resetCheckout()
+      toast.success('Order Placed Successfully!', 'Your order has been confirmed.')
       navigate(USER_ROUTES.CHECKOUT_SUCCESS, { state: { order }, replace: true })
     } catch (err) {
       // A stock/availability failure at this point means the cart moved under
@@ -120,6 +122,7 @@ export function PaymentScreen() {
       if (err?.code === 'INSUFFICIENT_STOCK' || err?.code === 'CART_ITEM_UNAVAILABLE') {
         hydrateCart()
       }
+      toast.error('Payment Failed', err)
       // Everything else is surfaced by the Toast below.
     }
   }

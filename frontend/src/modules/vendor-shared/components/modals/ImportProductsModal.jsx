@@ -82,7 +82,9 @@ export function ImportProductsModal({ isOpen, onClose, onImported }) {
       // A whole-file rejection (missing column, too many rows, not a CSV) comes
       // back as a message rather than a per-row report — there are no rows to
       // report on.
-      setError(err?.response?.data?.message || 'That file could not be imported')
+      const errMsg = err?.response?.data?.message || 'That file could not be imported'
+      setError(errMsg)
+      toast.error('Import failed', errMsg)
     } finally {
       setIsBusy(false)
     }

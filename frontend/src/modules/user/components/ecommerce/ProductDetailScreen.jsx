@@ -23,6 +23,7 @@ import { CartQuantityStepper } from './CartQuantityStepper'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { useCartStore } from '../../../../lib/cartStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
+import { toast } from '../../../../lib/toast'
 import {
   buildBreadcrumbStructuredData,
   buildProductStructuredData,
@@ -190,34 +191,52 @@ export function ProductDetailScreen() {
   const handleAddToCart = async () => {
     if (needsVariantChoice) {
       setVariantError(true)
+      toast.warning('Select Options', 'Please choose your preferred variant before adding to cart.')
       document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (!inStock || addState === 'adding' || buyNowState === 'buying') return
+    if (!inStock) {
+      toast.error('Out of Stock', 'This item is currently unavailable.')
+      return
+    }
+    if (addState === 'adding' || buyNowState === 'buying') return
     setAddState('adding')
     const result = await addToCart(cartLineItem(), addQuantity)
-    setAddState(result?.ok ? 'added' : 'idle')
-    if (result?.ok) setTimeout(() => setAddState('idle'), 1800)
+    if (result?.ok) {
+      setAddState('added')
+      toast.success('Added to Bag', `${product.name} has been added to your shopping bag.`)
+      setTimeout(() => setAddState('idle'), 1800)
+    } else {
+      setAddState('idle')
+      toast.error('Could not add to cart', result?.error)
+    }
   }
 
   const handleBuyNow = async () => {
     if (needsVariantChoice) {
       setVariantError(true)
+      toast.warning('Select Options', 'Please choose your preferred variant before proceeding.')
       document.getElementById('pdp-variant-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (!inStock || addState === 'adding' || buyNowState === 'buying') return
+    if (!inStock) {
+      toast.error('Out of Stock', 'This item is currently unavailable.')
+      return
+    }
+    if (addState === 'adding' || buyNowState === 'buying') return
     setBuyNowState('buying')
     const result = await addToCart(cartLineItem(), addQuantity)
     if (!result?.ok) {
       setBuyNowState('idle')
+      toast.error('Could not proceed', result?.error)
       return
     }
     // Direct checkout: navigate directly to address selection screen
     navigate(USER_ROUTES.CHECKOUT_ADDRESS)
   }
 
-  const handleToggleWishlist = () =>
+  const handleToggleWishlist = () => {
+    const wasWishlisted = isWishlisted
     toggleWishlistItem({
       id: product.id,
       name: product.name,
@@ -227,6 +246,12 @@ export function ProductDetailScreen() {
       price: displayPrice,
       originalPrice: product.price,
     })
+    if (wasWishlisted) {
+      toast.info('Removed from Wishlist', `${product.name} removed from your saved items.`)
+    } else {
+      toast.success('Saved to Wishlist', `${product.name} added to your wishlist.`)
+    }
+  }
 
   const handleShare = async () => {
     const url = `${window.location.origin}${userPath.product(product.id)}`
@@ -240,6 +265,7 @@ export function ProductDetailScreen() {
       }
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url)
+        toast.success('Link Copied', 'Product link copied to clipboard.')
       }
     } catch {
       // User dismissed the share sheet, or the API is unavailable. Not an error.

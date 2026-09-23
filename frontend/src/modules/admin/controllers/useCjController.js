@@ -2,6 +2,7 @@
 // and are the ONLY thing pages/ are allowed to call into.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from '../../../lib/toast'
 import {
   fetchCjSettings,
   connectCj,
@@ -43,12 +44,54 @@ export function useCjSettingsController() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: SETTINGS_KEY })
 
-  const connectMutation = useMutation({ mutationFn: connectCj, onSuccess: invalidate })
-  const disconnectMutation = useMutation({ mutationFn: disconnectCj, onSuccess: invalidate })
-  const testMutation = useMutation({ mutationFn: testCjConnection, onSuccess: invalidate })
-  const refreshMutation = useMutation({ mutationFn: refreshCjToken, onSuccess: invalidate })
-  const markupMutation = useMutation({ mutationFn: updateCjMarkupSettings, onSuccess: invalidate })
-  const visibilityMutation = useMutation({ mutationFn: updateCjDropshippingVisibility, onSuccess: invalidate })
+  const connectMutation = useMutation({
+    mutationFn: connectCj,
+    onSuccess: () => {
+      invalidate()
+      toast.success('CJ Connected', 'CJ Dropshipping account connected successfully.')
+    },
+    onError: (err) => toast.error('Connection failed', err),
+  })
+  const disconnectMutation = useMutation({
+    mutationFn: disconnectCj,
+    onSuccess: () => {
+      invalidate()
+      toast.info('CJ Disconnected', 'CJ Dropshipping account was disconnected.')
+    },
+    onError: (err) => toast.error('Disconnection failed', err),
+  })
+  const testMutation = useMutation({
+    mutationFn: testCjConnection,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Connection Active', 'CJ Dropshipping API responded successfully.')
+    },
+    onError: (err) => toast.error('Connection Test Failed', err),
+  })
+  const refreshMutation = useMutation({
+    mutationFn: refreshCjToken,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Token Refreshed', 'CJ Dropshipping access token refreshed.')
+    },
+    onError: (err) => toast.error('Token refresh failed', err),
+  })
+  const markupMutation = useMutation({
+    mutationFn: updateCjMarkupSettings,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Pricing Rules Saved', 'CJ markup settings updated successfully.')
+    },
+    onError: (err) => toast.error('Could not save pricing rules', err),
+  })
+  const visibilityMutation = useMutation({
+    mutationFn: updateCjDropshippingVisibility,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Visibility Updated', 'Dropshipping catalog visibility updated.')
+    },
+    onError: (err) => toast.error('Could not update visibility', err),
+  })
 
   return {
     data: query.data,

@@ -4,6 +4,7 @@ import { HiArrowLeft, HiPlus, HiPencil, HiTrash, HiCheckCircle } from 'react-ico
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { AddressFormModal } from './AddressFormModal'
+import { toast } from '../../../../lib/toast'
 
 export function MyAddressesScreen({ onBack }) {
   // Falls back to real navigation when no callback is supplied. The
@@ -30,11 +31,33 @@ export function MyAddressesScreen({ onBack }) {
   const openEditForm = (address) => setFormState({ open: true, editing: address })
   const closeForm = () => setFormState({ open: false, editing: null })
 
-  const handleSubmit = (values) => {
+  const handleSubmit = async (values) => {
     if (formState.editing) {
-      return updateAddress({ id: formState.editing.id, ...values })
+      const res = await updateAddress({ id: formState.editing.id, ...values })
+      toast.success('Address Updated', 'Delivery address details saved.')
+      return res
     }
-    return createAddress(values)
+    const res = await createAddress(values)
+    toast.success('Address Added', 'New delivery address saved.')
+    return res
+  }
+
+  const handleSetDefault = async (id) => {
+    try {
+      await setDefaultAddress(id)
+      toast.success('Default Address Set', 'Your primary delivery address was updated.')
+    } catch (err) {
+      toast.error('Could not set default address', err)
+    }
+  }
+
+  const handleRemove = async (id) => {
+    try {
+      await removeAddress(id)
+      toast.info('Address Removed', 'The delivery address was deleted.')
+    } catch (err) {
+      toast.error('Could not delete address', err)
+    }
   }
 
   return (
@@ -106,7 +129,7 @@ export function MyAddressesScreen({ onBack }) {
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
                   {!item.isDefault ? (
-                    <button onClick={() => setDefaultAddress(item.id)} className="text-blue-600 hover:underline">
+                    <button onClick={() => handleSetDefault(item.id)} className="text-blue-600 hover:underline">
                       Set as Default
                     </button>
                   ) : (
@@ -117,7 +140,7 @@ export function MyAddressesScreen({ onBack }) {
                     <button onClick={() => openEditForm(item)} className="hover:text-blue-600">
                       <HiPencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => removeAddress(item.id)} className="hover:text-red-600">
+                    <button onClick={() => handleRemove(item.id)} className="hover:text-red-600">
                       <HiTrash className="w-4 h-4" />
                     </button>
                   </div>
