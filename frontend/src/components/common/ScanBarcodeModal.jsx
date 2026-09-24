@@ -44,10 +44,13 @@ export function ScanBarcodeModal({ isOpen, onClose, lookupPath, onFound }) {
     e.preventDefault()
     const trimmed = code.trim()
     if (!trimmed) return
+    // A 2D scanner reading the label's QR code types the whole details line
+    // ("2000000000015 | Name | SKU: …"); the barcode is its first field.
+    const barcode = trimmed.match(/\d{13}/)?.[0] || trimmed
 
     setStatus('loading')
     try {
-      const res = await api.get(lookupPath(trimmed))
+      const res = await api.get(lookupPath(encodeURIComponent(barcode)))
       setStatus('idle')
       setCode('')
       onFound(res.data?.data)

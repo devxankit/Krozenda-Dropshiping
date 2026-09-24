@@ -3,6 +3,7 @@
 import { api } from '../../../lib/axios'
 import {
   orderSchema,
+  placedOrderSchema,
   orderListSchema,
   orderTrackingSchema,
   razorpayOrderSchema,
@@ -25,7 +26,9 @@ export async function createOrder({ idempotencyKey, ...payload }) {
   const response = await api.post('/user/orders', payload, {
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
   })
-  return orderSchema.parse(response.data.data)
+  // `orders` lists every order this checkout produced (two when a
+  // dropshipping item and seller items were bought together).
+  return placedOrderSchema.parse(response.data.data)
 }
 
 export async function cancelOrder(id) {

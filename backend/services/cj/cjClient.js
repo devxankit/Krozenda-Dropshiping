@@ -1,5 +1,6 @@
 const https = require('https');
 const { URL } = require('url');
+const pointsGuard = require('./cjPointsGuard');
 
 // The ONLY place an HTTP request reaches CJ Dropshipping's API. Mirrors
 // services/shipping/shiprocketClient.js on purpose — same failure model
@@ -123,17 +124,26 @@ function once({ method, path, accessToken, body, query, timeoutMs }) {
           // as an error too, not just a non-2xx HTTP status.
           const businessFailed = status >= 200 && status < 300 && parsed && parsed.result === false;
 
+          pointsGuard.record(parsed?.pointsInfo);
+
           if (status >= 200 && status < 300 && !businessFailed) {
             resolve({ status, body: parsed });
             return;
           }
 
           const cjCode = parsed?.code;
+          const message = cjMessage(parsed, status);
+          const code = mapErrorCode(status, cjCode, message);
+          if (code === 'CJ_POINTS_EXHAUSTED') pointsGuard.markExhausted();
           reject(
-            new CjError(cjMessage(parsed, status), {
+            new CjError(message, {
               status,
-              code: mapErrorCode(status, cjCode),
-              retryable: businessFailed ? isRetryableBusinessCode(cjCode) : RETRYABLE_STATUS.has(status),
+              code,
+              retryable:
+                code === 'CJ_POINTS_EXHAUSTED'
+                  ? false
+                  : code === 'CJ_RATE_LIMITED' ||
+                    (businessFailed ? isRetryableBusinessCode(cjCode) : RETRYABLE_STATUS.has(status)),
               body: parsed,
             })
           );
@@ -169,9 +179,20 @@ function once({ method, path, accessToken, body, query, timeoutMs }) {
 // CJ's own numeric/string business codes for auth failures vary by endpoint;
 // treat anything that looks like an expired/invalid token distinctly so
 // cjAuthService knows to refresh rather than give up.
-function mapErrorCode(status, cjCode) {
+//
+// The two quota failures are recognised by their text, because CJ sends both
+// as HTTP 200 + result:false with no stable code of their own:
+//   "Insufficient API points. Used today: …"  — daily points budget spent
+//     (see cjPointsGuard). Not retryable: only time refills it.
+//   "Too Many Requests, QPS limit is 1 time/1second" — per-second limit.
+//     Retryable after a short wait.
+const POINTS_EXHAUSTED = /insufficient api points/i;
+const QPS_LIMITED = /too many requests|qps limit/i;
+
+function mapErrorCode(status, cjCode, message = '') {
+  if (POINTS_EXHAUSTED.test(message)) return 'CJ_POINTS_EXHAUSTED';
+  if (status === 429 || QPS_LIMITED.test(message)) return 'CJ_RATE_LIMITED';
   if (status === 401 || status === 403) return 'CJ_UNAUTHORIZED';
-  if (status === 429) return 'CJ_RATE_LIMITED';
   if (cjCode === 1600200 || cjCode === '1600200') return 'CJ_TOKEN_EXPIRED';
   return 'CJ_HTTP_ERROR';
 }
@@ -207,6 +228,16 @@ async function call({
   const attempts = idempotent ? maxAttempts : 1;
   let lastError;
 
+  // Out of points: fail fast instead of spending the per-minute refill on
+  // calls CJ is going to refuse anyway.
+  if (pointsGuard.isPaused()) {
+    throw new CjError('CJ API points exhausted', {
+      code: 'CJ_POINTS_EXHAUSTED',
+      status: 429,
+      retryable: false,
+    });
+  }
+
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const result = await once({ method, path, accessToken, body, query, timeoutMs });
@@ -229,7 +260,8 @@ async function call({
       const canRetry = idempotent && err.retryable && attempt < attempts;
       if (!canRetry) break;
 
-      const backoff = Math.min(8000, 2 ** (attempt - 1) * 1000);
+      // CJ allows one call per second; a QPS rejection waits at least that.
+      const backoff = Math.max(err.code === 'CJ_RATE_LIMITED' ? 1500 : 0, Math.min(8000, 2 ** (attempt - 1) * 1000));
       await sleep(backoff + Math.floor(Math.random() * 250));
     }
   }
@@ -239,6 +271,7 @@ async function call({
 
 module.exports = {
   call,
+  mapErrorCode,
   CjError,
   scrub,
   baseUrl,

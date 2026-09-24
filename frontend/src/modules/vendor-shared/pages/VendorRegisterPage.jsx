@@ -15,6 +15,7 @@ import { VendorAuthShell } from '../components/shell/VendorAuthShell'
 import { toast } from '../../admin/stores/toastStore'
 import { useVendorRegisterController } from '../controllers/useVendorController'
 import { uploadRegistrationDocument } from '../services/authService'
+import { PolicyAcceptanceModal } from '../components/modals/PolicyAcceptanceModal'
 
 const BUSINESS_TYPES = [
   { value: 'proprietorship', label: 'Proprietorship' },
@@ -54,7 +55,7 @@ const BLANK = {
   ifsc: '',
 }
 
-function validateStep(step, form, docs) {
+function validateStep(step, form, docs, policyAcceptances) {
   const errors = {}
   const isB2B = form.vendorType === 'B2B'
 
@@ -98,6 +99,9 @@ function validateStep(step, form, docs) {
     if (form.ifsc.trim() && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(form.ifsc.trim())) {
       errors.ifsc = 'Enter a valid 11-digit IFSC (e.g. HDFC0001234)'
     }
+    if (!policyAcceptances) {
+      errors.policies = 'Please read and accept the seller policies to continue'
+    }
   }
 
   return errors
@@ -119,6 +123,10 @@ export function VendorRegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // Null until the seller has scrolled through and accepted every mandatory
+  // CMS policy in the modal; then the { slug, title, version } list sent up.
+  const [policyAcceptances, setPolicyAcceptances] = useState(null)
+  const [policyModalOpen, setPolicyModalOpen] = useState(false)
 
   // Direct Document Upload states
   const [docs, setDocs] = useState({
@@ -187,7 +195,7 @@ export function VendorRegisterPage() {
     e.preventDefault()
     setServerError(null)
 
-    const found = validateStep(3, form, docs)
+    const found = validateStep(3, form, docs, policyAcceptances)
     setErrors(found)
     if (Object.keys(found).length > 0) return
 
@@ -246,6 +254,7 @@ export function VendorRegisterPage() {
         ifsc: form.ifsc.trim().toUpperCase(),
       },
       documents,
+      policyAcceptances: policyAcceptances.map(({ slug, version }) => ({ slug, version })),
     }
 
     try {
@@ -255,6 +264,12 @@ export function VendorRegisterPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       const message = err?.response?.data?.message || 'Could not create your account'
+      // Admin republished a policy (or the list changed) while this form was
+      // open: the old acceptance no longer counts, so make them read it again.
+      const code = err?.response?.data?.code
+      if (code === 'POLICY_VERSION_CHANGED' || code === 'POLICIES_NOT_ACCEPTED') {
+        setPolicyAcceptances(null)
+      }
       setServerError(message)
       toast.error('Registration failed', message)
     }
@@ -874,6 +889,39 @@ export function VendorRegisterPage() {
           </div>
         )}
 
+        {step === 3 && (
+          <div>
+            <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/70 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={Boolean(policyAcceptances)}
+                onChange={(e) => {
+                  // Ticking never checks the box directly: it opens the modal,
+                  // and only accepting every document there ticks it.
+                  e.preventDefault()
+                  if (policyAcceptances) setPolicyAcceptances(null)
+                  else setPolicyModalOpen(true)
+                }}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 shrink-0"
+              />
+              <span className="text-xs text-slate-600 leading-relaxed">
+                I have read and agree to the Krozenda{' '}
+                <span className="font-semibold text-slate-900">
+                  Vendor Agreement, Terms &amp; Conditions, Privacy Policy, Shipping Policy and Return Policy
+                </span>
+                .
+                {policyAcceptances && (
+                  <span className="mt-1 flex items-center gap-1 font-semibold text-emerald-600">
+                    <HiOutlineDocumentCheck className="w-3.5 h-3.5" />
+                    Accepted: {policyAcceptances.map((p) => `${p.title} (${p.version})`).join(', ') || 'no policies required'}
+                  </span>
+                )}
+              </span>
+            </label>
+            {errors.policies && <p className="mt-1 text-[10px] text-red-500">{errors.policies}</p>}
+          </div>
+        )}
+
         {serverError && (
           <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
             {serverError}
@@ -918,6 +966,17 @@ export function VendorRegisterPage() {
           )}
         </div>
       </form>
+
+      {policyModalOpen && (
+        <PolicyAcceptanceModal
+          onClose={() => setPolicyModalOpen(false)}
+          onAccepted={(list) => {
+            setPolicyAcceptances(list)
+            setPolicyModalOpen(false)
+            setErrors((prev) => ({ ...prev, policies: undefined }))
+          }}
+        />
+      )}
 
       <div className="pt-3 text-center text-xs text-slate-500">
         Already selling on Krozenda?{' '}

@@ -144,6 +144,8 @@ export function useCatalogParams() {
         params.inStock,
         Boolean(params.minDiscount),
         params.source !== 'all',
+        params.flashSale,
+        params.trending,
       ].filter(Boolean).length,
     [params],
   )

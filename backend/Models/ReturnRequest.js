@@ -28,6 +28,9 @@ const returnRequestSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    // Which variant line of the order this is about. Two colours of one
+    // product are two lines, and each can be returned on its own.
+    variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
     productName: { type: String, required: true },
     productImage: { type: String, default: null },
 
@@ -49,13 +52,16 @@ const returnRequestSchema = new mongoose.Schema(
 );
 
 returnRequestSchema.index({ user: 1, createdAt: -1 });
-// One active (non-terminal) request per order+product at a time.
+// One active (non-terminal) request per order line at a time. Replaces the
+// old order+product index (dropped by migrate-split-order-indexes.js), which
+// blocked returning a second variant of the same product.
 returnRequestSchema.index(
-  { order: 1, product: 1 },
-  { unique: true, partialFilterExpression: { status: 'PENDING' } }
+  { order: 1, product: 1, variantId: 1 },
+  { unique: true, name: 'order_product_variant_pending_unique', partialFilterExpression: { status: 'PENDING' } }
 );
 
 const ReturnRequest = mongoose.model('ReturnRequest', returnRequestSchema);
+ReturnRequest.LEGACY_INDEX_NAMES = ['order_1_product_1'];
 ReturnRequest.REQUEST_TYPES = REQUEST_TYPES;
 ReturnRequest.STATUSES = STATUSES;
 ReturnRequest.SELLER_RECOMMENDATIONS = SELLER_RECOMMENDATIONS;

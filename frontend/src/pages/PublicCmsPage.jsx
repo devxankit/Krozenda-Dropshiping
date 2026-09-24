@@ -18,10 +18,13 @@ import {
 } from 'react-icons/hi2'
 import { api } from '../lib/axios'
 import { Footer } from '../components/layout/Footer'
+import { PolicyContent } from '../components/common/PolicyContent'
 
 const NAV_DOCUMENTS = [
   { slug: 'terms', title: 'Terms & Conditions', icon: HiScale, path: '/terms' },
   { slug: 'privacy-policy', title: 'Privacy Policy', icon: HiShieldCheck, path: '/privacy-policy' },
+  { slug: 'shipping-policy', title: 'Shipping Policy', icon: HiTruck, path: '/shipping-policy' },
+  { slug: 'return-policy', title: 'Return Policy', icon: HiArrowUturnLeft, path: '/return-policy' },
 ]
 
 // Fallback legal text, shown while the backend loads or when no CMS page has
@@ -515,9 +518,7 @@ export function PublicCmsPage({ defaultSlug }) {
                   </div>
 
                   {/* Document Body (Structured Typography) */}
-                  <div className="prose prose-slate max-w-none text-sm text-slate-700 leading-relaxed space-y-4 whitespace-pre-line font-sans">
-                    {pageData.content}
-                  </div>
+                  <PolicyContent content={pageData.content} className="max-w-none font-sans" />
 
                   {/* Document Footer Acknowledgement */}
                   <div className="mt-12 pt-6 border-t border-slate-200 bg-slate-50/70 -mx-6 sm:-mx-10 lg:-mx-12 px-6 sm:px-10 lg:px-12 py-6 rounded-b-3xl flex flex-col sm:flex-row items-center justify-between gap-4">

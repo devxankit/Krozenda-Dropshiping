@@ -113,25 +113,65 @@ describe('pricing resolver', () => {
 // Seller onboarding
 // ---------------------------------------------------------------------------
 describe('seller registration and verification', () => {
-  it('registers a B2C seller as PENDING and hands back a usable token', async () => {
+  // Signup now takes the seller's documents with it and waits for admin
+  // approval (vendorAuthController.register): the seller lands in
+  // UNDER_REVIEW, gets no token, and cannot log in until approved.
+  // Whatever the CMS currently marks mandatory, at its current version —
+  // exactly what the sign-up modal makes the seller scroll through.
+  async function acceptAllPolicies() {
+    const res = await request(app).get('/public/cms-acceptance');
+    return res.body.data.map((p) => ({ slug: p.slug, version: p.version }));
+  }
+
+  it('registers a B2C seller as UNDER_REVIEW and keeps them out until approved', async () => {
     const suffix = uniqueSuffix();
+    const email = `signup${suffix}@test.local`;
+    const policyAcceptances = await acceptAllPolicies();
+    expect(policyAcceptances.map((p) => p.slug)).toEqual(
+      expect.arrayContaining(['vendor-agreement', 'terms', 'privacy-policy', 'return-policy', 'shipping-policy'])
+    );
     const res = await request(app).post('/vendor/auth/register').send({
       vendorType: 'B2C',
       name: 'Self Signup',
-      email: `signup${suffix}@test.local`,
+      email,
       mobile: '9876543210',
       password: 'secret123',
       confirmPassword: 'secret123',
+      policyAcceptances,
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.vendor.verificationStatus).toBe('PENDING');
-    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.vendor.verificationStatus).toBe('UNDER_REVIEW');
+    expect(res.body.data.vendor.policyAcceptances).toHaveLength(policyAcceptances.length);
+    expect(res.body.data.token).toBeUndefined();
 
-    // The token has to work immediately — that is what lets a new seller reach
-    // the status screen and upload documents instead of being stranded.
-    const me = await request(app).get('/vendor/auth/me').set(auth(res.body.data.token));
-    expect(me.status).toBe(200);
+    const login = await request(app).post('/vendor/auth/login').send({ email, password: 'secret123' });
+    expect(login.status).toBe(403);
+    expect(login.body.code).toBe('VERIFICATION_PENDING');
+  });
+
+  it('refuses a seller who has not accepted the mandatory policies', async () => {
+    const base = {
+      vendorType: 'B2C',
+      name: 'No Consent',
+      mobile: '9876543212',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    };
+
+    const none = await request(app)
+      .post('/vendor/auth/register')
+      .send({ ...base, email: `noconsent${uniqueSuffix()}@test.local` });
+    expect(none.status).toBe(400);
+    expect(none.body.code).toBe('POLICIES_NOT_ACCEPTED');
+
+    // Accepting an older version than the one published is not consent to it.
+    const stale = (await acceptAllPolicies()).map((p) => ({ ...p, version: 'v0.1' }));
+    const old = await request(app)
+      .post('/vendor/auth/register')
+      .send({ ...base, email: `stale${uniqueSuffix()}@test.local`, policyAcceptances: stale });
+    expect(old.status).toBe(409);
+    expect(old.body.code).toBe('POLICY_VERSION_CHANGED');
   });
 
   it('refuses a B2B registration with no business details', async () => {
@@ -143,6 +183,7 @@ describe('seller registration and verification', () => {
       mobile: '9876543211',
       password: 'secret123',
       confirmPassword: 'secret123',
+      policyAcceptances: await acceptAllPolicies(),
     });
 
     expect(res.status).toBe(400);

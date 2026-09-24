@@ -10,7 +10,7 @@ import {
   Skeleton,
   Icon,
 } from '../../../../components/ui'
-import { ADMIN_ROUTES } from '../../../../config/routes'
+import { ADMIN_ROUTES, adminPath } from '../../../../config/routes'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, NoData } from '../../components/feedback'
 import { SectionCard } from '../../components/display'
@@ -367,6 +367,7 @@ function CjProductCard({ row, isSelected, onToggleSelect }) {
         />
       </label>
 
+      <Link to={adminPath.cjProductDetail(product._id || productId)} className="block">
       <div className="aspect-square w-full overflow-hidden bg-surface-muted">
         {image ? (
           <img src={image} alt={product.name || ''} className="h-full w-full object-cover" loading="lazy" />
@@ -406,6 +407,7 @@ function CjProductCard({ row, isSelected, onToggleSelect }) {
           </span>
         </div>
       </div>
+      </Link>
     </div>
   )
 }

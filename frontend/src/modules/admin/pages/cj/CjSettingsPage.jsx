@@ -191,6 +191,20 @@ export function CjSettingsPage() {
         </InlineAlert>
       )}
 
+      {/* CJ meters API calls in daily points. Running out is a quota, not a
+          broken connection — say so, so nobody reconnects for nothing. */}
+      {settings?.apiPoints?.remaining != null &&
+        (settings.apiPoints.paused || settings.apiPoints.remaining < 5000) && (
+          <InlineAlert
+            tone={settings.apiPoints.paused ? 'danger' : 'warning'}
+            title={settings.apiPoints.paused ? 'CJ API points used up' : 'CJ API points running low'}
+          >
+            {settings.apiPoints.remaining.toLocaleString('en-IN')} of{' '}
+            {(settings.apiPoints.total || 50000).toLocaleString('en-IN')} daily points left. Points refill every
+            minute and reset fully at 5:30 AM IST. Catalogue and sync resume on their own — no need to reconnect.
+          </InlineAlert>
+        )}
+
       {/* ── STOREFRONT VISIBILITY ── */}
       <SectionCard
         title="Storefront Visibility"

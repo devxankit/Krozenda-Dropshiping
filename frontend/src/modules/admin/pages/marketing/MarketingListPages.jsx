@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '../../../../components/ui'
 import { CampaignFormModal } from '../../components/marketing/CampaignFormModal'
 import { CouponFormDrawer } from '../../components/marketing/CouponFormDrawer'
+import { CouponWhatsappDrawer } from '../../components/marketing/CouponWhatsappDrawer'
 import { ExportMenu, ListScreen } from '../../components/data'
 import { InlineAlert, PermissionGate } from '../../components/feedback'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
@@ -22,6 +23,7 @@ export function CouponsPage() {
 
   const [editingCoupon, setEditingCoupon] = useState(null)
   const [removingCoupon, setRemovingCoupon] = useState(null)
+  const [whatsappCoupon, setWhatsappCoupon] = useState(null)
   const writer = useCouponWriteController({ onSaved: () => setEditingCoupon(null) })
 
   const couponColumns = [
@@ -29,11 +31,16 @@ export function CouponsPage() {
     {
       key: '__actions',
       header: '',
-      width: '11rem',
+      width: '16rem',
       align: 'right',
       render: (row) => (
         <PermissionGate permission={ADMIN_PERMISSIONS.MARKETING_MANAGE}>
           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {(row.status === 'ACTIVE' || row.status === 'UPCOMING') && (
+              <Button size="xs" variant="ghost" onClick={() => setWhatsappCoupon(row)}>
+                WhatsApp
+              </Button>
+            )}
             <Button size="xs" variant="secondary" onClick={() => writer.setStatus.run({ id: row.id, isActive: !row.isActive })}>
               {row.isActive ? 'Deactivate' : 'Activate'}
             </Button>
@@ -90,6 +97,10 @@ export function CouponsPage() {
           coupon={editingCoupon === 'new' ? null : editingCoupon}
           writer={writer}
         />
+      )}
+
+      {whatsappCoupon && (
+        <CouponWhatsappDrawer key={whatsappCoupon.id} coupon={whatsappCoupon} onClose={() => setWhatsappCoupon(null)} />
       )}
 
       <ConfirmDialog

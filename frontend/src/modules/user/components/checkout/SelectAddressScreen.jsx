@@ -47,7 +47,7 @@ export function SelectAddressScreen() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+      <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
         <CheckoutStepper current={1} />

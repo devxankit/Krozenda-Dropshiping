@@ -1,6 +1,7 @@
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, ToastBar, toast as hotToast } from 'react-hot-toast'
+import { HiXMark } from 'react-icons/hi2'
 import { queryClient } from './lib/queryClient'
 import { AppRoutes } from './routes'
 import { ScrollToTop } from './components/common/ScrollToTop'
@@ -48,7 +49,31 @@ function App() {
               },
             },
           }}
-        />
+        >
+          {/* Every toast gets a close button in its top-right corner, so a
+              message can be dismissed instead of waited out. A loading toast
+              has none: it closes itself when its work finishes. */}
+          {(t) => (
+            <ToastBar toast={t} style={{ ...t.style, position: 'relative', paddingRight: t.type === 'loading' ? undefined : 36 }}>
+              {({ icon, message }) => (
+                <>
+                  {icon}
+                  {message}
+                  {t.type !== 'loading' && (
+                    <button
+                      type="button"
+                      onClick={() => hotToast.dismiss(t.id)}
+                      aria-label="Close notification"
+                      className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <HiXMark className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  )}
+                </>
+              )}
+            </ToastBar>
+          )}
+        </Toaster>
       </BrowserRouter>
     </QueryClientProvider>
   )

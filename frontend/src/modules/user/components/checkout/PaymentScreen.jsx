@@ -80,7 +80,11 @@ export function PaymentScreen() {
       disabledReason: 'Insufficient wallet balance',
     },
     { id: 'COD', name: 'Cash on Delivery', icon: HiTruck },
-  ].filter((method) => !enabledMethods || enabledMethods[method.id] !== false)
+  ]
+    .filter((method) => !enabledMethods || enabledMethods[method.id] !== false)
+    // A dropshipping item in the cart: online payment only (the server
+    // refuses COD and wallet for it).
+    .filter((method) => !quote?.onlineOnly || method.id === 'RAZORPAY')
 
   // If the method the buyer had selected (from a previous visit, via
   // checkoutStore) got switched off admin-side, fall onto the first one
@@ -129,7 +133,7 @@ export function PaymentScreen() {
 
   return (
     <div className="flex min-h-screen w-full flex-col justify-between bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 

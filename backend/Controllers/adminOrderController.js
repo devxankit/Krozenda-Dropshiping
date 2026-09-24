@@ -2,11 +2,13 @@ const mongoose = require('mongoose');
 const Order = require('../Models/Order');
 const Customer = require('../Models/Customer');
 const Product = require('../Models/Product');
-const WalletTransaction = require('../Models/WalletTransaction');
 const { serializeOrder, releaseStock, reserveStock, notifyVendorsOfNewOrder } = require('./orderController');
 const { createNotification } = require('./notificationController');
 const { toPaise } = require('../utils/money');
 const accounting = require('../services/accountingPosting');
+const dropshipOrderService = require('../services/dropshipOrderService');
+const { refundCancelledOrderToWallet } = require('../services/orderCancellationService');
+const { isDropshipOrder } = require('../utils/dropship');
 
 const STATUS_NOTIFICATION = {
   PROCESSING: { title: 'Order Processing', message: (o) => `Your order #${o._id.toString().slice(-8).toUpperCase()} is now being processed.` },
@@ -242,6 +244,21 @@ async function updateOrderStatus(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid target status' });
   }
 
+  // A dropshipping order is cancelled at CJ first and refunded to the buyer's
+  // original payment — never to the wallet, which cannot pay for dropship
+  // items. That flow lives in dropshipOrderService.
+  if (status === 'CANCELLED') {
+    const target = await Order.findById(id).select('fulfillmentType checkoutGroupId items.product').lean();
+    if (target && (await isDropshipOrder(target))) {
+      const result = await dropshipOrderService.adminCancel({ orderId: id });
+      if (!result.ok) {
+        return res.status(result.status || 400).json({ success: false, message: result.message });
+      }
+      const cancelled = await Order.findById(id).populate('user', 'name mobileNumber email');
+      return res.json({ success: true, message: 'Order cancelled and refunded', data: withCustomer(cancelled) });
+    }
+  }
+
   const update = { $push: { statusHistory: { status, at: new Date() } } };
   const setFields = { status };
   if (status === 'DELIVERED') setFields.deliveredAt = new Date();
@@ -263,23 +280,11 @@ async function updateOrderStatus(req, res) {
   }
 
   if (status === 'CANCELLED') {
-    await releaseStock(order.items);
+    // Only lines still live: a line cancelled on its own already gave its stock back.
+    await releaseStock(order.items.filter((item) => item.status !== 'CANCELLED'));
     if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
-      const refundedCustomer = await Customer.findOneAndUpdate(
-        { _id: order.user },
-        { $inc: { walletBalance: order.total } },
-        { new: true }
-      );
-      await WalletTransaction.create({
-        user: order.user,
-        type: 'CREDIT',
-        amount: order.total,
-        balanceAfter: refundedCustomer.walletBalance,
-        source: 'ORDER_REFUND',
-        orderId: order._id,
-        status: 'SUCCESS',
-      });
-      await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: 'REFUNDED' } });
+      // What is still owed: lines cancelled on their own were refunded already.
+      await refundCancelledOrderToWallet(order);
 
       // Reverse the posted sale. Never fatal — the buyer's wallet has already
       // been credited, and every posting path is idempotent, so a failure
@@ -294,6 +299,7 @@ async function updateOrderStatus(req, res) {
         console.error('Accounting posting failed (admin cancellation), will be reconciled on next read:', err.message);
       }
     }
+    await dropshipOrderService.releaseCouponIfWholeCheckoutCancelled({ ...order.toObject(), status: 'CANCELLED' });
   }
 
   const notif = STATUS_NOTIFICATION[status];

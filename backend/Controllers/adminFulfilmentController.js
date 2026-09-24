@@ -4,6 +4,7 @@ const Product = require('../Models/Product');
 const Rto = require('../Models/Rto');
 const { toPaise } = require('../utils/money');
 const { releaseStock } = require('./orderController');
+const { cancelLine, claimCancelledOrderRefund } = require('../services/orderCancellationService');
 const { createNotification } = require('./notificationController');
 
 function vendorLabel(v) {
@@ -31,7 +32,9 @@ function ageHours(date) {
 
 function serializeSubOrder(order, item) {
   return {
-    id: `${order._id}:${item.product}`,
+    // The variant is part of the id: two colours of one product are two
+    // sub-orders, and cancelling one must not reach the other.
+    id: `${order._id}:${item.product}:${item.variantId || ''}`,
     orderId: order._id.toString(),
     placedAt: order.createdAt,
     model: 'marketplace',
@@ -83,10 +86,21 @@ async function listSubOrders(req, res) {
   res.json({ success: true, data: paged(items, { page, rowsPerPage }, tabCounts) });
 }
 
+// `<order>:<product>[:<variant>]`. Ids issued before the variant was added
+// still parse, and match the product's first line.
 function parseSubOrderId(id) {
-  const [orderId, productId] = String(id).split(':');
+  const [orderId, productId, variantId] = String(id).split(':');
   if (!mongoose.isValidObjectId(orderId) || !mongoose.isValidObjectId(productId)) return null;
-  return { orderId, productId };
+  if (variantId && !mongoose.isValidObjectId(variantId)) return null;
+  return { orderId, productId, variantId: variantId || null };
+}
+
+function findSubOrderIndex(order, { productId, variantId }) {
+  return order.items.findIndex(
+    (i) =>
+      i.product.toString() === productId &&
+      (variantId ? String(i.variantId) === variantId : true)
+  );
 }
 
 const NEXT_STATUS = { PENDING: 'PROCESSING', PROCESSING: 'SHIPPED', SHIPPED: 'DELIVERED' };
@@ -99,7 +113,7 @@ async function advanceSubOrder(req, res) {
   const order = await Order.findById(parsed.orderId).populate('user', 'name').populate('items.vendor', 'name business.businessName');
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-  const item = order.items.find((i) => i.product.toString() === parsed.productId);
+  const item = order.items[findSubOrderIndex(order, parsed)];
   if (!item) return res.status(404).json({ success: false, message: 'Sub-order not found' });
 
   const next = NEXT_STATUS[item.status];
@@ -118,25 +132,26 @@ async function cancelSubOrder(req, res) {
   if (!parsed) return res.status(400).json({ success: false, message: 'Invalid sub-order id' });
   const { reason } = req.body;
 
-  const order = await Order.findById(parsed.orderId).populate('user', 'name').populate('items.vendor', 'name business.businessName');
-  if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+  const existing = await Order.findById(parsed.orderId);
+  if (!existing) return res.status(404).json({ success: false, message: 'Order not found' });
+  const lineIndex = findSubOrderIndex(existing, parsed);
+  if (lineIndex < 0) return res.status(404).json({ success: false, message: 'Sub-order not found' });
 
-  const item = order.items.find((i) => i.product.toString() === parsed.productId);
-  if (!item) return res.status(404).json({ success: false, message: 'Sub-order not found' });
-  if (!['PENDING', 'PROCESSING'].includes(item.status)) {
-    return res.status(400).json({ success: false, message: `Cannot cancel a sub-order that is ${item.status}` });
-  }
+  // Cancels the line atomically, puts its stock back AND refunds the buyer
+  // what they paid for it — the refund used to be missing entirely.
+  const result = await cancelLine({ orderId: existing._id, lineIndex, cancelledBy: 'admin', reason });
+  if (!result.ok) return res.status(result.status).json({ success: false, message: result.message });
 
-  item.status = 'CANCELLED';
-  item.statusHistory.push({ status: 'CANCELLED', at: new Date() });
-  await order.save();
-  await releaseStock([{ product: item.product, quantity: item.quantity }]);
+  const order = await Order.findById(existing._id).populate('user', 'name').populate('items.vendor', 'name business.businessName');
+  const item = order.items[lineIndex];
 
   await createNotification({
     userId: order.user._id,
     type: 'ORDER',
     title: 'Item Cancelled',
-    message: `"${item.name}" from your order was cancelled.${reason ? ` Reason: ${reason}` : ''}`,
+    message: `"${item.name}" from your order was cancelled.${reason ? ` Reason: ${reason}` : ''}${
+      result.refunded > 0 ? ` ₹${result.refunded.toLocaleString('en-IN')} has been refunded to your wallet.` : ''
+    }`,
     actionType: 'ORDER',
     actionRefId: order._id,
   });
@@ -153,7 +168,7 @@ async function cancelSubOrder(req, res) {
 function serializeShipment(order, item) {
   const isLate = item.status === 'SHIPPED' && ageHours(order.updatedAt) > 96;
   return {
-    id: `${order._id}:${item.product}`,
+    id: `${order._id}:${item.product}:${item.variantId || ''}`,
     subOrderId: `${order._id.toString().slice(-8).toUpperCase()}`,
     awb: item.trackingNumber || '',
     courier: item.courierName || 'Unassigned',
@@ -212,7 +227,7 @@ async function updateShipment(req, res) {
 
   const order = await Order.findById(parsed.orderId).populate('items.vendor', 'name business.businessName');
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-  const item = order.items.find((i) => i.product.toString() === parsed.productId);
+  const item = order.items[findSubOrderIndex(order, parsed)];
   if (!item) return res.status(404).json({ success: false, message: 'Shipment not found' });
 
   if (status && Order.STATUSES.includes(status)) {
@@ -347,22 +362,27 @@ async function resolveCancellationRefund(req, res) {
     return res.json({ success: true, message: 'Nothing to refund', data: serializeCancellation(order) });
   }
 
-  const Customer = require('../Models/Customer');
-  const WalletTransaction = require('../Models/WalletTransaction');
-  const refundedCustomer = await Customer.findByIdAndUpdate(order.user._id, { $inc: { walletBalance: order.total } }, { new: true });
-  await WalletTransaction.create({
-    user: order.user._id,
-    type: 'CREDIT',
-    amount: order.total,
-    balanceAfter: refundedCustomer.walletBalance,
-    source: 'ORDER_REFUND',
-    orderId: order._id,
-    status: 'SUCCESS',
-  });
-  order.paymentStatus = 'REFUNDED';
-  await order.save();
+  // A dropship order goes back to the original payment, not the wallet — the
+  // wallet cannot buy dropship items. Its automatic refund may have failed;
+  // this retries it.
+  const { isDropshipOrder } = require('../utils/dropship');
+  if (await isDropshipOrder(order)) {
+    const result = await require('../services/dropshipOrderService').retryRefund({ orderId: order._id });
+    if (!result.ok) return res.status(result.status).json({ success: false, message: result.message });
+    const refreshed = await Order.findById(order._id).populate('user', 'name');
+    return res.json({ success: true, message: 'Refund sent to the original payment method', data: serializeCancellation(refreshed) });
+  }
 
-  res.json({ success: true, message: 'Refund credited to wallet', data: serializeCancellation(order) });
+  // Claimed atomically before paying: two clicks used to credit the wallet
+  // twice, because nothing stopped the second one.
+  const amount = await claimCancelledOrderRefund(order._id);
+  const refreshed = await Order.findById(order._id).populate('user', 'name');
+
+  res.json({
+    success: true,
+    message: amount > 0 ? 'Refund credited to wallet' : 'Nothing to refund',
+    data: serializeCancellation(refreshed),
+  });
 }
 
 module.exports = {

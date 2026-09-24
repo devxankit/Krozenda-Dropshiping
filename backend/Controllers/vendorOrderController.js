@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../Models/Order');
-const Product = require('../Models/Product');
+const { cancelLine } = require('../services/orderCancellationService');
 const { toPaise } = require('../utils/money');
 const { createNotification } = require('./notificationController');
 
@@ -143,9 +143,22 @@ async function updateMyOrderItemStatus(req, res) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  const item = order.items.find(
-    (i) => i.product.toString() === productId && i.vendor && i.vendor.toString() === req.vendor._id.toString()
-  );
+  // Which of this seller's lines. With a variantId, exactly that one; without
+  // (older clients), the first line of the product that can make this move —
+  // so two colours of one product are still reachable one after the other.
+  const variantId = req.body.variantId && mongoose.isValidObjectId(req.body.variantId) ? String(req.body.variantId) : null;
+  const mine = order.items
+    .map((line, index) => ({ line, index }))
+    .filter(
+      ({ line }) =>
+        line.product.toString() === productId &&
+        line.vendor &&
+        line.vendor.toString() === req.vendor._id.toString() &&
+        (!variantId || String(line.variantId) === variantId)
+    );
+  const chosen = mine.find(({ line }) => fromStatuses.includes(line.status)) || mine[0];
+  const item = chosen?.line;
+  const lineIndex = chosen?.index;
   if (!item) {
     return res.status(404).json({ success: false, message: 'Item not found on this order' });
   }
@@ -167,6 +180,34 @@ async function updateMyOrderItemStatus(req, res) {
     });
   }
 
+  // Rejection goes through the shared cancellation: atomic, puts the stock
+  // back, and refunds the buyer what they paid for the line — the refund was
+  // missing, and a double click used to return the stock twice.
+  if (status === 'CANCELLED') {
+    const result = await cancelLine({
+      orderId: order._id,
+      lineIndex,
+      cancelledBy: 'seller',
+      reason: trimmedReason,
+      vendorId: req.vendor._id,
+    });
+    if (!result.ok) return res.status(result.status).json({ success: false, message: result.message });
+
+    await createNotification({
+      userId: order.user,
+      type: 'ORDER',
+      title: 'Order Item Cancelled',
+      message: `"${item.name}" was cancelled by the seller: ${trimmedReason}${
+        result.refunded > 0 ? ` ₹${result.refunded.toLocaleString('en-IN')} has been refunded to your wallet.` : ''
+      }`,
+      actionType: 'ORDER',
+      actionRefId: order._id,
+    });
+
+    const cancelled = await Order.findById(order._id).populate('user', 'name mobileNumber email');
+    return res.json({ success: true, message: 'Item status updated', data: serializeVendorOrder(cancelled, req.vendor._id.toString()) });
+  }
+
   item.status = status;
   item.statusHistory.push({ status, at: new Date() });
   // PENDING -> PROCESSING is the acceptance. Stamped once, and never
@@ -177,22 +218,6 @@ async function updateMyOrderItemStatus(req, res) {
   if (trackingNumber !== undefined) item.trackingNumber = trackingNumber.trim();
 
   await order.save();
-
-  // Stock was decremented when the order was placed (orderController.
-  // reserveStock). A cancelled line has to give it back, or every seller
-  // rejection permanently burns inventory that was never shipped. Variant-
-  // aware for the same reason releaseStock is: the reservation came off a
-  // specific variant and has to go back to it.
-  if (status === 'CANCELLED') {
-    if (item.variantId) {
-      await Product.updateOne(
-        { _id: item.product, 'variants._id': item.variantId },
-        { $inc: { 'variants.$.stock': item.quantity } }
-      );
-    } else {
-      await Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } });
-    }
-  }
 
   await createNotification({
     userId: order.user,

@@ -198,6 +198,11 @@ export const auditLogSchema = paged(
     before: z.string().nullable(),
     after: z.string().nullable(),
     severity: z.enum(['info', 'notable', 'critical']),
+    // Present on live rows (see backend adminAuditLogController); fixtures omit them.
+    description: z.string().optional(),
+    method: z.string().optional(),
+    statusCode: z.number().int().optional(),
+    success: z.boolean().optional(),
   }),
 )
 

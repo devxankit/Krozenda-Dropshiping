@@ -114,6 +114,10 @@ export const productSchema = z.object({
   rating: z.number(),
   reviewsCount: z.number(),
   isDropship: z.boolean().default(false),
+  // Set per product by the admin/seller. Missing (older API) reads as returnable.
+  isReturnable: z.boolean().default(true),
+  // Detail endpoint only, and only for a dropshipped product.
+  dropship: z.object({ shipsFrom: z.string().nullable() }).nullable().default(null),
 })
 
 export const productListSchema = z.array(productSchema)

@@ -34,6 +34,13 @@ export async function updateVendorProfile(body) {
 // need not. A new account comes back PENDING + isActive:false with a usable
 // token, which is what lets the seller straight into the status screen to
 // upload documents rather than stranding them at a "wait for approval" wall.
+// The CMS pages admin has marked "requires acceptance", current version and
+// full text. The seller scrolls through each one before sign-up can submit.
+export async function fetchSellerPolicies() {
+  const { data } = await api.get('/public/cms-acceptance')
+  return data.data
+}
+
 export async function uploadRegistrationDocument(file) {
   const formData = new FormData()
   formData.append('file', file)

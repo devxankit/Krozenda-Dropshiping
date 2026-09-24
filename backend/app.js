@@ -93,6 +93,10 @@ app.use(
 // devices here, on whichever token they happen to be signed in with.
 app.use('/fcm-token', require('./Router/pushTokenRoutes'));
 
+// Records every admin/staff write (and sign-in attempt) into the audit log.
+// Must stay above every /admin router so none of them can slip past it.
+app.use('/admin', require('./Middlewares/adminAudit').adminAudit);
+
 app.use('/admin/auth', require('./Router/adminAuthRoutes'));
 // Reporting surface (dashboard + analytics). Mounted on /admin itself, so it
 // must declare only its own paths.
@@ -119,6 +123,7 @@ app.use('/admin/orders', require('./Router/adminOrderRoutes'));
 app.use('/admin/returns', require('./Router/adminReturnRoutes'));
 app.use('/admin/support/tickets', require('./Router/adminTicketRoutes'));
 app.use('/admin/system/backups', require('./Router/adminBackupRoutes'));
+app.use('/admin/system/audit-logs', require('./Router/adminAuditLogRoutes'));
 app.use('/admin/finance', require('./Router/adminFinanceRoutes'));
 app.use('/admin/accounting', require('./Router/adminAccountingRoutes'));
 // Accounts MVP — separate, minimal order-level financials + vendor payout
@@ -172,6 +177,7 @@ app.use('/catalog/brands', require('./Router/publicBrandRoutes'));
 app.use('/catalog/banners', require('./Router/publicBannerRoutes'));
 app.use('/catalog/coupons', require('./Router/publicCouponRoutes'));
 app.get('/public/cms/:slug', require('./Controllers/cmsController').getPublicCmsPage);
+app.get('/public/cms-acceptance', require('./Controllers/cmsController').getPublicAcceptancePages);
 app.get('/public/settings', require('./Controllers/adminSettingsController').getPublicSettings);
 app.use('/faq', require('./Router/publicFaqRoutes'));
 // Runtime UI translation. Unauthenticated like /catalog/*, because the

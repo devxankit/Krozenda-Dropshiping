@@ -14,6 +14,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ShowcasePage } from './pages/ShowcasePage'
 import { ProductsPage } from './pages/catalog/ProductsPage'
+import { ProductDetailPage } from './pages/catalog/ProductDetailPage'
 import { ApprovalsPage } from './pages/catalog/ApprovalsPage'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { BrandsPage } from './pages/catalog/BrandsPage'
@@ -27,6 +28,7 @@ import { CjDashboardPage } from './pages/cj/CjDashboardPage'
 import { CjCataloguePage } from './pages/cj/CjCataloguePage'
 import { CjCategoryPage } from './pages/cj/CjCategoryPage'
 import { CjProductsPage } from './pages/cj/CjProductsPage'
+import { CjProductDetailPage } from './pages/cj/CjProductDetailPage'
 import { CjOrdersPage } from './pages/cj/CjOrdersPage'
 import { CjShipmentsPage } from './pages/cj/CjShipmentsPage'
 import { CjDisputesPage } from './pages/cj/CjDisputesPage'
@@ -218,10 +220,9 @@ export default function AdminRoutes() {
                 }
               />
 
-              {/* Catalog. Product create/edit now happens in a modal on the list
-                screen itself; PRODUCT_NEW/PRODUCT_DETAIL stay registered
-                (redirecting back to the list) purely so links built elsewhere
-                with adminPath.productDetail(...) don't 404. */}
+              {/* Catalog. Product create/edit happens in a drawer (on the list
+                and on the detail screen); PRODUCT_NEW stays registered,
+                redirecting back to the list, so old links don't 404. */}
               <Route path={rel(ADMIN_ROUTES.PRODUCTS)} element={<ProductsPage />} />
               <Route
                 path={rel(ADMIN_ROUTES.PRODUCT_NEW)}
@@ -229,7 +230,7 @@ export default function AdminRoutes() {
               />
               <Route
                 path={rel(ADMIN_ROUTES.PRODUCT_DETAIL)}
-                element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />}
+                element={<ProductDetailPage />}
               />
               <Route path={rel(ADMIN_ROUTES.CATALOG_APPROVALS)} element={<ApprovalsPage />} />
               <Route path={rel(ADMIN_ROUTES.CATALOG_IMPORT)} element={<ImportPage />} />
@@ -267,6 +268,7 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.CJ_CATALOGUE)} element={<CjCataloguePage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_CATEGORY)} element={<CjCategoryPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_PRODUCTS)} element={<CjProductsPage />} />
+              <Route path={rel(ADMIN_ROUTES.CJ_PRODUCT_DETAIL)} element={<CjProductDetailPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_ORDERS)} element={<CjOrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_SHIPMENTS)} element={<CjShipmentsPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_DISPUTES)} element={<CjDisputesPage />} />

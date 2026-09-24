@@ -619,6 +619,29 @@ async function getPublicCmsPage(req, res) {
   });
 }
 
+// The seller reads the contract first; anything else admin flags as mandatory
+// follows in title order.
+const ACCEPTANCE_ORDER = ['vendor-agreement', 'terms', 'privacy-policy', 'return-policy', 'shipping-policy'];
+
+// Every published page an admin has marked "requires acceptance". This list
+// IS the set a seller must accept at sign-up — toggling the flag in the CMS
+// adds or removes a document there, with no code change.
+async function getRequiredAcceptancePages() {
+  await seedIfEmpty();
+  const pages = await CmsPage.find({ requiresAcceptance: true, status: 'published', isDeleted: false });
+  const rank = (slug) => {
+    const i = ACCEPTANCE_ORDER.indexOf(slug);
+    return i === -1 ? ACCEPTANCE_ORDER.length : i;
+  };
+  return pages.sort((a, b) => rank(a.slug) - rank(b.slug) || a.title.localeCompare(b.title));
+}
+
+// Public endpoint: GET /public/cms-acceptance
+async function getPublicAcceptancePages(req, res) {
+  const pages = await getRequiredAcceptancePages();
+  res.json({ success: true, data: pages.map(serializeCmsPage) });
+}
+
 module.exports = {
   listCmsPages,
   getCmsPage,
@@ -627,4 +650,6 @@ module.exports = {
   updateCmsPageStatus,
   deleteCmsPage,
   getPublicCmsPage,
+  getPublicAcceptancePages,
+  getRequiredAcceptancePages,
 };

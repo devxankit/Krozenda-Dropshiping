@@ -72,7 +72,7 @@ export function OrderDetailsScreen() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-slate-50">
-        <div className="hidden md:block"><WebHeader /></div>
+        <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
         <main className="mx-auto w-full max-w-4xl flex-1 space-y-3 p-6" aria-busy="true" aria-label="Loading order">
           <div className="h-28 animate-pulse rounded-3xl bg-slate-200" />
           <div className="h-48 animate-pulse rounded-3xl bg-slate-200" />
@@ -89,7 +89,7 @@ export function OrderDetailsScreen() {
     const notFound = error?.status === 404
     return (
       <div className="flex min-h-screen w-full flex-col bg-slate-50">
-        <div className="hidden md:block"><WebHeader /></div>
+        <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
           <ErrorState
             error={error}
@@ -111,7 +111,7 @@ export function OrderDetailsScreen() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+      <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 pb-28 md:pb-12 space-y-6">
         {/* Header Bar */}
@@ -164,7 +164,8 @@ export function OrderDetailsScreen() {
               <span className="sm:hidden">Invoice</span>
             </button>
 
-            {order.status === 'DELIVERED' && (
+            {/* Dropshipping orders cannot be returned (business rule). */}
+            {order.status === 'DELIVERED' && !order.isDropship && (
               <button
                 onClick={() => onRequestReturn(order)}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-colors flex items-center space-x-1.5 border border-slate-200"
@@ -176,6 +177,15 @@ export function OrderDetailsScreen() {
             )}
           </div>
         </div>
+
+        {order.isDropship && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900 shadow-xs">
+            <span className="font-bold">Dropshipping order.</span> It ships directly from our supplier and
+            cannot be cancelled, returned or replaced.
+            {order.status === 'CANCELLED' && order.paymentStatus === 'REFUNDED' &&
+              ' It was cancelled and the amount refunded to your original payment method.'}
+          </div>
+        )}
 
         {reorderMessage && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-2xl text-xs flex items-center justify-between shadow-xs">

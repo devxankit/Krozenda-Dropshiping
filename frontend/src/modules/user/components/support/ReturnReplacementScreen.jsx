@@ -24,6 +24,9 @@ const STATUS_META = {
   REJECTED: { label: 'Rejected', color: 'bg-red-50 text-red-700 border-red-200', Icon: HiXCircle },
 }
 
+// One order line: two variants of one product are two returnable lines.
+const lineKey = (item) => `${item.orderId}:${item.productId}:${item.variantId || ''}`
+
 export function ReturnReplacementScreen({ onBack, onContinue }) {
   // See the note on the other screens: a no-op default made both controls dead
   // once the router stopped passing callbacks.
@@ -41,7 +44,7 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
 
   useEffect(() => {
     if (!selectedKey && items.length > 0) {
-      setSelectedKey(`${items[0].orderId}:${items[0].productId}`)
+      setSelectedKey(lineKey(items[0]))
     }
   }, [items, selectedKey])
 
@@ -51,7 +54,7 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
     }
   }, [photos])
 
-  const selectedItem = items.find((item) => `${item.orderId}:${item.productId}` === selectedKey)
+  const selectedItem = items.find((item) => lineKey(item) === selectedKey)
   const lockedStatus = selectedItem?.existingRequest?.status === 'PENDING' || selectedItem?.existingRequest?.status === 'APPROVED'
     ? selectedItem.existingRequest.status
     : null
@@ -77,6 +80,7 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
       const request = await submitReturnRequest({
         orderId: selectedItem.orderId,
         productId: selectedItem.productId,
+        variantId: selectedItem.variantId,
         requestType,
         reason: selectedReason,
         photoFiles: photos.map((p) => p.file),
@@ -92,7 +96,7 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+      <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
@@ -128,8 +132,9 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                 >
                   {items.map((item) => (
-                    <option key={`${item.orderId}:${item.productId}`} value={`${item.orderId}:${item.productId}`}>
-                      {item.name} — Order #{item.orderId.slice(-8).toUpperCase()}
+                    <option key={lineKey(item)} value={lineKey(item)}>
+                      {item.name}
+                      {item.variant ? ` (${item.variant})` : ''} — Order #{item.orderId.slice(-8).toUpperCase()}
                     </option>
                   ))}
                 </select>

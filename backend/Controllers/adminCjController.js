@@ -1,5 +1,6 @@
 const CjSettings = require('../Models/CjSettings');
 const cjAuthService = require('../services/cj/cjAuthService');
+const cjPointsGuard = require('../services/cj/cjPointsGuard');
 
 // Never echo the encrypted blobs or plaintext credentials to the frontend —
 // only enough for the settings screen to show connection health (master plan
@@ -19,6 +20,9 @@ function serializeSettings(settings) {
     defaultMarkupValue: settings.defaultMarkupValue ?? settings.defaultMarkupPercent ?? 30,
     priceRounding: settings.priceRounding || 'ROUND',
     dropshippingEnabled: settings.dropshippingEnabled !== false,
+    // CJ API points as last reported by CJ (null until the first call since
+    // start-up) — "out of points" is a quota, not a broken connection.
+    apiPoints: cjPointsGuard.snapshot(),
     updatedAt: settings.updatedAt,
   };
 }

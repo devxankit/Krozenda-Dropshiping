@@ -131,6 +131,10 @@ function serializeItem(entry) {
     quantity: entry.quantity,
     stock,
     availability,
+    // A dropshipping item: online payment only, no cancellation, no return.
+    // Flag-based here for speed; checkout re-derives it authoritatively
+    // (utils/dropship), so a stale flag can never let COD through.
+    isDropship: p.fulfillmentProvider === 'CJ',
     // B2B context the cart UI needs to explain its own numbers.
     moq: p.moq ?? 1,
     priceSource: source,

@@ -43,6 +43,7 @@ import {
   deleteVendorProduct,
 } from '../services/vendorService'
 import {
+  fetchSellerPolicies,
   fetchVendorProfile,
   loginVendor,
   registerVendor,
@@ -73,6 +74,20 @@ export function useVendorResetPasswordController() {
 export function useVendorRegisterController() {
   const mutation = useMutation({ mutationFn: registerVendor })
   return { register: mutation.mutateAsync, isSubmitting: mutation.isPending, error: mutation.error }
+}
+
+// Mandatory CMS policies for the sign-up acceptance modal. Never served from
+// cache: the server rejects an outdated version, so a copy from before admin
+// republished would only fail at submit.
+export function useSellerPoliciesController() {
+  const query = useQuery({ queryKey: ['seller-policies'], queryFn: fetchSellerPolicies, staleTime: 0, gcTime: 0 })
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    isError: Boolean(query.error),
+    isSuccess: query.isSuccess,
+    refetch: query.refetch,
+  }
 }
 
 function useResource(key, queryFn, enabled = true) {

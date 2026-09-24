@@ -148,8 +148,20 @@ describe('prepaid order — sale, commission, gateway fee, shipping', () => {
     const product = await createProduct({ price: 10000, stock: 5, vendor: vendor._id });
 
     await addToCart(token, product._id.toString(), 1);
-    // Product 10,000 + shipping 100 = 10,100 collected from the buyer.
-    const res = await placeOrder({ token, address, method: 'RAZORPAY', shippingFee: 99, total: 10099 });
+    // Product 10,000 + shipping 99 = 10,099 collected from the buyer. The
+    // server no longer accepts a client-sent shipping fee — it quotes the
+    // carrier — so the carrier's answer is what is stubbed here.
+    const checkoutQuoteService = require('../services/shipping/checkoutQuoteService');
+    const quote = jest.spyOn(checkoutQuoteService, 'quoteCart').mockResolvedValue({
+      ok: true,
+      shippingFee: 99,
+      shippingByFulfillment: { STANDARD: 99, DROPSHIP: 0 },
+      carrierCost: 99,
+      freeReason: null,
+      groups: [],
+    });
+    const res = await placeOrder({ token, address, method: 'RAZORPAY', total: 10099 });
+    quote.mockRestore();
     expect(res.status).toBe(201);
 
     const orderId = res.body.data.id;

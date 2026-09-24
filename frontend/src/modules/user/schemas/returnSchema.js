@@ -4,6 +4,9 @@ import { z } from 'zod'
 export const returnableItemSchema = z.object({
   orderId: z.string(),
   productId: z.string(),
+  // Two variants of one product are two separately returnable lines.
+  variantId: z.string().nullable().optional().default(null),
+  variant: z.string().optional().default(''),
   name: z.string(),
   image: z.string().nullable(),
   price: z.number(),
@@ -25,6 +28,7 @@ export const returnRequestSchema = z.object({
   id: z.string(),
   orderId: z.string(),
   productId: z.string(),
+  variantId: z.string().nullable().optional().default(null),
   productName: z.string(),
   productImage: z.string().nullable(),
   requestType: z.enum(['REPLACEMENT', 'REFUND']),

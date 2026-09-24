@@ -8,6 +8,9 @@ export const orderItemSchema = z.object({
   price: z.number(),
   quantity: z.number(),
   variant: z.string(),
+  variantId: z.string().nullable().optional().default(null),
+  // This line's share of the coupon discount (null on older orders).
+  discountAmount: z.number().nullable().optional().default(null),
   hsnCode: z.string().optional().default(''),
   gstRate: z.number().optional().default(0),
   taxableValue: z.number().optional().default(0),
@@ -42,6 +45,11 @@ export const orderSchema = z.object({
   paymentMethod: z.enum(['COD', 'WALLET', 'RAZORPAY']),
   paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  // DROPSHIP orders are fulfilled by CJ: the buyer can neither cancel nor
+  // return them.
+  fulfillmentType: z.enum(['STANDARD', 'DROPSHIP']).optional().default('STANDARD'),
+  isDropship: z.boolean().optional().default(false),
+  checkoutGroupId: z.string().nullable().optional().default(null),
   deliveredAt: z.string().nullable(),
   statusHistory: z.array(orderStatusHistoryEntrySchema),
   b2b: z
@@ -71,6 +79,13 @@ export const orderPreviewItemSchema = z.object({
   quantity: z.number(),
 })
 
+// POST /user/orders response: the first order, plus every order the checkout
+// produced — a cart with a dropshipping item and seller items is placed as
+// two orders.
+export const placedOrderSchema = orderSchema.extend({
+  orders: z.array(orderSchema).optional(),
+})
+
 export const orderSummarySchema = z.object({
   id: z.string(),
   itemCount: z.number(),
@@ -79,6 +94,7 @@ export const orderSummarySchema = z.object({
   paymentMethod: z.enum(['COD', 'WALLET', 'RAZORPAY']),
   paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  isDropship: z.boolean().optional().default(false),
   deliveredAt: z.string().nullable(),
   createdAt: z.string(),
 })
@@ -167,6 +183,11 @@ export const shippingQuoteSchema = z.object({
 
   // Keyed by payment method id, so a row can show its own price.
   methods: z.record(z.string(), quotedMethodSchema),
+
+  // A dropshipping item in the cart: online payment only, and with seller
+  // items too, the checkout is placed as `orderCount` separate orders.
+  onlineOnly: z.boolean().optional().default(false),
+  orderCount: z.number().int().optional().default(1),
 
   freeReason: z.string().nullable(),
   freeShippingThreshold: z.number(),

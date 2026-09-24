@@ -176,6 +176,7 @@ const AUDIT_TABS = {
   critical: (a) => a.severity === 'critical',
   finance: (a) => a.action.startsWith('settlement') || a.action.startsWith('settings.business'),
   access: (a) => a.action.startsWith('auth') || a.action.startsWith('role'),
+  failed: (a) => a.action.endsWith('.fail'),
 }
 
 export function auditLogFixture(query = {}) {

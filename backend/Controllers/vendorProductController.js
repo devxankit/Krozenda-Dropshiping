@@ -4,7 +4,7 @@ const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
-const { isValidEan13, renderBarcodePng } = require('../utils/barcode');
+const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -181,6 +181,7 @@ function serializeProduct(p) {
     isActive: p.isActive !== false,
     isFlashsale: p.isFlashsale === true,
     isTrending: p.isTrending === true,
+    isReturnable: p.isReturnable !== false,
     approvalStatus: p.approvalStatus || 'APPROVED',
     rejectionReason: p.rejectionReason || '',
     rating: p.rating || 0,
@@ -291,6 +292,32 @@ async function getMyProductBarcodeImage(req, res) {
   res.send(png);
 }
 
+// GET /vendor/products/:id/qrcode.png
+//
+// The QR code printed beside the barcode on the product label — it carries
+// the product's details (see utils/barcode.productQrText). Unlike the
+// barcode, those details change (a price edit), so this is never cached.
+async function getMyProductQrImage(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findOne({ _id: id, vendor: req.vendor._id })
+    .select('name sku barcode price salePrice mrp brand category')
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .lean();
+  if (!product || !product.barcode) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const png = await renderProductQrPng(product);
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'no-cache');
+  res.send(png);
+}
+
 async function getMyProduct(req, res) {
   const { id } = req.params;
   const product = await Product.findOne({ _id: id, vendor: req.vendor._id })
@@ -310,7 +337,7 @@ async function createMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, hsnCode, gstRate, moq,
-    isFlashsale, isFlashSale, isTrending,
+    isFlashsale, isFlashSale, isTrending, isReturnable,
   } = req.body;
 
   const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
@@ -438,6 +465,7 @@ async function createMyProduct(req, res) {
     isActive,
     isFlashsale: toBool(flashSaleVal, false),
     isTrending: toBool(isTrending, false),
+    isReturnable: toBool(isReturnable, true),
     approvalStatus,
   });
 
@@ -455,7 +483,7 @@ async function updateMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, isActive, removeImages, hsnCode, gstRate, moq,
-    isFlashsale, isFlashSale, isTrending,
+    isFlashsale, isFlashSale, isTrending, isReturnable,
   } = req.body;
 
   const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
@@ -552,6 +580,9 @@ async function updateMyProduct(req, res) {
   if (isTrending !== undefined) {
     product.isTrending = toBool(isTrending, product.isTrending);
   }
+  if (isReturnable !== undefined) {
+    product.isReturnable = toBool(isReturnable, product.isReturnable !== false);
+  }
 
   let images = product.images || [];
   if (removeImages) {
@@ -598,6 +629,7 @@ module.exports = {
   getMyProduct,
   getMyProductByBarcode,
   getMyProductBarcodeImage,
+  getMyProductQrImage,
   createMyProduct,
   updateMyProduct,
   deleteMyProduct,

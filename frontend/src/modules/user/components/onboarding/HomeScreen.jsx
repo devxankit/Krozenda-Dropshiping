@@ -121,7 +121,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
       </div>
 
       {/* DESKTOP WEB HEADER (Hidden on mobile) */}
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 

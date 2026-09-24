@@ -4,9 +4,15 @@ const Category = require('../../Models/Category');
 const CjCategoryMapping = require('../../Models/CjCategoryMapping');
 const CjSettings = require('../../Models/CjSettings');
 const ProductFulfillmentMapping = require('../../Models/ProductFulfillmentMapping');
+const CjSyncLog = require('../../Models/CjSyncLog');
+const CjOrder = require('../../Models/CjOrder');
+// Registered for the brand / onboardedBy populates below.
+require('../../Models/Brand');
+require('../../Models/User');
 const cjProductService = require('./cjProductService');
 const cjImageService = require('./cjImageService');
 const { usdToInr, parseCjPrice, applyPriceRounding, calculateMarkupPrice } = require('./cjPricing');
+const { shortVariantLabels } = require('../../utils/variantLabels');
 
 // Phase 3 — Selected Product Onboarding.
 //
@@ -52,15 +58,19 @@ class OnboardingError extends Error {
 }
 
 // Manual: admin supplies sellingPrice directly (already in ₹), per variant.
-// Automatic: sellingPrice = (providerCost + providerShippingCost, converted
-// USD -> ₹) + margin. providerCost/providerShippingCost are CJ's own
-// quotes and always arrive in USD — see cjPricing.js for why the conversion
-// has to happen here rather than being skipped.
+// Automatic: sellingPrice = providerCost (converted USD -> ₹) + margin.
+// providerCost is CJ's own quote and always arrives in USD — see cjPricing.js
+// for why the conversion has to happen here rather than being skipped.
+//
+// Shipping is deliberately NOT in the price (business decision, 2026-09): the
+// buyer pays CJ's real freight at checkout (checkoutQuoteService.quoteCjGroup).
+// It used to be in both, so every CJ order charged shipping twice.
+// `providerShippingCost` is still accepted, and still stored on the mapping as
+// the checkout's fallback freight estimate, but it never touches the price.
 function computeSellingPrice({
   pricingMode,
   marginRule,
   providerCost,
-  providerShippingCost,
   manualPrice,
   defaultMarkupPercent = 30,
   priceRounding = 'NONE',
@@ -72,9 +82,7 @@ function computeSellingPrice({
     return manualPrice;
   }
 
-  const cost = usdToInr(providerCost);
-  const shipping = usdToInr(providerShippingCost);
-  const base = cost + shipping;
+  const base = usdToInr(providerCost);
 
   const rule = marginRule && typeof marginRule.value === 'number'
     ? marginRule
@@ -135,6 +143,17 @@ async function onboardProduct(
 
   if (!detail) throw new OnboardingError('CJ product not found', { status: 404 });
 
+  // Every variant's stock in one call (see getProductStockByVariant). A plain
+  // failure falls back to 0 stock as the per-variant lookup always did, but
+  // running out of CJ points aborts the onboarding: a product silently
+  // published with zero stock everywhere is worse than "try again shortly".
+  let stockByVid = new Map();
+  try {
+    stockByVid = await cjProductService.getProductStockByVariant(cjProductId, { onLog });
+  } catch (err) {
+    if (err.code === 'CJ_POINTS_EXHAUSTED' || err.code === 'CJ_RATE_LIMITED') throw err;
+  }
+
   const defaultMarkupPercent = globalSettings?.defaultMarkupPercent ?? 30;
   const effectivePriceRounding = priceRounding || globalSettings?.priceRounding || 'ROUND';
 
@@ -165,7 +184,7 @@ async function onboardProduct(
       const providerShippingCost = Number(cv.logisticPrice ?? 0) || 0;
 
       const [providerStock, variantImage] = await Promise.all([
-        cjProductService.getVariantTotalStock(cjVariantId, { onLog }).catch(() => 0),
+        Promise.resolve(stockByVid.get(String(cjVariantId)) ?? 0),
         cv.variantImage ? cjImageService.importCjImage(cv.variantImage).catch(() => null) : Promise.resolve(null),
       ]);
 
@@ -202,6 +221,14 @@ async function onboardProduct(
       };
     })
   );
+
+  // Short, distinguishing names ("White", "Black") instead of CJ's full
+  // product title repeated on every variant — these are what the cart, the
+  // order, the invoice and the admin panel all show.
+  const shortNames = shortVariantLabels(variantResults.map((vr) => vr.productVariant.name));
+  variantResults.forEach((vr, idx) => {
+    vr.productVariant.name = shortNames[idx] || vr.productVariant.name;
+  });
 
   for (const vr of variantResults) {
     productVariants.push(vr.productVariant);
@@ -318,6 +345,60 @@ async function listOnboardedProducts({ pageNum = 1, pageSize = 20, categoryId = 
   return { list: rows, pageNum, pageSize, total };
 }
 
+// One onboarded CJ product in full, for the admin detail screen: the mapping
+// (CJ ids, per-variant cost/stock, pricing mode, sync health), the Krozenda
+// Product it backs, its recent sync history and the CJ orders placed for it.
+// Reads Krozenda's DB only — opening this screen spends no CJ API points.
+async function getOnboardedProductDetail(productId) {
+  if (!mongoose.isValidObjectId(productId)) return null;
+
+  const mapping = await ProductFulfillmentMapping.findOne({ provider: 'CJ', product: productId })
+    .populate({
+      path: 'product',
+      select:
+        'name sku price salePrice discountPercent stock images isActive approvalStatus variants category brand description createdAt',
+      populate: [
+        { path: 'category', select: 'name' },
+        { path: 'brand', select: 'name' },
+      ],
+    })
+    .populate('onboardedBy', 'name email')
+    .lean();
+  if (!mapping || !mapping.product) return null;
+
+  const [syncLogs, orders, orderStats] = await Promise.all([
+    CjSyncLog.find({ product: productId }).sort({ createdAt: -1 }).limit(20).lean(),
+    CjOrder.find({ 'items.product': productId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('krozendaOrderId krozendaSubOrderId cjOrderId cjOrderNumber status paymentStatus items createdAt')
+      .lean(),
+    CjOrder.aggregate([
+      { $match: { 'items.product': new mongoose.Types.ObjectId(productId) } },
+      { $unwind: '$items' },
+      { $match: { 'items.product': new mongoose.Types.ObjectId(productId) } },
+      { $group: { _id: null, orders: { $addToSet: '$_id' }, units: { $sum: '$items.quantity' } } },
+    ]),
+  ]);
+
+  return {
+    mapping,
+    syncLogs,
+    orders: orders.map((o) => ({
+      ...o,
+      // Only this product's lines — a CJ order can carry several products.
+      quantity: (o.items || [])
+        .filter((i) => String(i.product) === String(productId))
+        .reduce((sum, i) => sum + i.quantity, 0),
+      items: undefined,
+    })),
+    orderStats: {
+      orderCount: orderStats[0]?.orders.length || 0,
+      unitsSold: orderStats[0]?.units || 0,
+    },
+  };
+}
+
 // Krozenda categories that currently hold at least one onboarded CJ product,
 // with a count each — backs the admin "Category" screen's cards and the
 // "Products" screen's category filter.
@@ -417,7 +498,8 @@ async function bulkAdjustPricing({
         let newPrice;
 
         if (applyOn === 'CJ_COST' && mv && typeof mv.providerCost === 'number') {
-          const costInr = usdToInr(mv.providerCost) + usdToInr(mv.providerShippingCost || 0);
+          // Cost only: shipping is charged separately at checkout.
+          const costInr = usdToInr(mv.providerCost);
           if (method === 'FIXED') {
             newPrice = applyPriceRounding(costInr + pct, rounding);
           } else if (method === 'DECREASE_PERCENT') {
@@ -454,8 +536,8 @@ async function bulkAdjustPricing({
       // Simple product
       let newPrice;
       if (applyOn === 'CJ_COST') {
-        const costInr = usdToInr(mapping.variants?.[0]?.providerCost || 0) +
-          usdToInr(mapping.variants?.[0]?.providerShippingCost || 0);
+        // Cost only: shipping is charged separately at checkout.
+        const costInr = usdToInr(mapping.variants?.[0]?.providerCost || 0);
         if (costInr > 0) {
           if (method === 'FIXED') {
             newPrice = applyPriceRounding(costInr + pct, rounding);
@@ -587,6 +669,7 @@ module.exports = {
   onboardProduct,
   bulkOnboardProducts,
   listOnboardedProducts,
+  getOnboardedProductDetail,
   getOnboardedCategorySummary,
   bulkAdjustPricing,
   computeSellingPrice,

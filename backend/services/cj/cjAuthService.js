@@ -65,7 +65,12 @@ async function persistTokens({ accessToken, accessTokenExpiryDate, refreshToken,
   await settings.save();
 }
 
+// Quota refusals say nothing about the account's connection, so they must
+// not flip it to FAILED — that is what sent admins off to "reconnect".
+const QUOTA_CODES = new Set(['CJ_POINTS_EXHAUSTED', 'CJ_RATE_LIMITED']);
+
 async function recordFailure(reason) {
+  if (QUOTA_CODES.has(reason)) return;
   const settings = await CjSettings.getSettings();
   settings.status = 'FAILED';
   settings.lastConnectionCheckAt = new Date();
@@ -80,6 +85,10 @@ function safeFailureMessage(code) {
       return 'CJ API key / email are not configured on the server.';
     case 'CJ_UNAUTHORIZED':
       return 'CJ rejected these credentials. Check the account email and API key.';
+    case 'CJ_POINTS_EXHAUSTED':
+      return "CJ's daily API limit for this account is used up. It refills every few minutes and resets fully at 5:30 AM IST — please try again shortly. No need to reconnect.";
+    case 'CJ_RATE_LIMITED':
+      return 'CJ is receiving too many requests right now. Please try again in a few seconds.';
     case 'CJ_TIMEOUT':
       return 'CJ did not respond in time. Please try again.';
     case 'CJ_REFRESH_TOKEN_MISSING':

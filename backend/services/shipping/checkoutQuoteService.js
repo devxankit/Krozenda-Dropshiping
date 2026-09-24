@@ -6,6 +6,7 @@ const serviceabilityService = require('./serviceabilityService');
 const cjLogisticsService = require('../cj/cjLogisticsService');
 const { usdToInr } = require('../cj/cjPricing');
 const { suggestPackage } = require('../../utils/packaging');
+const { resolveUnitPrice } = require('../../utils/pricing');
 
 // What shipping costs for a whole cart, at checkout.
 //
@@ -68,8 +69,17 @@ async function quoteGroup({ vendorId, entries, deliveryPincode, cod, settings })
     { settings, vendorDefault: vendor?.defaultPackage || null }
   );
 
+  // What the buyer is actually paying for these lines — variant and bulk
+  // price included. The courier's COD fee is a percentage of this, so the
+  // parent product's list price here would misprice every variant.
   const declaredValue = entries.reduce(
-    (sum, entry) => sum + (entry.product.salePrice ?? entry.product.price ?? 0) * entry.quantity,
+    (sum, entry) =>
+      sum +
+      resolveUnitPrice(entry.product, {
+        variantId: entry.variantId ? String(entry.variantId) : null,
+        quantity: entry.quantity,
+      }).unitPrice *
+        entry.quantity,
     0
   );
 
@@ -111,6 +121,20 @@ async function quoteGroup({ vendorId, entries, deliveryPincode, cod, settings })
   };
 }
 
+// The CJ variant a cart/order line maps to, or null.
+//
+// Strict on purpose. The old fallback to `variants[0]` meant a buyer who chose
+// Rose Red could have Black ordered from CJ without anyone noticing. A line
+// only falls back when there is no choice to get wrong: a simple product
+// (no variant chosen) whose mapping has exactly one CJ variant.
+function resolveCjVariant(mapping, variantId) {
+  const variants = mapping?.variants || [];
+  if (variantId) {
+    return variants.find((v) => v.krozendaVariantId && String(v.krozendaVariantId) === String(variantId)) || null;
+  }
+  return variants.length === 1 ? variants[0] : null;
+}
+
 // CJ Dropshipping parcel: international freight quote from China warehouse to customer PIN.
 async function quoteCjGroup({ entries, deliveryPincode, mappingsByProduct }) {
   const cjItems = [];
@@ -119,14 +143,15 @@ async function quoteCjGroup({ entries, deliveryPincode, mappingsByProduct }) {
   for (const entry of entries) {
     const pId = String(entry.product._id || entry.product.id);
     const mapping = mappingsByProduct.get(pId);
-    if (!mapping) continue;
+    const vMapping = resolveCjVariant(mapping, entry.variantId);
+    // No mapping, or no CJ variant for the option chosen: this line cannot be
+    // ordered from CJ, so it cannot be quoted either.
+    if (!mapping || !vMapping?.cjVariantId) {
+      log({ event: 'CJ_VARIANT_MAPPING_MISSING', productId: pId, variantId: entry.variantId ? String(entry.variantId) : null });
+      return { ok: false, reason: 'CJ_MAPPING_MISSING', vendorId: 'CJ_DROPSHIPPING' };
+    }
 
-    const vId = entry.variantId || entry.variant?._id || entry.variant?.id;
-    const vMapping =
-      mapping.variants?.find((v) => String(v.krozendaVariantId) === String(vId)) ||
-      mapping.variants?.[0];
-
-    const cjVariantId = vMapping?.cjVariantId || mapping.cjProductId;
+    const cjVariantId = vMapping.cjVariantId;
     cjItems.push({
       cjVariantId,
       quantity: entry.quantity,
@@ -188,14 +213,22 @@ async function quoteCjGroup({ entries, deliveryPincode, mappingsByProduct }) {
 //
 // `entries` are the SAME validated cart entries computeCheckoutTotals already
 // built — passed in rather than re-read, so the quote cannot be for a
-// different cart than the one being priced.
-async function quoteCart({ entries, address, paymentMethod, subtotal }) {
+// different cart than the one being priced. `dropshipProductIds` is the
+// caller's answer to "which lines are CJ", so the quote and the order split
+// can never disagree about it.
+async function quoteCart({ entries, address, paymentMethod, subtotal, dropshipProductIds = new Set() }) {
   const settings = await ShippingSettings.getSettings();
 
   if (!settings.shippingEnabled) {
     // Shipping turned off platform-wide. Not the buyer's problem to solve, and
     // charging them for a parcel that cannot be booked would be worse.
-    return { ok: true, shippingFee: 0, freeReason: 'SHIPPING_DISABLED', groups: [] };
+    return {
+      ok: true,
+      shippingFee: 0,
+      shippingByFulfillment: { STANDARD: 0, DROPSHIP: 0 },
+      freeReason: 'SHIPPING_DISABLED',
+      groups: [],
+    };
   }
 
   const deliveryPincode = String(address.pincode || '').trim();
@@ -222,7 +255,7 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
   const byVendor = new Map();
   for (const entry of entries) {
     const pId = String(entry.product._id || entry.product.id);
-    if (cjMappingByProductId.has(pId)) {
+    if (dropshipProductIds.has(pId) || cjMappingByProductId.has(pId)) {
       cjEntries.push(entry);
     } else {
       const key = entry.product.vendor ? String(entry.product.vendor) : 'PLATFORM';
@@ -267,6 +300,14 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
   }
 
   const failed = groups.find((g) => !g.ok);
+  if (failed?.reason === 'CJ_MAPPING_MISSING') {
+    return {
+      ok: false,
+      code: 'DROPSHIP_ITEM_UNAVAILABLE',
+      message:
+        'A dropshipping item in your cart is not available in the option you chose. Please remove it and add it again.',
+    };
+  }
   if (failed) {
     // A rate we could not fetch must not become a rate of zero. Blocking the
     // order is the honest outcome: the alternative is shipping something at a
@@ -286,9 +327,26 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
   const threshold = Number(settings.freeShippingThreshold) || 0;
   const qualifiesFree = threshold > 0 && subtotal >= threshold;
 
+  // Split by who fulfils it: a mixed cart becomes two orders, and each order
+  // carries its own parcels' delivery charge.
+  const cjGroup = groups.find((g) => g.vendorId === 'CJ_DROPSHIPPING') || null;
+  const dropshipCharge = cjGroup ? cjGroup.charge : 0;
+  const standardCharge = Math.round((carrierTotal - dropshipCharge) * 100) / 100;
+
+  // Free delivery covers the marketplace's own (seller) parcels only. CJ's
+  // international freight is always charged at cost: it is priced out of the
+  // product (business decision, 2026-09), so absorbing it would sell every
+  // dropship item below cost.
+  const shippingByFulfillment = qualifiesFree
+    ? { STANDARD: 0, DROPSHIP: dropshipCharge }
+    : { STANDARD: standardCharge, DROPSHIP: dropshipCharge };
+
   return {
     ok: true,
-    shippingFee: qualifiesFree ? 0 : carrierTotal,
+    shippingFee: Math.round((shippingByFulfillment.STANDARD + shippingByFulfillment.DROPSHIP) * 100) / 100,
+    shippingByFulfillment,
+    // The CJ logistics line that was quoted; the CJ order is created on it.
+    cjLogisticName: cjGroup?.courierName || null,
     // What it would have cost, kept even when free — this is the amount the
     // marketplace is absorbing, and it belongs in the order record.
     carrierCost: carrierTotal,
@@ -311,4 +369,4 @@ async function quoteCart({ entries, address, paymentMethod, subtotal }) {
   };
 }
 
-module.exports = { quoteCart, isCod, PREPAID_METHODS };
+module.exports = { quoteCart, isCod, resolveCjVariant, PREPAID_METHODS };

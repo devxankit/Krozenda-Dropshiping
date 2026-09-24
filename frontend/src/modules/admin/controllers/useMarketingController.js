@@ -36,6 +36,46 @@ export const useCouponWriteController = ({ onSaved } = {}) => ({
   }),
 })
 
+export const useCouponWhatsappController = (couponId, { onSent, search = '', wantsCustomers = false } = {}) => {
+  const stats = useQuery({
+    queryKey: ['admin', 'marketing', 'coupons', couponId, 'whatsapp'],
+    queryFn: () => service.fetchCouponWhatsapp(couponId),
+    enabled: Boolean(couponId),
+    // A send to "all customers" runs in the background; keep the counts moving.
+    refetchInterval: (query) => (query.state.data?.sending > 0 ? 3000 : false),
+  })
+  const customers = useQuery({
+    queryKey: ['admin', 'marketing', 'coupon-customers', search],
+    queryFn: () => service.searchCouponCustomers(search),
+    enabled: wantsCustomers,
+  })
+  const send = useAdminMutation({
+    mutationFn: service.sendCouponWhatsapp,
+    invalidate: [['admin', 'marketing', 'coupons', couponId, 'whatsapp']],
+    success: (result) =>
+      result.queued
+        ? `Sending to ${result.recipients.toLocaleString('en-IN')} customer${result.recipients === 1 ? '' : 's'}`
+        : `Sent to ${result.sent} customer${result.sent === 1 ? '' : 's'}`,
+    describe: (result) =>
+      [
+        result.alreadySent ? `${result.alreadySent} already had it` : null,
+        result.failed ? `${result.failed} failed` : null,
+        result.ineligible ? `${result.ineligible} not eligible for this coupon` : null,
+        result.noPhone ? `${result.noPhone} without a valid mobile` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || undefined,
+    onDone: onSent,
+  })
+  return {
+    stats: stats.data,
+    isLoadingStats: stats.isLoading,
+    customers: customers.data || [],
+    isLoadingCustomers: customers.isLoading && wantsCustomers,
+    send,
+  }
+}
+
 export const useCampaignListController = () =>
   useListController({ queryKey: ['admin', 'marketing', 'campaigns'], queryFn: service.fetchCampaigns })
 

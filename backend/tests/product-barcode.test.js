@@ -6,7 +6,7 @@
 const request = require('supertest');
 const app = require('../app');
 const Product = require('../Models/Product');
-const { generateBarcode, isValidEan13, ean13CheckDigit } = require('../utils/barcode');
+const { generateBarcode, isValidEan13, ean13CheckDigit, productQrText } = require('../utils/barcode');
 
 const { connectTestDb, disconnectTestDb, createProduct, createCategory, createAdmin, createVendor } = require('./helpers');
 
@@ -195,6 +195,57 @@ describe('vendor barcode lookup is scoped to the seller\'s own catalog', () => {
   });
 });
 
+describe('product QR code', () => {
+  it('carries the barcode first, then the product details, on one line', () => {
+    const text = productQrText({
+      barcode: '2000000000015',
+      name: 'Steel Bottle',
+      sku: 'SB-1',
+      price: 500,
+      salePrice: 450,
+      mrp: 600,
+      brand: { name: 'Acme' },
+      category: { name: 'Kitchen' },
+    });
+    expect(text.startsWith('2000000000015 | Steel Bottle')).toBe(true);
+    expect(text).toContain('SKU: SB-1');
+    expect(text).toContain('Price: Rs.450');
+    expect(text).toContain('MRP: Rs.600');
+    expect(text).toContain('Brand: Acme');
+    expect(text).not.toMatch(/\n/);
+  });
+
+  it('renders a PNG for admin, including a non-Latin product name', async () => {
+    const { token } = await createAdmin();
+    const product = await createProduct({ name: 'स्टील बोतल' });
+
+    const res = await request(app)
+      .get(`/admin/catalog/products/${product._id}/qrcode.png`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('image/png');
+    expect(res.body.slice(0, 4)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  });
+
+  it('renders for the owning seller only', async () => {
+    const { vendor: owner, token: ownerToken } = await createVendor();
+    const { token: otherToken } = await createVendor();
+    const category = await createCategory();
+    const product = await createProduct({ vendor: owner._id, category: category._id });
+
+    const own = await request(app)
+      .get(`/vendor/products/${product._id}/qrcode.png`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(own.status).toBe(200);
+
+    const other = await request(app)
+      .get(`/vendor/products/${product._id}/qrcode.png`)
+      .set('Authorization', `Bearer ${otherToken}`);
+    expect(other.status).toBe(404);
+  });
+});
+
 describe('backfill-product-barcodes', () => {
   it('assigns a barcode to a product that predates the field, and skips one that already has one', async () => {
     const category = await createCategory();
@@ -229,5 +280,45 @@ describe('backfill-product-barcodes', () => {
     // Never touched a product that already had one.
     const untouched = await Product.findById(alreadyDone._id).lean();
     expect(untouched.barcode).toBe(alreadyDone.barcode);
+  });
+});
+
+describe('GET /admin/catalog/products/:id', () => {
+  it('returns the product with its category and seller resolved', async () => {
+    const { token } = await createAdmin();
+    const { vendor } = await createVendor({ business: { businessName: 'Acme Traders' } });
+    const product = await createProduct({ name: 'Detail Widget', vendor: vendor._id });
+
+    const res = await request(app)
+      .get(`/admin/catalog/products/${product._id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(product._id.toString());
+    expect(res.body.data.name).toBe('Detail Widget');
+    expect(res.body.data.category.name).toBeTruthy();
+    expect(res.body.data.vendor).toBe(vendor._id.toString());
+    expect(res.body.data.vendorDetails).toMatchObject({ id: vendor._id.toString(), name: 'Acme Traders' });
+    expect(res.body.data.fulfillmentProvider).toBeNull();
+  });
+
+  it('404s an unknown id and 400s a malformed one', async () => {
+    const { token } = await createAdmin();
+
+    const missing = await request(app)
+      .get('/admin/catalog/products/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`);
+    expect(missing.status).toBe(404);
+
+    const malformed = await request(app)
+      .get('/admin/catalog/products/not-an-id')
+      .set('Authorization', `Bearer ${token}`);
+    expect(malformed.status).toBe(400);
+  });
+
+  it('requires admin auth', async () => {
+    const product = await createProduct();
+    const res = await request(app).get(`/admin/catalog/products/${product._id}`);
+    expect(res.status).toBe(401);
   });
 });

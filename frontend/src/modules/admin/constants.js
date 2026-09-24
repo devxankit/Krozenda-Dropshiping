@@ -216,7 +216,7 @@ export const NAV_TREE = Object.freeze([
   },
   {
     id: 'catalog',
-    label: 'Catalog',
+    label: 'Own Stock',
     items: [
       {
         label: 'Products',
@@ -286,13 +286,17 @@ export const NAV_TREE = Object.freeze([
     ],
   },
   {
+    // Section heading "Dropshipping"; `submenu` renders the items nested under
+    // one collapsible "CJ Dropshipping" parent. Items stay a flat list so the
+    // permission picker, breadcrumb and command palette read them unchanged.
     id: 'cj-dropshipping',
-    label: 'CJ Dropshipping',
+    label: 'Dropshipping',
+    submenu: { label: 'CJ Dropshipping', icon: 'dropshipping' },
     items: [
       {
         label: 'Dashboard',
         to: ADMIN_ROUTES.CJ_DASHBOARD,
-        icon: 'dropshipping',
+        icon: 'dashboard',
         permission: ADMIN_PERMISSIONS.CJ_VIEW,
         exact: true,
       },
@@ -313,6 +317,27 @@ export const NAV_TREE = Object.freeze([
         to: ADMIN_ROUTES.CJ_ORDERS,
         icon: 'orders',
         permission: ADMIN_PERMISSIONS.CJ_ORDERS,
+      },
+      {
+        label: 'Shipments',
+        to: ADMIN_ROUTES.CJ_SHIPMENTS,
+        icon: 'shipments',
+        permission: ADMIN_PERMISSIONS.CJ_SHIPMENTS,
+        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
+      },
+      {
+        label: 'Disputes',
+        to: ADMIN_ROUTES.CJ_DISPUTES,
+        icon: 'flag',
+        permission: ADMIN_PERMISSIONS.CJ_RETURNS,
+        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
+      },
+      {
+        label: 'Sync Logs',
+        to: ADMIN_ROUTES.CJ_SYNC_LOGS,
+        icon: 'activity',
+        permission: ADMIN_PERMISSIONS.CJ_SYNC,
+        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
       },
       {
         // Live CJ search + select-to-onboard flow. Same screen and route as
@@ -475,6 +500,12 @@ export const NAV_TREE = Object.freeze([
         icon: 'settings',
         permission: ADMIN_PERMISSIONS.SETTINGS_VIEW,
         match: '/admin/settings',
+      },
+      {
+        label: 'Audit log',
+        to: ADMIN_ROUTES.AUDIT_LOGS,
+        icon: 'audit',
+        permission: ADMIN_PERMISSIONS.AUDIT_VIEW,
       },
       {
         label: 'Backups',

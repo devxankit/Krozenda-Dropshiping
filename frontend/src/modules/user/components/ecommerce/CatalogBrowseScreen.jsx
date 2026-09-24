@@ -131,6 +131,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
       brands={brands}
       categories={categories}
       showCategories={mode === 'listing'}
+      showSort
       onApply={(draft) => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
         setParams({
@@ -142,6 +143,9 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
           inStock: draft.inStock,
           minDiscount: draft.minDiscount,
           source: draft.source,
+          flashSale: draft.flashSale,
+          trending: draft.trending,
+          sort: draft.sort,
         })
       }}
       onClear={() => {
@@ -154,13 +158,14 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col justify-between bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 pb-28 pt-4 sm:px-6 md:pb-12 md:pt-8 lg:px-8">
-        {/* Search + controls */}
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
+        {/* Search + controls — sticky on phones, where there is no WebHeader
+            above it; on md+ the sticky WebHeader already owns the top edge. */}
+        <div className="sticky top-2 z-40 flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-3 shadow-sm backdrop-blur-md sm:p-4 md:static md:bg-white md:backdrop-blur-none">
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -224,7 +229,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
         <div className="flex gap-6">
           {/* Desktop sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block">
-            <div className="sticky top-24 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="sticky top-24 flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
               <CatalogFilterPanel
                 params={params}
                 brands={brands}
@@ -240,6 +245,8 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
                     inStock: draft.inStock,
                     minDiscount: draft.minDiscount,
                     source: draft.source,
+                    flashSale: draft.flashSale,
+                    trending: draft.trending,
                   })
                 }
                 onClear={clearFilters}
@@ -280,7 +287,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
             {/* Active filter chips — so the user can always see WHY a result
                 set is small, and undo one filter without opening the panel. */}
             {activeFilterCount > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="-mx-4 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
                 {params.brands.map((brandId) => {
                   const brand = brands.find((b) => b.id === brandId)
                   return (
@@ -314,10 +321,22 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
                 {params.inStock && (
                   <FilterChip label="In stock" onRemove={() => setParams({ inStock: false })} />
                 )}
+                {params.flashSale && (
+                  <FilterChip label="Flash sale" onRemove={() => setParams({ flashSale: false })} />
+                )}
+                {params.trending && (
+                  <FilterChip label="Trending" onRemove={() => setParams({ trending: false })} />
+                )}
+                {params.source !== 'all' && (
+                  <FilterChip
+                    label={params.source === 'dropship' ? 'Dropship only' : 'Regular stock only'}
+                    onRemove={() => setParams({ source: 'all' })}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="text-[11px] font-bold text-blue-600 hover:underline"
+                  className="shrink-0 whitespace-nowrap text-[11px] font-bold text-blue-600 hover:underline"
                 >
                   Clear all
                 </button>
@@ -424,7 +443,7 @@ export function CatalogBrowseScreen({ mode = 'listing' }) {
 
 function FilterChip({ label, onRemove }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1 text-[11px] font-bold text-slate-700">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1 text-[11px] font-bold text-slate-700">
       <span className="max-w-[10rem] truncate">{label}</span>
       <button
         type="button"

@@ -51,6 +51,7 @@ export const productNodeSchema = z.object({
   isFlashsale: z.boolean().optional(),
   isFlashSale: z.boolean().optional(),
   isTrending: z.boolean().optional(),
+  isReturnable: z.boolean().optional(),
 }).passthrough()
 
 export const productListSchema = z.object({
@@ -240,6 +241,7 @@ export const productWriteSchema = z
     isFlashsale: z.boolean().optional(),
     isFlashSale: z.boolean().optional(),
     isTrending: z.boolean().optional(),
+    isReturnable: z.boolean().optional(),
   })
   .refine((data) => data.salePrice == null || data.salePrice <= data.price, {
     message: 'Sale price cannot be higher than the regular price',

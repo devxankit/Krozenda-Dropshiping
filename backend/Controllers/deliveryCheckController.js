@@ -153,7 +153,9 @@ async function checkProductDelivery(req, res) {
         pincode,
         serviceable: true,
         prepaid: { available: true, charge },
-        cod: { available: settings.codEnabled, charge },
+        // Dropshipping items are paid for online only (business rule, 2026-09).
+        cod: { available: false, charge: null },
+        onlineOnly: true,
         estimatedDays: days,
         estimatedDeliveryDate: estimateDate(days),
         isInternational: true,

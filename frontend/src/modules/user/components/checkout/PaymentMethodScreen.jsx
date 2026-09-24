@@ -4,6 +4,7 @@ import {
   HiBanknotes,
   HiCheckCircle,
   HiCreditCard,
+  HiGlobeAlt,
   HiMapPin,
   HiShieldCheck,
   HiTruck,
@@ -77,11 +78,19 @@ export function PaymentMethodScreen() {
     couponCode: appliedCoupon?.code,
   })
 
-  const canContinue = Boolean(quote) && !isLoading && !error
+  // A cart with a dropshipping item can only be paid online. The server
+  // refuses anything else; moving the selection here keeps the buyer from
+  // walking into that refusal.
+  const onlineOnly = Boolean(quote?.onlineOnly)
+  useEffect(() => {
+    if (onlineOnly && paymentMethod !== 'RAZORPAY') setPaymentMethod('RAZORPAY')
+  }, [onlineOnly, paymentMethod, setPaymentMethod])
+
+  const canContinue = Boolean(quote) && !isLoading && !error && (!onlineOnly || paymentMethod === 'RAZORPAY')
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 
@@ -134,6 +143,21 @@ export function PaymentMethodScreen() {
                 >
                   Change
                 </button>
+              </div>
+            )}
+
+            {onlineOnly && (
+              <div className="flex items-start gap-2.5 rounded-2xl border border-blue-200 bg-blue-50 p-3.5 shadow-xs">
+                <HiGlobeAlt className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                <div className="space-y-0.5 text-xs">
+                  <p className="font-bold text-blue-900">Online payment only for this order</p>
+                  <p className="text-blue-800">
+                    Your cart has a dropshipping item. These ship from our supplier and can only be paid
+                    online — they cannot be cancelled or returned.
+                    {quote.orderCount > 1 &&
+                      ` Your items will be placed as ${quote.orderCount} separate orders, paid in one payment.`}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -224,7 +248,7 @@ export function PaymentMethodScreen() {
                         <span className="inline-block h-4 w-12 animate-pulse rounded bg-slate-200" />
                       ) : !row ? null : row.available === false ? (
                         <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-400">
-                          Unavailable
+                          {row.reason === 'ONLINE_PAYMENT_REQUIRED' ? 'Not for dropship items' : 'Unavailable'}
                         </span>
                       ) : (
                         <div className="flex flex-col items-end">

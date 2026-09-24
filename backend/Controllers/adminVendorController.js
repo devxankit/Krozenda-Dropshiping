@@ -7,6 +7,7 @@ const { sendToTokens } = require('../utils/pushHelper');
 const { serializeVendor, createVendorAccount } = require('./vendorAuthController');
 const { serializeDocument } = require('./vendorDocumentController');
 const razorpayRouteService = require('../services/razorpayRouteService');
+const emailService = require('../services/emailService');
 
 // Live SKU count and gross sales per vendor, read from the catalog and the
 // order line items that snapshot their vendor at order time — the directory
@@ -89,6 +90,10 @@ async function createVendor(req, res) {
     return res.status(error.status).json({ success: false, message: error.message });
   }
 
+  // A partner an admin activates on the spot never passes through the KYC
+  // queue, so this is the only point they learn the account is live.
+  if (approveNow) emailService.sendVendorAccountApproved(vendor);
+
   res.status(201).json({
     success: true,
     message: approveNow ? 'Partner onboarded and activated' : 'Partner registered, awaiting verification',
@@ -137,6 +142,7 @@ async function updateVendorStatus(req, res) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
   }
 
+  const previousStatus = vendor.verificationStatus;
   vendor.verificationStatus = verificationStatus;
   vendor.rejectionReason = verificationStatus === 'REJECTED' ? rejectionReason.trim() : '';
   if (verificationStatus === 'APPROVED') {
@@ -147,6 +153,15 @@ async function updateVendorStatus(req, res) {
   }
 
   await vendor.save();
+
+  // Email on every rejection (the reason may have changed), but on approval
+  // only when the account actually becomes active, so re-saving an already
+  // approved vendor doesn't resend it. Fire and forget: never throws.
+  if (verificationStatus === 'APPROVED' && previousStatus !== 'APPROVED') {
+    emailService.sendVendorAccountApproved(vendor);
+  } else if (verificationStatus === 'REJECTED') {
+    emailService.sendVendorApplicationRejected(vendor, vendor.rejectionReason);
+  }
 
   // Dispatch English notification to seller
   if (verificationStatus === 'APPROVED') {
@@ -252,6 +267,11 @@ async function reviewVendorDocument(req, res) {
   doc.verifiedBy = req.admin._id;
   doc.verifiedAt = new Date();
   await doc.save();
+
+  if (status === 'REJECTED') {
+    const vendor = await Vendor.findById(vendorId).select('name email vendorType');
+    if (vendor) emailService.sendVendorDocumentRejected(vendor, doc);
+  }
 
   res.json({
     success: true,

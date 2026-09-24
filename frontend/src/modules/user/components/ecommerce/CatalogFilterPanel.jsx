@@ -19,10 +19,41 @@ const RATING_OPTIONS = [
 ]
 
 const DISCOUNT_OPTIONS = [
+  { label: '70% or more', value: 70 },
   { label: '50% or more', value: 50 },
+  { label: '40% or more', value: 40 },
   { label: '30% or more', value: 30 },
+  { label: '20% or more', value: 20 },
   { label: '10% or more', value: 10 },
 ]
+
+// One-tap price bands. They only fill the Min/Max inputs, so the range can
+// still be fine-tuned by hand afterwards.
+const PRICE_PRESETS = [
+  { label: 'Under ₹500', min: null, max: 500 },
+  { label: '₹500 – ₹1,000', min: 500, max: 1000 },
+  { label: '₹1,000 – ₹5,000', min: 1000, max: 5000 },
+  { label: '₹5,000 – ₹20,000', min: 5000, max: 20000 },
+  { label: 'Over ₹20,000', min: 20000, max: null },
+]
+
+// Mirrors CatalogBrowseScreen's sort dropdown; shown inside the panel only
+// where that dropdown is out of reach (the mobile sheet).
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'popular', label: 'Popularity' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'discount', label: 'Discount' },
+  { value: 'rating', label: 'Customer rating' },
+]
+
+const chipClass = (active) =>
+  `rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors ${
+    active
+      ? 'border-blue-600 bg-blue-600 text-white'
+      : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600'
+  }`
 
 const PRICE_CEILING = 200000
 
@@ -40,6 +71,7 @@ export function CatalogFilterPanel({
   onClear,
   onClose,
   showCategories = true,
+  showSort = false,
 }) {
   const [brandQuery, setBrandQuery] = useState('')
   // "Product type" (dropship vs regular stock) only makes sense — and only
@@ -59,6 +91,9 @@ export function CatalogFilterPanel({
       inStock: params.inStock,
       minDiscount: params.minDiscount,
       source: params.source,
+      flashSale: params.flashSale,
+      trending: params.trending,
+      sort: params.sort,
     }),
     [params],
   )
@@ -104,8 +139,60 @@ export function CatalogFilterPanel({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
+    // min-h-0 + flex-1, not h-full: inside the sheet's max-h flex column h-full
+    // resolved to auto, so the panel grew to its content height and everything
+    // below the fold could not be scrolled to.
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
+        {showSort && (
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+              Sort by
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => patch({ sort: option.value })}
+                  className={chipClass(draft.sort === option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Offers
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => patch({ flashSale: !draft.flashSale })}
+              className={chipClass(draft.flashSale)}
+            >
+              Flash sale
+            </button>
+            <button
+              type="button"
+              onClick={() => patch({ trending: !draft.trending })}
+              className={chipClass(draft.trending)}
+            >
+              Trending
+            </button>
+            <button
+              type="button"
+              onClick={() => patch({ inStock: !draft.inStock })}
+              className={chipClass(draft.inStock)}
+            >
+              In stock only
+            </button>
+          </div>
+        </fieldset>
+
         {showCategories && categories.length > 0 && (
           <fieldset className="space-y-2">
             <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
@@ -229,6 +316,27 @@ export function CatalogFilterPanel({
               />
             </label>
           </div>
+          <div className="flex flex-wrap gap-2">
+            {PRICE_PRESETS.map((preset) => {
+              const active = draft.minPrice === preset.min && draft.maxPrice === preset.max
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() =>
+                    patch(
+                      active
+                        ? { minPrice: null, maxPrice: null }
+                        : { minPrice: preset.min, maxPrice: preset.max },
+                    )
+                  }
+                  className={chipClass(active)}
+                >
+                  {preset.label}
+                </button>
+              )
+            })}
+          </div>
           {priceRangeInvalid && (
             <p role="alert" className="text-[11px] font-semibold text-red-600">
               Minimum price cannot be higher than the maximum.
@@ -236,84 +344,63 @@ export function CatalogFilterPanel({
           )}
         </fieldset>
 
-        <fieldset className="space-y-1">
+        <fieldset className="space-y-2">
           <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
             Customer rating
           </legend>
-          {RATING_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => patch({ rating: draft.rating === option.value ? null : option.value })}
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
-                draft.rating === option.value
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <span>{option.label}</span>
-              {draft.rating === option.value && <HiCheck className="h-4 w-4" aria-hidden="true" />}
-            </button>
-          ))}
-        </fieldset>
-
-        <fieldset className="space-y-1">
-          <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
-            Discount
-          </legend>
-          {DISCOUNT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() =>
-                patch({ minDiscount: draft.minDiscount === option.value ? null : option.value })
-              }
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
-                draft.minDiscount === option.value
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <span>{option.label}</span>
-              {draft.minDiscount === option.value && (
-                <HiCheck className="h-4 w-4" aria-hidden="true" />
-              )}
-            </button>
-          ))}
-        </fieldset>
-
-        {dropshippingEnabled && (
-          <fieldset className="space-y-1">
-            <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Product type
-            </legend>
-            {SOURCE_OPTIONS.map((option) => (
+          <div className="flex flex-wrap gap-2">
+            {RATING_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => patch({ source: option.value })}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${
-                  draft.source === option.value
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
+                onClick={() => patch({ rating: draft.rating === option.value ? null : option.value })}
+                className={chipClass(draft.rating === option.value)}
               >
-                <span>{option.label}</span>
-                {draft.source === option.value && <HiCheck className="h-4 w-4" aria-hidden="true" />}
+                {option.label}
               </button>
             ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Discount
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {DISCOUNT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  patch({ minDiscount: draft.minDiscount === option.value ? null : option.value })
+                }
+                className={chipClass(draft.minDiscount === option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        {dropshippingEnabled && (
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
+              Product type
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {SOURCE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => patch({ source: option.value })}
+                  className={chipClass(draft.source === option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </fieldset>
         )}
-
-        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 px-3 py-3">
-          <span className="text-xs font-bold text-slate-800">In stock only</span>
-          <input
-            type="checkbox"
-            checked={draft.inStock}
-            onChange={(e) => patch({ inStock: e.target.checked })}
-            className="h-4 w-4 accent-blue-600"
-          />
-        </label>
       </div>
 
       {/* Sticky action bar, padded for the home indicator so "Apply" is never

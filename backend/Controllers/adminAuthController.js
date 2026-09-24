@@ -32,6 +32,10 @@ async function login(req, res) {
     return res.status(403).json({ success: false, message: 'Account is deactivated' });
   }
 
+  // Login runs before protectAdmin exists for this request, so the audit
+  // middleware learns who signed in from here.
+  res.locals.auditActor = user;
+
   const permissions = user.role === 'admin' ? [] : user.roleId?.permissions || [];
 
   const token = signToken('admin', {

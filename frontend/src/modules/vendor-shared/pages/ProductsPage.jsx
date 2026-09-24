@@ -6,6 +6,7 @@ import { VENDOR_PRODUCT_COLUMNS, VENDOR_PRODUCT_TABS } from '../tableColumns/ven
 import { AddVendorProductModal } from '../components/modals/AddVendorProductModal'
 import { EditVendorProductModal } from '../components/modals/EditVendorProductModal'
 import { UpdateStockModal } from '../components/modals/UpdateStockModal'
+import { VendorProductDetailModal } from '../components/modals/VendorProductDetailModal'
 import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
 import { downloadTableCsv } from '../../admin/lib/exportCsv'
 
@@ -27,6 +28,7 @@ export function VendorProductsPage() {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [viewingProduct, setViewingProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
 
@@ -46,10 +48,21 @@ export function VendorProductsPage() {
     {
       key: '__actions',
       header: 'Actions',
-      width: '6.5rem',
+      width: '9rem',
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setViewingProduct(row)
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            title="View details & barcode"
+          >
+            <Icon name="eye" className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={(e) => {
@@ -362,102 +375,187 @@ export function VendorProductsPage() {
             {items.map((item) => {
               const primaryImage = item.images?.[0]
               const isPendingOrRejected = item.approvalStatus === 'PENDING' || item.approvalStatus === 'REJECTED'
+              const hasDiscount = item.salePrice != null && item.salePrice < item.price
+              const discountPct =
+                item.discountPercent ||
+                (hasDiscount ? Math.round(((item.price - item.salePrice) / item.price) * 100) : 0)
+
               return (
                 <div
                   key={item.id}
                   onClick={() => setEditingProduct(item)}
-                  className="group relative flex flex-col cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-brand-300 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                  className="group relative flex flex-col cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:border-brand-400 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/70 border border-slate-100 flex items-center justify-center">
+                  {/* Cover Image Showcase */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-100 p-2.5 flex items-center justify-center">
                     {primaryImage ? (
-                      <img src={primaryImage} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      <img
+                        src={primaryImage}
+                        alt={item.name}
+                        className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          if (e.currentTarget.parentElement) {
+                            e.currentTarget.parentElement.innerHTML = `<div class="flex h-full w-full items-center justify-center font-bold text-xl text-brand-600 bg-brand-50">${item.name ? item.name.slice(0, 2).toUpperCase() : 'PR'}</div>`
+                          }
+                        }}
+                      />
                     ) : (
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
                         {item.name ? item.name.slice(0, 2).toUpperCase() : 'PR'}
                       </div>
                     )}
 
-                    <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
-                      {item.stock <= 0 && (
-                        <span className="rounded-lg bg-rose-600/90 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          Out of Stock
-                        </span>
-                      )}
+                    {/* Top Floating Badges */}
+                    <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1 max-w-[70%] z-10 pointer-events-none">
                       {item.isFlashsale && (
-                        <span className="rounded-lg bg-amber-500/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          🔥 Flash Sale
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          <span>🔥</span>
+                          <span>Flash</span>
                         </span>
                       )}
                       {item.isTrending && (
-                        <span className="rounded-lg bg-indigo-600/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          📈 Trending
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          <span>📈</span>
+                          <span>Trending</span>
+                        </span>
+                      )}
+                      {discountPct > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          {discountPct}% OFF
+                        </span>
+                      )}
+                      {item.stock <= 0 && (
+                        <span className="inline-flex items-center rounded-full bg-rose-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          Out of Stock
                         </span>
                       )}
                     </div>
 
-                    <div className="absolute top-2.5 right-2.5">
+                    {/* Top Right Status Badge */}
+                    <div className="absolute top-2 right-2 z-10">
                       {isPendingOrRejected ? (
                         <Badge
                           tone={STATUS_TONE[item.approvalStatus] || 'neutral'}
                           dot
                           size="sm"
-                          className="backdrop-blur-md bg-white/95 shadow-xs border border-white/80 font-semibold"
+                          className="backdrop-blur-md bg-white/95 shadow-xs border border-white/80 font-bold"
                         >
-                          {item.approvalStatus === 'PENDING' ? 'Pending review' : 'Rejected'}
+                          {item.approvalStatus === 'PENDING' ? 'Pending' : 'Rejected'}
                         </Badge>
                       ) : (
-                        <Badge
-                          tone={item.isActive ? 'success' : 'neutral'}
-                          dot
-                          size="sm"
-                          className="backdrop-blur-md bg-white/95 shadow-xs border border-white/80 font-semibold"
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold backdrop-blur-md shadow-xs border ${
+                            item.isActive
+                              ? 'bg-white/95 border-emerald-200 text-emerald-700'
+                              : 'bg-white/95 border-slate-200 text-slate-500'
+                          }`}
                         >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                            }`}
+                          />
                           {item.isActive ? 'Active' : 'Hidden'}
-                        </Badge>
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-3.5 flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 text-2xs text-slate-400 truncate">
-                      <span className="font-semibold text-slate-600">{item.category?.name || 'Catalog'}</span>
+                  {/* Details */}
+                  <div className="mt-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-2xs truncate">
+                      <span className="font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded text-[10px] tracking-wide uppercase truncate max-w-[120px]">
+                        {item.category?.name || 'Catalog'}
+                      </span>
                       {item.brand?.name && (
-                        <>
-                          <span>•</span>
-                          <span className="text-slate-500">{item.brand.name}</span>
-                        </>
+                        <span className="text-slate-500 font-medium text-[11px] truncate">
+                          · {item.brand.name}
+                        </span>
                       )}
                     </div>
 
-                    <h3 className="font-bold text-slate-900 text-sm mt-1 truncate group-hover:text-brand-600 transition-colors" title={item.name}>
+                    <h3
+                      className="font-bold text-slate-900 text-sm mt-1.5 line-clamp-2 min-h-[2.5rem] leading-snug group-hover:text-brand-600 transition-colors"
+                      title={item.name}
+                    >
                       {item.name}
                     </h3>
 
+                    {/* Pricing */}
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-base font-extrabold text-slate-900 tabular">
+                      <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight tabular">
                         {formatRupees(item.salePrice ?? item.price)}
                       </span>
-                      {item.salePrice != null && item.salePrice < item.price && (
-                        <span className="text-2xs text-slate-400 line-through tabular">{formatRupees(item.price)}</span>
+                      {hasDiscount && (
+                        <span className="text-xs text-slate-400 line-through tabular font-normal">
+                          {formatRupees(item.price)}
+                        </span>
+                      )}
+                      {discountPct > 0 && (
+                        <span className="ml-auto text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md">
+                          Save {formatRupees(item.price - item.salePrice)}
+                        </span>
                       )}
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between text-2xs">
-                      <span className="text-slate-500 font-medium">
-                        Stock: <span className="font-bold text-slate-800">{item.stock}</span>
-                      </span>
-                      {item.sku && <span className="text-slate-400 truncate">SKU: {item.sku}</span>}
+                    {/* Stock status indicator */}
+                    <div className="mt-2.5 flex items-center justify-between text-2xs pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-block h-1.5 w-1.5 rounded-full ${
+                            item.stock > 10
+                              ? 'bg-emerald-500'
+                              : item.stock > 0
+                                ? 'bg-amber-500'
+                                : 'bg-rose-500'
+                          }`}
+                        />
+                        <span className="text-slate-500 font-medium">Stock:</span>
+                        <span
+                          className={`font-bold tabular ${
+                            item.stock > 10
+                              ? 'text-slate-800'
+                              : item.stock > 0
+                                ? 'text-amber-600'
+                                : 'text-rose-600'
+                          }`}
+                        >
+                          {item.stock > 0 ? item.stock : 'Out of Stock'}
+                        </span>
+                      </div>
+                      {item.sku && (
+                        <span
+                          className="font-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-200/60 px-1.5 py-0.5 rounded max-w-[100px] truncate"
+                          title={item.sku}
+                        >
+                          SKU: {item.sku}
+                        </span>
+                      )}
                     </div>
 
                     {item.approvalStatus === 'REJECTED' && item.rejectionReason && (
-                      <p className="mt-1.5 text-2xs text-danger-600">{item.rejectionReason}</p>
+                      <p className="mt-2 text-2xs text-rose-600 bg-rose-50/80 border border-rose-200/60 p-1.5 rounded-lg">
+                        {item.rejectionReason}
+                      </p>
                     )}
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-y-2">
-                    <div className="flex items-center gap-1.5" title="Storefront visibility">
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                      <span className="text-2xs font-semibold text-slate-600">{item.isActive ? 'Live' : 'Hidden'}</span>
+                  {/* Card Bottom Footer */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2" title="Storefront visibility">
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
+                        }`}
+                      />
+                      <span
+                        className={`text-xs font-bold tracking-tight ${
+                          item.isActive ? 'text-emerald-700' : 'text-slate-400'
+                        }`}
+                      >
+                        {item.isActive ? 'Live' : 'Hidden'}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -465,9 +563,20 @@ export function VendorProductsPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
+                          setViewingProduct(item)
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 border border-slate-200/50 hover:border-brand-200 transition-all shadow-2xs"
+                        title="View details & barcode"
+                      >
+                        <Icon name="eye" className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setEditingProduct(item)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 border border-slate-200/50 hover:border-brand-200 transition-all shadow-2xs"
                         title="Edit product details"
                       >
                         <Icon name="edit" className="h-3.5 w-3.5" />
@@ -478,7 +587,7 @@ export function VendorProductsPage() {
                           e.stopPropagation()
                           setSelectedProduct(item)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 border border-slate-200/50 hover:border-brand-200 transition-all shadow-2xs"
                         title="Update stock"
                       >
                         <Icon name="inventory" className="h-3.5 w-3.5" />
@@ -529,6 +638,20 @@ export function VendorProductsPage() {
         onUpdateStock={list.updateStock}
       />
 
+      <VendorProductDetailModal
+        product={viewingProduct}
+        isOpen={Boolean(viewingProduct)}
+        onClose={() => setViewingProduct(null)}
+        onEdit={(product) => {
+          setViewingProduct(null)
+          setEditingProduct(product)
+        }}
+        onUpdateStock={(product) => {
+          setViewingProduct(null)
+          setSelectedProduct(product)
+        }}
+      />
+
       <EditVendorProductModal
         key={editingProduct?.id}
         product={editingProduct}
@@ -546,7 +669,7 @@ export function VendorProductsPage() {
         lookupPath={(code) => `/vendor/products/barcode/${code}`}
         onFound={(product) => {
           setScanOpen(false)
-          setSelectedProduct(product)
+          setViewingProduct(product)
         }}
       />
     </>

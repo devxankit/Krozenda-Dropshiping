@@ -6,6 +6,8 @@ const VendorPasswordReset = require('../Models/VendorPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
 const { updateLanguageFor } = require('./languageController');
+const { getRequiredAcceptancePages } = require('./cmsController');
+const emailService = require('../services/emailService');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
@@ -31,6 +33,12 @@ function serializeVendor(vendor) {
     bank: vendor.bank || {},
     verificationStatus: vendor.verificationStatus,
     rejectionReason: vendor.rejectionReason || '',
+    policyAcceptances: (vendor.policyAcceptances || []).map(({ slug, title, version, acceptedAt }) => ({
+      slug,
+      title,
+      version,
+      acceptedAt,
+    })),
     isActive: vendor.isActive,
     // Null means the account has never chosen; see languageController.
     language: vendor.language || null,
@@ -43,7 +51,10 @@ function serializeVendor(vendor) {
 // from the panel, so the two can never disagree about what a valid B2B or
 // B2C vendor looks like. Returns { error } or { vendor } rather than
 // touching the response, since the two callers reply differently.
-async function createVendorAccount(payload, { verificationStatus = 'PENDING', isActive = false } = {}) {
+async function createVendorAccount(
+  payload,
+  { verificationStatus = 'PENDING', isActive = false, policyAcceptances = [] } = {}
+) {
   const {
     vendorType,
     name,
@@ -113,16 +124,72 @@ async function createVendorAccount(payload, { verificationStatus = 'PENDING', is
     bank: bank || {},
     verificationStatus,
     isActive,
+    policyAcceptances,
   });
 
   return { vendor };
 }
 
+// A self-registering seller must accept the CURRENT version of every policy
+// admin has marked mandatory in the CMS. Checking the version (not just the
+// slug) means a form opened before admin republished a policy cannot sign
+// the seller up against text they never saw.
+async function resolvePolicyAcceptances(submitted, ip) {
+  const required = await getRequiredAcceptancePages();
+  const accepted = new Map(
+    (Array.isArray(submitted) ? submitted : [])
+      .filter((a) => a && typeof a.slug === 'string')
+      .map((a) => [a.slug.toLowerCase().trim(), String(a.version || '').trim()])
+  );
+
+  const missing = required.filter((p) => !accepted.has(p.slug));
+  if (missing.length) {
+    return {
+      error: {
+        status: 400,
+        code: 'POLICIES_NOT_ACCEPTED',
+        message: `Please read and accept: ${missing.map((p) => p.title).join(', ')}`,
+      },
+    };
+  }
+
+  const stale = required.filter((p) => accepted.get(p.slug) !== (p.version || 'v1.0'));
+  if (stale.length) {
+    return {
+      error: {
+        status: 409,
+        code: 'POLICY_VERSION_CHANGED',
+        message: `${stale.map((p) => p.title).join(', ')} has been updated. Please review and accept the latest version.`,
+      },
+    };
+  }
+
+  const acceptedAt = new Date();
+  return {
+    acceptances: required.map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      version: p.version || 'v1.0',
+      acceptedAt,
+      ip: ip || '',
+    })),
+  };
+}
+
 async function register(req, res) {
-  const { documents, ...restPayload } = req.body;
+  const { documents, policyAcceptances, ...restPayload } = req.body;
+
+  const policies = await resolvePolicyAcceptances(policyAcceptances, req.ip);
+  if (policies.error) {
+    return res
+      .status(policies.error.status)
+      .json({ success: false, code: policies.error.code, message: policies.error.message });
+  }
+
   const { error, vendor } = await createVendorAccount(restPayload, {
     verificationStatus: 'UNDER_REVIEW',
     isActive: false,
+    policyAcceptances: policies.acceptances,
   });
 
   if (error) {
@@ -144,6 +211,9 @@ async function register(req, res) {
       }
     }
   }
+
+  // Fire and forget: the email service never throws.
+  emailService.sendVendorRegistrationReceived(vendor);
 
   res.status(201).json({
     success: true,
@@ -328,6 +398,8 @@ async function submitForVerification(req, res) {
   vendor.verificationStatus = 'UNDER_REVIEW';
   vendor.rejectionReason = '';
   await vendor.save();
+
+  emailService.sendVendorRegistrationReceived(vendor);
 
   res.json({
     success: true,

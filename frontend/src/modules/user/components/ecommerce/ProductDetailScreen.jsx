@@ -3,7 +3,10 @@ import {
   HiArrowLeft,
   HiArrowPath,
   HiCheck,
+  HiCreditCard,
+  HiGlobeAlt,
   HiHeart,
+  HiNoSymbol,
   HiOutlineHeart,
   HiOutlineShoppingBag,
   HiShare,
@@ -29,7 +32,6 @@ import {
   buildProductStructuredData,
   usePageMeta,
 } from '../../../../lib/usePageMeta'
-import { useAuthStore } from '../../../../lib/authStore'
 import {
   useProductController,
   useRelatedProductsController,
@@ -62,6 +64,7 @@ export function ProductDetailScreen() {
   const images = product?.images?.length ? product.images : []
   const variants = product?.variants ?? []
   const hasVariants = variants.length > 0
+  const variantLabels = useMemo(() => shortVariantLabels(product?.variants ?? []), [product?.variants])
 
   // Defaults to the first in-stock variant if none explicitly picked
   const activeVariantId =
@@ -73,7 +76,6 @@ export function ProductDetailScreen() {
     (state) =>
       state.items.find((i) => i.id === productId && (i.variantId ?? null) === activeVariantId)?.quantity ?? 0,
   )
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   // Price and stock both come from the chosen variant once there is one. A
   // product with variants and none chosen shows the cheapest option as a
@@ -145,7 +147,7 @@ export function ProductDetailScreen() {
     const isNotFound = error?.status === 404
     return (
       <div className="flex min-h-screen w-full flex-col bg-slate-50">
-        <div className="hidden md:block">
+        <div className="sticky top-0 z-50 hidden md:block">
           <WebHeader />
         </div>
         <div className="flex flex-1 items-center justify-center p-6">
@@ -174,7 +176,7 @@ export function ProductDetailScreen() {
     id: product.id,
     variantId: selectedVariant?.id ?? null,
     name: product.name,
-    variant: selectedVariant?.name ?? '',
+    variant: selectedVariant ? variantLabels.get(selectedVariant.id) : '',
     image: selectedVariant?.image ?? images[0] ?? null,
     imageSrcSet: product.imageSrcSets?.[0] ?? null,
     price: displayPrice,
@@ -287,7 +289,7 @@ export function ProductDetailScreen() {
 
   return (
     <div className="flex min-h-screen w-full flex-col justify-between bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 
@@ -339,58 +341,36 @@ export function ProductDetailScreen() {
             <HiArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span>Back</span>
           </button>
-          <div className="flex items-center gap-2">
-            {isAuthenticated && (
-              <button
-                type="button"
-                onClick={handleToggleWishlist}
-                aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                aria-pressed={isWishlisted}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
-              >
-                {isWishlisted ? (
-                  <HiHeart className="h-4 w-4 fill-red-500 text-red-500" />
-                ) : (
-                  <HiOutlineHeart className="h-4 w-4" />
-                )}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share this product"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
-            >
-              <HiShare className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleShare}
+            aria-label="Share this product"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
+          >
+            <HiShare className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-10">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-10">
           {/* Gallery */}
-          <div className="space-y-6 lg:sticky lg:top-24">
+          <div className="space-y-4 lg:sticky lg:top-24">
             <div className="relative rounded-3xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-6">
-              <div className="absolute right-4 top-4 z-20 hidden flex-col gap-2 md:flex">
-                {isAuthenticated && (
-                  <button
-                    type="button"
-                    onClick={handleToggleWishlist}
-                    aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                    aria-pressed={isWishlisted}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:bg-white"
-                  >
-                    {isWishlisted ? (
-                      <HiHeart className="h-5 w-5 fill-red-500 text-red-500" />
-                    ) : (
-                      <HiOutlineHeart className="h-5 w-5" />
-                    )}
-                  </button>
-                )}
+              {/* The heart sits on the image on every screen size, where
+                  shoppers look for it. Signed-out likes are kept locally and
+                  merged into the account on sign-in, so no auth gate. */}
+              {/* Offset = card padding (p-4 / sm:p-6) + 12px, so the buttons sit
+                  inside the image rather than straddling its edge. */}
+              <div className="absolute right-7 top-7 z-20 flex flex-col gap-2 sm:right-9 sm:top-9">
+                <WishlistButton
+                  isWishlisted={isWishlisted}
+                  onToggle={handleToggleWishlist}
+                  className="h-11 w-11 rounded-full"
+                />
                 <button
                   type="button"
                   onClick={handleShare}
                   aria-label="Share this product"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:bg-white"
+                  className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm backdrop-blur hover:bg-white md:flex"
                 >
                   <HiShare className="h-5 w-5" />
                 </button>
@@ -470,40 +450,22 @@ export function ProductDetailScreen() {
                 ))}
               </div>
             )}
-
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2">
-                  <HiShieldCheck className="mx-auto h-4 w-4 text-blue-600" aria-hidden="true" />
-                  <span className="block text-[10px] font-bold text-slate-800">100% Genuine</span>
-                </div>
-                <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2">
-                  <HiArrowPath className="mx-auto h-4 w-4 text-emerald-600" aria-hidden="true" />
-                  <span className="block text-[10px] font-bold text-slate-800">7 Days Return</span>
-                </div>
-                <div className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2">
-                  <HiTruck className="mx-auto h-4 w-4 text-indigo-600" aria-hidden="true" />
-                  <span className="block text-[10px] font-bold text-slate-800">Express Courier</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Buy box */}
-          <div className="space-y-6 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm lg:p-8">
+          <div className="space-y-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+            {/* 1. Identity */}
             <div className="space-y-2 border-b border-slate-100 pb-4">
-              {product.sku && (
-                <span className="inline-block rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700">
-                  SKU: {product.sku}
-                </span>
+              {(product.brand || product.category) && (
+                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                  {[product.brand?.name, product.category?.name].filter(Boolean).join(' · ')}
+                </p>
               )}
               <h1 className="text-xl font-black leading-tight text-slate-900 lg:text-3xl">
                 {product.name}
               </h1>
-              {(product.brand || product.category) && (
-                <p className="text-xs font-semibold text-slate-500">
-                  {[product.brand?.name, product.category?.name].filter(Boolean).join(' · ')}
-                </p>
+              {product.sku && (
+                <p className="text-[11px] font-semibold text-slate-400">SKU: {product.sku}</p>
               )}
 
               {/* Only rendered when reviews actually exist — no fabricated
@@ -525,7 +487,8 @@ export function ProductDetailScreen() {
               )}
             </div>
 
-            <div className="space-y-3">
+            {/* 2. Price & availability */}
+            <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="text-2xl font-black text-slate-900 lg:text-3xl">
                   {'₹'}
@@ -547,26 +510,27 @@ export function ProductDetailScreen() {
               </div>
               <p className="text-[11px] font-medium text-slate-500">Inclusive of all taxes.</p>
 
-              <div className="pt-1" aria-live="polite">
+              <div className="flex flex-wrap items-center gap-2" aria-live="polite">
                 {!inStock ? (
-                  <span className="text-xs font-bold text-red-600">Out of stock</span>
+                  <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">
+                    Out of stock
+                  </span>
                 ) : lowStock ? (
-                  <span className="text-xs font-bold text-amber-600">
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
                     Only {availableStock} left in stock
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                    <HiCheck className="h-4 w-4" aria-hidden="true" />
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800">
+                    <HiCheck className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>In stock</span>
                   </span>
                 )}
+                {moq > 1 && (
+                  <span className="rounded-full bg-slate-200/70 px-2.5 py-1 text-[11px] font-bold text-slate-700">
+                    Min. order: {moq} units
+                  </span>
+                )}
               </div>
-
-              {moq > 1 && (
-                <p className="text-[11px] font-semibold text-slate-700">
-                  Minimum order: {moq} units
-                </p>
-              )}
             </div>
 
             <VariantPicker
@@ -574,6 +538,7 @@ export function ProductDetailScreen() {
               selectedId={activeVariantId}
               onSelect={handleSelectVariant}
               hasError={variantError}
+              labels={variantLabels}
               fallbackPrice={product.salePrice ?? product.price}
             />
 
@@ -582,41 +547,91 @@ export function ProductDetailScreen() {
             {/* Delivery check */}
             <DeliveryCheckCard productId={product.id} />
 
-            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-              {/* Once it is in the cart, "Add to Cart" has nothing left to say —
-                  the useful control is how many. */}
-              {cartQuantity > 0 ? (
-                <CartQuantityStepper productId={product.id} stock={availableStock} />
-              ) : (
+            {/* 3. Actions */}
+            <div className="border-t border-slate-100 pt-4">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Once it is in the cart, "Add to Cart" has nothing left to say —
+                    the useful control is how many. */}
+                {cartQuantity > 0 ? (
+                  <CartQuantityStepper productId={product.id} stock={availableStock} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    disabled={!inStock || addState === 'adding'}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-blue-700 bg-white px-4 py-4 text-xs font-extrabold tracking-wide text-blue-700 shadow-sm transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {addState === 'added' ? (
+                      <>
+                        <HiCheck className="h-5 w-5" aria-hidden="true" />
+                        <span>Added</span>
+                      </>
+                    ) : (
+                      <>
+                        <HiOutlineShoppingBag className="h-5 w-5" aria-hidden="true" />
+                        <span>{addState === 'adding' ? 'Adding…' : 'Add to Cart'}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+  
                 <button
                   type="button"
-                  onClick={handleAddToCart}
-                  disabled={!inStock || addState === 'adding'}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-blue-700 bg-white px-4 py-4 text-xs font-extrabold tracking-wide text-blue-700 shadow-sm transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleBuyNow}
+                  disabled={!inStock || addState === 'adding' || buyNowState === 'buying'}
+                  className="w-full rounded-2xl bg-blue-700 px-4 py-4 text-xs font-extrabold tracking-wide text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {addState === 'added' ? (
-                    <>
-                      <HiCheck className="h-5 w-5" aria-hidden="true" />
-                      <span>Added</span>
-                    </>
-                  ) : (
-                    <>
-                      <HiOutlineShoppingBag className="h-5 w-5" aria-hidden="true" />
-                      <span>{addState === 'adding' ? 'Adding…' : 'Add to Cart'}</span>
-                    </>
-                  )}
+                  {buyNowState === 'buying' ? 'Proceeding…' : 'Buy Now'}
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                disabled={!inStock || addState === 'adding' || buyNowState === 'buying'}
-                className="w-full rounded-2xl bg-blue-700 px-4 py-4 text-xs font-extrabold tracking-wide text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {buyNowState === 'buying' ? 'Proceeding…' : 'Buy Now'}
-              </button>
+              </div>
             </div>
+
+            {/* 4. Assurances. A dropshipping item ships from the supplier on
+                different terms — online payment only, no cancellation, no
+                return — and says so here, before the buyer commits, rather
+                than promising a return it cannot honour. */}
+            {product.isDropship && (
+              <ul className="grid grid-cols-3 gap-2 text-center">
+                <li className="space-y-1 rounded-xl border border-blue-100 bg-blue-50 p-2.5">
+                  <HiCreditCard className="mx-auto h-5 w-5 text-blue-600" aria-hidden="true" />
+                  <span className="block text-[10px] font-bold text-slate-800">Online Payment Only</span>
+                </li>
+                <li className="space-y-1 rounded-xl border border-amber-100 bg-amber-50 p-2.5">
+                  <HiNoSymbol className="mx-auto h-5 w-5 text-amber-600" aria-hidden="true" />
+                  <span className="block text-[10px] font-bold text-slate-800">No Cancellation</span>
+                </li>
+                <li className="space-y-1 rounded-xl border border-amber-100 bg-amber-50 p-2.5">
+                  <HiArrowPath className="mx-auto h-5 w-5 text-amber-600" aria-hidden="true" />
+                  <span className="block text-[10px] font-bold text-slate-800">No Returns</span>
+                </li>
+              </ul>
+            )}
+            {product.isDropship && (
+              <DropshipShippingNote shipsFrom={product.dropship?.shipsFrom} onMore={() => setActiveTab('shipping')} />
+            )}
+            {!product.isDropship && (
+              <ul className="grid grid-cols-3 gap-2 text-center">
+                <li className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                  <HiShieldCheck className="mx-auto h-5 w-5 text-blue-600" aria-hidden="true" />
+                  <span className="block text-[10px] font-bold text-slate-800">100% Genuine</span>
+                </li>
+                {product.isReturnable ? (
+                  <li className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                    <HiArrowPath className="mx-auto h-5 w-5 text-emerald-600" aria-hidden="true" />
+                    <span className="block text-[10px] font-bold text-slate-800">7 Days Return</span>
+                  </li>
+                ) : (
+                  <li className="space-y-1 rounded-xl border border-amber-100 bg-amber-50 p-2.5">
+                    <HiArrowPath className="mx-auto h-5 w-5 text-amber-600" aria-hidden="true" />
+                    <span className="block text-[10px] font-bold text-slate-800">Non-Returnable</span>
+                  </li>
+                )}
+                <li className="space-y-1 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                  <HiTruck className="mx-auto h-5 w-5 text-indigo-600" aria-hidden="true" />
+                  <span className="block text-[10px] font-bold text-slate-800">Express Courier</span>
+                </li>
+              </ul>
+            )}
           </div>
         </div>
 
@@ -634,6 +649,7 @@ export function ProductDetailScreen() {
                 id: 'reviews',
                 label: `Customer Reviews${product.reviewsCount > 0 ? ` (${product.reviewsCount})` : ''}`,
               },
+              ...(product.isDropship ? [{ id: 'shipping', label: 'Shipping & Returns' }] : []),
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -662,6 +678,8 @@ export function ProductDetailScreen() {
                 {product.description || 'No description has been provided for this product yet.'}
               </p>
             </div>
+          ) : activeTab === 'shipping' ? (
+            <DropshipPolicy shipsFrom={product.dropship?.shipsFrom} />
           ) : (
             <SectionErrorBoundary label="Reviews">
               <ReviewsTab productId={productId} product={product} />
@@ -684,6 +702,106 @@ export function ProductDetailScreen() {
 }
 
 // ---------------------------------------------------------------------------
+
+// ISO country code -> "China". Falls back to the code itself on a browser
+// without Intl.DisplayNames rather than showing nothing.
+function countryName(code) {
+  if (!code) return null
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) || code
+  } catch {
+    return code
+  }
+}
+
+// Buy-box note for a dropshipped item: it is imported, ships on its own lane,
+// and its freight is a separate line at checkout (never baked into the price).
+function DropshipShippingNote({ shipsFrom, onMore }) {
+  const country = countryName(shipsFrom)
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-3.5">
+      <HiGlobeAlt className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
+      <div className="space-y-1 text-[11px] leading-relaxed text-slate-600">
+        <p className="text-xs font-bold text-slate-900">
+          Imported item{country ? ` · Ships from ${country}` : ''}
+        </p>
+        <p>
+          Shipped directly from our partner warehouse. Shipping is calculated at checkout and paid online
+          (UPI, cards, net banking).
+        </p>
+        <button type="button" onClick={onMore} className="font-bold text-blue-700 hover:underline">
+          Shipping &amp; return policy
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function DropshipPolicy({ shipsFrom }) {
+  const country = countryName(shipsFrom)
+  const points = [
+    {
+      title: 'Where it ships from',
+      body: country
+        ? `This item is dispatched from our partner warehouse in ${country}, not from a local seller.`
+        : 'This item is dispatched from our partner warehouse, not from a local seller.',
+    },
+    {
+      title: 'Delivery time',
+      body: 'International shipments usually take longer than local orders. Enter your PIN code above for the courier and estimated delivery for your address.',
+    },
+    {
+      title: 'Shipping charges',
+      body: 'Shipping is quoted for your address and added at checkout. Free-delivery offers do not cover international shipping.',
+    },
+    {
+      title: 'Payment',
+      body: 'Online payment only — Cash on Delivery and wallet balance cannot be used. If your cart also has other items, the whole order is paid online.',
+    },
+    {
+      title: 'Cancellation & returns',
+      body: 'Orders for this item cannot be cancelled or returned once placed. If the order cannot be fulfilled after payment, the full amount is refunded automatically to your original payment method.',
+    },
+  ]
+
+  return (
+    <div className="space-y-4 text-xs leading-relaxed text-slate-600">
+      <h2 className="text-sm font-black text-slate-900">Shipping &amp; Returns</h2>
+      <dl className="grid gap-3 sm:grid-cols-2">
+        {points.map((p) => (
+          <div key={p.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            <dt className="text-xs font-bold text-slate-900">{p.title}</dt>
+            <dd className="mt-1">{p.body}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+// The like control on the gallery image. Size and corner shape come from the
+// caller; state and colours live here.
+function WishlistButton({ isWishlisted, onToggle, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+      aria-pressed={isWishlisted}
+      className={`flex items-center justify-center border shadow-sm transition-all active:scale-95 ${
+        isWishlisted
+          ? 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
+          : 'border-slate-200 bg-white/90 text-slate-600 backdrop-blur hover:border-red-200 hover:text-red-500'
+      } ${className}`}
+    >
+      {isWishlisted ? (
+        <HiHeart className="h-5 w-5 fill-red-500" aria-hidden="true" />
+      ) : (
+        <HiOutlineHeart className="h-5 w-5" aria-hidden="true" />
+      )}
+    </button>
+  )
+}
 
 function ReviewsTab({ productId, product }) {
   const [page, setPage] = useState(1)
@@ -866,7 +984,7 @@ function ProductDetailSkeleton() {
   // Shaped like the real page so nothing jumps when the data lands.
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
       <main
@@ -892,13 +1010,39 @@ function ProductDetailSkeleton() {
   )
 }
 
+// CJ names every variant "<full product title> <option> <size>", so four
+// colours of one case render as four near-identical 60-character buttons.
+// Words shared by EVERY variant at the start or end say nothing about which
+// one to pick — drop them and keep what differs ("White", "Rose Red"). Falls
+// back to the stored names if trimming would leave a blank or a duplicate.
+function shortVariantLabels(variants) {
+  const names = variants.map((v) => String(v.name ?? '').trim())
+  const labels = new Map(variants.map((v, i) => [v.id, names[i]]))
+  if (variants.length < 2) return labels
+
+  const words = names.map((n) => n.split(/\s+/))
+  const minLen = Math.min(...words.map((w) => w.length))
+  const sameAt = (pick) => words.every((w) => pick(w).toLowerCase() === pick(words[0]).toLowerCase())
+
+  let prefix = 0
+  while (prefix < minLen && sameAt((w) => w[prefix])) prefix++
+  let suffix = 0
+  while (prefix + suffix < minLen && sameAt((w) => w[w.length - 1 - suffix])) suffix++
+
+  const trimmed = words.map((w) => w.slice(prefix, w.length - suffix).join(' '))
+  if (trimmed.some((t) => !t) || new Set(trimmed.map((t) => t.toLowerCase())).size !== trimmed.length) {
+    return labels
+  }
+  return new Map(variants.map((v, i) => [v.id, trimmed[i]]))
+}
+
 // The option picker. Rendered only when the product actually has options, so a
 // simple product's page is unchanged.
 //
 // An out-of-stock option stays visible but unselectable: hiding it makes the
 // product look like it was never offered in that size, which is the question
 // the buyer came to answer.
-function VariantPicker({ variants, selectedId, onSelect, hasError, fallbackPrice }) {
+function VariantPicker({ variants, selectedId, onSelect, hasError, labels, fallbackPrice }) {
   if (!variants || variants.length === 0) return null
 
   return (
@@ -943,7 +1087,7 @@ function VariantPicker({ variants, selectedId, onSelect, hasError, fallbackPrice
                     : 'border-slate-200 bg-white text-slate-900 hover:border-slate-400'
               }`}
             >
-              <span className="block text-xs font-bold">{variant.name}</span>
+              <span className="block text-xs font-bold">{labels.get(variant.id)}</span>
               <span className="mt-0.5 block text-[11px] font-semibold">
                 {isOut ? 'Out of stock' : `₹${price.toLocaleString('en-IN')}`}
               </span>

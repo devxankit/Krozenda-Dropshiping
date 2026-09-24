@@ -63,7 +63,59 @@ async function renderBarcodePng(code) {
     scale: 3,
     height: 15,
     includetext: true,
+    // bwip-js draws on a transparent canvas by default — fine on a white web
+    // page, but a downloaded file opened in a dark-mode image viewer (or sent
+    // to some label printers) shows black bars on black. A white quiet zone
+    // is also what scanners need to find the start of the symbol.
+    backgroundcolor: 'FFFFFF',
+    paddingwidth: 10,
+    paddingheight: 6,
   });
 }
 
-module.exports = { generateBarcode, isValidEan13, renderBarcodePng, ean13CheckDigit };
+// An EAN-13 can only ever hold its 13 digits, so a scanner reading it gets a
+// number and nothing else — the panel's scan box turns that number into the
+// product. The QR code printed next to it is what carries the product's
+// details themselves, so a phone camera (or a 2D scanner) shows them with no
+// login and no app.
+//
+// One line, barcode FIRST: a 2D scanner types it into the panel's scan box
+// like a keyboard and would submit at the first newline, and the scan box
+// picks the 13-digit code out of the front of it.
+function productQrText(product) {
+  const price = product.salePrice != null && product.salePrice < product.price ? product.salePrice : product.price;
+  const parts = [
+    product.barcode,
+    product.name,
+    product.sku ? `SKU: ${product.sku}` : null,
+    price != null ? `Price: Rs.${price}` : null,
+    product.mrp != null && product.mrp > price ? `MRP: Rs.${product.mrp}` : null,
+    product.brand?.name ? `Brand: ${product.brand.name}` : null,
+    product.category?.name ? `Category: ${product.category.name}` : null,
+  ];
+  return parts.filter(Boolean).join(' | ');
+}
+
+async function renderProductQrPng(product) {
+  return bwipjs.toBuffer({
+    bcid: 'qrcode',
+    // bwip-js reads the string one byte per character, so a product name in
+    // Hindi (or with a ₹) has to be handed over as its UTF-8 bytes; phone
+    // scanners decode those back as UTF-8.
+    text: Buffer.from(productQrText(product), 'utf8').toString('latin1'),
+    eclevel: 'M',
+    scale: 4,
+    backgroundcolor: 'FFFFFF',
+    paddingwidth: 4,
+    paddingheight: 4,
+  });
+}
+
+module.exports = {
+  generateBarcode,
+  isValidEan13,
+  renderBarcodePng,
+  renderProductQrPng,
+  productQrText,
+  ean13CheckDigit,
+};

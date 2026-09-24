@@ -31,6 +31,7 @@ function formFromProduct(product) {
     status: product.status || (product.isActive === false ? 'Inactive' : 'Active'),
     isFlashsale: product.isFlashsale === true,
     isTrending: product.isTrending === true,
+    isReturnable: product.isReturnable !== false,
   }
 }
 
@@ -118,6 +119,7 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
     body.append('status', formData.status || 'Active')
     body.append('isFlashsale', formData.isFlashsale)
     body.append('isTrending', formData.isTrending)
+    body.append('isReturnable', formData.isReturnable)
 
     if (removedImages.length > 0) body.append('removeImages', JSON.stringify(removedImages))
     newFiles.forEach((f) => body.append('images', f))
@@ -463,6 +465,24 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
                 <span className="text-xs font-bold text-slate-900">📈 Trending Product</span>
                 <p className="mt-0.5 text-2xs text-slate-600">
                   Showcase on trending carousels and top recommendation feeds.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/80 to-teal-50/30 p-3.5 transition-all">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                id="vendor-edit-returnable"
+                checked={formData.isReturnable}
+                onChange={(e) => setFormData({ ...formData, isReturnable: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <div className="flex-1">
+                <span className="text-xs font-bold text-slate-900">↩️ Returnable Product</span>
+                <p className="mt-0.5 text-2xs text-slate-600">
+                  When on, buyers can request a return or replacement within 7 days of delivery. Turn off for non-returnable items.
                 </p>
               </div>
             </label>

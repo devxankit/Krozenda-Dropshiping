@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../Models/Product');
 const PlatformSettings = require('../Models/PlatformSettings');
 const { isFirebaseConfigured } = require('../Config/firebase');
+const whatsapp = require('../services/whatsappService');
 
 // Same reasoning as adminAnalyticsController's integrationHealth(): reported
 // from what this server can actually see (live connection state and which
@@ -59,6 +60,21 @@ function integrationRows() {
       status: row(smtp),
       note: smtp ? null : 'SMTP_HOST not set',
       environment: smtp ? 'Live' : 'Not configured',
+      lastEventAt: null,
+      ownedBy: 'client',
+      settingsPath: '/admin/settings/notifications',
+    },
+    {
+      id: 'whatsapp',
+      name: 'WhatsApp (BhashSMS)',
+      purpose: 'Order placed and order status updates to the buyer',
+      status: row(whatsapp.isConfigured(), !whatsapp.isEnabled()),
+      note: !whatsapp.isConfigured()
+        ? 'WHATSAPP_USER / WHATSAPP_PASS / WHATSAPP_SENDER not set'
+        : whatsapp.isEnabled()
+          ? null
+          : 'Credentials set but sending is off (WHATSAPP_ENABLED)',
+      environment: whatsapp.isEnabled() ? 'Live' : 'Not configured',
       lastEventAt: null,
       ownedBy: 'client',
       settingsPath: '/admin/settings/notifications',

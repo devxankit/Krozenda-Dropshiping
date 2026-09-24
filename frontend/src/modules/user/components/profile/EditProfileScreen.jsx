@@ -151,7 +151,7 @@ export function EditProfileScreen({ onBack }) {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+      <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
 
       <main className="flex-1 pb-24 md:pb-12 max-w-2xl mx-auto w-full md:px-6 md:py-6">
         <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center space-x-3 shadow-xs">

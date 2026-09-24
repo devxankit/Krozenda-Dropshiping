@@ -615,13 +615,13 @@ export function HomeCenterFeed({
           {/* Product-type toggle — only shown when dropshipping is enabled
               platform-wide; see dropshippingEnabled above. */}
           {dropshippingEnabled && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="-mx-4 flex flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
               {PRODUCT_TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setProductType(opt.value)}
-                  className={`rounded-full px-3 py-1.5 text-[11px] font-bold border transition-colors ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-bold border transition-colors ${
                     productType === opt.value
                       ? 'bg-blue-600 border-blue-600 text-white'
                       : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'

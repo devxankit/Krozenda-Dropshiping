@@ -3,7 +3,12 @@ const cjAuthService = require('../services/cj/cjAuthService');
 const { getImageUrl } = require('../utils/imageHelper');
 
 function handleError(res, err) {
-  if (err.status && err.status < 500) {
+  if (err.code === 'CJ_POINTS_EXHAUSTED' || err.code === 'CJ_RATE_LIMITED') {
+    return res.status(429).json({ success: false, message: cjAuthService.safeFailureMessage(err.code) });
+  }
+  // CjError carries CJ's own HTTP status, which is 200 on a business-level
+  // refusal — only a real 4xx is passed through as the response status.
+  if (err.status >= 400 && err.status < 500) {
     return res.status(err.status).json({ success: false, message: err.message });
   }
   res.status(502).json({
@@ -76,6 +81,36 @@ async function listProducts(req, res) {
   res.json({ success: true, data: { ...result, list } });
 }
 
+// GET /admin/cj/products/:productId — one onboarded CJ product, keyed by the
+// Krozenda Product id (what the Products grid links with).
+async function getProductDetail(req, res) {
+  const detail = await cjOnboardingService.getOnboardedProductDetail(req.params.productId);
+  if (!detail) {
+    return res.status(404).json({ success: false, message: 'CJ product not found' });
+  }
+
+  const { mapping } = detail;
+  const product = mapping.product;
+  res.json({
+    success: true,
+    data: {
+      ...detail,
+      mapping: {
+        ...mapping,
+        product: {
+          ...product,
+          images: (product.images || []).map((img) => getImageUrl(img)),
+          variants: (product.variants || []).map((v) => ({
+            ...v,
+            attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes || {},
+            image: v.image ? getImageUrl(v.image) : null,
+          })),
+        },
+      },
+    },
+  });
+}
+
 // GET /admin/cj/products/category-summary
 // Krozenda categories that hold at least one onboarded CJ product, with a
 // count each. Backs both the standalone Category screen's cards and the
@@ -136,5 +171,5 @@ async function bulkOnboard(req, res) {
   }
 }
 
-module.exports = { onboardProduct, listProducts, getCategorySummary, bulkPricing, bulkOnboard };
+module.exports = { onboardProduct, listProducts, getProductDetail, getCategorySummary, bulkPricing, bulkOnboard };
 

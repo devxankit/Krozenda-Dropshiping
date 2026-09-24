@@ -66,7 +66,7 @@ export function WishlistScreen() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 

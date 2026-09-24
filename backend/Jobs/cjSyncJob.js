@@ -38,8 +38,12 @@ async function runOnce() {
   }
 }
 
+// Hourly by default. A full pass costs ~30 CJ points per product (840 for
+// the 28 onboarded today); every 10 minutes that was 121k points a day
+// against a 50k budget. Hourly is ~20k, leaving the rest for the admin
+// catalogue and orders. Webhooks, once live, carry the urgent changes.
 function scheduleCjSync() {
-  const schedule = process.env.CJ_SYNC_CRON || '*/10 * * * *';
+  const schedule = process.env.CJ_SYNC_CRON || '0 * * * *';
 
   if (!cron.validate(schedule)) {
     console.error(`[cjSyncJob] invalid cron "${schedule}" — CJ sync not scheduled`);

@@ -4,10 +4,11 @@ const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
 const CjSettings = require('../Models/CjSettings');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
-const { isValidEan13, renderBarcodePng } = require('../utils/barcode');
+const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 
 // Admin > CJ Dropshipping > Settings > "Show Dropshipping Products to
 // Customers" (CjSettings.dropshippingEnabled). A CJ-fulfilled product
@@ -174,6 +175,7 @@ function serializeProduct(p) {
     isActive: p.isActive !== false,
     isFlashsale: p.isFlashsale === true,
     isTrending: p.isTrending === true,
+    isReturnable: p.isReturnable !== false,
     approvalStatus: p.approvalStatus || 'APPROVED',
     rejectionReason: p.rejectionReason || '',
     rating: p.rating || 0,
@@ -202,6 +204,44 @@ async function listProducts(req, res) {
   };
 
   res.json({ success: true, data: { items, stats } });
+}
+
+// GET /admin/catalog/products/:id — the product detail screen. Same shape as a
+// list row, plus the two things only a detail view needs: who sells it (the
+// list carries a bare vendor id) and whether CJ fulfils it.
+async function getProduct(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findById(id)
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .populate('vendor', 'name email business.businessName')
+    .lean();
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const vendor = product.vendor && product.vendor._id ? product.vendor : null;
+
+  res.json({
+    success: true,
+    message: 'Product fetched successfully',
+    data: {
+      ...serializeProduct({ ...product, vendor: vendor ? vendor._id : product.vendor }),
+      vendorDetails: vendor
+        ? {
+            id: vendor._id.toString(),
+            name: vendor.business?.businessName || vendor.name || '',
+            email: vendor.email || '',
+          }
+        : null,
+      fulfillmentProvider: product.fulfillmentProvider || null,
+    },
+  });
 }
 
 // GET /admin/catalog/products/barcode/:code
@@ -255,6 +295,32 @@ async function getProductBarcodeImage(req, res) {
   res.send(png);
 }
 
+// GET /admin/catalog/products/:id/qrcode.png
+//
+// The QR code printed beside the barcode on the product label — it carries
+// the product's details (see utils/barcode.productQrText). Unlike the
+// barcode, those details change (a price edit), so this is never cached.
+async function getProductQrImage(req, res) {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid product id' });
+  }
+
+  const product = await Product.findById(id)
+    .select('name sku barcode price salePrice mrp brand category')
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .lean();
+  if (!product || !product.barcode) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const png = await renderProductQrPng(product);
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'no-cache');
+  res.send(png);
+}
+
 async function createProduct(req, res) {
   const settings = await CatalogSettings.getSettings();
   if (settings.sellerOnlyMode) {
@@ -285,6 +351,7 @@ async function createProduct(req, res) {
     isFlashsale,
     isFlashSale,
     isTrending,
+    isReturnable,
     hsnCode,
     gstRate,
     moq,
@@ -403,6 +470,7 @@ async function createProduct(req, res) {
     isActive: activeBool,
     isFlashsale: toBool(flashSaleVal, false),
     isTrending: toBool(isTrending, false),
+    isReturnable: toBool(isReturnable, true),
   });
 
   await product.populate([
@@ -440,6 +508,7 @@ async function updateProduct(req, res) {
     isFlashsale,
     isFlashSale,
     isTrending,
+    isReturnable,
     removeImages,
     hsnCode,
     gstRate,
@@ -572,6 +641,9 @@ async function updateProduct(req, res) {
 
   if (isTrending !== undefined) {
     product.isTrending = toBool(isTrending, product.isTrending);
+  }
+  if (isReturnable !== undefined) {
+    product.isReturnable = toBool(isReturnable, product.isReturnable !== false);
   }
 
   let images = product.images || [];
@@ -1073,6 +1145,8 @@ function serializePublicProduct(p) {
     description: p.description || '',
     isFlashsale: p.isFlashsale === true,
     isTrending: p.isTrending === true,
+    // Dropship lines are never returnable (business rule), whatever the flag says.
+    isReturnable: p.isReturnable !== false && p.fulfillmentProvider !== 'CJ',
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
@@ -1105,7 +1179,19 @@ async function getPublicProduct(req, res) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  res.json({ success: true, message: 'Product fetched successfully', data: serializePublicProduct(product) });
+  const data = serializePublicProduct(product);
+
+  // What a buyer needs to know before ordering a dropshipped item: where it
+  // ships from. Only the warehouse country leaves the mapping — CJ ids, costs
+  // and provider stock stay admin-only.
+  if (data.isDropship) {
+    const mapping = await ProductFulfillmentMapping.findOne({ product: product._id, provider: 'CJ' })
+      .select('warehouseCountryCode')
+      .lean();
+    data.dropship = { shipsFrom: mapping?.warehouseCountryCode || null };
+  }
+
+  res.json({ success: true, message: 'Product fetched successfully', data });
 }
 
 // GET /catalog/products/:id/related — a separate call on purpose so the detail
@@ -1179,6 +1265,7 @@ async function listRelatedProducts(req, res) {
 
 module.exports = {
   listProducts,
+  getProduct,
   listPublicProducts,
   getPublicCatalogSettings,
   serializeProductCard,
@@ -1187,6 +1274,7 @@ module.exports = {
   createProduct,
   getProductByBarcode,
   getProductBarcodeImage,
+  getProductQrImage,
   updateProduct,
   updateProductStatus,
   updateProductFlashSaleStatus,

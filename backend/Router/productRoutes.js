@@ -1,9 +1,11 @@
 const express = require('express');
 const {
   listProducts,
+  getProduct,
   createProduct,
   getProductByBarcode,
   getProductBarcodeImage,
+  getProductQrImage,
   updateProduct,
   updateProductStatus,
   updateProductFlashSaleStatus,
@@ -27,6 +29,8 @@ const uploadProductImages = [
 router.get('/', listProducts);
 router.get('/barcode/:code', getProductByBarcode);
 router.get('/:id/barcode.png', getProductBarcodeImage);
+router.get('/:id/qrcode.png', getProductQrImage);
+router.get('/:id', getProduct);
 router.post('/', ...uploadProductImages, createProduct);
 router.put('/:id', ...uploadProductImages, updateProduct);
 router.patch('/:id/status', updateProductStatus);

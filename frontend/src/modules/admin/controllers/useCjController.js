@@ -30,6 +30,7 @@ import {
   updateCjDropshippingVisibility,
   bulkAdjustCjPricing,
   bulkOnboardCjProducts,
+  fetchOnboardedCjProduct,
 } from '../services/cjService'
 import { fetchCategoryTree } from '../services/catalogService'
 
@@ -199,6 +200,30 @@ export function useCjBulkOnboardingController() {
 export function useCjOnboardedProductsController(params) {
   const query = useQuery({ queryKey: ['admin', 'cj', 'products', params], queryFn: () => fetchOnboardedCjProducts(params) })
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
+
+// The CJ Products detail screen. "Sync now" re-reads this one product's
+// stock and cost from CJ (one inventory call — a few API points), then
+// refreshes the screen and the grid behind it.
+export function useCjOnboardedProductDetailController(productId) {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: ['admin', 'cj', 'products', 'detail', productId],
+    queryFn: () => fetchOnboardedCjProduct(productId),
+    enabled: Boolean(productId),
+  })
+  const syncMutation = useMutation({
+    mutationFn: (cjProductId) => runCjSyncNow({ cjProductId }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'cj', 'products'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'cj', 'sync-logs'] })
+    },
+  })
+  return {
+    ...query,
+    syncNow: syncMutation.mutateAsync,
+    isSyncing: syncMutation.isPending,
+  }
 }
 
 export function useCjProductCategorySummaryController() {

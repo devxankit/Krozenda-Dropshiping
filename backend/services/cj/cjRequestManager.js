@@ -11,8 +11,11 @@
 // a bulk sync job) from hammering CJ. Endpoint-specific limits can be added
 // as extra keys later without changing callers.
 
-const DEFAULT_MIN_INTERVAL_MS = Number(process.env.CJ_MIN_REQUEST_INTERVAL_MS || 350);
-const DEFAULT_MAX_CONCURRENCY = Number(process.env.CJ_MAX_CONCURRENCY || 2);
+// CJ enforces "QPS limit is 1 time/1second" per account (live rejections,
+// 2026-09-24), so the gate is one request at a time, a little over a second
+// apart. The old 2-wide / 350 ms gate drew hundreds of QPS rejections a day.
+const DEFAULT_MIN_INTERVAL_MS = Number(process.env.CJ_MIN_REQUEST_INTERVAL_MS || 1100);
+const DEFAULT_MAX_CONCURRENCY = Number(process.env.CJ_MAX_CONCURRENCY || 1);
 
 let queue = [];
 let active = 0;

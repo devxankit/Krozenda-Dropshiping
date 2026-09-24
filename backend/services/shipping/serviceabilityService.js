@@ -58,8 +58,14 @@ function toNumber(value) {
 // Turns one carrier entry into the shape the rest of the application uses.
 // Nothing downstream ever sees a Shiprocket field name.
 function normaliseCourier(entry) {
-  const rate = toNumber(firstDefined(entry, ['rate', 'freight_charge', 'total_charge']));
+  // `rate` / `total_charge` is Shiprocket's ALL-IN figure: on a cod=1 query it
+  // already contains cod_charges. Only a bare freight_charge excludes it.
+  // Adding cod_charges on top of `rate` double-counted it — a ₹94,990 COD
+  // parcel quoted ₹4,941 against Shiprocket's own ₹2,566 (2.5% COD fee twice).
+  const allInRate = toNumber(firstDefined(entry, ['rate', 'total_charge']));
+  const freightCharge = toNumber(firstDefined(entry, ['freight_charge']));
   const codCharge = toNumber(firstDefined(entry, ['cod_charges', 'cod_charge'])) ?? 0;
+  const rate = allInRate ?? (freightCharge === null ? null : freightCharge + codCharge);
 
   return {
     courierId: toNumber(firstDefined(entry, ['courier_company_id', 'courier_id'])),
@@ -67,10 +73,10 @@ function normaliseCourier(entry) {
     // What the carrier will bill. Null means "could not read it" — callers
     // must treat that as unknown, not as zero.
     rate,
-    freightCharge: toNumber(firstDefined(entry, ['freight_charge'])),
+    freightCharge,
     codCharge,
-    // Total the platform pays if this courier is chosen.
-    estimatedCost: rate === null ? null : Math.round((rate + codCharge) * 100) / 100,
+    // Total the platform pays if this courier is chosen — COD fee included.
+    estimatedCost: rate === null ? null : Math.round(rate * 100) / 100,
     estimatedDeliveryDays: toNumber(firstDefined(entry, ['estimated_delivery_days', 'delivery_days'])),
     estimatedDeliveryDate: firstDefined(entry, ['etd', 'estimated_delivery_date']),
     // Shiprocket answers 1/0 rather than true/false.

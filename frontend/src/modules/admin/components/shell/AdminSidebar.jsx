@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icon, Tooltip } from '../../../../components/ui'
 import { ADMIN_ROUTES } from '../../../../config/routes'
@@ -43,6 +44,52 @@ function NavItem({ item, collapsed, count }) {
     <Tooltip label={count > 0 ? `${item.label} (${count})` : item.label} placement="right">
       <span className="relative">{link}</span>
     </Tooltip>
+  )
+}
+
+// A group with `submenu` renders its items under one collapsible parent row
+// (Dropshipping → CJ Dropshipping → Dashboard, Products…). It opens itself
+// whenever one of its screens is active. In the 64px rail there is no room
+// for nesting, so the items render flat there as before.
+function NavSubmenu({ submenu, items, collapsed, counts }) {
+  const { pathname } = useLocation()
+  const hasActive = items.some((item) => isNavItemActive(item, pathname))
+  // null until the admin toggles it — until then it follows the active route.
+  const [toggled, setToggled] = useState(null)
+  const open = toggled ?? hasActive
+
+  const renderItem = (item) => (
+    <NavItem
+      key={item.to}
+      item={item}
+      collapsed={collapsed}
+      count={item.badge ? counts[item.badge] : 0}
+    />
+  )
+
+  if (collapsed) return items.map(renderItem)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setToggled(!open)}
+        aria-expanded={open}
+        className={`flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-sm transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+          hasActive ? 'font-semibold text-brand-700' : 'font-medium text-ink-muted hover:text-slate-900'
+        }`}
+      >
+        <Icon name={submenu.icon} className="h-4 w-4 shrink-0" />
+        <span className="truncate">{submenu.label}</span>
+        <Icon
+          name="chevronDown"
+          className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+      {open && (
+        <div className="ml-4 flex flex-col gap-0.5 border-l border-border pl-2">{items.map(renderItem)}</div>
+      )}
+    </>
   )
 }
 
@@ -135,14 +182,18 @@ export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onTo
                   {group.label}
                 </p>
               ))}
-            {group.items.map((item) => (
-              <NavItem
-                key={item.to}
-                item={item}
-                collapsed={collapsed}
-                count={item.badge ? counts[item.badge] : 0}
-              />
-            ))}
+            {group.submenu ? (
+              <NavSubmenu submenu={group.submenu} items={group.items} collapsed={collapsed} counts={counts} />
+            ) : (
+              group.items.map((item) => (
+                <NavItem
+                  key={item.to}
+                  item={item}
+                  collapsed={collapsed}
+                  count={item.badge ? counts[item.badge] : 0}
+                />
+              ))
+            )}
           </div>
         ))}
       </nav>

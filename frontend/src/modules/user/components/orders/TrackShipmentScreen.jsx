@@ -34,7 +34,7 @@ export function TrackShipmentScreen() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-slate-50">
-        <div className="hidden md:block"><WebHeader /></div>
+        <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
         <main className="mx-auto w-full max-w-3xl flex-1 space-y-3 p-6" aria-busy="true" aria-label="Loading shipment">
           <div className="h-24 animate-pulse rounded-3xl bg-slate-200" />
           <div className="h-64 animate-pulse rounded-3xl bg-slate-200" />
@@ -48,7 +48,7 @@ export function TrackShipmentScreen() {
   if (isError || !order) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-slate-50">
-        <div className="hidden md:block"><WebHeader /></div>
+        <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
         <div className="flex flex-1 items-center justify-center p-6">
           <ErrorState
             error={error}
@@ -72,7 +72,7 @@ export function TrackShipmentScreen() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col justify-between text-slate-800 font-sans">
-      <div className="hidden md:block"><WebHeader /></div>
+      <div className="sticky top-0 z-50 hidden md:block"><WebHeader /></div>
 
       <div className="flex-1 pb-20 md:pb-12 max-w-3xl mx-auto w-full md:px-6 md:py-6">
         <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">

@@ -41,7 +41,10 @@ async function handleRazorpayWebhook(req, res) {
 
   try {
     if (eventType === 'payment.captured' && paymentEntity) {
-      const order = await Order.findOne({ razorpayPaymentId: paymentEntity.id });
+      // One payment can pay for two orders (a checkout split into a dropship
+      // and a standard order), so every order on it is reconciled.
+      const orders = await Order.find({ razorpayPaymentId: paymentEntity.id });
+      const order = orders[0] || null;
       if (!order) {
         // The capture happened but no order was ever placed against it — the
         // client-driven verify call (POST /user/orders) never ran. This is
@@ -54,10 +57,12 @@ async function handleRazorpayWebhook(req, res) {
           amount: paymentEntity.amount,
           reason: 'Captured payment has no matching order — needs manual reconciliation or refund',
         });
-      } else if (order.paymentStatus === 'PENDING') {
-        order.paymentStatus = 'PAID';
-        await order.save();
-        log({ event: 'RAZORPAY_WEBHOOK_ORDER_RECONCILED', orderId: String(order._id) });
+      } else {
+        for (const pending of orders.filter((o) => o.paymentStatus === 'PENDING')) {
+          pending.paymentStatus = 'PAID';
+          await pending.save();
+          log({ event: 'RAZORPAY_WEBHOOK_ORDER_RECONCILED', orderId: String(pending._id) });
+        }
       }
     } else if (eventType === 'payment.failed' && paymentEntity) {
       log({
@@ -66,8 +71,25 @@ async function handleRazorpayWebhook(req, res) {
         razorpayOrderId: paymentEntity.order_id || null,
       });
     } else if (eventType === 'refund.processed' && refundEntity) {
-      const order = await Order.findOne({ razorpayPaymentId: refundEntity.payment_id });
-      if (order && order.paymentStatus !== 'REFUNDED') {
+      // Which order the refund is for. Every refund this backend issues names
+      // its order in `notes.orderId` — needed because a split checkout's two
+      // orders share one payment, and a partial refund of one must not mark
+      // the other refunded. Without a note, only an unambiguous single order
+      // on the payment is touched.
+      const orders = await Order.find({ razorpayPaymentId: refundEntity.payment_id });
+      const notedId = refundEntity.notes?.orderId ? String(refundEntity.notes.orderId) : null;
+      const order = notedId
+        ? orders.find((o) => String(o._id) === notedId) || null
+        : orders.length === 1
+          ? orders[0]
+          : null;
+      if (!order && orders.length > 1) {
+        log({
+          event: 'RAZORPAY_WEBHOOK_REFUND_AMBIGUOUS',
+          razorpayPaymentId: refundEntity.payment_id,
+          orderIds: orders.map((o) => String(o._id)),
+        });
+      } else if (order && order.paymentStatus !== 'REFUNDED') {
         order.paymentStatus = 'REFUNDED';
         await order.save();
         log({ event: 'RAZORPAY_WEBHOOK_REFUND_RECONCILED', orderId: String(order._id) });

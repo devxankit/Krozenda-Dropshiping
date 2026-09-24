@@ -59,7 +59,12 @@ export function UpdateStockModal({ product, isOpen, onClose, onUpdateStock }) {
             Models/Product.js — so it is always present by the time a seller
             can open this modal at all. */}
         {product.barcode && (
-          <ProductBarcode code={product.barcode} imageUrl={`/vendor/products/${product.id}/barcode.png`} />
+          <ProductBarcode
+            code={product.barcode}
+            imageUrl={`/vendor/products/${product.id}/barcode.png?v=2`}
+            qrUrl={`/vendor/products/${product.id}/qrcode.png`}
+            product={product}
+          />
         )}
 
         <Input

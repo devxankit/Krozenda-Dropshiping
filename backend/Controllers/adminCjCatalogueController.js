@@ -24,7 +24,14 @@ const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 24;
 
 function handleCjError(res, err) {
-  const status = err.code === 'CJ_CREDENTIALS_MISSING' ? 400 : err.status && err.status < 500 ? 400 : 502;
+  const status =
+    err.code === 'CJ_POINTS_EXHAUSTED' || err.code === 'CJ_RATE_LIMITED'
+      ? 429
+      : err.code === 'CJ_CREDENTIALS_MISSING'
+        ? 400
+        : err.status && err.status < 500
+          ? 400
+          : 502;
   res.status(status).json({
     success: false,
     message:

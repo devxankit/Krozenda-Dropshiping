@@ -20,8 +20,15 @@ export const TICKET_TONE = Object.freeze({
   closed: 'neutral',
 })
 
+const METHOD_TONE = Object.freeze({ POST: 'brand', PUT: 'warning', PATCH: 'warning', DELETE: 'danger', GET: 'neutral' })
+
 export const AUDIT_COLUMNS = Object.freeze([
-  { key: 'at', header: 'When', width: '11rem', cellClassName: 'text-xs text-ink-muted' },
+  {
+    key: 'at',
+    header: 'When',
+    width: '11rem',
+    render: (row) => <span className="tabular text-xs text-ink-muted">{row.at}</span>,
+  },
   {
     key: 'actor',
     header: 'Who',
@@ -30,27 +37,36 @@ export const AUDIT_COLUMNS = Object.freeze([
   },
   {
     key: 'action',
-    header: 'Action',
+    header: 'What they did',
     render: (row) => (
       <span className="block min-w-0">
-        <span className="tabular block truncate text-xs font-semibold text-slate-900">
-          {row.action}
+        <span className="flex min-w-0 items-center gap-1.5">
+          {row.method && (
+            <Badge tone={METHOD_TONE[row.method] || 'neutral'} size="sm">
+              {row.method}
+            </Badge>
+          )}
+          <span className="truncate text-xs font-semibold text-slate-900">
+            {row.description || row.action}
+          </span>
         </span>
-        <span className="block truncate text-2xs text-ink-faint">
-          {row.entity} · {row.entityId}
+        <span className="tabular block truncate text-2xs text-ink-faint">
+          {row.action}
+          {row.statusCode ? ` · ${row.statusCode}` : ''}
         </span>
       </span>
     ),
   },
   {
     // A before/after pair is the whole point of an audit log — a row that says
-    // only "settings updated" is not evidence of anything.
+    // only "settings updated" is not evidence of anything. Live rows carry the
+    // submitted (redacted) payload as `after`.
     key: 'before',
     header: 'Change',
     width: '16rem',
     render: (row) =>
       row.before || row.after ? (
-        <span className="flex flex-col gap-0.5">
+        <span className="flex min-w-0 flex-col gap-0.5" title={[row.before, row.after].filter(Boolean).join('\n')}>
           {row.before && (
             <span className="tabular truncate text-2xs text-danger-700">− {row.before}</span>
           )}
@@ -90,6 +106,17 @@ export const AUDIT_FILTERS = Object.freeze([
       { value: 'info', label: 'Info' },
     ],
   },
+  {
+    key: 'method',
+    label: 'Operation',
+    options: [
+      { value: 'POST', label: 'Create / action' },
+      { value: 'PUT', label: 'Update (PUT)' },
+      { value: 'PATCH', label: 'Update (PATCH)' },
+      { value: 'DELETE', label: 'Delete' },
+      { value: 'GET', label: 'Download / export' },
+    ],
+  },
 ])
 
 export const AUDIT_TABS = Object.freeze([
@@ -97,6 +124,7 @@ export const AUDIT_TABS = Object.freeze([
   { id: 'critical', label: 'Critical' },
   { id: 'finance', label: 'Money & rules' },
   { id: 'access', label: 'Access' },
+  { id: 'failed', label: 'Failed' },
 ])
 
 export const TICKET_COLUMNS = Object.freeze([

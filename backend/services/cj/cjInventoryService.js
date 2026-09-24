@@ -5,6 +5,9 @@ const CjSyncLog = require('../../Models/CjSyncLog');
 const cjProductService = require('./cjProductService');
 const cjOnboardingService = require('./cjOnboardingService');
 const { parseCjPrice } = require('./cjPricing');
+const pointsGuard = require('./cjPointsGuard');
+
+const QUOTA_CODES = new Set(['CJ_POINTS_EXHAUSTED', 'CJ_RATE_LIMITED']);
 
 // Phase 4 — stock + price sync for already-onboarded CJ products.
 //
@@ -51,10 +54,12 @@ async function syncMapping(mapping, { trigger = 'SCHEDULED' } = {}) {
   await mapping.save();
 
   try {
-    const [detail, cjVariants] = await Promise.all([
-      cjProductService.getProductDetail(mapping.cjProductId),
-      cjProductService.getProductVariants(mapping.cjProductId),
-    ]);
+    // Three calls per product whatever its variant count (30 points). Stock
+    // used to be fetched one variant at a time — 368 calls for 28 products,
+    // which alone spent the account's daily CJ points many times over.
+    const detail = await cjProductService.getProductDetail(mapping.cjProductId);
+    const cjVariants = await cjProductService.getProductVariants(mapping.cjProductId);
+    const stockByVid = await cjProductService.getProductStockByVariant(mapping.cjProductId);
 
     if (!detail) throw new Error('CJ product no longer available');
 
@@ -69,10 +74,10 @@ async function syncMapping(mapping, { trigger = 'SCHEDULED' } = {}) {
       mv.providerCost = liveCost || mv.providerCost;
       mv.providerShippingCost = liveShipping || mv.providerShippingCost;
       // Stock is never on the variant-list response itself (verified against
-      // a live account — its inventory fields come back null); it lives only
-      // on the separate per-warehouse stock endpoint. See
-      // cjProductService.getVariantTotalStock.
-      mv.providerStock = await cjProductService.getVariantTotalStock(mv.cjVariantId);
+      // a live account — its inventory fields come back null); it comes from
+      // the per-product stock endpoint. A variant missing there keeps its
+      // last known stock, like a discontinued one above.
+      if (stockByVid.has(String(mv.cjVariantId))) mv.providerStock = stockByVid.get(String(mv.cjVariantId));
 
       const productVariant = mv.krozendaVariantId
         ? product.variants.id(mv.krozendaVariantId)
@@ -128,6 +133,14 @@ async function syncMapping(mapping, { trigger = 'SCHEDULED' } = {}) {
 
     return { ok: true };
   } catch (err) {
+    // Out of CJ points / over the QPS limit: nothing is wrong with this
+    // product, so it is not marked FAILED — the cycle just stops (syncAll).
+    if (QUOTA_CODES.has(err.code)) {
+      mapping.syncStatus = 'IDLE';
+      await mapping.save();
+      return { ok: false, quota: true, error: err.message };
+    }
+
     mapping.syncStatus = 'FAILED';
     mapping.lastSyncError = err.message || 'Sync failed';
     await mapping.save();
@@ -150,14 +163,30 @@ async function syncMapping(mapping, { trigger = 'SCHEDULED' } = {}) {
 // not parallel: cjRequestManager already throttles the underlying CJ calls,
 // but running mappings one at a time keeps a single slow/failing product
 // from starving the shared concurrency slots for everything after it.
+//
+// Stalest first, so a cycle cut short by the points budget picks up where
+// the last one stopped instead of re-syncing the same products every time.
+// Scheduled runs stop while the CJ points balance is below the background
+// reserve (cjPointsGuard), leaving it for the admin catalogue and orders.
 async function syncAll({ trigger = 'SCHEDULED' } = {}) {
-  const mappings = await ProductFulfillmentMapping.find({ provider: 'CJ' });
-  const results = { total: mappings.length, succeeded: 0, failed: 0 };
+  const mappings = await ProductFulfillmentMapping.find({ provider: 'CJ' }).sort({ lastSyncedAt: 1 });
+  const results = { total: mappings.length, succeeded: 0, failed: 0, skipped: 0 };
 
-  for (const mapping of mappings) {
+  for (const [index, mapping] of mappings.entries()) {
+    const budgetLow = trigger === 'SCHEDULED' ? !pointsGuard.canSpendInBackground() : pointsGuard.isPaused();
+    if (budgetLow) {
+      results.skipped = mappings.length - index;
+      results.stoppedReason = 'CJ_POINTS_LOW';
+      break;
+    }
+
     const result = await syncMapping(mapping, { trigger });
     if (result.ok) results.succeeded += 1;
-    else results.failed += 1;
+    else if (result.quota) {
+      results.skipped = mappings.length - index;
+      results.stoppedReason = 'CJ_POINTS_LOW';
+      break;
+    } else results.failed += 1;
   }
 
   return results;

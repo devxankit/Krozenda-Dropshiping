@@ -32,6 +32,20 @@ const businessSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Which version of each mandatory CMS policy the seller accepted at sign-up.
+// The version is copied, not referenced: if admin later edits the policy, this
+// still proves what the seller actually agreed to.
+const policyAcceptanceSchema = new mongoose.Schema(
+  {
+    slug: { type: String, required: true, trim: true },
+    title: { type: String, trim: true, default: '' },
+    version: { type: String, trim: true, default: '' },
+    acceptedAt: { type: Date, default: Date.now },
+    ip: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const contactPersonSchema = new mongoose.Schema(
   {
     name: { type: String, trim: true, default: '' },
@@ -125,6 +139,7 @@ const vendorSchema = new mongoose.Schema(
       default: 'PENDING',
     },
     rejectionReason: { type: String, default: '' },
+    policyAcceptances: { type: [policyAcceptanceSchema], default: [] },
     // The panel's UI language. On the ACCOUNT rather than the device, so it
     // follows this person to another machine and only ever changes when they
     // change it. Null means "never chosen", which is NOT the same as English.

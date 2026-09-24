@@ -1,6 +1,11 @@
 const cron = require('node-cron');
 const CjShipment = require('../Models/CjShipment');
 const cjLogisticsService = require('../services/cj/cjLogisticsService');
+const pointsGuard = require('../services/cj/cjPointsGuard');
+
+// Tracking feeds the buyer's order status, so it may dig deeper into the CJ
+// points balance than stock sync before it stands down.
+const POINTS_RESERVE = Number(process.env.CJ_TRACKING_POINTS_RESERVE || 1000);
 
 // Fallback for lost CJ tracking webhooks (master plan §12/§18), same shape
 // as the existing Shiprocket Jobs/trackingPoller.js: only pollable shipments
@@ -32,17 +37,26 @@ async function runOnce() {
     let succeeded = 0;
     let failed = 0;
 
+    let stoppedReason = null;
     for (const shipment of shipments) {
+      if (!pointsGuard.canSpendInBackground(POINTS_RESERVE)) {
+        stoppedReason = 'CJ_POINTS_LOW';
+        break;
+      }
       try {
         await cjLogisticsService.syncShipment(shipment);
         succeeded += 1;
       } catch (err) {
+        if (err.code === 'CJ_POINTS_EXHAUSTED' || err.code === 'CJ_RATE_LIMITED') {
+          stoppedReason = 'CJ_POINTS_LOW';
+          break;
+        }
         failed += 1;
         console.error(`[cjTrackingPoller] shipment ${shipment._id} sync failed:`, err.message);
       }
     }
 
-    const result = { total: shipments.length, succeeded, failed };
+    const result = { total: shipments.length, succeeded, failed, ...(stoppedReason ? { stoppedReason } : {}) };
     console.log(JSON.stringify({ scope: 'CJ', event: 'CJ_TRACKING_POLL_COMPLETE', ...result }));
     return result;
   } catch (err) {

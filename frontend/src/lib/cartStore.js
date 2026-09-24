@@ -66,6 +66,8 @@ function normaliseServerItem(item) {
     // B2B context the server resolves, so the cart page can explain its own
     // numbers without re-deriving the pricing rules.
     moq: item.moq ?? 1,
+    // Dropshipping item: online payment only, no cancellation, no return.
+    isDropship: item.isDropship === true,
     priceSource: item.priceSource ?? 'PRODUCT',
     appliedTier: item.appliedTier ?? null,
     nextTier: item.nextTier ?? null,

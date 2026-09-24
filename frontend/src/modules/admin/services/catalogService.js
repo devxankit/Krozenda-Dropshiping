@@ -25,6 +25,11 @@ export async function fetchProducts() {
   return data.data
 }
 
+export async function fetchProduct(id) {
+  const { data } = await api.get(`/admin/catalog/products/${id}`)
+  return data.data
+}
+
 export function fetchApprovalQueue(query = {}) {
   return fetchResource({
     path: '/admin/catalog/approvals',

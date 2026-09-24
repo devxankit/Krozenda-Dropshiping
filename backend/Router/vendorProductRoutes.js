@@ -4,6 +4,7 @@ const {
   getMyProduct,
   getMyProductByBarcode,
   getMyProductBarcodeImage,
+  getMyProductQrImage,
   createMyProduct,
   updateMyProduct,
   deleteMyProduct,
@@ -50,6 +51,7 @@ router.get('/import/template', getImportTemplate);
 router.post('/import', uploadCsv.single('file'), importProducts);
 router.get('/barcode/:code', getMyProductByBarcode);
 router.get('/:id/barcode.png', getMyProductBarcodeImage);
+router.get('/:id/qrcode.png', getMyProductQrImage);
 router.get('/:id', getMyProduct);
 router.post('/', ...uploadProductImages, createMyProduct);
 router.put('/:id', ...uploadProductImages, updateMyProduct);

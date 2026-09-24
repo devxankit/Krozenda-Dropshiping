@@ -28,7 +28,8 @@ const params = (query) => ({
 const list = (path, fixture, schema, live = false) => (query) =>
   fetchResource({ path, params: params(query), fixture: () => fixture(query), schema, live })
 
-export const fetchAuditLog = list('/admin/system/audit-logs', fixtures.auditLogFixture, auditLogSchema)
+// Real backend — every admin/staff write is recorded by Middlewares/adminAudit.js.
+export const fetchAuditLog = list('/admin/system/audit-logs', fixtures.auditLogFixture, auditLogSchema, true)
 
 // --- Support tickets (real backend — dynamic, see ticketController.js) ----
 

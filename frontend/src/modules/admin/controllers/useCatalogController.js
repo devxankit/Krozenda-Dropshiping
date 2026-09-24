@@ -30,6 +30,17 @@ function useCatalogResource(key, queryFn) {
 }
 
 export const useProductListController = () => useCatalogResource('products', fetchProducts)
+// Keyed under ['admin', 'catalog'] so every product write (which invalidates
+// that whole subtree) refreshes the detail screen along with the list.
+export function useProductDetailController(productId) {
+  const query = useQuery({
+    queryKey: ['admin', 'catalog', 'product', productId],
+    queryFn: () => service.fetchProduct(productId),
+    enabled: Boolean(productId),
+  })
+  return { product: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
+
 export const useApprovalQueueController = () => useCatalogResource('approvals', fetchApprovalQueue)
 export const useApprovalSettingsController = () =>
   useCatalogResource('approval-settings', service.fetchApprovalSettings)

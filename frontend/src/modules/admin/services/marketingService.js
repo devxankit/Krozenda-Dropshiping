@@ -47,6 +47,23 @@ export async function deleteCoupon({ id }) {
   return data.data
 }
 
+// --- Coupon offers over WhatsApp (BhashSMS template `coupon_offer`) --------
+
+export async function fetchCouponWhatsapp(id) {
+  const { data } = await api.get(`/admin/marketing/coupons/${id}/whatsapp`)
+  return data.data
+}
+
+export async function searchCouponCustomers(search) {
+  const { data } = await api.get('/admin/marketing/coupons/whatsapp/customers', { params: { search } })
+  return data.data.items
+}
+
+export async function sendCouponWhatsapp({ id, audience, customerIds }) {
+  const { data } = await api.post(`/admin/marketing/coupons/${id}/whatsapp`, { audience, customerIds })
+  return data.data
+}
+
 export const fetchReviews = (query) =>
   fetchResource({ path: '/admin/marketing/reviews', params: params(query), fixture: () => fixtures.reviewListFixture(query), schema: reviewListSchema, live: true })
 

@@ -360,12 +360,13 @@ describe('cjOnboardingService — pricing engine', () => {
       providerCost: 5, // USD
       providerShippingCost: 1.5, // USD
     });
-    // base = (5 + 1.5) * USD_TO_INR_RATE, +20% margin on that base
-    const base = 6.5 * USD_TO_INR_RATE;
+    // base = 5 * USD_TO_INR_RATE, +20% margin on that base. Shipping is not
+    // in the price: the buyer pays CJ's real freight at checkout.
+    const base = 5 * USD_TO_INR_RATE;
     expect(price).toBeCloseTo(Math.round((base + base * 0.2) * 100) / 100, 5);
   });
 
-  it('automatic mode computes cost + shipping + margin (flat, in INR after conversion)', () => {
+  it('automatic mode computes cost + margin, without shipping (flat, in INR after conversion)', () => {
     const { USD_TO_INR_RATE } = require('../services/cj/cjPricing');
     const price = cjOnboardingService.computeSellingPrice({
       pricingMode: 'AUTOMATIC',
@@ -373,7 +374,7 @@ describe('cjOnboardingService — pricing engine', () => {
       providerCost: 5,
       providerShippingCost: 1.5,
     });
-    const base = 6.5 * USD_TO_INR_RATE;
+    const base = 5 * USD_TO_INR_RATE;
     expect(price).toBeCloseTo(Math.round((base + 349) * 100) / 100, 5);
   });
 });
@@ -429,5 +430,54 @@ describe('cjSyncJob — overlap prevention', () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
     spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Admin CJ product detail screen
+// ---------------------------------------------------------------------------
+describe('cjOnboardingService — getOnboardedProductDetail', () => {
+  const mongoose = require('mongoose');
+  const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
+  const { createProduct } = require('./helpers');
+
+  afterEach(() => ProductFulfillmentMapping.deleteMany({}));
+
+  it('returns the mapping, sync logs, and only this product’s order lines', async () => {
+    const product = await createProduct({ fulfillmentProvider: 'CJ' });
+    const other = new mongoose.Types.ObjectId();
+    await ProductFulfillmentMapping.create({
+      product: product._id,
+      cjProductId: 'CJP-1',
+      warehouseCountryCode: 'cn',
+      variants: [{ cjVariantId: 'CJV-1', providerCost: 2.5, providerStock: 40 }],
+    });
+    await CjSyncLog.create({
+      entity: 'PRODUCT', entityId: 'CJP-1', product: product._id, operation: 'STOCK_SYNC', status: 'SUCCESS',
+    });
+    await CjOrder.create({
+      krozendaOrderId: new mongoose.Types.ObjectId(),
+      krozendaSubOrderId: 'SUB-DETAIL-1',
+      items: [
+        { product: product._id, cjProductId: 'CJP-1', cjVariantId: 'CJV-1', quantity: 3, unitCost: 2.5 },
+        { product: other, cjProductId: 'CJP-2', cjVariantId: 'CJV-2', quantity: 5, unitCost: 1 },
+      ],
+    });
+
+    const detail = await cjOnboardingService.getOnboardedProductDetail(String(product._id));
+
+    expect(detail.mapping.cjProductId).toBe('CJP-1');
+    expect(detail.mapping.product.name).toBe(product.name);
+    expect(detail.mapping.warehouseCountryCode).toBe('CN');
+    expect(detail.syncLogs).toHaveLength(1);
+    expect(detail.orders).toHaveLength(1);
+    expect(detail.orders[0].quantity).toBe(3);
+    expect(detail.orderStats).toEqual({ orderCount: 1, unitsSold: 3 });
+  });
+
+  it('returns null for a product that is not CJ-mapped or an invalid id', async () => {
+    const product = await createProduct();
+    expect(await cjOnboardingService.getOnboardedProductDetail(String(product._id))).toBeNull();
+    expect(await cjOnboardingService.getOnboardedProductDetail('not-an-id')).toBeNull();
   });
 });

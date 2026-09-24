@@ -9,6 +9,7 @@ const ReturnRequest = require('../Models/ReturnRequest');
 const { nextIds } = require('./accountingSequence');
 const { loadRules, resolveForLine } = require('./commissionResolver');
 const { toPaise, percentOfPaise, allocateProportional } = require('../utils/money');
+const { lineDiscountsPaise, findLineIndex } = require('../utils/orderLines');
 
 // THE POSTING ENGINE. Every row on the ledger is written by one of the
 // functions here, and every one of them is safe to call again: rows carry a
@@ -150,7 +151,11 @@ function explodeOrderLines(order, { couponFundedByVendor }) {
   }));
 
   const weights = lines.map((line) => line.grossPaise);
-  const discountShares = allocateProportional(toPaise(order.discountAmount), weights);
+  // Each line's own coupon share, fixed at checkout over only the lines the
+  // coupon applied to. Spreading the order-level figure over EVERY line made
+  // one seller pay for another seller's coupon; older orders without the
+  // snapshot still fall back to that spread (see utils/orderLines).
+  const discountShares = lineDiscountsPaise(order);
   const shippingShares = allocateProportional(toPaise(order.shippingFee), weights);
 
   return lines.map((line, index) => {
@@ -346,7 +351,10 @@ async function postOrderSale(orderInput, { session, createdBy = null } = {}) {
   // Gateway fee applies to online captures only — COD and wallet payments
   // never touch a payment gateway (task §11).
   if (order.paymentMethod === 'RAZORPAY' && orderTotalPaise > 0) {
-    const feePaise = percentOfPaise(orderTotalPaise, config.gatewayFeePercent) + toPaise(config.gatewayFeeFixed);
+    // The gateway's fixed fee is charged once per PAYMENT. A split checkout
+    // pays two orders with one payment, so only its primary order carries it.
+    const fixedFeePaise = (order.checkoutGroupIndex || 0) === 0 ? toPaise(config.gatewayFeeFixed) : 0;
+    const feePaise = percentOfPaise(orderTotalPaise, config.gatewayFeePercent) + fixedFeePaise;
 
     if (feePaise > 0) {
       if (config.gatewayFeeBearer === 'SELLER' && sellerLines.length > 0) {
@@ -553,9 +561,20 @@ function refundRowsForLine({ saleRow, commissionRow, refundPaise, order, returnR
   return rows;
 }
 
-// The posted SALE and COMMISSION for one order, indexed by product, so a
+// The posted SALE and COMMISSION for one order, indexed by ORDER LINE, so a
 // refund can find exactly what it is reversing.
-async function postedRowsByProduct(orderId) {
+//
+// Keyed by line, not product: two variants of one product are two lines with
+// two sale rows, and a product-keyed map kept only the last of them — so a
+// cancellation reversed one variant's sale and silently left the other. The
+// line index is read from the row's eventKey (`SALE:<order>:<index>:<product>`),
+// which every sale and commission row has carried since they were introduced.
+function lineKeyOf(entry) {
+  const parts = String(entry.eventKey || '').split(':');
+  return parts.length >= 4 && /^\d+$/.test(parts[2]) ? parts[2] : `product:${entry.product}`;
+}
+
+async function postedRowsByLine(orderId) {
   const posted = await AccountingTransaction.find({
     order: orderId,
     type: { $in: ['SALE', 'COMMISSION'] },
@@ -564,11 +583,20 @@ async function postedRowsByProduct(orderId) {
   const sales = new Map();
   const commissions = new Map();
   for (const entry of posted) {
-    const key = String(entry.product);
+    const key = lineKeyOf(entry);
     if (entry.type === 'SALE') sales.set(key, entry);
     else commissions.set(key, entry);
   }
   return { sales, commissions };
+}
+
+// What has already been refunded against each sale row, by that row's id.
+async function refundedBySaleRow(orderId) {
+  const refunded = await AccountingTransaction.aggregate([
+    { $match: { order: new mongoose.Types.ObjectId(String(orderId)), type: 'REFUND' } },
+    { $group: { _id: '$reversalOf', total: { $sum: '$debit' } } },
+  ]);
+  return new Map(refunded.map((entry) => [String(entry._id), entry.total]));
 }
 
 /**
@@ -585,15 +613,20 @@ async function postReturnRefund({ returnRequest, createdBy = null }) {
   const order = await Order.findById(request.order).lean();
   if (!order) return { posted: 0, reason: 'order-not-found' };
 
-  const { sales, commissions } = await postedRowsByProduct(order._id);
-  const saleRow = sales.get(String(request.product));
+  const { sales, commissions } = await postedRowsByLine(order._id);
+  // The request names its line by product + variant. A request from before
+  // variants were recorded on it falls back to the product's first line.
+  const index = findLineIndex(order, request.product, request.variantId);
+  const fallbackIndex = order.items.findIndex((item) => String(item.product) === String(request.product));
+  const lineKey = String(index >= 0 ? index : fallbackIndex);
+  const saleRow = sales.get(lineKey) || sales.get(`product:${request.product}`);
   // Nothing was ever posted for this line — an unremitted COD order, say.
   // There is no sale to claw back, so there is nothing to reverse either.
   if (!saleRow) return { posted: 0, reason: 'no-sale-posted' };
 
   const rows = refundRowsForLine({
     saleRow,
-    commissionRow: commissions.get(String(request.product)),
+    commissionRow: commissions.get(lineKey) || commissions.get(`product:${request.product}`),
     refundPaise: toPaise(request.refundAmount || 0),
     order,
     returnRequestId: request._id,
@@ -615,35 +648,76 @@ async function postOrderCancellationRefund({ order: orderInput, createdBy = null
   const order = orderInput && orderInput.items ? orderInput : await Order.findById(orderInput).lean();
   if (!order) return { posted: 0, reason: 'order-not-found' };
 
-  const { sales, commissions } = await postedRowsByProduct(order._id);
+  const { sales, commissions } = await postedRowsByLine(order._id);
   if (sales.size === 0) return { posted: 0, reason: 'no-sale-posted' };
 
   // Anything already refunded through a return request is netted off, so a
   // cancellation after a partial refund cannot pay the same money back twice.
-  const alreadyRefunded = await AccountingTransaction.aggregate([
-    { $match: { order: order._id, type: 'REFUND' } },
-    { $group: { _id: '$product', total: { $sum: '$debit' } } },
-  ]);
-  const refundedByProduct = new Map(alreadyRefunded.map((entry) => [String(entry._id), entry.total]));
+  // Netted per sale row, so it holds for two variants of one product too.
+  const refunded = await refundedBySaleRow(order._id);
+  const salesPerProduct = new Map();
+  for (const saleRow of sales.values()) {
+    const product = String(saleRow.product);
+    salesPerProduct.set(product, (salesPerProduct.get(product) || 0) + 1);
+  }
 
   const rows = [];
-  for (const [productKey, saleRow] of sales) {
-    const outstanding = saleRow.credit - (refundedByProduct.get(productKey) || 0);
+  for (const [lineKey, saleRow] of sales) {
+    const outstanding = saleRow.credit - (refunded.get(String(saleRow._id)) || 0);
     if (outstanding <= 0) continue;
 
+    const productKey = String(saleRow.product);
     rows.push(
       ...refundRowsForLine({
         saleRow,
-        commissionRow: commissions.get(productKey),
+        commissionRow: commissions.get(lineKey),
         refundPaise: outstanding,
         order,
         returnRequestId: null,
         reasonLabel: 'order cancelled',
         createdBy,
-        keySuffix: `ORDER_CANCEL:${order._id}:${productKey}`,
+        // Unchanged key shape for a product with one line, so a cancellation
+        // posted before this change is recognised rather than posted again.
+        keySuffix:
+          salesPerProduct.get(productKey) > 1
+            ? `ORDER_CANCEL:${order._id}:${productKey}:${lineKey}`
+            : `ORDER_CANCEL:${order._id}:${productKey}`,
       })
     );
   }
+
+  const result = await insertRows(rows);
+  return { posted: result.inserted.length, skipped: result.skipped };
+}
+
+/**
+ * Reverse the sale for ONE order line that was cancelled on its own (a seller
+ * rejecting it, or an admin cancelling a sub-order) after the order's sale was
+ * posted. Idempotent on (order, line).
+ */
+async function postLineCancellationRefund({ order: orderInput, lineIndex, createdBy = null }) {
+  const order = orderInput && orderInput.items ? orderInput : await Order.findById(orderInput).lean();
+  if (!order) return { posted: 0, reason: 'order-not-found' };
+
+  const { sales, commissions } = await postedRowsByLine(order._id);
+  const saleRow = sales.get(String(lineIndex));
+  // Nothing posted for this line yet (an unremitted COD order): nothing to reverse.
+  if (!saleRow) return { posted: 0, reason: 'no-sale-posted' };
+
+  const refunded = await refundedBySaleRow(order._id);
+  const outstanding = saleRow.credit - (refunded.get(String(saleRow._id)) || 0);
+  if (outstanding <= 0) return { posted: 0, reason: 'already-refunded' };
+
+  const rows = refundRowsForLine({
+    saleRow,
+    commissionRow: commissions.get(String(lineIndex)),
+    refundPaise: outstanding,
+    order,
+    returnRequestId: null,
+    reasonLabel: 'item cancelled',
+    createdBy,
+    keySuffix: `LINE_CANCEL:${order._id}:${lineIndex}`,
+  });
 
   const result = await insertRows(rows);
   return { posted: result.inserted.length, skipped: result.skipped };
@@ -780,6 +854,7 @@ module.exports = {
   recordCodRemittance,
   postReturnRefund,
   postOrderCancellationRefund,
+  postLineCancellationRefund,
   postAdjustment,
   reconcileLedger,
 };

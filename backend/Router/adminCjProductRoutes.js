@@ -2,6 +2,7 @@ const express = require('express');
 const {
   onboardProduct,
   listProducts,
+  getProductDetail,
   getCategorySummary,
   bulkPricing,
   bulkOnboard,
@@ -16,6 +17,7 @@ router.use(requirePermission('admin.cj.products'));
 // Before '/' so it never matches the catch-all list route.
 router.get('/category-summary', getCategorySummary);
 router.get('/', listProducts);
+router.get('/:productId', getProductDetail);
 router.post('/onboard', onboardProduct);
 router.post('/bulk-onboard', bulkOnboard);
 router.post('/bulk-pricing', bulkPricing);

@@ -19,6 +19,7 @@ const LIST_PATH = '/v1/product/list';
 const DETAIL_PATH = '/v1/product/query';
 const VARIANT_PATH = '/v1/product/variant/query';
 const STOCK_PATH = '/v1/product/stock/queryByVid';
+const PRODUCT_STOCK_PATH = '/v1/product/stock/getInventoryByPid';
 
 function authenticatedCall(request) {
   return cjAuthService.withAuth((accessToken) =>
@@ -145,7 +146,33 @@ async function getVariantTotalStock(variantId, { onLog } = {}) {
   return (warehouses || []).reduce((sum, w) => sum + (Number(w.totalInventoryNum) || 0), 0);
 }
 
+// Total stock for EVERY variant of one product in a single call, as a
+// Map(vid -> units). One call costs the same 10 points as one per-variant
+// call, so for a 72-variant product this is 10 points instead of 720.
+// Response shape verified on the live account (2026-09-24):
+//   data.variantInventories[] = { vid, inventory: [{ countryCode, totalInventory, ... }] }
+async function getProductStockByVariant(productId, { onLog } = {}) {
+  if (!productId) throw new Error('productId is required');
+
+  const { body } = await authenticatedCall({
+    method: 'GET',
+    path: PRODUCT_STOCK_PATH,
+    query: { pid: productId },
+    idempotent: true,
+    onLog,
+  });
+
+  const stock = new Map();
+  for (const row of body?.data?.variantInventories || []) {
+    if (!row?.vid) continue;
+    const total = (row.inventory || []).reduce((sum, w) => sum + (Number(w.totalInventory) || 0), 0);
+    stock.set(String(row.vid), total);
+  }
+  return stock;
+}
+
 module.exports = {
+  getProductStockByVariant,
   getCategories,
   searchProducts,
   getProductDetail,

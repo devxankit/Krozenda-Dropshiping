@@ -136,7 +136,7 @@ function OnboardModal({ product, variants, onClose }) {
             value={pricingMode}
             onChange={(e) => setPricingMode(e.target.value)}
             options={[
-              { value: 'AUTOMATIC', label: 'Automatic (cost + shipping + margin)' },
+              { value: 'AUTOMATIC', label: 'Automatic (cost + margin, shipping charged at checkout)' },
               { value: 'MANUAL', label: 'Manual' },
             ]}
           />

@@ -86,6 +86,13 @@ export async function fetchOnboardedCjProducts(params) {
   return data.data
 }
 
+// One onboarded CJ product (keyed by its Krozenda Product id): mapping,
+// Product, recent sync logs and CJ orders. Reads Krozenda's DB only.
+export async function fetchOnboardedCjProduct(productId) {
+  const { data } = await api.get(`/admin/cj/products/${productId}`)
+  return data.data
+}
+
 // Krozenda categories that hold at least one onboarded CJ product, with a
 // count each. Backs the standalone Category screen's cards and the Products
 // screen's category filter.

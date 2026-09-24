@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Badge, Icon, Input, Pagination, Switch, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { ADMIN_PERMISSIONS } from '../../constants'
+import { adminPath } from '../../../../config/routes'
 import { ProductFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { ScanBarcodeModal } from '../../../../components/common/ScanBarcodeModal'
@@ -48,6 +50,7 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [removingProduct, setRemovingProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
 
   const writer = useProductWriteController({
@@ -173,7 +176,12 @@ export function ProductsPage() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
+              <Link
+                to={adminPath.productDetail(item.id)}
+                className="block font-semibold text-slate-900 text-sm truncate hover:text-brand-600 transition-colors"
+              >
+                {item.name}
+              </Link>
               <div className="flex items-center gap-2 text-2xs text-slate-400">
                 {item.sku && <span>SKU: {item.sku}</span>}
                 {item.brand?.name && <span>• {item.brand.name}</span>}
@@ -336,11 +344,18 @@ export function ProductsPage() {
     {
       key: '__actions',
       header: 'Actions',
-      width: '7.5rem',
+      width: '9.5rem',
       align: 'right',
       render: (item) => (
-        <PermissionGate permission={MANAGE}>
-          <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end gap-1">
+          <Link
+            to={adminPath.productDetail(item.id)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            title="View details"
+          >
+            <Icon name="eye" className="h-4 w-4" />
+          </Link>
+          <PermissionGate permission={MANAGE}>
             <button
               type="button"
               onClick={() => setEditingProduct(item)}
@@ -357,8 +372,8 @@ export function ProductsPage() {
             >
               <Icon name="delete" className="h-4 w-4" />
             </button>
-          </div>
-        </PermissionGate>
+          </PermissionGate>
+        </div>
       ),
     },
   ]
@@ -669,18 +684,23 @@ export function ProductsPage() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {pagedProducts.map((item) => {
               const primaryImage = item.images?.[0]
+              const hasDiscount = item.salePrice != null && item.salePrice < item.price
+              const discountPct =
+                item.discountPercent ||
+                (hasDiscount ? Math.round(((item.price - item.salePrice) / item.price) * 100) : 0)
+
               return (
                 <div
                   key={item.id}
-                  className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-brand-300 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                  className="group relative flex flex-col rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:border-brand-400 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-300 hover:-translate-y-1"
                 >
                   {/* Cover Image Showcase */}
-                  <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/70 border border-slate-100 flex items-center justify-center">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-100 p-2.5 flex items-center justify-center">
                     {primaryImage ? (
                       <img
                         src={primaryImage}
                         alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                           if (e.currentTarget.parentElement) {
@@ -695,143 +715,195 @@ export function ProductsPage() {
                     )}
 
                     {/* Top Floating Badges */}
-                    <div className="absolute top-2.5 left-2.5 flex flex-col gap-1">
+                    <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1 max-w-[70%] z-10 pointer-events-none">
                       {item.isFlashsale && (
-                        <span className="rounded-lg bg-amber-500/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          🔥 Flash Sale
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          <span>🔥</span>
+                          <span>Flash</span>
                         </span>
                       )}
                       {item.isTrending && (
-                        <span className="rounded-lg bg-indigo-600/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          📈 Trending
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          <span>📈</span>
+                          <span>Trending</span>
                         </span>
                       )}
-                      {Boolean(item.discountPercent) && (
-                        <span className="rounded-lg bg-emerald-600/90 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
-                          {item.discountPercent}% OFF
+                      {discountPct > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                          {discountPct}% OFF
                         </span>
                       )}
                       {item.stock <= 0 && (
-                        <span className="rounded-lg bg-rose-600/90 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
+                        <span className="inline-flex items-center rounded-full bg-rose-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           Out of Stock
                         </span>
                       )}
                     </div>
 
-                    <div className="absolute top-2.5 right-2.5">
-                      <Badge
-                        tone={item.isActive ? 'success' : 'neutral'}
-                        dot
-                        size="sm"
-                        className="backdrop-blur-md bg-white/95 shadow-xs border border-white/80 font-semibold"
+                    {/* Top Right Status Badge */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold backdrop-blur-md shadow-xs border ${
+                          item.isActive
+                            ? 'bg-white/95 border-emerald-200 text-emerald-700'
+                            : 'bg-white/95 border-slate-200 text-slate-500'
+                        }`}
                       >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                          }`}
+                        />
                         {item.isActive ? 'Active' : 'Hidden'}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
 
                   {/* Details */}
-                  <div className="mt-3.5 flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 text-2xs text-slate-400 truncate">
-                      <span className="font-semibold text-slate-600">{item.category?.name || 'Catalog'}</span>
+                  <div className="mt-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-2xs truncate">
+                      <span className="font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded text-[10px] tracking-wide uppercase truncate max-w-[120px]">
+                        {item.category?.name || 'Catalog'}
+                      </span>
                       {item.brand?.name && (
-                        <>
-                          <span>•</span>
-                          <span className="text-slate-500">{item.brand.name}</span>
-                        </>
+                        <span className="text-slate-500 font-medium text-[11px] truncate">
+                          · {item.brand.name}
+                        </span>
                       )}
                     </div>
 
                     <h3
-                      className="font-bold text-slate-900 text-sm mt-1 truncate group-hover:text-brand-600 transition-colors"
+                      className="font-bold text-slate-900 text-sm mt-1.5 line-clamp-2 min-h-[2.5rem] leading-snug group-hover:text-brand-600 transition-colors"
                       title={item.name}
                     >
-                      {item.name}
+                      <Link to={adminPath.productDetail(item.id)}>{item.name}</Link>
                     </h3>
 
                     {/* Pricing */}
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-base font-extrabold text-slate-900 tabular">
+                      <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight tabular">
                         {formatRupees(item.salePrice ?? item.price)}
                       </span>
-                      {item.salePrice != null && item.salePrice < item.price && (
-                        <span className="text-2xs text-slate-400 line-through tabular">
+                      {hasDiscount && (
+                        <span className="text-xs text-slate-400 line-through tabular font-normal">
                           {formatRupees(item.price)}
+                        </span>
+                      )}
+                      {discountPct > 0 && (
+                        <span className="ml-auto text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md">
+                          Save {formatRupees(item.price - item.salePrice)}
                         </span>
                       )}
                     </div>
 
                     {/* Stock status indicator */}
-                    <div className="mt-2 flex items-center justify-between text-2xs">
-                      <span className="text-slate-500 font-medium">
-                        Stock: <span className="font-bold text-slate-800">{item.stock}</span>
-                      </span>
-                      {item.sku && <span className="text-slate-400 truncate">SKU: {item.sku}</span>}
+                    <div className="mt-2.5 flex items-center justify-between text-2xs pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-block h-1.5 w-1.5 rounded-full ${
+                            item.stock > 10
+                              ? 'bg-emerald-500'
+                              : item.stock > 0
+                                ? 'bg-amber-500'
+                                : 'bg-rose-500'
+                          }`}
+                        />
+                        <span className="text-slate-500 font-medium">Stock:</span>
+                        <span
+                          className={`font-bold tabular ${
+                            item.stock > 10
+                              ? 'text-slate-800'
+                              : item.stock > 0
+                                ? 'text-amber-600'
+                                : 'text-rose-600'
+                          }`}
+                        >
+                          {item.stock > 0 ? item.stock : 'Out of Stock'}
+                        </span>
+                      </div>
+                      {item.sku && (
+                        <span
+                          className="font-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-200/60 px-1.5 py-0.5 rounded max-w-[100px] truncate"
+                          title={item.sku}
+                        >
+                          SKU: {item.sku}
+                        </span>
+                      )}
                     </div>
+
+                    {/* Quick Promo Tags: Flash Sale & Trending Toggles */}
+                    <PermissionGate permission={MANAGE}>
+                      <div className="mt-2.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={writer.setFlashSaleStatus.isSubmitting}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            writer.setFlashSaleStatus.run({ id: item.id, isFlashsale: !item.isFlashsale })
+                          }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                            item.isFlashsale
+                              ? 'bg-amber-500 text-white shadow-xs shadow-amber-500/20 ring-1 ring-amber-400'
+                              : 'bg-slate-100/90 text-slate-500 hover:text-amber-700 hover:bg-amber-50 border border-slate-200/60'
+                          }`}
+                          title={item.isFlashsale ? 'Turn off Flash Sale' : 'Turn on Flash Sale'}
+                        >
+                          <span>🔥</span>
+                          <span>Flash {item.isFlashsale ? 'ON' : ''}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={writer.setTrendingStatus.isSubmitting}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            writer.setTrendingStatus.run({ id: item.id, isTrending: !item.isTrending })
+                          }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                            item.isTrending
+                              ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-600/20 ring-1 ring-indigo-500'
+                              : 'bg-slate-100/90 text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200/60'
+                          }`}
+                          title={item.isTrending ? 'Turn off Trending' : 'Turn on Trending'}
+                        >
+                          <span>📈</span>
+                          <span>Trending {item.isTrending ? 'ON' : ''}</span>
+                        </button>
+                      </div>
+                    </PermissionGate>
                   </div>
 
                   {/* Card Bottom Footer */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-y-2">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <div className="flex items-center gap-1.5" title="Storefront Visibility">
-                        <Switch
-                          id={`product-grid-active-${item.id}`}
-                          checked={item.isActive}
-                          disabled={writer.setStatus.isSubmitting}
-                          onChange={() => writer.setStatus.run({ id: item.id, isActive: !item.isActive })}
-                        />
-                        <span className="text-2xs font-semibold text-slate-600">
-                          {item.isActive ? 'Live' : 'Hidden'}
-                        </span>
-                      </div>
-
-                      <PermissionGate permission={MANAGE}>
-                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200" title="Flash Sale Status">
-                          <Switch
-                            id={`product-grid-flash-${item.id}`}
-                            checked={Boolean(item.isFlashsale)}
-                            disabled={writer.setFlashSaleStatus.isSubmitting}
-                            onChange={() =>
-                              writer.setFlashSaleStatus.run({ id: item.id, isFlashsale: !item.isFlashsale })
-                            }
-                          />
-                          <span
-                            className={`text-2xs font-bold ${
-                              item.isFlashsale ? 'text-amber-600' : 'text-slate-400'
-                            }`}
-                          >
-                            🔥
-                          </span>
-                        </div>
-                      </PermissionGate>
-
-                      <PermissionGate permission={MANAGE}>
-                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200" title="Trending Status">
-                          <Switch
-                            id={`product-grid-trending-${item.id}`}
-                            checked={Boolean(item.isTrending)}
-                            disabled={writer.setTrendingStatus.isSubmitting}
-                            onChange={() =>
-                              writer.setTrendingStatus.run({ id: item.id, isTrending: !item.isTrending })
-                            }
-                          />
-                          <span
-                            className={`text-2xs font-bold ${
-                              item.isTrending ? 'text-indigo-600' : 'text-slate-400'
-                            }`}
-                          >
-                            📈
-                          </span>
-                        </div>
-                      </PermissionGate>
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2" title="Storefront Visibility">
+                      <Switch
+                        id={`product-grid-active-${item.id}`}
+                        checked={item.isActive}
+                        disabled={writer.setStatus.isSubmitting}
+                        onChange={() => writer.setStatus.run({ id: item.id, isActive: !item.isActive })}
+                      />
+                      <span
+                        className={`text-xs font-bold tracking-tight ${
+                          item.isActive ? 'text-emerald-700' : 'text-slate-400'
+                        }`}
+                      >
+                        {item.isActive ? 'Live' : 'Hidden'}
+                      </span>
                     </div>
 
-                    <PermissionGate permission={MANAGE}>
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
+                      <Link
+                        to={adminPath.productDetail(item.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 border border-slate-200/50 hover:border-brand-200 transition-all shadow-2xs"
+                        title="View details"
+                      >
+                        <Icon name="eye" className="h-3.5 w-3.5" />
+                      </Link>
+                      <PermissionGate permission={MANAGE}>
                         <button
                           type="button"
                           onClick={() => setEditingProduct(item)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 border border-slate-200/50 hover:border-brand-200 transition-all shadow-2xs"
                           title="Edit product"
                         >
                           <Icon name="edit" className="h-3.5 w-3.5" />
@@ -839,13 +911,13 @@ export function ProductsPage() {
                         <button
                           type="button"
                           onClick={() => setRemovingProduct(item)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 border border-slate-200/50 hover:border-danger-200 transition-all shadow-2xs"
                           title="Delete product"
                         >
                           <Icon name="delete" className="h-3.5 w-3.5" />
                         </button>
-                      </div>
-                    </PermissionGate>
+                      </PermissionGate>
+                    </div>
                   </div>
                 </div>
               )
@@ -889,16 +961,14 @@ export function ProductsPage() {
         />
       )}
 
-      {/* Scan a barcode to jump straight to that product's edit drawer —
-          the lookup response is already shaped exactly like a row from the
-          product list, so it opens the same drawer with no translation. */}
+      {/* Scan a barcode to open that product's full details page. */}
       <ScanBarcodeModal
         isOpen={scanOpen}
         onClose={() => setScanOpen(false)}
         lookupPath={(code) => `/admin/catalog/products/barcode/${code}`}
         onFound={(product) => {
           setScanOpen(false)
-          setEditingProduct(product)
+          navigate(adminPath.productDetail(product.id))
         }}
       />
 

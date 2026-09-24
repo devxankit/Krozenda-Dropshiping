@@ -8,7 +8,7 @@ const Product = require('../Models/Product');
 const Customer = require('../Models/Customer');
 const Coupon = require('../Models/Coupon');
 const WalletTransaction = require('../Models/WalletTransaction');
-const { evaluateCoupon, redeemCoupon } = require('./couponController');
+const { evaluateCoupon, filterEligibleItems, redeemCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
 const Shipment = require('../Models/Shipment');
 const trackingService = require('../services/shipping/trackingService');
@@ -27,7 +27,10 @@ const {
 const accounting = require('../services/accountingPosting');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
-const cjOrderService = require('../services/cj/cjOrderService');
+const dropshipOrderService = require('../services/dropshipOrderService');
+const { refundCancelledOrderToWallet } = require('../services/orderCancellationService');
+const { findDropshipProductIds, isDropshipOrder } = require('../utils/dropship');
+const { toPaise, allocateProportional } = require('../utils/money');
 
 // Accounting is posted alongside the order, never in front of it. A ledger
 // write must never be able to fail a customer's checkout or a cancellation —
@@ -71,6 +74,8 @@ function serializeOrder(o) {
       price: item.price,
       quantity: item.quantity,
       variant: item.variant || '',
+      variantId: item.variantId ? item.variantId.toString() : null,
+      discountAmount: item.discountAmount ?? null,
       vendorId: item.vendor ? item.vendor.toString() : null,
       hsnCode: item.hsnCode || '',
       gstRate: item.gstRate || 0,
@@ -86,6 +91,10 @@ function serializeOrder(o) {
     paymentMethod: o.paymentMethod,
     paymentStatus: o.paymentStatus,
     status: o.status,
+    // A dropship order can be neither cancelled nor returned by the buyer.
+    fulfillmentType: o.fulfillmentType || 'STANDARD',
+    isDropship: o.fulfillmentType === 'DROPSHIP',
+    checkoutGroupId: o.checkoutGroupId || null,
     deliveredAt: o.deliveredAt,
     statusHistory: (o.statusHistory || []).map((entry) => ({ status: entry.status, at: entry.at })),
     b2b: o.b2b
@@ -275,33 +284,41 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
       taxableValue: tax.taxableValuePaise,
       taxAmount: tax.taxPaise,
       vendor: entry.product.vendor || null,
+      returnable: entry.product.isReturnable !== false,
     };
   });
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Summed in paise: a rupee float added across forty lines drifts.
+  const linePaise = items.map((item) => toPaise(item.price) * item.quantity);
+  const subtotal = linePaise.reduce((sum, p) => sum + p, 0) / 100;
 
-  // Quoted from the carrier for THIS cart, THIS address and THIS payment
-  // method. `cartEntries` is passed straight through so the quote cannot be
-  // for a different basket than the one being priced.
-  const quote = await checkoutQuoteService.quoteCart({
-    entries: cartEntries,
-    address,
-    paymentMethod,
-    subtotal,
-  });
-
-  if (!quote.ok) {
-    // A rate we could not get must not silently become zero. Stopping is the
-    // honest outcome — the alternative is shipping at a price nobody agreed to.
-    return { error: { status: 409, code: quote.code, message: quote.message } };
+  // CJ Dropshipping lines. Business rule: they are paid for online and only
+  // online — no COD, no wallet — and a cart holding even one of them follows
+  // that rule as a whole.
+  const dropshipIds = await findDropshipProductIds(cartEntries.map((entry) => entry.product));
+  const fulfillmentOf = (item) => (dropshipIds.has(String(item.product)) ? 'DROPSHIP' : 'STANDARD');
+  const hasDropship = items.some((item) => fulfillmentOf(item) === 'DROPSHIP');
+  if (hasDropship && String(paymentMethod || '').toUpperCase() !== 'RAZORPAY') {
+    return {
+      error: {
+        status: 409,
+        code: 'ONLINE_PAYMENT_REQUIRED',
+        message:
+          'Your cart has a dropshipping item, which can only be paid for online. Cash on delivery and wallet are not available for this order.',
+      },
+    };
   }
 
-  const shipping = quote.shippingFee;
-  const previousOrders = await Order.countDocuments({ user: user._id, paymentStatus: 'PAID' });
+  // Any order that was not cancelled makes the buyer a returning customer.
+  // Counting only PAID orders left a buyer whose orders were all COD (paid
+  // only on delivery) "new" indefinitely, free to take a new-customer coupon
+  // on order after order.
+  const previousOrders = await Order.countDocuments({ user: user._id, status: { $ne: 'CANCELLED' } });
   const isNewCustomer = previousOrders === 0;
 
   let discountAmount = 0;
   let normalizedCouponCode = null;
+  let appliedCoupon = null;
   const couponCartItems = items.map((item, idx) => ({
     productId: item.product,
     categoryId: cartEntries[idx].product?.category,
@@ -320,7 +337,6 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
       userId: user._id,
       cartItems: couponCartItems,
       cartTotal: subtotal,
-      shippingFee: shipping,
       isNewCustomer,
     });
     if (!evaluation.valid) {
@@ -329,9 +345,77 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
 
     discountAmount = evaluation.discountAmount;
     normalizedCouponCode = coupon.code;
+    appliedCoupon = coupon;
   }
 
-  const total = Math.max(0, subtotal - discountAmount + shipping);
+  // Priced AFTER the coupon, so free delivery is judged on the discounted amount.
+  // Quoted from the carrier for THIS cart, THIS address and THIS payment
+  // method. `cartEntries` is passed straight through so the quote cannot be
+  // for a different basket than the one being priced.
+  const quote = await checkoutQuoteService.quoteCart({
+    entries: cartEntries,
+    address,
+    paymentMethod,
+    // The free-delivery threshold is measured on what the buyer actually
+    // pays for the goods — after the coupon. Measuring it before let a coupon
+    // push a cart below the threshold and still ship free.
+    subtotal: (toPaise(subtotal) - toPaise(discountAmount)) / 100,
+    dropshipProductIds: dropshipIds,
+  });
+
+  if (!quote.ok) {
+    // A rate we could not get must not silently become zero. Stopping is the
+    // honest outcome — the alternative is shipping at a price nobody agreed to.
+    return { error: { status: 409, code: quote.code, message: quote.message } };
+  }
+
+  const shipping = quote.shippingFee;
+
+  // Each line's share of the discount, spread ONLY over the lines the coupon
+  // applied to. Fixed here, once, and snapshotted on the order: refunds and
+  // the seller ledger both read it, so a return pays back what was actually
+  // paid, and one seller's coupon never comes out of another seller's line.
+  const discountPaiseByLine = items.map(() => 0);
+  if (appliedCoupon && discountAmount > 0) {
+    const eligible = new Set(filterEligibleItems(appliedCoupon, couponCartItems));
+    const eligibleIndexes = couponCartItems.map((ci, idx) => (eligible.has(ci) ? idx : -1)).filter((idx) => idx >= 0);
+    const shares = allocateProportional(
+      toPaise(discountAmount),
+      eligibleIndexes.map((idx) => linePaise[idx])
+    );
+    eligibleIndexes.forEach((idx, k) => {
+      discountPaiseByLine[idx] = shares[k];
+    });
+  }
+  items.forEach((item, idx) => {
+    item.discountAmount = discountPaiseByLine[idx] / 100;
+  });
+
+  // One order per fulfilment type. A cart of only seller products is one
+  // STANDARD order exactly as before; a mixed cart becomes a STANDARD and a
+  // DROPSHIP order, each with its own lines, discount and delivery charge.
+  const shippingBy = quote.shippingByFulfillment || { STANDARD: shipping, DROPSHIP: 0 };
+  const orderGroups = ['STANDARD', 'DROPSHIP']
+    .map((fulfillmentType) => {
+      const indexes = items.map((item, idx) => idx).filter((idx) => fulfillmentOf(items[idx]) === fulfillmentType);
+      if (indexes.length === 0) return null;
+
+      const subtotalPaise = indexes.reduce((sum, idx) => sum + linePaise[idx], 0);
+      const discountPaise = indexes.reduce((sum, idx) => sum + discountPaiseByLine[idx], 0);
+      const shippingPaise = toPaise(shippingBy[fulfillmentType] || 0);
+      return {
+        fulfillmentType,
+        items: indexes.map((idx) => items[idx]),
+        subtotal: subtotalPaise / 100,
+        discountAmount: discountPaise / 100,
+        shippingFee: shippingPaise / 100,
+        total: Math.max(0, subtotalPaise - discountPaise + shippingPaise) / 100,
+      };
+    })
+    .filter(Boolean);
+
+  // The amount charged is exactly the sum of the orders it pays for.
+  const total = orderGroups.reduce((sum, group) => sum + toPaise(group.total), 0) / 100;
 
   return {
     address,
@@ -344,6 +428,8 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
     discountAmount,
     normalizedCouponCode,
     total,
+    orderGroups,
+    hasDropship,
     couponCartItems,
     isNewCustomer,
   };
@@ -498,13 +584,9 @@ async function createOrder(req, res) {
   // with a request that hasn't committed yet) — this just avoids doing the
   // whole payment/stock dance again in the common case.
   if (idempotencyKey) {
-    const existing = await Order.findOne({ user: req.user._id, idempotencyKey });
-    if (existing) {
-      return res.status(200).json({
-        success: true,
-        message: 'Order already placed',
-        data: serializeOrder(existing),
-      });
+    const existing = await Order.find({ user: req.user._id, idempotencyKey }).sort({ checkoutGroupIndex: 1 });
+    if (existing.length > 0) {
+      return res.status(200).json(placedResponse(existing, 'Order already placed'));
     }
   }
 
@@ -514,7 +596,18 @@ async function createOrder(req, res) {
   if (checkout.error) {
     return res.status(checkout.error.status).json(serializeCheckoutError(checkout.error));
   }
-  const { address, items, subtotal, shipping, discountAmount, normalizedCouponCode, total, couponCartItems, isNewCustomer } = checkout;
+  const {
+    address,
+    items,
+    subtotal,
+    shipping,
+    normalizedCouponCode,
+    total,
+    orderGroups,
+    quote,
+    couponCartItems,
+    isNewCustomer,
+  } = checkout;
 
   let paymentStatus = 'PENDING';
   let capturedPayment = null;
@@ -586,45 +679,59 @@ async function createOrder(req, res) {
     paymentStatus = 'PAID';
   }
 
-  let order;
+  // One order per fulfilment type — see computeCheckoutTotals. They share the
+  // payment, the idempotency key and a checkout group id; index 0 is the
+  // primary.
+  const checkoutGroupId = crypto.randomUUID();
+  const shippingAddress = {
+    fullName: address.fullName,
+    phone: address.phone,
+    line1: address.line1,
+    line2: address.line2,
+    city: address.city,
+    state: address.state,
+    pincode: address.pincode,
+    country: address.country,
+  };
+  const b2bSnapshot =
+    b2b && b2b.isB2B
+      ? {
+          isB2B: true,
+          companyName: typeof b2b.companyName === 'string' ? b2b.companyName.trim() : '',
+          gstin: typeof b2b.gstin === 'string' ? b2b.gstin.trim().toUpperCase() : '',
+        }
+      : { isB2B: false, companyName: '', gstin: '' };
+
+  let orders;
   try {
-    order = await Order.create({
-      user: req.user._id,
-      items,
-      shippingAddress: {
-        fullName: address.fullName,
-        phone: address.phone,
-        line1: address.line1,
-        line2: address.line2,
-        city: address.city,
-        state: address.state,
-        pincode: address.pincode,
-        country: address.country,
-      },
-      subtotal,
-      discountAmount,
-      couponCode: normalizedCouponCode,
-      shippingFee: shipping,
-      total,
-      paymentMethod,
-      paymentStatus,
-      razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
-      razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
-      idempotencyKey,
-      b2b: b2b && b2b.isB2B
-        ? {
-            isB2B: true,
-            companyName: typeof b2b.companyName === 'string' ? b2b.companyName.trim() : '',
-            gstin: typeof b2b.gstin === 'string' ? b2b.gstin.trim().toUpperCase() : '',
-          }
-        : {
-            isB2B: false,
-            companyName: '',
-            gstin: '',
-          },
-      status: 'PENDING',
-    });
+    // ordered: the first failure stops the batch, and anything already
+    // written is removed below, so a checkout never ends up half-placed.
+    orders = await Order.insertMany(
+      orderGroups.map((group, index) => ({
+        user: req.user._id,
+        items: group.items,
+        shippingAddress,
+        subtotal: group.subtotal,
+        discountAmount: group.discountAmount,
+        couponCode: normalizedCouponCode,
+        shippingFee: group.shippingFee,
+        total: group.total,
+        paymentMethod,
+        paymentStatus,
+        razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
+        razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
+        idempotencyKey,
+        fulfillmentType: group.fulfillmentType,
+        checkoutGroupId,
+        checkoutGroupIndex: index,
+        cjLogisticName: group.fulfillmentType === 'DROPSHIP' ? quote?.cjLogisticName || null : null,
+        b2b: b2bSnapshot,
+        status: 'PENDING',
+      })),
+      { ordered: true }
+    );
   } catch (err) {
+    await Order.deleteMany({ checkoutGroupId });
     await releaseStock(items);
     if (paymentMethod === 'WALLET') {
       await Customer.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
@@ -632,17 +739,13 @@ async function createOrder(req, res) {
     if (err.code === 11000) {
       // Lost the race against a concurrent identical submission (a double
       // tap, or the same request retried after a timeout). Everything this
-      // call reserved has just been released above, and the winner's order is
-      // already committed — hand that one back so the buyer sees one order,
-      // not an error.
+      // call reserved has just been released above, and the winner's orders
+      // are already committed — hand those back so the buyer sees them, not
+      // an error.
       if (idempotencyKey) {
-        const winner = await Order.findOne({ user: req.user._id, idempotencyKey });
-        if (winner) {
-          return res.status(200).json({
-            success: true,
-            message: 'Order already placed',
-            data: serializeOrder(winner),
-          });
+        const winners = await Order.find({ user: req.user._id, idempotencyKey }).sort({ checkoutGroupIndex: 1 });
+        if (winners.length > 0) {
+          return res.status(200).json(placedResponse(winners, 'Order already placed'));
         }
       }
       // A razorpayPaymentId collision with no matching idempotency key is
@@ -657,6 +760,7 @@ async function createOrder(req, res) {
     }
     throw err;
   }
+  const order = orders[0];
 
   if (paymentMethod === 'WALLET') {
     const freshCustomer = await Customer.findById(req.user._id);
@@ -697,30 +801,48 @@ async function createOrder(req, res) {
     userId: req.user._id,
     type: 'ORDER',
     title: 'Order Placed',
-    message: `Your order for ${items.length} item(s) worth ₹${total.toLocaleString('en-IN')} has been placed successfully.`,
+    message:
+      orders.length > 1
+        ? `Your ${orders.length} orders for ${items.length} item(s) worth ₹${total.toLocaleString('en-IN')} have been placed successfully.`
+        : `Your order for ${items.length} item(s) worth ₹${total.toLocaleString('en-IN')} has been placed successfully.`,
     actionType: 'ORDER',
     actionRefId: order._id,
   });
 
-  await notifyVendorsOfNewOrder(items, order._id);
-
-  // CJ Dropshipping auto-fulfillment & order tracking:
-  // If any line in the order is backed by a CJ product, create the CjOrder
-  // row and dispatch the order to CJ's system. Wrapped so external network
-  // failure never rejects a customer's placed order.
-  await processCjOrderFulfillment(order, items);
-
-  // Shiprocket auto-dispatch for domestic multi-vendor items:
-  // Partitions items seller-wise and creates separate Shiprocket shipments
-  // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
-  await autoCreateShipmentsForOrder(order, items);
-
   // A prepaid order's money is in hand right now, so its sale, commission and
   // gateway fee post immediately. A COD order posts nothing yet — the cash is
   // still with the courier until an admin records the remittance (task §12).
-  await postAccounting('order sale', () => accounting.postOrderSale(order.toObject()));
+  // Posted BEFORE CJ is asked: if CJ refuses and the order is refunded, the
+  // refund needs a posted sale to reverse.
+  for (const placed of orders) {
+    await postAccounting('order sale', () => accounting.postOrderSale(placed.toObject()));
+  }
 
-  res.status(201).json({ success: true, message: 'Order placed successfully', data: serializeOrder(order) });
+  for (const placed of orders) {
+    if (placed.fulfillmentType === 'DROPSHIP') {
+      // Sent to CJ; if CJ definitely refuses, the buyer is refunded to their
+      // original payment automatically. Never throws.
+      await dropshipOrderService.fulfil(placed);
+    } else {
+      await notifyVendorsOfNewOrder(placed.items, placed._id);
+      // Shiprocket auto-dispatch for domestic multi-vendor items:
+      // Partitions items seller-wise and creates separate Shiprocket shipments
+      // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
+      await autoCreateShipmentsForOrder(placed, placed.items);
+    }
+  }
+
+  // Re-read: fulfilment may have cancelled and refunded the dropship order.
+  const fresh = await Order.find({ checkoutGroupId }).sort({ checkoutGroupIndex: 1 });
+  res.status(201).json(placedResponse(fresh, 'Order placed successfully'));
+}
+
+// `data` stays the first order, exactly the shape every existing client
+// reads; `orders` lists every order the checkout produced (two for a cart
+// split into a dropship and a standard order).
+function placedResponse(orders, message) {
+  const serialized = orders.map(serializeOrder);
+  return { success: true, message, data: { ...serialized[0], orders: serialized } };
 }
 
 async function autoCreateShipmentsForOrder(order, items) {
@@ -754,50 +876,6 @@ async function autoCreateShipmentsForOrder(order, items) {
   }
 }
 
-async function processCjOrderFulfillment(order, items) {
-  try {
-    const cjItems = [];
-    for (const item of items) {
-      const productId = item.product || item.productId;
-      const mapping = await ProductFulfillmentMapping.findOne({ product: productId, provider: 'CJ' });
-      if (mapping) {
-        const vMapping =
-          mapping.variants?.find((v) => String(v.krozendaVariantId) === String(item.variantId)) ||
-          mapping.variants?.[0];
-        cjItems.push({
-          product: productId,
-          cjProductId: mapping.cjProductId,
-          cjVariantId: vMapping?.cjVariantId || mapping.cjProductId,
-          quantity: item.quantity,
-          unitCost: vMapping?.providerCost || 0,
-        });
-      }
-    }
-
-    if (cjItems.length > 0) {
-      await cjOrderService.createOrder({
-        krozendaOrderId: order._id,
-        krozendaSubOrderId: `CJ-${order._id.toString()}`,
-        items: cjItems,
-        shippingAddress: {
-          countryCode: 'IN',
-          country: order.shippingAddress?.country || 'India',
-          province: order.shippingAddress?.state || '',
-          city: order.shippingAddress?.city || '',
-          line: [order.shippingAddress?.line1, order.shippingAddress?.line2].filter(Boolean).join(', '),
-          name: order.shippingAddress?.fullName || '',
-          zip: order.shippingAddress?.pincode || '',
-          phone: order.shippingAddress?.phone || '',
-          fromCountryCode: 'CN',
-          logisticName: 'CJPacket Eub',
-        },
-      });
-    }
-  } catch (err) {
-    console.error('CJ Dropshipping order creation notice:', err.message);
-  }
-}
-
 // A list row only needs enough to render the card — who it was, what it cost,
 // where it is, and a thumbnail strip. Sending the full serializeOrder payload
 // (every line item's snapshot, the whole shipping address, the complete status
@@ -818,6 +896,7 @@ function serializeOrderSummary(o) {
     paymentMethod: o.paymentMethod,
     paymentStatus: o.paymentStatus,
     status: o.status,
+    isDropship: o.fulfillmentType === 'DROPSHIP',
     deliveredAt: o.deliveredAt,
     createdAt: o.createdAt,
   };
@@ -871,6 +950,20 @@ async function cancelOrder(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid order id' });
   }
 
+  // Business rule: a dropshipping order is sent to the supplier the moment it
+  // is paid for, and the buyer cannot cancel it. Checked before the update so
+  // nothing is touched when it is refused.
+  const target = await Order.findOne({ _id: id, user: req.user._id })
+    .select('fulfillmentType checkoutGroupId items.product')
+    .lean();
+  if (target && (await isDropshipOrder(target))) {
+    return res.status(403).json({
+      success: false,
+      code: 'DROPSHIP_NOT_CANCELLABLE',
+      message: 'Dropshipping orders cannot be cancelled once placed.',
+    });
+  }
+
   const order = await Order.findOneAndUpdate(
     { _id: id, user: req.user._id, status: { $in: USER_CANCELLABLE_STATUSES } },
     { $set: { status: 'CANCELLED', cancelledBy: 'buyer' }, $push: { statusHistory: { status: 'CANCELLED', at: new Date() } } },
@@ -885,24 +978,12 @@ async function cancelOrder(req, res) {
     });
   }
 
-  await releaseStock(order.items);
+  // Only lines still live: a line cancelled on its own already gave its stock back.
+  await releaseStock(order.items.filter((item) => item.status !== 'CANCELLED'));
 
   if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
-    const refundedCustomer = await Customer.findOneAndUpdate(
-      { _id: req.user._id },
-      { $inc: { walletBalance: order.total } },
-      { new: true }
-    );
-    await WalletTransaction.create({
-      user: req.user._id,
-      type: 'CREDIT',
-      amount: order.total,
-      balanceAfter: refundedCustomer.walletBalance,
-      source: 'ORDER_REFUND',
-      orderId: order._id,
-      status: 'SUCCESS',
-    });
-    await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: 'REFUNDED' } });
+    // What is still owed: lines cancelled on their own were refunded already.
+    await refundCancelledOrderToWallet(order);
 
     // Reverse whatever was posted for this order. The original SALE rows stay
     // exactly as they were — this writes REFUND debits against them and hands
@@ -911,6 +992,9 @@ async function cancelOrder(req, res) {
       accounting.postOrderCancellationRefund({ order: { ...order.toObject(), paymentStatus: 'REFUNDED' } })
     );
   }
+
+  // The coupon slot comes back once nothing bought with it is still live.
+  await dropshipOrderService.releaseCouponIfWholeCheckoutCancelled({ ...order.toObject(), status: 'CANCELLED' });
 
   await createNotification({
     userId: req.user._id,
@@ -1039,8 +1123,16 @@ async function getShippingQuote(req, res) {
   const prepaidView = describe(prepaid);
   const codView = describe(cod);
 
-  // Wallet is prepaid money, so it ships at the prepaid rate.
-  const byMethod = { RAZORPAY: prepaidView, WALLET: prepaidView, COD: codView };
+  // Wallet is prepaid money, so it ships at the prepaid rate — except that a
+  // cart with a dropshipping item can only be paid online at all.
+  const walletView = prepaid.hasDropship
+    ? {
+        available: false,
+        reason: 'ONLINE_PAYMENT_REQUIRED',
+        message: 'Dropshipping items can only be paid for online.',
+      }
+    : prepaidView;
+  const byMethod = { RAZORPAY: prepaidView, WALLET: walletView, COD: codView };
   const chosen = byMethod[selected] || prepaidView;
 
   res.json({
@@ -1063,6 +1155,10 @@ async function getShippingQuote(req, res) {
       // after.
       methods: byMethod,
 
+      // A cart with a dropshipping item: Razorpay only, and — when it also
+      // has seller items — placed as more than one order.
+      onlineOnly: Boolean(prepaid.hasDropship),
+      orderCount: prepaid.orderGroups?.length ?? 1,
       freeReason: prepaid.quote?.freeReason ?? null,
       freeShippingThreshold: prepaid.quote?.freeShippingThreshold ?? 0,
       amountToFreeShipping: prepaid.quote?.amountToFreeShipping ?? 0,

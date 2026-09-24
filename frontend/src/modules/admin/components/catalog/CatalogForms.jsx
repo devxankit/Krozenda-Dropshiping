@@ -507,6 +507,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     status: product?.status ?? (product?.isActive === false ? 'Inactive' : 'Active'),
     isFlashsale: product?.isFlashsale ?? false,
     isTrending: product?.isTrending ?? false,
+    isReturnable: product?.isReturnable ?? true,
   }))
   const [keptImages, setKeptImages] = useState(() => product?.images ?? [])
   const [newFiles, setNewFiles] = useState([])
@@ -577,6 +578,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
       isActive: form.status === 'Active',
       isFlashsale: form.isFlashsale,
       isTrending: form.isTrending,
+      isReturnable: form.isReturnable,
     }
 
     const result = productWriteSchema.safeParse(payload)
@@ -730,7 +732,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
           {keptImages.map((url, index) => (
             <div
               key={url}
-              className={`group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
+              className={`group relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
                 index === 0 ? 'border-brand-500 ring-2 ring-brand-200' : 'border-slate-200'
               }`}
             >
@@ -760,7 +762,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
             return (
               <div
                 key={`${file.name}-${index}`}
-                className={`group relative h-22 w-22 shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
+                className={`group relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs ${
                   isCover ? 'border-brand-500 ring-2 ring-brand-200' : 'border-slate-200'
                 }`}
               >
@@ -787,7 +789,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
           })}
 
           {totalImages < MAX_PRODUCT_IMAGES && (
-            <label className="flex h-22 w-22 shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-white text-slate-500 hover:border-brand-500 hover:text-brand-600 hover:bg-brand-50/40 transition-all">
+            <label className="flex h-[88px] w-[88px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-white text-slate-500 hover:border-brand-500 hover:text-brand-600 hover:bg-brand-50/40 transition-all">
               <Icon name="upload" className="h-5 w-5" />
               <span className="text-2xs font-semibold">{totalImages === 0 ? 'Add Main' : 'Add Image'}</span>
               <input
@@ -998,13 +1000,32 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
             </div>
           </label>
         </div>
+
+        <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/80 to-teal-50/30 p-3.5 transition-all">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="product-returnable"
+              checked={form.isReturnable}
+              onChange={(event) => updateField('isReturnable', event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <div className="flex-1">
+              <span className="text-xs font-bold text-slate-900">↩️ Returnable Product</span>
+              <p className="mt-0.5 text-2xs text-slate-600">
+                When on, buyers can request a return or replacement within 7 days of delivery. Turn off for non-returnable items.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
 
       {editing && product.barcode && (
         <ProductBarcode
           code={product.barcode}
-          imageUrl={`/admin/catalog/products/${product.id}/barcode.png`}
-          className="max-w-xs"
+          imageUrl={`/admin/catalog/products/${product.id}/barcode.png?v=2`}
+          qrUrl={`/admin/catalog/products/${product.id}/qrcode.png`}
+          product={product}
         />
       )}
 

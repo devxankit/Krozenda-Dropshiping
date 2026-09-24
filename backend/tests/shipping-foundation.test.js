@@ -663,3 +663,72 @@ describe('pickup locations', () => {
     expect(await PickupLocation.countDocuments({ vendor: vendor._id, isDefault: true })).toBe(1);
   });
 });
+
+describe('courier rate normalisation', () => {
+  const { normaliseCourier } = require('../services/shipping/serviceabilityService');
+
+  // Shiprocket's `rate` on a cod=1 query already includes cod_charges. Adding
+  // them again quoted a ₹94,990 COD parcel at ₹4,941 instead of ₹2,566.
+  it('does not add the COD fee on top of an all-in rate', () => {
+    const courier = normaliseCourier({
+      courier_company_id: 1,
+      rate: 2566.47,
+      freight_charge: 191.72,
+      cod_charges: 2374.75,
+      cod: 1,
+    });
+    expect(courier.estimatedCost).toBe(2566.47);
+  });
+
+  it('adds the COD fee when only a bare freight charge is reported', () => {
+    const courier = normaliseCourier({ courier_company_id: 1, freight_charge: 100, cod_charges: 40 });
+    expect(courier.estimatedCost).toBe(140);
+  });
+
+  it('keeps an unreadable rate as unknown, never zero', () => {
+    const courier = normaliseCourier({ courier_company_id: 1, cod_charges: 40 });
+    expect(courier.estimatedCost).toBeNull();
+  });
+});
+
+describe('shipping policy upgrade', () => {
+  beforeEach(resetShipping);
+
+  it('brings a pre-v2 settings document up to the current policy exactly once', async () => {
+    // Written the way an old deployment stored it: old defaults, no policyVersion.
+    await ShippingSettings.collection.insertOne({
+      key: 'GLOBAL',
+      shippingEnabled: false,
+      sellerOwnAccountEnabled: true,
+      updatedBy: null,
+    });
+
+    const upgraded = await ShippingSettings.getSettings();
+    expect(upgraded.shippingEnabled).toBe(true);
+    expect(upgraded.sellerOwnAccountEnabled).toBe(false);
+
+    const raw = await ShippingSettings.collection.findOne({ key: 'GLOBAL' });
+    expect(raw.policyVersion).toBe(2);
+  });
+
+  it('never flips settings back once they have been saved, admin id or not', async () => {
+    await setSettings({ shippingEnabled: false, sellerOwnAccountEnabled: true });
+
+    const again = await ShippingSettings.getSettings();
+    expect(again.shippingEnabled).toBe(false);
+    expect(again.sellerOwnAccountEnabled).toBe(true);
+  });
+
+  it('leaves an admin-chosen pre-v2 document as the admin set it', async () => {
+    await ShippingSettings.collection.insertOne({
+      key: 'GLOBAL',
+      shippingEnabled: false,
+      sellerOwnAccountEnabled: true,
+      updatedBy: new (require('mongoose').Types.ObjectId)(),
+    });
+
+    const settings = await ShippingSettings.getSettings();
+    expect(settings.shippingEnabled).toBe(false);
+    expect(settings.sellerOwnAccountEnabled).toBe(true);
+  });
+});

@@ -132,6 +132,13 @@ const productSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     isFlashsale: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },
+    // Whether a buyer may raise a return/replacement on this product. Set by
+    // whoever owns the product (admin or seller) on the product form. Defaults
+    // to true so every product created before this switch keeps the return
+    // policy it was sold under. Snapshotted onto the order line at checkout
+    // (Order.items.returnable) — flipping it later never changes the policy
+    // for units already bought.
+    isReturnable: { type: Boolean, default: true },
     // 0 means "no reviews yet" — the storefront hides the rating badge
     // rather than showing a fabricated score for a brand new product.
     rating: { type: Number, default: 0, min: 0, max: 5 },

@@ -55,7 +55,10 @@ export function canAccessNavItem(item, permissions = [], role = null) {
 
 export function flatNavItems() {
   return NAV_TREE.flatMap((group) =>
-    group.items.map((item) => ({ ...item, group: group.label || 'Overview' })),
+    group.items.map((item) => ({
+      ...item,
+      group: group.submenu?.label || group.label || 'Overview',
+    })),
   )
 }
 

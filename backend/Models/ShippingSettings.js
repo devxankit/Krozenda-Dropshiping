@@ -20,6 +20,8 @@ const COURIER_SELECTION_STRATEGIES = [
   'MANUAL',
 ];
 
+const CURRENT_POLICY_VERSION = 2;
+
 const shippingSettingsSchema = new mongoose.Schema(
   {
     // Enforces the singleton: a second document cannot be inserted.
@@ -94,6 +96,12 @@ const shippingSettingsSchema = new mongoose.Schema(
     trackingPollBatchSize: { type: Number, default: 50, min: 1, max: 500 },
 
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
+    // Which revision of the platform's default policy this document has been
+    // brought up to. 2 = the single-admin Shiprocket flow (shipping on,
+    // sellers' own carrier accounts off). Every document created from now on
+    // is born at 2; see getSettings for the one-time upgrade of older ones.
+    policyVersion: { type: Number, default: CURRENT_POLICY_VERSION },
   },
   { timestamps: true }
 );
@@ -102,12 +110,25 @@ const shippingSettingsSchema = new mongoose.Schema(
 // goes through this rather than findOne, so the document is guaranteed to
 // exist and the defaults above are the real starting policy.
 shippingSettingsSchema.statics.getSettings = async function getSettings() {
-  let existing = await this.findOne({ key: 'GLOBAL' });
+  const existing = await this.findOne({ key: 'GLOBAL' });
   if (existing) {
-    // If shippingEnabled is false or sellerOwnAccountEnabled is true by old default, align with platform policy
-    if (existing.sellerOwnAccountEnabled !== false && !existing.updatedBy) {
-      existing.sellerOwnAccountEnabled = false;
-      existing.shippingEnabled = true;
+    // A document written before policy v2 carries the OLD defaults (shipping
+    // off, sellers' own accounts on). Bring it up to the single-admin
+    // Shiprocket policy ONCE — unless an admin has already chosen settings —
+    // and record that it was done.
+    //
+    // Once, not on every read: this used to run whenever `updatedBy` was
+    // empty, so any settings saved without an admin id (a script, the seed,
+    // every test) were silently flipped back on the next read.
+    // `$isDefault` is true only when the field was missing from the stored
+    // document, i.e. it predates this upgrade.
+    if (existing.$isDefault('policyVersion')) {
+      if (!existing.updatedBy) {
+        existing.sellerOwnAccountEnabled = false;
+        existing.shippingEnabled = true;
+      }
+      existing.policyVersion = CURRENT_POLICY_VERSION;
+      existing.markModified('policyVersion');
       await existing.save();
     }
     return existing;

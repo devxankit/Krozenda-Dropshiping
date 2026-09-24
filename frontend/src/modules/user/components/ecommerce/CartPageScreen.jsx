@@ -76,10 +76,12 @@ export function CartPageScreen() {
     (item) => AVAILABILITY_NOTE[item.availability]?.blocking,
   )
   const unitCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const hasDropship = cartItems.some((item) => item.isDropship)
+  const hasStandard = cartItems.some((item) => !item.isDropship)
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 
@@ -122,6 +124,15 @@ export function CartPageScreen() {
             >
               Dismiss
             </button>
+          </div>
+        )}
+
+        {/* Said here, before checkout, so the payment step holds no surprise. */}
+        {hasDropship && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3.5 text-xs text-blue-900">
+            <span className="font-bold">Your cart has a dropshipping item.</span> This order can only be
+            paid online, and dropshipping items cannot be cancelled or returned.
+            {hasStandard && ' Your items will be placed as two separate orders, paid in one payment.'}
           </div>
         )}
 

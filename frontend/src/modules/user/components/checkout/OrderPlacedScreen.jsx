@@ -26,13 +26,17 @@ export function OrderPlacedScreen() {
 
   usePageMeta({ title: 'Order Placed', noindex: true })
 
+  // A cart with a dropshipping item and seller items is placed as two
+  // orders, each tracked (and cancelled/returned) on its own.
+  const splitOrders = orderFromState?.orders?.length > 1 ? orderFromState.orders : null
+
   const orderRef = order?.id ? `#${order.id.slice(-10).toUpperCase()}` : null
   const amount = order?.total ?? null
   const paymentStatus = order ? PAYMENT_STATUS_COPY[order.paymentStatus] : null
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 font-sans text-slate-800">
-      <div className="hidden md:block">
+      <div className="sticky top-0 z-50 hidden md:block">
         <WebHeader />
       </div>
 
@@ -55,7 +59,44 @@ export function OrderPlacedScreen() {
             </p>
           </div>
 
-          {order ? (
+          {splitOrders ? (
+            <div className="mx-auto max-w-md space-y-3 text-left">
+              <p className="rounded-2xl border border-blue-100 bg-blue-50 p-3.5 text-xs font-medium leading-relaxed text-blue-900">
+                Your cart was placed as {splitOrders.length} separate orders, paid in one payment, so
+                each can be tracked on its own.
+              </p>
+              {splitOrders.map((placed) => (
+                <Link
+                  key={placed.id}
+                  to={userPath.order(placed.id)}
+                  className="block space-y-1.5 rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-xs transition-colors hover:border-blue-300"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-sm font-black text-slate-900">
+                      #{placed.id.slice(-10).toUpperCase()}
+                    </span>
+                    <span className="text-sm font-black text-blue-700">
+                      {'₹'}
+                      {placed.total.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-slate-600">
+                    {placed.isDropship ? 'Dropshipping order' : 'Regular order'} · {placed.items.length}{' '}
+                    {placed.items.length === 1 ? 'item' : 'items'}
+                  </p>
+                  {placed.isDropship &&
+                    (placed.status === 'CANCELLED' ? (
+                      <p className="font-bold text-red-700">
+                        Our supplier could not accept this order. It has been cancelled and refunded to
+                        your original payment method.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-500">Ships from our supplier · cannot be cancelled or returned</p>
+                    ))}
+                </Link>
+              ))}
+            </div>
+          ) : order ? (
             <dl className="mx-auto max-w-md space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-xs">
               <div className="flex items-center justify-between">
                 <dt className="font-medium text-slate-500">Order reference</dt>
@@ -95,10 +136,10 @@ export function OrderPlacedScreen() {
           <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
             <button
               type="button"
-              onClick={() => navigate(order ? userPath.order(order.id) : USER_ROUTES.ORDERS)}
+              onClick={() => navigate(order && !splitOrders ? userPath.order(order.id) : USER_ROUTES.ORDERS)}
               className="w-full rounded-2xl bg-blue-700 px-5 py-3.5 text-xs font-bold tracking-wide text-white shadow-md transition-all hover:bg-blue-800 active:scale-[0.98] sm:w-1/2"
             >
-              {order ? 'View order details' : 'View my orders'}
+              {order && !splitOrders ? 'View order details' : 'View my orders'}
             </button>
             <Link
               to={USER_ROUTES.DASHBOARD}

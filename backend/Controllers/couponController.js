@@ -387,7 +387,9 @@ function computeDiscountAmount(coupon, eligibleAmount) {
     raw = Math.min(raw, coupon.maxDiscountAmount);
   }
 
-  return Math.max(0, Math.min(raw, eligibleAmount));
+  // Rounded to the paisa: 10% of ₹437.46 is ₹43.746, and an amount nobody can
+  // pay drifts the order total, the ledger and the refund apart.
+  return Math.round(Math.max(0, Math.min(raw, eligibleAmount)) * 100) / 100;
 }
 
 // cartItems: [{ productId, categoryId, vendorId, price, quantity }]
@@ -629,7 +631,11 @@ async function applyCoupon(req, res) {
   }
 
   const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const previousOrders = await Order.countDocuments({ user: req.user._id, paymentStatus: 'PAID' });
+  // Any order that was not cancelled makes the buyer a returning customer.
+  // Counting only PAID orders left a buyer whose orders were all COD (paid
+  // only on delivery) "new" indefinitely, free to take a new-customer coupon
+  // on order after order.
+  const previousOrders = await Order.countDocuments({ user: req.user._id, status: { $ne: 'CANCELLED' } });
 
   const evaluation = await evaluateCoupon(coupon, {
     userId: req.user._id,
@@ -692,6 +698,7 @@ module.exports = {
   updateCouponStatus,
   deleteCoupon,
   evaluateCoupon,
+  filterEligibleItems,
   redeemCoupon,
   releaseCoupon,
   listPublicCoupons,
