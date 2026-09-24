@@ -104,6 +104,8 @@ function normaliseVariants(raw) {
     }));
 }
 
+const DEFAULT_PRODUCT_IMAGE = '/images/default-product.png';
+
 function serializeProduct(p) {
   return {
     id: p._id.toString(),
@@ -163,7 +165,9 @@ function serializeProduct(p) {
     })),
     variantStock: (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0),
 
-    images: (p.images || []).map((img) => getImageUrl(img)),
+    images: (p.images && p.images.length > 0)
+      ? p.images.map((img) => getImageUrl(img))
+      : [DEFAULT_PRODUCT_IMAGE],
     shortDescription: p.shortDescription || '',
     description: p.description || '',
     status: p.status || (p.isActive ? 'Active' : 'Inactive'),
@@ -764,7 +768,7 @@ function serializeProductCard(p) {
     hasBulkPricing: (p.priceTiers || []).length > 0,
 
     // Just the card image. The gallery belongs to the detail endpoint.
-    image: p.images?.[0] ? getImageUrl(p.images[0]) : null,
+    image: p.images?.[0] ? getImageUrl(p.images[0]) : DEFAULT_PRODUCT_IMAGE,
     // Responsive candidates for the same image, so a 400px tile downloads a
     // 400px file instead of the 1000px canonical one. Null when the upload
     // predates the derivative pipeline — the client then just uses `image`.
@@ -1061,7 +1065,9 @@ function serializePublicProduct(p) {
         image: v.image ? getImageUrl(v.image) : null,
       })),
 
-    images: (p.images || []).map((img) => getImageUrl(img)),
+    images: (p.images && p.images.length > 0)
+      ? p.images.map((img) => getImageUrl(img))
+      : [DEFAULT_PRODUCT_IMAGE],
     // Parallel to `images`, index for index.
     imageSrcSets: (p.images || []).map((img) => getImageVariants(img)?.srcSet ?? null),
     description: p.description || '',

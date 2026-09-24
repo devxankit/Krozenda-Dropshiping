@@ -210,6 +210,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
   const menuItems = [
     { label: 'Edit Profile', Icon: HiPencilSquare, route: USER_ROUTES.PROFILE_EDIT },
     { label: 'My Addresses', Icon: HiMapPin, route: USER_ROUTES.ADDRESSES },
+    { label: 'My Wallet', Icon: HiWallet, route: USER_ROUTES.WALLET },
     { label: 'Wishlist', Icon: HiHeart, route: USER_ROUTES.WISHLIST },
     { label: 'Coupons & Offers', Icon: HiTag, route: USER_ROUTES.COUPONS },
     { label: 'My Reviews', Icon: HiStar, route: '/app/reviews' },

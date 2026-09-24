@@ -29,6 +29,8 @@ const PLACEHOLDER_ICON = (
   </svg>
 )
 
+export const DEFAULT_PRODUCT_IMAGE = '/images/default-product.png'
+
 export function SmartImage({
   src,
   srcSet = null,
@@ -45,24 +47,37 @@ export function SmartImage({
   // should NOT be lazy — lazy-loading the LCP element delays it by a round
   // trip for no benefit.
   priority = false,
+  fallbackSrc = DEFAULT_PRODUCT_IMAGE,
   onClick,
 }) {
-  // A card recycled to a different product (a new page of results, a
-  // carousel) must reset its load state, or it keeps the previous image's
-  // error and shows a fallback over a perfectly good URL.
-  //
-  // Done as a render-phase adjustment rather than an effect: React re-runs
-  // this component immediately with the new state, before anything is
-  // committed to the DOM, so there is no flash of the stale image and no extra
-  // paint. (This is React's documented "adjusting state when a prop changes".)
-  const [status, setStatus] = useState(src ? 'loading' : 'empty')
+  // If no primary src is provided, use fallbackSrc directly.
+  const resolvedInitialSrc = src || fallbackSrc || null
+  const initialIsFallback = !src && !!fallbackSrc
+
+  const [currentSrc, setCurrentSrc] = useState(resolvedInitialSrc)
+  const [isFallback, setIsFallback] = useState(initialIsFallback)
+  const [status, setStatus] = useState(resolvedInitialSrc ? 'loading' : 'empty')
   const [statusSrc, setStatusSrc] = useState(src)
+
   if (statusSrc !== src) {
     setStatusSrc(src)
-    setStatus(src ? 'loading' : 'empty')
+    const nextFallback = !src && !!fallbackSrc
+    setIsFallback(nextFallback)
+    setCurrentSrc(src || fallbackSrc || null)
+    setStatus(src || fallbackSrc ? 'loading' : 'empty')
   }
 
-  const showFallback = status === 'error' || status === 'empty'
+  const showPlaceholder = status === 'error' || (status === 'empty' && !currentSrc)
+
+  const handleImgError = () => {
+    if (!isFallback && fallbackSrc) {
+      setIsFallback(true)
+      setCurrentSrc(fallbackSrc)
+      setStatus('loading')
+    } else {
+      setStatus('error')
+    }
+  }
 
   return (
     <div
@@ -75,7 +90,7 @@ export function SmartImage({
         <div className="absolute inset-0 animate-pulse bg-slate-100" aria-hidden="true" />
       )}
 
-      {showFallback ? (
+      {showPlaceholder ? (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-50 text-slate-400"
           // The alt text is already on the <img> path; here the box is
@@ -86,11 +101,11 @@ export function SmartImage({
           {PLACEHOLDER_ICON}
           <span className="text-[9px] font-semibold uppercase tracking-wide">No image</span>
         </div>
-      ) : (
+      ) : currentSrc ? (
         <img
-          src={src}
-          {...(srcSet ? { srcSet, sizes } : {})}
-          alt={alt}
+          src={currentSrc}
+          {...(!isFallback && srcSet ? { srcSet, sizes } : {})}
+          alt={alt || 'Product'}
           loading={priority ? 'eager' : 'lazy'}
           // fetchpriority is the other half of "this is the LCP image"; without
           // it the browser still queues an eager image behind other requests.
@@ -110,12 +125,16 @@ export function SmartImage({
           fetchpriority={priority ? 'high' : 'auto'}
           decoding={priority ? 'sync' : 'async'}
           onLoad={() => setStatus('loaded')}
-          onError={() => setStatus('error')}
+          onError={handleImgError}
           className={`absolute inset-0 h-full w-full transition-opacity duration-200 ${
-            fit === 'cover' ? 'object-cover' : 'object-contain'
+            isFallback
+              ? 'object-contain p-2'
+              : fit === 'cover'
+                ? 'object-cover'
+                : 'object-contain'
           } ${status === 'loaded' ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
         />
-      )}
+      ) : null}
     </div>
   )
 }

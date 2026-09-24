@@ -106,6 +106,8 @@ function toRelativePath(url) {
   return index === -1 ? url : url.slice(index);
 }
 
+const DEFAULT_PRODUCT_IMAGE = '/images/default-product.png';
+
 function serializeProduct(p) {
   return {
     id: p._id.toString(),
@@ -170,7 +172,9 @@ function serializeProduct(p) {
     })),
     variantStock: (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0),
 
-    images: (p.images || []).map((img) => getImageUrl(img)),
+    images: (p.images && p.images.length > 0)
+      ? p.images.map((img) => getImageUrl(img))
+      : [DEFAULT_PRODUCT_IMAGE],
     shortDescription: p.shortDescription || '',
     description: p.description || '',
     status: p.status || (p.isActive ? 'Active' : 'Inactive'),
@@ -306,8 +310,10 @@ async function createMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, hsnCode, gstRate, moq,
-    isFlashsale, isTrending,
+    isFlashsale, isFlashSale, isTrending,
   } = req.body;
+
+  const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
 
   const priceTiers = parseJsonField(req.body.priceTiers, []);
   const variants = normaliseVariants(parseJsonField(req.body.variants, [])) || [];
@@ -430,7 +436,7 @@ async function createMyProduct(req, res) {
     description: String(description || '').trim(),
     status: productStatus,
     isActive,
-    isFlashsale: toBool(isFlashsale, false),
+    isFlashsale: toBool(flashSaleVal, false),
     isTrending: toBool(isTrending, false),
     approvalStatus,
   });
@@ -449,8 +455,10 @@ async function updateMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, isActive, removeImages, hsnCode, gstRate, moq,
-    isFlashsale, isTrending,
+    isFlashsale, isFlashSale, isTrending,
   } = req.body;
+
+  const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
 
   // Undefined means "not sent, leave alone"; an empty array means "the seller
   // removed them all". parseJsonField preserves that distinction by defaulting
@@ -538,8 +546,8 @@ async function updateMyProduct(req, res) {
     product.status = product.isActive ? 'Active' : (product.status === 'Draft' ? 'Draft' : 'Inactive');
   }
 
-  if (isFlashsale !== undefined) {
-    product.isFlashsale = toBool(isFlashsale, product.isFlashsale);
+  if (flashSaleVal !== undefined) {
+    product.isFlashsale = toBool(flashSaleVal, product.isFlashsale);
   }
   if (isTrending !== undefined) {
     product.isTrending = toBool(isTrending, product.isTrending);

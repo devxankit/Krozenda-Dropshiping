@@ -63,7 +63,7 @@ function computeSellingPrice({
   providerShippingCost,
   manualPrice,
   defaultMarkupPercent = 30,
-  priceRounding = 'ROUND',
+  priceRounding = 'NONE',
 }) {
   if (pricingMode === 'MANUAL') {
     if (typeof manualPrice !== 'number' || manualPrice <= 0) {

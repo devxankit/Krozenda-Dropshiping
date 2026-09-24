@@ -29,6 +29,7 @@ export const USER_ROUTES = Object.freeze({
   SEARCH: '/app/search',
   CART: '/app/cart',
   WISHLIST: '/app/wishlist',
+  WALLET: '/app/wallet',
   ORDERS: '/app/orders',
   NOTIFICATIONS: '/app/notifications',
   COUPONS: '/app/coupons',

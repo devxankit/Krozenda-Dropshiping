@@ -383,6 +383,16 @@ export function VendorProductsPage() {
                           Out of Stock
                         </span>
                       )}
+                      {item.isFlashsale && (
+                        <span className="rounded-lg bg-amber-500/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
+                          🔥 Flash Sale
+                        </span>
+                      )}
+                      {item.isTrending && (
+                        <span className="rounded-lg bg-indigo-600/95 px-2 py-0.5 text-2xs font-extrabold text-white shadow-xs backdrop-blur-md">
+                          📈 Trending
+                        </span>
+                      )}
                     </div>
 
                     <div className="absolute top-2.5 right-2.5">

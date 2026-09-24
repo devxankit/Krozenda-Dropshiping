@@ -47,7 +47,7 @@ export function ProductCard({ product, layout = 'grid', priority = false, classN
       id: product.id,
       name: product.name,
       subtitle,
-      image: product.image,
+      image: product.image || '/images/default-product.png',
       imageSrcSet: product.imageSrcSet,
       price,
       originalPrice: product.price,

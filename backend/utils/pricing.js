@@ -25,7 +25,7 @@
 const MIN_QUANTITY = 1;
 
 function isPositiveNumber(value) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 /**

@@ -302,11 +302,12 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
 
   let discountAmount = 0;
   let normalizedCouponCode = null;
-  const couponCartItems = cartEntries.map((entry) => ({
-    productId: entry.product._id,
-    categoryId: entry.product.category,
-    price: entry.product.salePrice ?? entry.product.price ?? 0,
-    quantity: entry.quantity,
+  const couponCartItems = items.map((item, idx) => ({
+    productId: item.product,
+    categoryId: cartEntries[idx].product?.category,
+    vendorId: item.vendor,
+    price: item.price,
+    quantity: item.quantity,
   }));
 
   if (couponCode) {

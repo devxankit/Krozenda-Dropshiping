@@ -76,6 +76,8 @@ export const vendorProductSchema = z.object({
   images: z.array(z.string()),
   description: z.string(),
   isActive: z.boolean(),
+  isFlashsale: z.boolean().optional(),
+  isTrending: z.boolean().optional(),
   approvalStatus: z.string(),
   rejectionReason: z.string(),
   rating: z.number(),

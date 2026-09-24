@@ -15,10 +15,22 @@ export const VENDOR_PRODUCT_COLUMNS = Object.freeze([
     header: 'SKU / Product',
     render: (row) => (
       <div className="flex items-center gap-2.5">
-        {row.images?.[0] && <img src={row.images[0]} alt="" className="h-8 w-8 rounded-md object-cover" />}
+        <img src={row.images?.[0] || '/images/default-product.png'} alt="" className="h-8 w-8 rounded-md object-contain bg-white border border-slate-100 p-0.5" />
         <div className="flex flex-col">
           <span className="font-medium text-slate-900 text-xs">{row.name}</span>
-          <span className="text-2xs text-ink-subtle">{row.sku || '—'} · {row.category?.name || 'Uncategorized'}</span>
+          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+            <span className="text-2xs text-ink-subtle">{row.sku || '—'} · {row.category?.name || 'Uncategorized'}</span>
+            {row.isFlashsale && (
+              <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                🔥 Flash
+              </span>
+            )}
+            {row.isTrending && (
+              <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                📈 Trending
+              </span>
+            )}
+          </div>
         </div>
       </div>
     ),

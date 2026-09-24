@@ -82,6 +82,9 @@ const NotificationCenterScreen = lazy(() =>
 const SettingsScreen = lazy(() =>
   import('./components/profile/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 )
+const WalletScreen = lazy(() =>
+  import('./components/profile/WalletScreen').then((m) => ({ default: m.WalletScreen })),
+)
 
 const HelpSupportScreen = lazy(() =>
   import('./components/support/HelpSupportScreen').then((m) => ({ default: m.HelpSupportScreen })),
@@ -189,6 +192,7 @@ export default function UserRoutes() {
               <Route path="profile/addresses" element={<MyAddressesScreen />} />
               <Route path="profile/edit" element={<EditProfileScreen />} />
               <Route path="wishlist" element={<WishlistScreen />} />
+              <Route path="wallet" element={<WalletScreen />} />
               <Route path="coupons" element={<CouponsOffersScreen />} />
               <Route path="notifications" element={<NotificationCenterScreen />} />
               <Route path="settings" element={<SettingsScreen />} />

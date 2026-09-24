@@ -6,6 +6,7 @@ const Cart = require('../Models/Cart');
 const Order = require('../Models/Order');
 const { getImageUrl } = require('../utils/imageHelper');
 const { toPaise } = require('../utils/money');
+const { resolveUnitPrice } = require('../utils/pricing');
 
 function toBool(value, fallback) {
   if (value === undefined) return fallback;
@@ -430,7 +431,7 @@ async function evaluateCoupon(coupon, { userId, cartItems = [], cartTotal, shipp
   const amountForMinCheck = coupon.applicableTo === 'ALL' ? (cartTotal ?? eligibleAmount) : eligibleAmount;
 
   if (coupon.minOrderAmount && amountForMinCheck < coupon.minOrderAmount) {
-    return { valid: false, reason: `Minimum order amount of ${coupon.minOrderAmount} required` };
+    return { valid: false, reason: `Minimum order amount of ₹${coupon.minOrderAmount} required` };
   }
   if (coupon.minQuantity != null && eligibleQuantity < coupon.minQuantity) {
     return { valid: false, reason: `Minimum quantity of ${coupon.minQuantity} required` };
@@ -609,12 +610,19 @@ async function applyCoupon(req, res) {
   const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
   const cartItems = (cart?.items || [])
     .filter((entry) => entry.product)
-    .map((entry) => ({
-      productId: entry.product._id,
-      categoryId: entry.product.category,
-      price: entry.product.salePrice ?? entry.product.price ?? 0,
-      quantity: entry.quantity,
-    }));
+    .map((entry) => {
+      const { unitPrice } = resolveUnitPrice(entry.product, {
+        variantId: entry.variantId,
+        quantity: entry.quantity,
+      });
+      return {
+        productId: entry.product._id,
+        categoryId: entry.product.category,
+        vendorId: entry.product.vendor,
+        price: unitPrice,
+        quantity: entry.quantity,
+      };
+    });
 
   if (cartItems.length === 0) {
     return res.status(400).json({ success: false, message: 'Your cart is empty' });
