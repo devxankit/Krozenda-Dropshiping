@@ -1,61 +1,50 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HiCheckCircle, HiOutlineArrowDown } from 'react-icons/hi2'
 import { Modal } from '../../../../components/ui'
 import { PolicyContent } from '../../../../components/common/PolicyContent'
 import { useSellerPoliciesController } from '../../controllers/useVendorController'
 
-// How close to the bottom counts as "read to the end". A few pixels of slack
-// so sub-pixel rounding on zoomed screens can never strand the button.
-const END_SLACK_PX = 24
-
-// Walks the seller through every mandatory CMS policy, one at a time. Accept
-// stays disabled until the document has been scrolled to its end; only after
-// the last one is accepted does onAccepted fire with the versions agreed to.
+// Shows every mandatory CMS policy one after another in a single scroll.
+// Accept stays disabled until the seller has scrolled past the last one; it
+// then accepts them all at once and onAccepted fires with the versions
+// agreed to.
+//
+// The documents scroll with the modal body itself, so "read to the end" is an
+// end-of-documents marker coming into view rather than a scrollTop check on a
+// container we don't own.
 //
 // Mount it only while open (the parent renders it conditionally), so every
-// opening starts again from the first document with nothing accepted.
+// opening starts again with nothing read.
 export function PolicyAcceptanceModal({ onClose, onAccepted }) {
   const policies = useSellerPoliciesController()
 
-  const [index, setIndex] = useState(0)
-  // Highest document index scrolled to its end; -1 = none yet.
-  const [readIndex, setReadIndex] = useState(-1)
-  const [accepted, setAccepted] = useState([])
-  const scrollRef = useRef(null)
+  const [reachedEnd, setReachedEnd] = useState(false)
+  const sectionRefs = useRef({})
+  const endRef = useRef(null)
 
   const docs = policies.data || []
-  const current = docs[index]
-  const isLast = index === docs.length - 1
-  const reachedEnd = readIndex >= index
 
-  const checkEnd = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - END_SLACK_PX) {
-      setReadIndex((prev) => Math.max(prev, index))
-    }
-  }, [index])
-
-  // New document: back to the top, and re-check — a policy short enough to
-  // fit without scrolling is already "read to the end".
+  // Policies short enough to fit without scrolling are "read" as soon as they
+  // render.
   useEffect(() => {
-    const el = scrollRef.current
-    if (el) el.scrollTop = 0
-    const frame = requestAnimationFrame(checkEnd)
-    return () => cancelAnimationFrame(frame)
-  }, [current?.slug, checkEnd])
+    const end = endRef.current
+    if (!end) return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setReachedEnd(true)
+    })
+    observer.observe(end)
+    return () => observer.disconnect()
+  }, [docs.length])
 
   function handleAccept() {
-    const next = [...accepted, { slug: current.slug, title: current.title, version: current.version }]
-    if (isLast) {
-      onAccepted(next)
-      return
-    }
-    setAccepted(next)
-    setIndex(index + 1)
+    onAccepted(docs.map(({ slug, title, version }) => ({ slug, title, version })))
   }
 
-  const footer = current ? (
+  function jumpTo(slug) {
+    sectionRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const footer = docs.length ? (
     <>
       <button
         type="button"
@@ -68,10 +57,10 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
         type="button"
         onClick={handleAccept}
         disabled={!reachedEnd}
-        title={reachedEnd ? undefined : 'Scroll to the end of the document to accept'}
+        title={reachedEnd ? undefined : 'Scroll to the end of the policies to accept'}
         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLast ? 'I Accept & Continue' : `I Accept — Next (${index + 2}/${docs.length})`}
+        {docs.length > 1 ? `I Accept All ${docs.length} & Continue` : 'I Accept & Continue'}
       </button>
     </>
   ) : null
@@ -83,7 +72,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
       size="xl"
       closeOnOverlayClick={false}
       title="Seller Policies & Agreements"
-      description="Please read each document to the end and accept it to continue your registration."
+      description="Please read all the documents below to the end and accept them to continue your registration."
       footer={footer}
     >
       {policies.isLoading && <p className="py-10 text-center text-xs text-slate-500">Loading policies…</p>}
@@ -114,46 +103,22 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
         </div>
       )}
 
-      {current && (
-        <div className="space-y-3">
-          {/* Progress across every document */}
+      {docs.length > 0 && (
+        <div className="space-y-4">
+          {/* Quick links to each document */}
           <ol className="flex flex-wrap gap-1.5">
-            {docs.map((doc, i) => {
-              const done = i < index
-              const active = i === index
-              return (
-                <li
-                  key={doc.slug}
-                  className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold ${
-                    done
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : active
-                        ? 'border-blue-200 bg-blue-50 text-blue-700'
-                        : 'border-slate-200 bg-white text-slate-400'
-                  }`}
+            {docs.map((doc) => (
+              <li key={doc.slug}>
+                <button
+                  type="button"
+                  onClick={() => jumpTo(doc.slug)}
+                  className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
                 >
-                  {done && <HiCheckCircle className="h-3.5 w-3.5" />}
                   {doc.title}
-                </li>
-              )
-            })}
+                </button>
+              </li>
+            ))}
           </ol>
-
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-sm font-bold text-slate-900">{current.title}</h3>
-            <span className="shrink-0 text-[11px] text-slate-500">
-              {current.version}
-              {current.updatedAt ? ` · Updated ${current.updatedAt}` : ''}
-            </span>
-          </div>
-
-          <div
-            ref={scrollRef}
-            onScroll={checkEnd}
-            className="h-[45vh] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3"
-          >
-            <PolicyContent content={current.content} />
-          </div>
 
           <p
             className={`flex items-center gap-1.5 text-[11px] font-semibold ${
@@ -162,14 +127,37 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
           >
             {reachedEnd ? (
               <>
-                <HiCheckCircle className="h-4 w-4" /> You have read this document. You can accept it now.
+                <HiCheckCircle className="h-4 w-4" /> You have read all the documents. You can accept them now.
               </>
             ) : (
               <>
-                <HiOutlineArrowDown className="h-4 w-4" /> Scroll to the end of the document to enable “I Accept”.
+                <HiOutlineArrowDown className="h-4 w-4" /> Scroll to the end of all the documents to enable “I Accept”.
               </>
             )}
           </p>
+
+          {docs.map((doc) => (
+            <section
+              key={doc.slug}
+              ref={(el) => {
+                sectionRefs.current[doc.slug] = el
+              }}
+              className="scroll-mt-2 space-y-2"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-bold text-slate-900">{doc.title}</h3>
+                <span className="shrink-0 text-[11px] text-slate-500">
+                  {doc.version}
+                  {doc.updatedAt ? ` · Updated ${doc.updatedAt}` : ''}
+                </span>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+                <PolicyContent content={doc.content} />
+              </div>
+            </section>
+          ))}
+
+          <div ref={endRef} aria-hidden="true" className="h-px" />
         </div>
       )}
     </Modal>
