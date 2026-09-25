@@ -55,6 +55,9 @@ export function GeneralSettingsPage({ defaultTab }) {
   const [platformName, setPlatformName] = useState('')
   const [legalEntity, setLegalEntity] = useState('')
   const [gstin, setGstin] = useState('')
+  // Printed as the supplier address on Krozenda's invoices (own stock, CJ);
+  // its state decides CGST + SGST vs IGST.
+  const [registeredAddress, setRegisteredAddress] = useState(null)
   const [supportEmail, setSupportEmail] = useState('')
   const [supportPhone, setSupportPhone] = useState('')
 
@@ -124,6 +127,7 @@ export function GeneralSettingsPage({ defaultTab }) {
       setPlatformName((prev) => prev || p.name || '')
       setLegalEntity((prev) => prev || p.legalEntity || '')
       setGstin((prev) => prev || p.gstin || '')
+      setRegisteredAddress((prev) => prev || { addressLine: '', city: '', state: '', pincode: '', ...p.registeredAddress })
       setSupportEmail((prev) => prev || p.supportEmail || '')
       setSupportPhone((prev) => prev || p.supportPhone || '')
       if (p.footerTagline !== undefined) setFooterTagline((prev) => prev || p.footerTagline)
@@ -228,6 +232,7 @@ export function GeneralSettingsPage({ defaultTab }) {
         name: platformName,
         legalEntity,
         gstin,
+        ...(registeredAddress ? { registeredAddress } : {}),
         supportEmail,
         supportPhone,
         footerTagline,
@@ -271,6 +276,7 @@ export function GeneralSettingsPage({ defaultTab }) {
         name: platformName,
         legalEntity,
         gstin,
+        ...(registeredAddress ? { registeredAddress } : {}),
         supportEmail,
         supportPhone,
         footerTagline,
@@ -535,8 +541,42 @@ export function GeneralSettingsPage({ defaultTab }) {
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}
                   placeholder="27AAECK4821M1Z9"
-                  description="15-digit Goods & Services Tax Identification Number"
+                  description="15-digit Goods & Services Tax Identification Number. Printed on invoices for own-stock and CJ Dropshipping items; seller items carry the seller's own GSTIN."
                 />
+
+                <Input
+                  id="registered-address-line"
+                  label="GST registered address"
+                  size="control"
+                  value={registeredAddress?.addressLine || ''}
+                  onChange={(e) => setRegisteredAddress((prev) => ({ ...prev, addressLine: e.target.value }))}
+                  placeholder="Building, street, area"
+                />
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Input
+                    id="registered-address-city"
+                    label="City"
+                    size="control"
+                    value={registeredAddress?.city || ''}
+                    onChange={(e) => setRegisteredAddress((prev) => ({ ...prev, city: e.target.value }))}
+                  />
+                  <Input
+                    id="registered-address-state"
+                    label="State"
+                    size="control"
+                    value={registeredAddress?.state || ''}
+                    onChange={(e) => setRegisteredAddress((prev) => ({ ...prev, state: e.target.value }))}
+                    description="Decides CGST + SGST or IGST"
+                  />
+                  <Input
+                    id="registered-address-pincode"
+                    label="Pincode"
+                    size="control"
+                    value={registeredAddress?.pincode || ''}
+                    onChange={(e) => setRegisteredAddress((prev) => ({ ...prev, pincode: e.target.value }))}
+                  />
+                </div>
 
                 <Input
                   id="support-email"

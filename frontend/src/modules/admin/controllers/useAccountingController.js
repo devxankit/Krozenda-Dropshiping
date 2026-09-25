@@ -2,7 +2,7 @@
 // and are the ONLY thing pages/ are allowed to call into.
 
 import { useCallback, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import * as service from '../services/accountingService'
 import { useListController } from './useListController'
 import { useAdminMutation } from './useAdminMutation'
@@ -158,6 +158,22 @@ export const useCommissionOptionsController = (productSearch = '') =>
   useResource(['admin', 'accounting', 'commission-options', productSearch], () =>
     service.fetchCommissionOptions(productSearch),
   )
+
+export const useCommissionSummaryController = () =>
+  useResource(['admin', 'accounting', 'commission-summary'], service.fetchCommissionSummary)
+
+// A read that happens to be a POST: no toast, no invalidation — the last
+// answer is simply kept until the next preview replaces it.
+export function useCommissionPreviewController() {
+  const mutation = useMutation({ mutationFn: service.previewCommission })
+  return {
+    run: mutation.mutate,
+    result: mutation.data,
+    error: mutation.error,
+    isSubmitting: mutation.isPending,
+    reset: mutation.reset,
+  }
+}
 
 export function useCommissionRuleWriteController({ onSaved } = {}) {
   const create = useAdminMutation({

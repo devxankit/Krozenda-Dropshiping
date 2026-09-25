@@ -9,17 +9,28 @@ const { percentOfPaise, toPaise } = require('../utils/money');
 //
 // Priority, most specific first:
 //
-//     Product -> Seller -> Category -> Global -> seller's own rate -> config
+//     Product -> Seller -> Category -> Global -> AccountingConfig default
 //
 // A higher `priority` on a rule overrides that ordering; scope specificity is
 // only the tie-break. Rules that are inactive, not yet started or expired are
 // never considered.
+//
+// CommissionRule is the ONLY source of a rate. A seller's negotiated rate is a
+// SELLER rule; Vendor.commissionRatePercent is a legacy field that nothing
+// here reads any more (migrate-vendor-commission-rates.js moved it into
+// rules). Two places to set one seller's rate is how the seller screen and
+// the ledger came to disagree.
 
 const SOURCES = Object.freeze({
   RULE: 'RULE',
+  // Never produced any more. Kept because COMMISSION rows posted before the
+  // migration carry it in their frozen metadata, and reports still read them.
   VENDOR_RATE: 'VENDOR_RATE',
   PLATFORM_DEFAULT: 'PLATFORM_DEFAULT',
 });
+
+// The order the chain is drawn in for an admin: most specific first.
+const CHAIN_SCOPES = Object.freeze(['PRODUCT', 'SELLER', 'CATEGORY', 'GLOBAL']);
 
 const TARGET_FOR_SCOPE = Object.freeze({
   PRODUCT: 'product',
@@ -82,6 +93,18 @@ function pickBest(candidates) {
 }
 
 /**
+ * What a set of terms ({type, value}) charges on a line. The one formula,
+ * shared by a live rule and by the terms frozen on an order line.
+ */
+function chargeFor({ type, value }, basePaise, quantity = 1) {
+  if (type === 'PERCENTAGE') return percentOfPaise(basePaise, value);
+  // FIXED is per unit sold, but can never exceed the line itself — otherwise
+  // a 50-rupee accessory sold under a 100-rupee fixed-fee rule would push a
+  // successful sale into a negative payable.
+  return Math.min(toPaise(value) * Math.max(1, Math.round(Number(quantity) || 1)), basePaise);
+}
+
+/**
  * Commission for one order line.
  *
  * @param {object} line
@@ -91,28 +114,23 @@ function pickBest(candidates) {
  * @param {*} line.vendorId
  * @param {*} [line.categoryId]
  * @param {*} [line.productId]
- * @param {number} [line.vendorRatePercent]  Vendor.commissionRatePercent.
+ * @param {number} [line.quantity=1]  Units on the line — a FIXED rule is
+ *   charged per unit sold.
  * @param {Array}  rules   From loadRules().
  * @param {object} config  From AccountingConfig.resolve().
  * @returns {{amountPaise:number, ratePercent:number|null, source:string, rule:object|null, workings:object}}
  */
 function resolveForLine(line, rules, config) {
-  const { basePaise, vendorId, categoryId, productId, vendorRatePercent } = line;
+  const { basePaise, vendorId, categoryId, productId } = line;
+  const quantity = Math.max(1, Math.round(Number(line.quantity) || 1));
 
   const rule = pickBest(rules.filter((candidate) => matches(candidate, { vendorId, categoryId, productId })));
 
   if (rule) {
-    const amountPaise =
-      rule.type === 'PERCENTAGE'
-        ? percentOfPaise(basePaise, rule.value)
-        : // A FIXED rule is a flat charge per line, but it can never exceed
-          // the line itself — otherwise a 50-rupee accessory sold under a
-          // 100-rupee fixed-fee rule would push a successful sale into a
-          // negative payable.
-          Math.min(toPaise(rule.value), basePaise);
-
+    // A matched rule of 0 is an explicit "no commission" — it is returned as
+    // a zero charge, never treated as "no rule" and passed down the chain.
     return {
-      amountPaise,
+      amountPaise: chargeFor(rule, basePaise, quantity),
       ratePercent: rule.type === 'PERCENTAGE' ? rule.value : null,
       source: SOURCES.RULE,
       rule,
@@ -122,26 +140,103 @@ function resolveForLine(line, rules, config) {
         ruleScope: rule.scope,
         ruleType: rule.type,
         ruleValue: rule.value,
+        quantity,
         basePaise,
       },
     };
   }
 
-  // No rule matched. The seller's own negotiated rate is the next authority,
-  // then the platform default — both of which the older Finance module
-  // already used, so orders keep being charged exactly as they were until
-  // someone actually writes a rule.
-  const hasVendorRate = vendorRatePercent !== null && vendorRatePercent !== undefined;
-  const ratePercent = hasVendorRate ? vendorRatePercent : config.defaultCommissionPercent;
-  const source = hasVendorRate ? SOURCES.VENDOR_RATE : SOURCES.PLATFORM_DEFAULT;
+  // No rule matched: the platform default, which always exists — so a line
+  // can never go uncharged for want of configuration.
+  const ratePercent = config.defaultCommissionPercent;
 
   return {
     amountPaise: percentOfPaise(basePaise, ratePercent),
     ratePercent,
-    source,
+    source: SOURCES.PLATFORM_DEFAULT,
     rule: null,
-    workings: { ratePercent, basePaise, source },
+    workings: { ratePercent, quantity, basePaise, source: SOURCES.PLATFORM_DEFAULT },
   };
+}
+
+/**
+ * Every step of the chain for one line — including the ones that did NOT
+ * apply — so an admin can see why a rate is what it is without opening the
+ * rules screen. `applies` marks the rule resolveForLine() actually picks,
+ * which is not always the most specific one: a higher `priority` wins.
+ */
+function explainChain(line, rules, config) {
+  const { vendorId, categoryId, productId } = line;
+  const matching = rules.filter((candidate) => matches(candidate, { vendorId, categoryId, productId }));
+  const winner = pickBest(matching);
+
+  const steps = CHAIN_SCOPES.map((scope) => {
+    const rule = pickBest(matching.filter((candidate) => candidate.scope === scope));
+    return {
+      scope,
+      ruleId: rule ? String(rule._id) : null,
+      ruleName: rule ? rule.name : null,
+      type: rule ? rule.type : null,
+      value: rule ? rule.value : null,
+      priority: rule ? rule.priority : null,
+      applies: Boolean(rule && winner && String(rule._id) === String(winner._id)),
+    };
+  });
+
+  steps.push({
+    scope: 'DEFAULT',
+    ruleId: null,
+    ruleName: 'Platform default',
+    type: 'PERCENTAGE',
+    value: config.defaultCommissionPercent,
+    priority: null,
+    applies: !winner,
+  });
+
+  return steps;
+}
+
+/**
+ * A seller's headline rate: their SELLER rule, else a GLOBAL rule, else the
+ * platform default. For screens that show "this seller pays N%" — it is NOT
+ * what every line is charged (a product rule, or a higher-priority category
+ * rule, can still outrank it), which is why the ledger never uses it.
+ *
+ * @returns {Promise<Map<string, {type:string, value:number, ratePercent:number|null, source:string, ruleId:string|null}>>}
+ */
+async function sellerRatesFor(vendorIds, { at = new Date(), config = null } = {}) {
+  const resolvedConfig = config || (await AccountingConfig.resolve());
+  const ids = vendorIds.map(String);
+  const rules = await loadRules({ vendorIds: ids, at });
+
+  const rates = new Map();
+  for (const vendorId of ids) {
+    const rule = pickBest(
+      rules.filter(
+        (candidate) =>
+          candidate.scope === 'GLOBAL' || (candidate.scope === 'SELLER' && String(candidate.vendor) === vendorId)
+      )
+    );
+    rates.set(
+      vendorId,
+      rule
+        ? {
+            type: rule.type,
+            value: rule.value,
+            ratePercent: rule.type === 'PERCENTAGE' ? rule.value : null,
+            source: rule.scope,
+            ruleId: String(rule._id),
+          }
+        : {
+            type: 'PERCENTAGE',
+            value: resolvedConfig.defaultCommissionPercent,
+            ratePercent: resolvedConfig.defaultCommissionPercent,
+            source: 'DEFAULT',
+            ruleId: null,
+          }
+    );
+  }
+  return rates;
 }
 
 /**
@@ -196,4 +291,14 @@ async function validateRuleInput(input, { ruleId = null } = {}) {
   return null;
 }
 
-module.exports = { loadRules, resolveForLine, validateRuleInput, SOURCES, TARGET_FOR_SCOPE };
+module.exports = {
+  loadRules,
+  resolveForLine,
+  chargeFor,
+  explainChain,
+  sellerRatesFor,
+  validateRuleInput,
+  SOURCES,
+  TARGET_FOR_SCOPE,
+  CHAIN_SCOPES,
+};

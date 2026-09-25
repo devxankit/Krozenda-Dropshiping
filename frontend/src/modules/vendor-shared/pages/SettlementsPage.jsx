@@ -51,7 +51,12 @@ const EARNING_COLUMNS = [
     header: 'Commission',
     width: '8rem',
     align: 'right',
-    render: (row) => <MoneyCell amount={row.commission} compact muted />,
+    render: (row) => (
+      <div className="flex flex-col items-end">
+        <MoneyCell amount={row.commission} compact muted />
+        {row.estimated && <span className="text-2xs text-ink-faint">estimate</span>}
+      </div>
+    ),
   },
   {
     key: 'netAmount',
@@ -144,9 +149,13 @@ export function EarningsPage() {
 
       {summary && (
         <p className="mb-4 text-2xs text-ink-subtle">
-          Commission shown per line is the rate actually charged. Your default rate is{' '}
-          {summary.commissionRatePercent}%, but a category or product rule set by the platform can override it on
-          individual items.
+          Commission shown per line is what was actually charged, fixed when the order was placed. Your default
+          rate is{' '}
+          {summary.commissionRateType === 'FIXED'
+            ? `₹${summary.commissionRateValue} per unit`
+            : `${summary.commissionRatePercent}%`}
+          , but a product rule set by the platform can override it on individual items. Lines marked
+          &ldquo;estimate&rdquo; are cash-on-delivery orders whose payment the courier has not handed over yet.
         </p>
       )}
 

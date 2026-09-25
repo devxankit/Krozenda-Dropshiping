@@ -12,6 +12,8 @@ const AdminAuditLog = require('../Models/AdminAuditLog');
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const DOWNLOAD_RE = /\/(download|export)(\/|$)/i;
+// POSTs that only compute and write nothing (they need a body, so not a GET).
+const READ_ONLY_POST_RE = /\/preview$/i;
 
 const SENSITIVE_KEY_RE = /pass(word)?|token|secret|otp|pin$|cvv|api_?key|private_?key|signature|authorization/i;
 const MAX_CHANGES_LENGTH = 2000;
@@ -130,7 +132,7 @@ function classify({ method, path, statusCode, isSignIn }) {
 function adminAudit(req, res, next) {
   const method = req.method.toUpperCase();
   const path = req.originalUrl.split('?')[0];
-  const isWrite = WRITE_METHODS.has(method);
+  const isWrite = WRITE_METHODS.has(method) && !(method === 'POST' && READ_ONLY_POST_RE.test(path));
   const isDownload = method === 'GET' && DOWNLOAD_RE.test(path);
   if (!isWrite && !isDownload) return next();
 

@@ -5,7 +5,7 @@ import { VendorTopbar } from './VendorTopbar'
 
 import { useAuthStore } from '../../../../lib/authStore'
 import { disconnectRealtime } from '../../../../lib/realtime'
-import { useVendorRealtime } from '../../controllers/useVendorController'
+import { useVendorPushRefresh, useVendorRealtime } from '../../controllers/useVendorController'
 import { toast } from '../../../admin/stores/toastStore'
 
 export function VendorLayout() {
@@ -18,6 +18,7 @@ export function VendorLayout() {
   // One websocket for the whole panel, opened here because this is the only
   // component guaranteed to be mounted for as long as the seller is signed in.
   useVendorRealtime()
+  useVendorPushRefresh()
 
   const isPartner = pathname.startsWith('/partner')
 

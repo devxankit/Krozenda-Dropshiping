@@ -11,6 +11,7 @@ const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 const { isOwnStockProduct, isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
+const { syncPreviewBatch } = require('../services/productImport/importService');
 
 // Admin > CJ Dropshipping > Settings > "Show Dropshipping Products to
 // Customers" (CjSettings.dropshippingEnabled). A CJ-fulfilled product
@@ -161,6 +162,12 @@ function serializeProduct(p) {
     isReturnable: p.isReturnable !== false,
     approvalStatus: p.approvalStatus || 'APPROVED',
     rejectionReason: p.rejectionReason || '',
+    // CSV-imported and not yet approved: hidden from buyers until approved
+    // from the product list (see services/productImport).
+    // Only the platform's own previews: a seller's preview is theirs to
+    // approve from the seller panel, so admin sees it as a plain seller Draft.
+    importPreview: p.importPreview === true && !p.vendor,
+    importBatchId: p.importBatch ? p.importBatch.toString() : null,
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
@@ -617,6 +624,12 @@ async function updateProduct(req, res) {
     product.isActive = toBool(isActive, product.isActive);
     product.status = product.isActive ? 'Active' : (product.status === 'Draft' ? 'Draft' : 'Inactive');
   }
+  // Editing an imported preview fixes its details; only approving it (from
+  // the product list) may put it live.
+  if (product.importPreview) {
+    product.status = 'Draft';
+    product.isActive = false;
+  }
 
   const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
   if (flashSaleVal !== undefined) {
@@ -679,6 +692,13 @@ async function updateProductStatus(req, res) {
     .populate('brand', 'name');
   if (!product) {
     return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  if (product.importPreview && toBool(isActive, false)) {
+    return res.status(400).json({
+      success: false,
+      message: 'This product was imported from CSV and is still a preview. Approve it to make it live.',
+    });
   }
 
   product.isActive = toBool(isActive, product.isActive);
@@ -771,6 +791,11 @@ async function deleteProduct(req, res) {
   }
 
   await product.deleteOne();
+
+  // Deleting the last waiting preview of a CSV import closes that import.
+  if (product.importPreview && product.importBatch) {
+    await syncPreviewBatch(product.importBatch, req.admin?.name || '');
+  }
 
   // Otherwise every buyer's cart/wishlist keeps an unbounded, permanently
   // dangling reference to a product that no longer exists — harmless

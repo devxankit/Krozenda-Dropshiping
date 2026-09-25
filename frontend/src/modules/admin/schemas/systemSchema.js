@@ -56,6 +56,14 @@ export const generalSettingsSchema = z.object({
     name: z.string(),
     legalEntity: z.string().optional().default(''),
     gstin: z.string().optional().default(''),
+    registeredAddress: z
+      .object({
+        addressLine: z.string().optional().default(''),
+        city: z.string().optional().default(''),
+        state: z.string().optional().default(''),
+        pincode: z.string().optional().default(''),
+      })
+      .optional(),
     supportEmail: z.string().optional().default(''),
     supportPhone: z.string().optional().default(''),
     footerTagline: z.string().optional().default(''),

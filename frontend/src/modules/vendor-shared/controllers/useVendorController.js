@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addVendorTicketMessage,
   createVendorBrand,
@@ -18,6 +18,7 @@ import {
   fetchVendorCustomers,
   fetchVendorEarningsEntries,
   fetchVendorEarningsSummary,
+  fetchVendorRevenue,
   fetchVendorInventory,
   fetchVendorKycDocs,
   fetchVendorFssaiStatus,
@@ -54,7 +55,8 @@ import {
   updateVendorProfile,
 } from '../services/authService'
 import { useListController } from '../../admin/controllers/useListController'
-import { requestPushToken } from '../../../lib/firebase'
+import { describePush, onForegroundMessage, requestPushToken } from '../../../lib/firebase'
+import { toast } from '../../../lib/toast'
 import { onRealtime } from '../../../lib/realtime'
 
 export function useVendorLoginController() {
@@ -245,6 +247,17 @@ export function useVendorEarningsController() {
   }
 }
 
+// The seller's own Revenue screen: one window at a time, the previous window
+// kept on screen while the next loads so the range switch does not flash.
+export function useVendorRevenueController(range) {
+  const query = useQuery({
+    queryKey: ['vendor', 'revenue', range],
+    queryFn: () => fetchVendorRevenue(range),
+    placeholderData: keepPreviousData,
+  })
+  return { data: query.data, isLoading: query.isLoading, isFetching: query.isFetching, error: query.error, refetch: query.refetch }
+}
+
 export function useVendorAnalyticsController() {
   return useResource(['vendor', 'analytics'], fetchVendorAnalytics)
 }
@@ -409,12 +422,42 @@ export function useVendorRealtime() {
       queryClient.invalidateQueries({ queryKey: ['vendor', 'orders'] })
     })
 
+    // A push that lands while the panel is open and focused never reaches the
+    // service worker, so the browser shows nothing — surface it as a toast.
+    // The socket above already refreshes the lists; this is what makes the
+    // seller actually notice a new order.
+    let offPush = () => {}
+    let cancelled = false
+    onForegroundMessage((payload) => {
+      const { title, body } = describePush(payload)
+      if (title) toast.info(title, body)
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'notifications'] })
+    }).then((off) => {
+      if (cancelled) off()
+      else offPush = off
+    })
+
     return () => {
+      cancelled = true
       offNotification()
       offOrder()
       offShipment()
+      offPush()
     }
   }, [queryClient])
+}
+
+// Re-registers this browser's push token whenever the panel opens, not only
+// at sign-in: a seller who stays signed in for weeks would otherwise keep a
+// token FCM has since rotated, and silently stop getting order pushes. Only
+// when permission is already granted — the prompt itself stays at sign-in.
+export function useVendorPushRefresh() {
+  useEffect(() => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    requestPushToken()
+      .then((token) => (token ? registerVendorFcmToken(token) : null))
+      .catch(() => {})
+  }, [])
 }
 
 // Best-effort, same reasoning as the buyer app's registerPushToken in

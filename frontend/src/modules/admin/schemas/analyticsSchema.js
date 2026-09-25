@@ -87,3 +87,40 @@ export const customerAnalyticsSchema = z.object({
   buyerMix: z.array(slice),
   topCities: z.array(z.object({ label: z.string(), orders: z.number(), revenue: z.number() })),
 })
+
+// Revenue (Controllers/revenueController). Every figure block has the same
+// shape, whether it is the whole platform, one channel, one seller or one
+// product.
+const revenueFigures = {
+  orders: z.number(),
+  units: z.number(),
+  sales: z.number(),
+  refunds: z.number(),
+  netSales: z.number(),
+  inProgressSales: z.number(),
+  commission: z.number(),
+  cost: z.number(),
+  earnings: z.number(),
+  sellerEarnings: z.number(),
+  linesWithoutCost: z.number(),
+}
+
+export const revenueSchema = z.object({
+  ...windowMeta,
+  kpis: z.array(kpi),
+  channelKpis: z.record(z.string(), z.array(kpi)),
+  totals: z.object({ ...revenueFigures, shippingFees: z.number() }),
+  channels: z.array(z.object({ key: z.string(), label: z.string(), ...revenueFigures })),
+  trend: z.array(point),
+  sellers: z.array(z.object({ id: z.string(), name: z.string(), vendorType: z.string(), ...revenueFigures })),
+  notes: z.object({ cjUsdToInrRate: z.number(), ownStockLinesWithoutCost: z.number() }),
+})
+
+export const sellerRevenueSchema = z.object({
+  ...windowMeta,
+  seller: z.object({ id: z.string(), name: z.string(), vendorType: z.string().optional() }),
+  kpis: z.array(kpi),
+  totals: z.object(revenueFigures),
+  trend: z.array(point),
+  products: z.array(z.object({ id: z.string(), name: z.string(), ...revenueFigures })),
+})

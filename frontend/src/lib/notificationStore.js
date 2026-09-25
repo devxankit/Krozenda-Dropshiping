@@ -7,7 +7,7 @@
 import { create } from 'zustand'
 import { api } from './axios'
 import { useAuthStore } from './authStore'
-import { onForegroundMessage, requestPushToken } from './firebase'
+import { describePush, onForegroundMessage, requestPushToken } from './firebase'
 
 // FCM only invokes the service worker's background handler when the tab is
 // NOT focused — a push that arrives while the buyer is looking at the page
@@ -18,9 +18,16 @@ function watchForegroundPush() {
   if (listeningForPush) return
   listeningForPush = true
   onForegroundMessage((payload) => {
-    const { title, body } = payload.notification || {}
+    const { title, body, link } = describePush(payload)
     if (title && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/images/logo.png' })
+      const shown = new Notification(title, { body, icon: '/images/logo.png' })
+      if (link) {
+        shown.onclick = () => {
+          window.focus()
+          window.location.assign(link)
+          shown.close()
+        }
+      }
     }
   })
 }

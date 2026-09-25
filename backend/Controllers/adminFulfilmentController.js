@@ -21,9 +21,9 @@ function paged(items, { page = 1, rowsPerPage = 25 } = {}, tabCounts) {
 }
 
 // ---------------------------------------------------------------------------
-// Sub-orders — one row per (order, vendor-owned line item). "model" is
-// always MARKETPLACE: this platform has no dropshipping/own-stock split at
-// the order level (see Product.vendor: null meaning platform-owned).
+// Sub-orders — one row per (order, line item). "model" is the line's channel,
+// the same three the dashboard and Revenue screen use: a CJ (DROPSHIP) order
+// is CJ Dropshipping, a seller's line is Sellers, anything else is Own stock.
 // ---------------------------------------------------------------------------
 
 function ageHours(date) {
@@ -37,7 +37,7 @@ function serializeSubOrder(order, item) {
     id: `${order._id}:${item.product}:${item.variantId || ''}`,
     orderId: order._id.toString(),
     placedAt: order.createdAt,
-    model: 'marketplace',
+    model: order.fulfillmentType === 'DROPSHIP' ? 'dropshipping' : item.vendorDoc ? 'marketplace' : 'own_stock',
     seller: vendorLabel(item.vendorDoc),
     buyer: order.user?.name || '',
     status: item.status,

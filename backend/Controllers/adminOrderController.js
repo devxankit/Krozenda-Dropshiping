@@ -186,7 +186,8 @@ async function createOrder(req, res) {
 
   let order;
   try {
-    order = await Order.create({
+    // Seller lines get their commission terms frozen on, as at checkout.
+    const [draft] = await accounting.attachCommissionSnapshots([{
       user: userId,
       items,
       shippingAddress: {
@@ -207,7 +208,8 @@ async function createOrder(req, res) {
       paymentMethod,
       paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PAID',
       status: 'PENDING',
-    });
+    }]);
+    order = await Order.create(draft);
   } catch (err) {
     await releaseStock(items);
     throw err;

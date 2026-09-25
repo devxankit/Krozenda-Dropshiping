@@ -6,6 +6,7 @@ import {
   placedOrderSchema,
   orderListSchema,
   orderTrackingSchema,
+  orderInvoiceSchema,
   razorpayOrderSchema,
   shippingQuoteSchema,
 } from '../schemas/orderSchema'
@@ -75,6 +76,13 @@ export async function fetchOrder(id, { signal } = {}) {
 export async function fetchOrderTracking(id, { signal } = {}) {
   const response = await api.get(`/user/orders/${id}/tracking`, { signal })
   return orderTrackingSchema.parse(response.data.data)
+}
+
+// The order's tax invoice(s), one per supplier, each with that supplier's
+// GSTIN — built on the server so the GST treatment is never guessed here.
+export async function fetchOrderInvoice(id, { signal } = {}) {
+  const response = await api.get(`/user/orders/${id}/invoice`, { signal })
+  return orderInvoiceSchema.parse(response.data.data)
 }
 
 // What this cart will cost to ship, for a given payment method.

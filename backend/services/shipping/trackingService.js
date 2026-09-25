@@ -4,6 +4,7 @@ const { resolveForShipment } = require('./shippingAccountResolver');
 const shiprocketService = require('./shiprocketService');
 const { mapShiprocketStatus, POLLABLE_STATUSES } = require('../../Config/shipping');
 const { syncOrderFromShipment } = require('./shipmentService');
+const buyerAlerts = require('../buyerAlertService');
 
 // Turning carrier scans into shipment state.
 //
@@ -122,6 +123,7 @@ function extractSummary(body) {
 // Returns what actually changed, so callers can tell a genuinely new event
 // from a replay without re-reading.
 async function applyScans(shipment, scans, { source = 'WEBHOOK', summary = null } = {}) {
+  const statusBefore = shipment.internalStatus;
   let newEvents = 0;
   let statusChanged = false;
   const unmappedStatuses = [];
@@ -209,6 +211,11 @@ async function applyScans(shipment, scans, { source = 'WEBHOOK', summary = null 
 
   if (statusChanged) {
     await syncOrderFromShipment(shipment);
+    // Out for delivery / failed attempt have no order status of their own,
+    // so the Order-model WhatsApp hook never sees them. Never throws.
+    if (shipment.internalStatus !== statusBefore) {
+      await buyerAlerts.notifyShipmentMilestone(shipment);
+    }
   }
 
   return { newEvents, statusChanged, unmappedStatuses };

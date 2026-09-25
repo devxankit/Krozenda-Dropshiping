@@ -2,6 +2,8 @@ const Payout = require('../Models/Payout');
 const { verifyRazorpaySignature } = require('../utils/razorpayWebhookVerify');
 const payoutService = require('../services/payoutService');
 const { createNotification } = require('./notificationController');
+const { notifyVendorSettlementPaid } = require('../services/vendorAlertService');
+const { alertAdmins } = require('../services/adminAlertService');
 const { fromPaise } = require('../utils/money');
 
 // POST /webhook/route-transfers — Razorpay Route's own event feed, separate
@@ -189,6 +191,12 @@ async function notifyVendorOfSettlement(payout) {
       actionType: 'WALLET',
       actionRefId: payout.settlement,
     });
+    await notifyVendorSettlementPaid({
+      vendorId: payout.vendor,
+      amount: Number(amountRupees),
+      reference: payout.razorpayTransferId ? `Ref ${payout.razorpayTransferId}` : '',
+      key: payout.settlement ? `SETTLEMENT:${payout.settlement}` : `PAYOUT:${payout._id}`,
+    });
   } catch (err) {
     // Best-effort — createNotification already swallows its own errors, but
     // guard here too since this runs inside a webhook handler that must 200.
@@ -206,6 +214,15 @@ async function notifyVendorOfFailure(payout, failureReason) {
       message: `Your settlement of ₹${amountRupees} could not be transferred. Our team has been notified.`,
       actionType: 'WALLET',
       actionRefId: payout.settlement,
+    });
+    // The seller was just told "our team has been notified" — make it true.
+    await alertAdmins({
+      event: 'SETTLEMENT_FAILED',
+      title: 'Seller settlement failed',
+      message: `A ₹${amountRupees} Razorpay Route transfer to a seller failed${failureReason ? `: ${failureReason}` : ''}. Check the seller's bank details and retry.`,
+      link: '/admin/finance/settlements',
+      key: `SETTLEMENT_FAILED:${payout._id}:${payout.razorpayTransferId || ''}`,
+      urgent: true,
     });
   } catch (err) {
     log({ event: 'ROUTE_WEBHOOK_NOTIFY_FAILED', payoutId: String(payout._id), message: err.message });

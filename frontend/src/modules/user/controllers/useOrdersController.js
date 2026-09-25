@@ -2,7 +2,7 @@
 // and are the ONLY thing components are allowed to call into.
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchOrders, fetchOrder, fetchOrderTracking, cancelOrder } from '../services/orderService'
+import { fetchOrders, fetchOrder, fetchOrderInvoice, fetchOrderTracking, cancelOrder } from '../services/orderService'
 
 // OrderListScreen. Server-paginated: this previously fetched every order the
 // buyer had ever placed, in full, on every visit to the Orders tab.
@@ -56,6 +56,17 @@ export function useOrderController(orderId) {
     error: query.error,
     refetch: query.refetch,
   }
+}
+
+// The order's invoice set: one tax invoice per supplier (Krozenda / each
+// seller), each carrying that supplier's GSTIN.
+export function useOrderInvoiceController(orderId) {
+  const query = useQuery({
+    queryKey: ['user', 'order', orderId, 'invoice'],
+    queryFn: ({ signal }) => fetchOrderInvoice(orderId, { signal }),
+    enabled: Boolean(orderId),
+  })
+  return { invoice: query.data, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch }
 }
 
 // Cancelling restores stock and may trigger a refund, so both the list and the

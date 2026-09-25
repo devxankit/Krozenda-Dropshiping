@@ -3,6 +3,7 @@ const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
+const { syncPreviewBatch } = require('../services/productImport/importService');
 const { getImageUrl } = require('../utils/imageHelper');
 const { normaliseVariants, validateVariants, resolveVariantImages } = require('../utils/productVariants');
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
@@ -166,6 +167,10 @@ function serializeProduct(p) {
     isReturnable: p.isReturnable !== false,
     approvalStatus: p.approvalStatus || 'APPROVED',
     rejectionReason: p.rejectionReason || '',
+    // CSV-imported and not yet approved by the seller: a hidden Draft that is
+    // not in the platform's approval queue yet (see services/productImport).
+    importPreview: p.importPreview === true,
+    importBatchId: p.importBatch ? p.importBatch.toString() : null,
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
@@ -199,7 +204,8 @@ async function listMyProducts(req, res) {
     if (effectiveStatus === 'active') items = items.filter((p) => p.isActive && p.approvalStatus === 'APPROVED');
     else if (effectiveStatus === 'inactive') items = items.filter((p) => !p.isActive);
     else if (effectiveStatus === 'out_of_stock') items = items.filter((p) => p.stock <= 0);
-    else if (effectiveStatus === 'pending') items = items.filter((p) => p.approvalStatus === 'PENDING');
+    else if (effectiveStatus === 'pending') items = items.filter((p) => p.approvalStatus === 'PENDING' && !p.importPreview);
+    else if (effectiveStatus === 'preview') items = items.filter((p) => p.importPreview);
     else if (effectiveStatus === 'rejected') items = items.filter((p) => p.approvalStatus === 'REJECTED');
   }
 
@@ -208,7 +214,9 @@ async function listMyProducts(req, res) {
     active: allSerialized.filter((p) => p.isActive && p.approvalStatus === 'APPROVED').length,
     inactive: allSerialized.filter((p) => !p.isActive).length,
     out_of_stock: allSerialized.filter((p) => p.stock <= 0).length,
-    pending: allSerialized.filter((p) => p.approvalStatus === 'PENDING').length,
+    // A preview is not "pending approval" until the seller submits it.
+    pending: allSerialized.filter((p) => p.approvalStatus === 'PENDING' && !p.importPreview).length,
+    preview: allSerialized.filter((p) => p.importPreview).length,
     rejected: allSerialized.filter((p) => p.approvalStatus === 'REJECTED').length,
   };
 
@@ -556,6 +564,12 @@ async function updateMyProduct(req, res) {
     product.isActive = toBool(isActive, product.isActive);
     product.status = product.isActive ? 'Active' : (product.status === 'Draft' ? 'Draft' : 'Inactive');
   }
+  // Editing an imported preview fixes its details; only approving it (from
+  // the product list) submits it.
+  if (product.importPreview) {
+    product.status = 'Draft';
+    product.isActive = false;
+  }
 
   if (flashSaleVal !== undefined) {
     product.isFlashsale = toBool(flashSaleVal, product.isFlashsale);
@@ -603,6 +617,10 @@ async function deleteMyProduct(req, res) {
   }
 
   await product.deleteOne();
+  // Deleting the last waiting preview of a CSV import closes that import.
+  if (product.importPreview && product.importBatch) {
+    await syncPreviewBatch(product.importBatch, req.vendor.name || '');
+  }
   await Promise.all([
     Cart.updateMany({ 'items.product': product._id }, { $pull: { items: { product: product._id } } }),
     Wishlist.updateMany({ 'items.product': product._id }, { $pull: { items: { product: product._id } } }),

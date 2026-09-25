@@ -223,34 +223,6 @@ export function inventoryFixture({ tab = 'all', filters = {} } = {}) {
   }
 }
 
-export function importRunFixture() {
-  return {
-    fileName: 'nova-retail-catalog-sep.xlsx',
-    uploadedAt: '2 Sep 2026, 12:14',
-    totalRows: 480,
-    validRows: 462,
-    errorRows: 18,
-    mapping: [
-      { column: 'Product Name', field: 'name', sample: 'Aarohi Cotton Table Runner, 180 cm' },
-      { column: 'SKU Code', field: 'sku', sample: 'KZ-HD-RNR-180' },
-      { column: 'MRP', field: 'mrp', sample: '899.00' },
-      { column: 'Selling Price', field: 'price', sample: '749.00' },
-      { column: 'HSN', field: 'tax.hsn', sample: '630232' },
-      { column: 'GST %', field: 'tax.gstRate', sample: '12' },
-      { column: 'Qty', field: 'inventory.onHand', sample: '620' },
-      { column: 'Vendor Notes', field: null, sample: 'Restock every Monday' },
-    ],
-    errors: [
-      { row: 14, column: 'HSN', value: '7323', message: 'HSN must be 6 or 8 digits for a taxable supply' },
-      { row: 27, column: 'GST %', value: '19', message: 'Not a valid GST slab — use 0, 5, 12, 18 or 28' },
-      { row: 41, column: 'SKU Code', value: 'KZ-HD-RNR-180', message: 'Duplicate of an existing SKU' },
-      { row: 58, column: 'Selling Price', value: '1049.00', message: 'Selling price is above MRP' },
-      { row: 63, column: 'Product Name', value: '', message: 'Required' },
-      { row: 88, column: 'Qty', value: '-12', message: 'Quantity cannot be negative' },
-    ],
-  }
-}
-
 export function supplierSyncFixture() {
   return {
     adapters: [

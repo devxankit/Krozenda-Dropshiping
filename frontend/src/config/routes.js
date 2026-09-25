@@ -121,6 +121,7 @@ export const ADMIN_ROUTES = Object.freeze({
   ANALYTICS_VENDORS: '/admin/analytics/vendors',
   ANALYTICS_CATALOG: '/admin/analytics/catalog',
   ANALYTICS_CUSTOMERS: '/admin/analytics/customers',
+  REVENUE: '/admin/revenue',
 
   // ---- catalog ------------------------------------------------------------
   PRODUCTS: '/admin/catalog/products',

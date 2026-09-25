@@ -212,6 +212,12 @@ export const NAV_TREE = Object.freeze([
         permission: ADMIN_PERMISSIONS.ANALYTICS_VIEW,
         match: '/admin/analytics',
       },
+      {
+        label: 'Revenue',
+        to: ADMIN_ROUTES.REVENUE,
+        icon: 'money',
+        permission: ADMIN_PERMISSIONS.ANALYTICS_VIEW,
+      },
     ],
   },
   {

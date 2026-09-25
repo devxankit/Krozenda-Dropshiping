@@ -276,6 +276,51 @@ export const commissionOptionsSchema = z.object({
   products: z.array(option),
 })
 
+// Off the ledger's COMMISSION and REFUND_REVERSAL rows — see
+// adminCommissionController.getCommissionSummary for what each bucket means.
+export const commissionSummarySchema = z.object({
+  totalCharged: money,
+  netCommission: money,
+  pending: money,
+  earned: money,
+  reversed: money,
+  cancelled: money,
+  thisMonth: money,
+  lastMonth: money,
+  lines: z.number().int().nonnegative(),
+})
+
+const chainScope = z.enum(['PRODUCT', 'SELLER', 'CATEGORY', 'GLOBAL', 'DEFAULT'])
+
+export const commissionPreviewSchema = z.object({
+  productName: z.string().nullable(),
+  quantity: z.number().int().positive(),
+  grossAmount: money,
+  discount: money,
+  discountFundedBy: z.enum(['SELLER', 'PLATFORM']),
+  commissionBasis: z.string(),
+  commissionBase: money,
+  commissionType: z.enum(['PERCENTAGE', 'FIXED']),
+  commissionRate: z.number().nullable(),
+  commissionValue: z.number(),
+  commissionAmount: money,
+  source: chainScope,
+  ruleId: z.string().nullable(),
+  ruleName: z.string(),
+  sellerPayable: money,
+  chain: z.array(
+    z.object({
+      scope: chainScope,
+      ruleId: z.string().nullable(),
+      ruleName: z.string().nullable(),
+      type: z.enum(['PERCENTAGE', 'FIXED']).nullable(),
+      value: z.number().nullable(),
+      priority: z.number().nullable(),
+      applies: z.boolean(),
+    }),
+  ),
+})
+
 export const accountingConfigSchema = z.object({
   defaultCommissionPercent: z.number(),
   maxCommissionPercent: z.number(),

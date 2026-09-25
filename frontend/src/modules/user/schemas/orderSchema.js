@@ -194,3 +194,70 @@ export const shippingQuoteSchema = z.object({
   amountToFreeShipping: z.number(),
   parcelCount: z.number().int(),
 })
+
+// GET /user/orders/:id/invoice — one tax invoice per supplier (Krozenda for
+// own-stock and CJ items, each seller for theirs). Money is in PAISE.
+const invoiceMoney = {
+  cgst: z.number(),
+  sgst: z.number(),
+  igst: z.number(),
+  tax: z.number(),
+  taxable: z.number(),
+  total: z.number(),
+}
+
+const invoiceAddressSchema = z
+  .object({
+    addressLine: z.string().optional().default(''),
+    city: z.string().optional().default(''),
+    state: z.string().optional().default(''),
+    pincode: z.string().optional().default(''),
+  })
+  .partial()
+
+export const orderInvoiceSchema = z.object({
+  orderId: z.string(),
+  orderNumber: z.string(),
+  invoiceDate: z.string(),
+  paymentMethod: z.string(),
+  placeOfSupply: z.object({ stateCode: z.string(), stateName: z.string() }),
+  buyer: z.object({
+    name: z.string(),
+    companyName: z.string(),
+    gstin: z.string(),
+    isB2B: z.boolean(),
+    address: z.object({}).passthrough(),
+  }),
+  invoices: z.array(
+    z.object({
+      invoiceNumber: z.string(),
+      documentType: z.enum(['TAX_INVOICE', 'BILL_OF_SUPPLY']),
+      supplier: z.object({
+        kind: z.enum(['PLATFORM', 'SELLER']),
+        name: z.string(),
+        legalName: z.string(),
+        gstin: z.string(),
+        address: invoiceAddressSchema,
+        stateCode: z.string(),
+        stateName: z.string(),
+      }),
+      taxType: z.enum(['INTRA', 'INTER', 'NONE']),
+      items: z.array(
+        z.object({
+          name: z.string(),
+          variant: z.string(),
+          hsnCode: z.string(),
+          quantity: z.number(),
+          unitPrice: z.number(),
+          gross: z.number(),
+          discount: z.number(),
+          gstRate: z.number(),
+          ...invoiceMoney,
+        }),
+      ),
+      shipping: z.number().nullable(),
+      totals: z.object({ ...invoiceMoney, gross: z.number(), discount: z.number(), shipping: z.number() }),
+    }),
+  ),
+  grandTotal: z.number(),
+})

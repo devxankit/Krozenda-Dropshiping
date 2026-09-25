@@ -10,6 +10,10 @@ const Coupon = require('../Models/Coupon');
 const WalletTransaction = require('../Models/WalletTransaction');
 const { evaluateCoupon, filterEligibleItems, redeemCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
+const vendorAlerts = require('../services/vendorAlertService');
+const { alertAdmins, highValueThreshold } = require('../services/adminAlertService');
+const CheckoutAttempt = require('../Models/CheckoutAttempt');
+const { buildInvoices } = require('../services/invoiceService');
 const Shipment = require('../Models/Shipment');
 const trackingService = require('../services/shipping/trackingService');
 const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
@@ -499,21 +503,10 @@ async function releaseStock(items) {
 
 // One notification per distinct vendor represented in the order, not one per
 // item — a seller with 3 of their SKUs in the same cart gets a single "New
-// order received" ping, not three.
+// order received" ping (in-app + push + WhatsApp), not three. See
+// services/vendorAlertService.
 async function notifyVendorsOfNewOrder(items, orderId) {
-  const vendorIds = [...new Set(items.filter((item) => item.vendor).map((item) => item.vendor.toString()))];
-  await Promise.all(
-    vendorIds.map((vendorId) =>
-      createNotification({
-        vendorId,
-        type: 'ORDER',
-        title: 'New Order Received',
-        message: `You have a new order for ${items.filter((i) => i.vendor?.toString() === vendorId).length} of your product(s).`,
-        actionType: 'ORDER',
-        actionRefId: orderId,
-      })
-    )
-  );
+  await vendorAlerts.notifyVendorsOfNewOrder({ _id: orderId, items });
 }
 
 // POST /user/orders/razorpay-order — mirrors walletController.createTopupOrder
@@ -545,6 +538,15 @@ async function createRazorpayOrder(req, res) {
     receipt: `order_${req.user._id}_${Date.now()}`,
     notes: { purpose: 'ORDER_PAYMENT', userId: req.user._id.toString() },
   });
+
+  // Remembered so a checkout that never turns into an order (payment failed,
+  // popup closed) gets one "complete your payment" reminder — see
+  // Jobs/engagementJob. Best-effort: a reminder is never worth failing checkout.
+  try {
+    await CheckoutAttempt.create({ user: req.user._id, razorpayOrderId: order.id, amount: checkout.total });
+  } catch (err) {
+    console.error('[createRazorpayOrder] could not record checkout attempt:', err.message);
+  }
 
   res.json({
     success: true,
@@ -712,8 +714,10 @@ async function createOrder(req, res) {
   try {
     // ordered: the first failure stops the batch, and anything already
     // written is removed below, so a checkout never ends up half-placed.
+    // Each seller line's commission terms are frozen onto it here, at
+    // checkout, so a rule edited later cannot change what it is charged.
     orders = await Order.insertMany(
-      orderGroups.map((group, index) => ({
+      await accounting.attachCommissionSnapshots(orderGroups.map((group, index) => ({
         user: req.user._id,
         items: group.items,
         shippingAddress,
@@ -733,7 +737,7 @@ async function createOrder(req, res) {
         cjLogisticName: group.fulfillmentType === 'DROPSHIP' ? quote?.cjLogisticName || null : null,
         b2b: b2bSnapshot,
         status: 'PENDING',
-      })),
+      }))),
       { ordered: true }
     );
   } catch (err) {
@@ -836,6 +840,16 @@ async function createOrder(req, res) {
       // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
       await autoCreateShipmentsForOrder(placed, placed.items);
     }
+  }
+
+  if (total >= highValueThreshold()) {
+    await alertAdmins({
+      event: 'HIGH_VALUE_ORDER',
+      title: 'High-value order placed',
+      message: `ORD-${String(order._id).slice(-8).toUpperCase()} worth ₹${total.toLocaleString('en-IN')} (${paymentMethod}) by ${order.shippingAddress?.fullName || 'a customer'}.`,
+      link: `/admin/orders/detail/${order._id}`,
+      key: `HIGH_VALUE_ORDER:${order._id}`,
+    });
   }
 
   // Re-read: fulfilment may have cancelled and refunded the dropship order.
@@ -1026,6 +1040,19 @@ async function cancelOrder(req, res) {
 //   * no seller identity, no carrier account, no costs, no internal status
 //     codes. The 22-state machine is collapsed to the five states a buyer
 //     understands, via BUYER_FACING_ORDER_STATUS
+// GET /user/orders/:id/invoice — the buyer's tax invoice(s): one per supplier
+// (Krozenda for own-stock and CJ items, each seller for theirs), each with
+// that supplier's GSTIN. See services/invoiceService.
+async function getOrderInvoice(req, res) {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid order id' });
+  }
+  const order = await Order.findOne({ _id: req.params.id, user: req.user._id }).lean();
+  if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+  res.json({ success: true, data: await buildInvoices(order) });
+}
+
 async function getOrderTracking(req, res) {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) {
@@ -1280,6 +1307,7 @@ module.exports = {
   createOrder,
   listOrders,
   getOrder,
+  getOrderInvoice,
   cancelOrder,
   getOrderTracking,
   reorder,

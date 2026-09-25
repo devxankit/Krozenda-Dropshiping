@@ -7,6 +7,7 @@ const {
   getCatalogAnalytics,
   getCustomerAnalytics,
 } = require('../Controllers/adminAnalyticsController');
+const { getAdminRevenue, getAdminSellerRevenue } = require('../Controllers/revenueController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
@@ -19,5 +20,7 @@ router.get('/analytics/sales', requirePermission('admin.analytics.view'), getSal
 router.get('/analytics/vendors', requirePermission('admin.analytics.view'), getVendorAnalytics);
 router.get('/analytics/catalog', requirePermission('admin.analytics.view'), getCatalogAnalytics);
 router.get('/analytics/customers', requirePermission('admin.analytics.view'), getCustomerAnalytics);
+router.get('/analytics/revenue', requirePermission('admin.analytics.view'), getAdminRevenue);
+router.get('/analytics/revenue/sellers/:id', requirePermission('admin.analytics.view'), getAdminSellerRevenue);
 
 module.exports = router;

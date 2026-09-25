@@ -4,14 +4,16 @@
 
 // ---- Business models (project context §1) --------------------------------
 export const BUSINESS_MODEL = Object.freeze({
-  DROPSHIPPING: 'dropshipping', // Model A — Direct Dropshipping
-  MARKETPLACE: 'marketplace', // Model B — Marketplace (Amazon-style)
-  OWN_STOCK: 'own_stock', // Model C — Own Stock
+  // The three revenue channels. Keys are what the API sends; the meanings
+  // follow backend adminAnalyticsController / revenueService.
+  DROPSHIPPING: 'dropshipping', // CJ Dropshipping (CJ-fulfilled orders)
+  MARKETPLACE: 'marketplace', // Sellers (every seller, B2C and B2B)
+  OWN_STOCK: 'own_stock', // Own Stock (admin's own catalogue)
 })
 
 export const BUSINESS_MODEL_LABELS = Object.freeze({
-  [BUSINESS_MODEL.DROPSHIPPING]: 'Direct Dropshipping',
-  [BUSINESS_MODEL.MARKETPLACE]: 'Marketplace',
+  [BUSINESS_MODEL.DROPSHIPPING]: 'CJ Dropshipping',
+  [BUSINESS_MODEL.MARKETPLACE]: 'Sellers',
   [BUSINESS_MODEL.OWN_STOCK]: 'Own Stock',
 })
 

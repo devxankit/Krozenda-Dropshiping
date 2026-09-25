@@ -4,14 +4,12 @@ import * as fixtures from '../fixtures/catalog'
 const {
   approvalQueueFixture,
   attributeListFixture,
-  importRunFixture,
   inventoryFixture,
   supplierSyncFixture,
 } = fixtures
 import {
   approvalQueueSchema,
   attributeListSchema,
-  importRunSchema,
   inventorySchema,
   supplierSyncSchema,
   attributeSchema,
@@ -82,14 +80,6 @@ export function fetchInventory(query = {}) {
     fixture: () => inventoryFixture(query),
     schema: inventorySchema,
     live: true,
-  })
-}
-
-export function fetchImportRun() {
-  return fetchResource({
-    path: '/admin/catalog/import/latest',
-    fixture: importRunFixture,
-    schema: importRunSchema,
   })
 }
 

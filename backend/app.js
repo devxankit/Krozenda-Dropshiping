@@ -104,6 +104,7 @@ app.use('/admin', require('./Router/adminAnalyticsRoutes'));
 app.use('/admin/staff', require('./Router/staffRoutes'));
 app.use('/admin/roles', require('./Router/roleRoutes'));
 app.use('/admin/catalog/approvals', require('./Router/adminApprovalRoutes'));
+app.use('/admin/catalog/import', require('./Router/adminProductImportRoutes'));
 app.use('/admin/catalog/products', require('./Router/productRoutes'));
 app.use('/admin/catalog/categories', require('./Router/categoryRoutes'));
 app.use('/admin/catalog/brands', require('./Router/brandRoutes'));

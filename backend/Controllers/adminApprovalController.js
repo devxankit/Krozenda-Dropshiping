@@ -66,7 +66,8 @@ async function listApprovalQueue(req, res) {
   const [categories, brands, products] = await Promise.all([
     Category.find({ approvalStatus: 'PENDING' }).populate('createdByVendor', 'name business.businessName').lean(),
     Brand.find({ approvalStatus: 'PENDING' }).populate('createdByVendor', 'name business.businessName').lean(),
-    Product.find({ approvalStatus: 'PENDING' })
+    // A seller's CSV preview is not submitted until the seller approves it.
+    Product.find({ approvalStatus: 'PENDING', importPreview: { $ne: true } })
       .populate('vendor', 'name business.businessName')
       .populate('category', 'name')
       .lean(),
@@ -143,7 +144,12 @@ async function decide(req, res, decision) {
   }
 
   const Model = MODEL_BY_KIND[parsed.kind];
-  const doc = await Model.findOne({ _id: parsed.rawId, approvalStatus: 'PENDING' });
+  const doc = await Model.findOne({
+    _id: parsed.rawId,
+    approvalStatus: 'PENDING',
+    // Not in the queue until the seller submits it (see listApprovalQueue).
+    ...(parsed.kind === 'product' ? { importPreview: { $ne: true } } : {}),
+  });
   if (!doc) {
     return res.status(404).json({ success: false, message: 'Item not found or already decided' });
   }

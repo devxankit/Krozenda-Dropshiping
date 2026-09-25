@@ -20,7 +20,6 @@ import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { BrandsPage } from './pages/catalog/BrandsPage'
 import { AttributesPage } from './pages/catalog/AttributesPage'
 import { InventoryPage } from './pages/catalog/InventoryPage'
-import { ImportPage } from './pages/catalog/ImportPage'
 import { SupplierSyncPage } from './pages/catalog/SupplierSyncPage'
 import { DropshippingOverviewPage } from './pages/dropshipping/DropshippingOverviewPage'
 import { CjSettingsPage } from './pages/cj/CjSettingsPage'
@@ -114,6 +113,9 @@ const VendorAnalyticsPage = lazy(() =>
 const CatalogAnalyticsPage = lazy(() =>
   import('./pages/analytics/CatalogAnalyticsPage').then((m) => ({ default: m.CatalogAnalyticsPage })),
 )
+const RevenuePage = lazy(() =>
+  import('./pages/analytics/RevenuePage').then((m) => ({ default: m.RevenuePage })),
+)
 const CustomerAnalyticsPage = lazy(() =>
   import('./pages/analytics/CustomerAnalyticsPage').then((m) => ({ default: m.CustomerAnalyticsPage })),
 )
@@ -188,6 +190,14 @@ export default function AdminRoutes() {
               />
 
               <Route
+                path={rel(ADMIN_ROUTES.REVENUE)}
+                element={
+                  <Suspense fallback={<ChunkFallback />}>
+                    <RevenuePage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path={rel(ADMIN_ROUTES.ANALYTICS_SALES)}
                 element={
                   <Suspense fallback={<ChunkFallback />}>
@@ -233,7 +243,12 @@ export default function AdminRoutes() {
                 element={<ProductDetailPage />}
               />
               <Route path={rel(ADMIN_ROUTES.CATALOG_APPROVALS)} element={<ApprovalsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CATALOG_IMPORT)} element={<ImportPage />} />
+              {/* CSV import happens in a modal on the Products screen; the old
+                  URL stays registered so bookmarks land there. */}
+              <Route
+                path={rel(ADMIN_ROUTES.CATALOG_IMPORT)}
+                element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />}
+              />
               <Route path={rel(ADMIN_ROUTES.CATEGORIES)} element={<CategoriesPage />} />
               <Route path={rel(ADMIN_ROUTES.BRANDS)} element={<BrandsPage />} />
               <Route path={rel(ADMIN_ROUTES.ATTRIBUTES)} element={<AttributesPage />} />

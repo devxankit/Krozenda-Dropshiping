@@ -34,7 +34,7 @@ function blockedReason(coupon) {
 }
 
 function rupees(amount) {
-  return `Rs.${Number(amount || 0).toLocaleString('en-IN')}`;
+  return whatsapp.rupees(amount);
 }
 
 // Params for `coupon_offer`, in {{n}} order:

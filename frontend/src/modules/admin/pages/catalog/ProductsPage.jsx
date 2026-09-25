@@ -5,6 +5,9 @@ import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { adminPath } from '../../../../config/routes'
+import { toast } from '../../stores/toastStore'
+import { AdminImportModal } from '../../../catalog-import/components/AdminImportModal'
+import { useApprovePreviewProducts } from '../../../catalog-import/controllers/useProductImportController'
 import { ProductFormDrawer } from '../../components/catalog/CatalogForms'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { ScanBarcodeModal } from '../../../../components/common/ScanBarcodeModal'
@@ -35,6 +38,35 @@ function formatDate(value) {
   }).format(date)
 }
 
+function PreviewBadge({ floating = false }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ${
+        floating ? 'shadow-xs backdrop-blur-md' : ''
+      }`}
+      title="Imported from CSV — Draft, hidden from buyers until approved"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      Preview · Draft
+    </span>
+  )
+}
+
+function ApproveButton({ onClick, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+      title="Approve — make this imported product live"
+    >
+      <Icon name="check" className="h-3 w-3" />
+      Approve
+    </button>
+  )
+}
+
 export function ProductsPage() {
   const products = useProductListController()
   const categories = useCategoryTreeController()
@@ -50,7 +82,23 @@ export function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [removingProduct, setRemovingProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [approveAllOpen, setApproveAllOpen] = useState(false)
   const navigate = useNavigate()
+
+  // CSV-imported products arrive as hidden Draft "previews"; this is the only
+  // way they go live (the visibility switch refuses them server-side).
+  const approvePreviews = useApprovePreviewProducts('/admin/catalog/import', {
+    productQueryKeys: [['admin', 'catalog']],
+  })
+  async function approveImported(payload) {
+    try {
+      const res = await approvePreviews.mutateAsync(payload)
+      toast.success('Approved', res.message)
+    } catch (err) {
+      toast.error('Could not approve', err.message)
+    }
+  }
   const [page, setPage] = useState(1)
 
   const writer = useProductWriteController({
@@ -73,6 +121,7 @@ export function ProductsPage() {
   const outOfStockCount = useMemo(() => productItems.filter((p) => p.stock <= 0).length, [productItems])
   const flashSaleCount = useMemo(() => productItems.filter((p) => p.isFlashsale).length, [productItems])
   const trendingCount = useMemo(() => productItems.filter((p) => p.isTrending).length, [productItems])
+  const previewCount = useMemo(() => productItems.filter((p) => p.importPreview).length, [productItems])
   const activeRatio = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0
 
   const filteredProducts = useMemo(() => {
@@ -82,6 +131,7 @@ export function ProductsPage() {
       if (statusFilter === 'out_of_stock' && item.stock > 0) return false
       if (statusFilter === 'flash_sale' && !item.isFlashsale) return false
       if (statusFilter === 'trending' && !item.isTrending) return false
+      if (statusFilter === 'preview' && !item.importPreview) return false
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
@@ -146,6 +196,9 @@ export function ProductsPage() {
     { id: 'active', label: 'Active', count: activeCount },
     { id: 'inactive', label: 'Inactive', count: inactiveCount },
     { id: 'out_of_stock', label: 'Out of Stock', count: outOfStockCount },
+    ...(previewCount > 0 || statusFilter === 'preview'
+      ? [{ id: 'preview', label: 'Import Preview', count: previewCount }]
+      : []),
   ]
 
   const tableColumns = [
@@ -183,6 +236,7 @@ export function ProductsPage() {
                 {item.name}
               </Link>
               <div className="flex items-center gap-2 text-2xs text-slate-400">
+                {item.importPreview && <PreviewBadge />}
                 {item.sku && <span>SKU: {item.sku}</span>}
                 {item.brand?.name && <span>• {item.brand.name}</span>}
               </div>
@@ -253,7 +307,15 @@ export function ProductsPage() {
       key: 'isActive',
       header: 'Storefront Visibility',
       width: '12rem',
-      render: (item) => (
+      render: (item) =>
+        item.importPreview ? (
+          <PermissionGate permission={MANAGE} fallback={<PreviewBadge />}>
+            <ApproveButton
+              disabled={approvePreviews.isPending}
+              onClick={() => approveImported({ productIds: [item.id] })}
+            />
+          </PermissionGate>
+        ) : (
         <div className="flex items-center gap-2.5">
           <Switch
             id={`product-table-active-${item.id}`}
@@ -265,7 +327,7 @@ export function ProductsPage() {
             {item.isActive ? 'Active' : 'Hidden'}
           </Badge>
         </div>
-      ),
+        ),
     },
     {
       key: 'isFlashsale',
@@ -416,6 +478,19 @@ export function ProductsPage() {
                 <span>Scan barcode</span>
               </button>
               <PermissionGate permission={MANAGE}>
+                {!isSellerOnlyOn && (
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                    title="Import products from a CSV file — they stay hidden until you approve them"
+                  >
+                    <Icon name="upload" className="h-3.5 w-3.5" />
+                    <span>Import CSV</span>
+                  </button>
+                )}
+              </PermissionGate>
+              <PermissionGate permission={MANAGE}>
                 <button
                   type="button"
                   onClick={() => setEditingProduct('new')}
@@ -535,6 +610,45 @@ export function ProductsPage() {
             </div>
           </div>
         </div>
+
+        {previewCount > 0 && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2.5">
+              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">
+                  {previewCount} imported product{previewCount === 1 ? '' : 's'} waiting for approval
+                </p>
+                <p className="text-xs text-amber-800">
+                  They are Drafts and hidden from buyers. View, edit or delete any that are wrong, then approve to make
+                  them live.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {statusFilter !== 'preview' && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('preview')}
+                  className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                >
+                  Review previews
+                </button>
+              )}
+              <PermissionGate permission={MANAGE}>
+                <button
+                  type="button"
+                  onClick={() => setApproveAllOpen(true)}
+                  disabled={approvePreviews.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Icon name="check" className="h-3.5 w-3.5" />
+                  Approve all {previewCount}
+                </button>
+              </PermissionGate>
+            </div>
+          </div>
+        )}
 
         {/* Smart Toolbar */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
@@ -742,6 +856,9 @@ export function ProductsPage() {
 
                     {/* Top Right Status Badge */}
                     <div className="absolute top-2 right-2 z-10">
+                      {item.importPreview ? (
+                        <PreviewBadge floating />
+                      ) : (
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold backdrop-blur-md shadow-xs border ${
                           item.isActive
@@ -756,6 +873,7 @@ export function ProductsPage() {
                         />
                         {item.isActive ? 'Active' : 'Hidden'}
                       </span>
+                      )}
                     </div>
                   </div>
 
@@ -875,6 +993,14 @@ export function ProductsPage() {
 
                   {/* Card Bottom Footer */}
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    {item.importPreview ? (
+                      <PermissionGate permission={MANAGE} fallback={<PreviewBadge />}>
+                        <ApproveButton
+                          disabled={approvePreviews.isPending}
+                          onClick={() => approveImported({ productIds: [item.id] })}
+                        />
+                      </PermissionGate>
+                    ) : (
                     <div className="flex items-center gap-2" title="Storefront Visibility">
                       <Switch
                         id={`product-grid-active-${item.id}`}
@@ -890,6 +1016,7 @@ export function ProductsPage() {
                         {item.isActive ? 'Live' : 'Hidden'}
                       </span>
                     </div>
+                    )}
 
                     <div className="flex items-center gap-1">
                       <Link
@@ -969,6 +1096,29 @@ export function ProductsPage() {
         onFound={(product) => {
           setScanOpen(false)
           navigate(adminPath.productDetail(product.id))
+        }}
+      />
+
+      <AdminImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onFinished={() => products.refetch()}
+        onShowPreviews={() => {
+          products.refetch()
+          setStatusFilter('preview')
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={approveAllOpen}
+        onClose={() => setApproveAllOpen(false)}
+        title={`Approve all ${previewCount} imported products?`}
+        description="They become Active and visible to buyers straight away."
+        confirmLabel="Approve all"
+        isSubmitting={approvePreviews.isPending}
+        onConfirm={async () => {
+          await approveImported({ all: true })
+          setApproveAllOpen(false)
         }}
       />
 

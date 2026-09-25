@@ -1,4 +1,5 @@
 const { messaging, isFirebaseConfigured } = require('../Config/firebase');
+const { webpushLink } = require('./notificationLinks');
 
 // FCM's multicast call accepts at most 500 tokens per request.
 const CHUNK_SIZE = 500;
@@ -20,13 +21,24 @@ const STALE_TOKEN_ERRORS = new Set([
 // Sends one push to every token, in batches. Best-effort per token — a few
 // dead tokens (uninstalled app, revoked permission) never fail the whole
 // send, they just get reported back so the caller can prune them.
-async function sendToTokens(tokens, { title, body, data = {} } = {}) {
+//
+// `link` is an app path (/app/orders/..). It rides in `data.link` for the
+// service worker and the foreground handlers, and — when FRONTEND_URL is https
+// — as webpush.fcmOptions.link, which is what makes a tap on the browser's
+// own notification open the right page.
+async function sendToTokens(tokens, { title, body, data = {}, link = null } = {}) {
   if (!isFirebaseConfigured) {
     return { successCount: 0, failureCount: tokens.length, staleTokens: [] };
   }
   if (!tokens.length) {
     return { successCount: 0, failureCount: 0, staleTokens: [] };
   }
+
+  const payloadData = { ...data };
+  if (link) payloadData.link = link;
+  const absoluteLink = link ? webpushLink(link) : null;
+  const webpush = { notification: { icon: '/images/logo.png' } };
+  if (absoluteLink) webpush.fcmOptions = { link: absoluteLink };
 
   let successCount = 0;
   let failureCount = 0;
@@ -36,7 +48,8 @@ async function sendToTokens(tokens, { title, body, data = {} } = {}) {
     const response = await messaging.sendEachForMulticast({
       tokens: batch,
       notification: { title, body },
-      data: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value)])),
+      data: Object.fromEntries(Object.entries(payloadData).map(([key, value]) => [key, String(value)])),
+      webpush,
     });
 
     successCount += response.successCount;

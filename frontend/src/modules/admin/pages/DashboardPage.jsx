@@ -107,7 +107,7 @@ export function DashboardPage() {
     <PageBody>
       <PageHeader
         title="Dashboard"
-        description="Marketplace, dropshipping and own stock — one view across all three."
+        description="Own stock, CJ Dropshipping and sellers — each shown separately."
         actions={
           <>
             <SegmentedControl items={DASHBOARD_RANGES} activeId={range} onChange={setRange} />

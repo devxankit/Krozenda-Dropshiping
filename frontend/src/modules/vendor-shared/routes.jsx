@@ -1,4 +1,4 @@
-import { Route } from 'react-router-dom'
+import { Navigate, Route } from 'react-router-dom'
 import { VendorLayout } from './components/shell/VendorLayout'
 import { VendorOnboardingGate } from './components/shell/VendorOnboardingGate'
 import { VendorDashboardPage } from './pages/DashboardPage'
@@ -15,6 +15,7 @@ import { ReturnsPage } from './pages/ReturnsPage'
 import { ReviewsPage } from './pages/ReviewsPage'
 import { EarningsPage } from './pages/SettlementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { RevenuePage } from './pages/RevenuePage'
 import { ReportsPage } from './pages/ReportsPage'
 import { TicketsPage } from './pages/TicketsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -32,6 +33,8 @@ export const vendorSharedRoutes = (
       <Route path="status" element={<VendorOnboardingStatusPage />} />
       <Route path="dashboard" element={<VendorDashboardPage />} />
       <Route path="products" element={<VendorProductsPage />} />
+      {/* CSV import now opens as a modal on the products page. */}
+      <Route path="products/import" element={<Navigate to=".." relative="path" replace />} />
       <Route path="inventory" element={<VendorInventoryPage />} />
       <Route path="categories" element={<CategoriesPage />} />
       <Route path="brands" element={<BrandsPage />} />
@@ -44,6 +47,7 @@ export const vendorSharedRoutes = (
       <Route path="reviews" element={<ReviewsPage />} />
       <Route path="earnings" element={<EarningsPage />} />
       <Route path="analytics" element={<AnalyticsPage />} />
+      <Route path="revenue" element={<RevenuePage />} />
       <Route path="reports" element={<ReportsPage />} />
       <Route path="tickets" element={<TicketsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />

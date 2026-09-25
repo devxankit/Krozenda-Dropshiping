@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   HiBell,
   HiOutlineShoppingBag,
@@ -7,6 +7,7 @@ import {
   HiCurrencyRupee,
   HiShieldCheck,
   HiArrowPath,
+  HiXMark,
 } from 'react-icons/hi2'
 import { useNavigate, Link } from 'react-router-dom'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
@@ -49,6 +50,7 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
   // While the mobile search is focused the logo and the icon cluster slide
   // away so the input can take the whole header row.
   const [mobileSearchFocused, setMobileSearchFocused] = useState(false)
+  const mobileSearchInputRef = useRef(null)
   const cartCount = useCartCount()
   const unreadCount = useUnreadNotificationCount()
   const [timeLeft, setTimeLeft] = useState(getTimeUntilMidnight())
@@ -112,6 +114,16 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
     navigate(q ? userPath.search(q) : USER_ROUTES.LISTING)
   }
 
+  // Cross button: first tap clears the text, tap on an empty box closes search mode.
+  const handleMobileSearchClear = () => {
+    if (mobileSearchQuery) {
+      setMobileSearchQuery('')
+      mobileSearchInputRef.current?.focus()
+    } else {
+      mobileSearchInputRef.current?.blur()
+    }
+  }
+
   // Choose the spotlight deal product for the right sidebar
   const spotlightDeal = flashSale[0] || trending[0] || null
 
@@ -153,12 +165,25 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
             >
               <HiMagnifyingGlass className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input
+                ref={mobileSearchInputRef}
                 type="search"
                 value={mobileSearchQuery}
                 onChange={(e) => setMobileSearchQuery(e.target.value)}
                 placeholder="Search products, brands, categories..."
-                className="w-full px-2 bg-transparent text-xs font-normal text-slate-800 placeholder-slate-400 focus:outline-none"
+                className="w-full px-2 bg-transparent text-xs font-normal text-slate-800 placeholder-slate-400 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
               />
+              {(mobileSearchFocused || mobileSearchQuery) && (
+                <button
+                  type="button"
+                  // Keep focus in the input so the header doesn't flicker on tap.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleMobileSearchClear}
+                  className="shrink-0 p-0.5 -mr-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200/70 transition-colors"
+                  aria-label={mobileSearchQuery ? 'Clear search' : 'Close search'}
+                >
+                  <HiXMark className="w-4 h-4" />
+                </button>
+              )}
             </form>
 
             <div

@@ -9,7 +9,6 @@ import {
   fetchAttributes,
   fetchBrands,
   fetchCategoryTree,
-  fetchImportRun,
   fetchInventory,
   fetchProducts,
   fetchSupplierSync,
@@ -55,7 +54,6 @@ export function useApprovalSettingsController({ enabled = true } = {}) {
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
 export const useAttributesController = () => useCatalogResource('attributes', fetchAttributes)
-export const useImportRunController = () => useCatalogResource('import', fetchImportRun)
 export const useSupplierSyncController = () => useCatalogResource('supplier-sync', fetchSupplierSync)
 
 // Catalog writes touch listings, the approval queue and the category tree at

@@ -1,5 +1,6 @@
 import { api } from '../../../lib/axios'
 import { fetchResource, mutateResource } from '../../admin/services/mockTransport'
+import { sellerRevenueSchema } from '../../admin/schemas/analyticsSchema'
 import {
   vendorAnalyticsSchema,
   vendorCouponListSchema,
@@ -102,6 +103,11 @@ export async function recommendOnVendorReturn(id, { decision, note }) {
   const { data } = await api.post(`/vendor/returns/${id}/recommend`, { decision, note })
   return vendorReturnSchema.parse(data.data)
 }
+
+// Sales, commission and earnings for a window — the same figures admin sees
+// for this seller (backend services/revenueService).
+export const fetchVendorRevenue = (range = '30d') =>
+  fetchResource({ path: '/vendor/earnings/revenue', params: { range }, schema: sellerRevenueSchema, live: true })
 
 export const fetchVendorEarningsSummary = () =>
   fetchResource({ path: '/vendor/earnings/summary', schema: vendorEarningsSummarySchema, live: true })

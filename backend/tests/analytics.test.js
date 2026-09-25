@@ -161,24 +161,27 @@ describe('GET /admin/dashboard', () => {
     expect(cancelled.count).toBe(1);
   });
 
-  it('attributes revenue to a business model from the seller behind each line', async () => {
+  it('splits revenue into own stock, CJ Dropshipping and sellers', async () => {
     const { token } = await createAdmin();
     const { user } = await createCustomer();
 
     const marketplaceSeller = await createVendor('B2C');
-    const dropshipSeller = await createVendor('B2B');
+    const partnerSeller = await createVendor('B2B');
 
     // Attribution reads the line's own vendor snapshot first, and falls back
-    // to the product's owner — both paths are exercised here.
+    // to the product's owner — both paths are exercised here. A B2B partner
+    // is a seller like any other; only CJ-fulfilled lines are CJ.
     const ownStock = await createProduct({ price: 100 });
-    const dropshipProduct = await createProduct({ price: 300, vendor: dropshipSeller._id });
+    const partnerProduct = await createProduct({ price: 50, vendor: partnerSeller._id });
+    const cjProduct = await createProduct({ price: 300, fulfillmentProvider: 'CJ' });
 
     await placeOrder({
       user: user._id,
       items: [
         { product: ownStock, price: 100, quantity: 1, vendor: marketplaceSeller._id },
+        { product: partnerProduct, price: 50, quantity: 2 },
         { product: ownStock, price: 100, quantity: 1 },
-        { product: dropshipProduct, price: 300, quantity: 1 },
+        { product: cjProduct, price: 300, quantity: 1 },
       ],
     });
 
@@ -194,7 +197,7 @@ describe('GET /admin/dashboard', () => {
       { marketplace: 0, dropshipping: 0, own_stock: 0 },
     );
 
-    expect(totals.marketplace).toBe(10000);
+    expect(totals.marketplace).toBe(20000);
     expect(totals.own_stock).toBe(10000);
     expect(totals.dropshipping).toBe(30000);
     // The bands add back up to the headline GMV.

@@ -21,8 +21,10 @@ import {
   auditLogListSchema,
   codRemittanceSchema,
   commissionOptionsSchema,
+  commissionPreviewSchema,
   commissionRuleListSchema,
   commissionRuleSchema,
+  commissionSummarySchema,
   payoutDetailSchema,
   payoutListSchema,
   payoutSchema,
@@ -112,6 +114,12 @@ export const fetchCommissionRules = (query) =>
 
 export const fetchCommissionOptions = (product) =>
   read(`${BASE}/commissions/options`, { params: { product }, schema: commissionOptionsSchema })
+
+export const fetchCommissionSummary = () => read(`${BASE}/commissions/summary`, { schema: commissionSummarySchema })
+
+// A POST because it takes a body; it writes nothing.
+export const previewCommission = (body) =>
+  write('post', `${BASE}/commissions/preview`, { body, schema: commissionPreviewSchema })
 
 export const createCommissionRule = (body) =>
   write('post', `${BASE}/commissions`, { body, schema: commissionRuleSchema })

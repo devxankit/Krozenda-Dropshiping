@@ -1,17 +1,25 @@
 // Store Settings: bank payout details + notification preferences. Business
 // profile (name/logo/address) is covered by vendorAuthController.updateProfile
 // — kept separate since that endpoint already owns `vendor.business/address`.
-function serializeSettings(vendor) {
+const { sellerRatesFor } = require('../services/commissionResolver');
+
+// The seller's headline rate comes from their CommissionRule (else the
+// platform default) — the rule the ledger charges — not the legacy
+// Vendor.commissionRatePercent field.
+async function serializeSettings(vendor) {
+  const rate = (await sellerRatesFor([vendor._id])).get(String(vendor._id));
   return {
     storeName: vendor.business?.businessName || vendor.name,
-    commissionRatePercent: vendor.commissionRatePercent ?? 10,
+    commissionRatePercent: rate.ratePercent,
+    commissionRateType: rate.type,
+    commissionRateValue: rate.value,
     bank: vendor.bank || {},
     notificationPrefs: vendor.notificationPrefs || { orderUpdates: true, promotions: true },
   };
 }
 
 async function getMySettings(req, res) {
-  res.json({ success: true, data: serializeSettings(req.vendor) });
+  res.json({ success: true, data: await serializeSettings(req.vendor) });
 }
 
 async function updateMySettings(req, res) {
@@ -27,7 +35,7 @@ async function updateMySettings(req, res) {
   }
 
   await vendor.save();
-  res.json({ success: true, message: 'Settings updated', data: serializeSettings(vendor) });
+  res.json({ success: true, message: 'Settings updated', data: await serializeSettings(vendor) });
 }
 
 module.exports = { getMySettings, updateMySettings };

@@ -10,6 +10,11 @@ const wishlistSchema = new mongoose.Schema(
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         addedAt: { type: Date, default: Date.now },
+        // What the buyer last saw, kept by Jobs/engagementJob so it can say
+        // "back in stock" / "price dropped" once per change. Null until the
+        // job first looks at the item — the first look never alerts.
+        lastPrice: { type: Number, default: null },
+        lastInStock: { type: Boolean, default: null },
       },
     ],
   },

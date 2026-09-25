@@ -6,6 +6,7 @@ const {
   getOrder,
   cancelOrder,
   getOrderTracking,
+  getOrderInvoice,
   getShippingQuote,
   getPaymentMethods,
   reorder,
@@ -33,5 +34,7 @@ router.patch('/:id/cancel', cancelOrder);
 // Reads the stored timeline only; it never calls the carrier, so a buyer
 // refreshing this screen cannot spend the seller's carrier rate limit.
 router.get('/:id/tracking', getOrderTracking);
+// One tax invoice per supplier, each carrying that supplier's GSTIN.
+router.get('/:id/invoice', getOrderInvoice);
 
 module.exports = router;

@@ -83,6 +83,10 @@ export const vendorProductSchema = z.object({
   isReturnable: z.boolean().optional(),
   approvalStatus: z.string(),
   rejectionReason: z.string(),
+  // CSV-imported and not yet approved by the seller — a hidden Draft that is
+  // not in the platform's approval queue until they approve it.
+  importPreview: z.boolean().optional(),
+  importBatchId: z.string().nullable().optional(),
   rating: z.number(),
   reviewsCount: z.number().int(),
   createdAt: z.string(),
@@ -215,10 +219,13 @@ export const vendorReturnSchema = z.object({
 export const vendorReturnListSchema = paged(vendorReturnSchema)
 
 export const vendorEarningsSummarySchema = z.object({
-  // The seller's default rate. Not necessarily what every line was charged —
-  // a category or product CommissionRule outranks it — so the screen labels
-  // it as the default rather than "your commission".
-  commissionRatePercent: z.number(),
+  // The seller's default rate (their SELLER rule, else the platform default).
+  // Not necessarily what every line was charged — a product rule outranks it
+  // — so the screen labels it as the default rather than "your commission".
+  // Null when that rule is a fixed per-unit fee rather than a percentage.
+  commissionRatePercent: z.number().nullable(),
+  commissionRateType: z.enum(['PERCENTAGE', 'FIXED']).optional(),
+  commissionRateValue: z.number().optional(),
   totalSales: z.number().int(),
   totalCommission: z.number().int(),
   netEarnings: z.number().int(),
@@ -230,6 +237,9 @@ export const vendorEarningsSummarySchema = z.object({
   inBatchAmount: z.number().int(),
   // Delivered but not yet claimed by any batch.
   unsettledAmount: z.number().int(),
+  // The part of unsettledAmount not on the ledger yet (COD the courier still
+  // holds) — an estimate at the terms frozen on the order.
+  estimatedAmount: z.number().int().optional(),
   inTransitOrderValue: z.number().int(),
   deliveredOrdersCount: z.number().int(),
   completedPayoutsCount: z.number().int(),
@@ -250,6 +260,8 @@ export const vendorEarningsEntrySchema = z.object({
   settlementStatus: z.string().nullable(),
   state: z.enum(['PAID', 'IN_BATCH', 'UNSETTLED']),
   paidAt: z.string().nullable(),
+  // True for a line not on the ledger yet (COD the courier still holds).
+  estimated: z.boolean().optional(),
 })
 
 export const vendorEarningsEntryListSchema = z.object({ items: z.array(vendorEarningsEntrySchema) })
@@ -339,7 +351,9 @@ export const vendorKycListSchema = z.object({ items: z.array(vendorKycDocSchema)
 
 export const vendorSettingsSchema = z.object({
   storeName: z.string(),
-  commissionRatePercent: z.number(),
+  commissionRatePercent: z.number().nullable(),
+  commissionRateType: z.enum(['PERCENTAGE', 'FIXED']).optional(),
+  commissionRateValue: z.number().optional(),
   bank: z.record(z.string(), z.any()),
   notificationPrefs: z.object({ orderUpdates: z.boolean(), promotions: z.boolean() }),
 })

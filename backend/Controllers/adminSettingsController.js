@@ -16,6 +16,7 @@ async function getGeneralSettings(req, res) {
           name: platform.name,
           legalEntity: platform.legalEntity,
           gstin: platform.gstin,
+          registeredAddress: platform.registeredAddress,
           supportEmail: platform.supportEmail,
           supportPhone: platform.supportPhone,
           footerTagline: platform.footerTagline,
@@ -88,6 +89,7 @@ async function updateGeneralSettings(req, res) {
       name,
       legalEntity,
       gstin,
+      registeredAddress,
       supportEmail,
       supportPhone,
       footerTagline,
@@ -110,6 +112,13 @@ async function updateGeneralSettings(req, res) {
     if (name !== undefined) platform.name = name;
     if (legalEntity !== undefined) platform.legalEntity = legalEntity;
     if (gstin !== undefined) platform.gstin = gstin;
+    if (registeredAddress && typeof registeredAddress === 'object') {
+      for (const field of ['addressLine', 'city', 'state', 'pincode']) {
+        if (registeredAddress[field] !== undefined) {
+          platform.registeredAddress[field] = String(registeredAddress[field]).trim();
+        }
+      }
+    }
     if (supportEmail !== undefined) platform.supportEmail = supportEmail;
     if (supportPhone !== undefined) platform.supportPhone = supportPhone;
     if (footerTagline !== undefined) platform.footerTagline = footerTagline;
@@ -209,6 +218,7 @@ async function updateGeneralSettings(req, res) {
           name: platform.name,
           legalEntity: platform.legalEntity,
           gstin: platform.gstin,
+          registeredAddress: platform.registeredAddress,
           supportEmail: platform.supportEmail,
           supportPhone: platform.supportPhone,
           footerTagline: platform.footerTagline,

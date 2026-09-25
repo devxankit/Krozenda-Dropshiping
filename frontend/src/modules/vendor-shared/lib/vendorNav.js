@@ -36,6 +36,7 @@ export const getVendorNavTree = (isPartner = false, isApproved = true) => {
       id: 'finance',
       label: 'Finance',
       items: [
+        { label: 'Revenue', to: `${prefix}/revenue`, icon: 'money' },
         { label: 'Reports', to: `${prefix}/reports`, icon: 'reports' },
         { label: 'Earnings & Settlements', to: `${prefix}/earnings`, icon: 'settlements' },
         { label: 'Analytics', to: `${prefix}/analytics`, icon: 'analytics' },

@@ -159,8 +159,11 @@ const vendorSchema = new mongoose.Schema(
     // Push (FCM) device tokens — see User.fcmTokens for the same shape.
     fcmTokens: { type: [fcmTokenSchema], default: [] },
 
-    // Platform commission taken off each delivered item's line total —
-    // admin-set, read-only from the vendor side (see vendorEarningsController).
+    // DEPRECATED — nothing reads this for a commission any more. A seller's
+    // negotiated rate is a SELLER CommissionRule (services/commissionResolver).
+    // Kept only so historical documents and old exports still load;
+    // migrate-vendor-commission-rates.js copied every non-default value into a
+    // rule. Do not start reading it again.
     commissionRatePercent: { type: Number, default: 10, min: 0, max: 100 },
 
     // Tier 2 of the package-measurement fallback chain (product dimensions ->

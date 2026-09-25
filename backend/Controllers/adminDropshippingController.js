@@ -1,13 +1,16 @@
 const Vendor = require('../Models/Vendor');
 const Order = require('../Models/Order');
 const Product = require('../Models/Product');
+const AccountingConfig = require('../Models/AccountingConfig');
 const { toPaise } = require('../utils/money');
+const { sellerRatesFor } = require('../services/commissionResolver');
 
 // "Dropshipping partner" on this panel is not a separate entity — it IS a
 // B2B Vendor (vendorType: 'B2B'). See adminAnalyticsController.ATTRIBUTE_LINES,
 // which already treats vendorType 'B2B' as business model "direct
-// dropshipping", and adminFinanceController's commission-rules screen, which
-// already treats Vendor.commissionRatePercent as the real commission rule.
+// dropshipping". A partner's commission is its headline CommissionRule rate
+// (commissionResolver.sellerRatesFor) — the same figure the Finance
+// commission-rules screen shows.
 //
 // This module scopes those same real collections (Vendor/Order/Product) to
 // B2B only and serves them under /admin/dropshipping/*. Fields that describe
@@ -16,7 +19,6 @@ const { toPaise } = require('../utils/money');
 // NOT fabricated here: they are returned as honest constants (see inline
 // comments at each such field) rather than invented values.
 
-const DEFAULT_COMMISSION_RATE = 10; // mirrors adminFinanceController.DEFAULT_COMMISSION_RATE
 
 const BUSINESS_TYPE_LABELS = {
   proprietorship: 'Proprietorship',
@@ -212,10 +214,11 @@ async function getDropshipOverview(req, res) {
       },
       { $sort: { createdAt: -1 } },
     ]),
-    Vendor.find({ vendorType: 'B2B' }).select('commissionRatePercent').lean(),
+    Vendor.find({ vendorType: 'B2B' }).select('_id').lean(),
   ]);
 
-  const rateByVendor = new Map(vendorRateRows.map((v) => [v._id.toString(), v.commissionRatePercent ?? DEFAULT_COMMISSION_RATE]));
+  const rates = await sellerRatesFor(vendorRateRows.map((v) => v._id));
+  const rateByVendor = new Map([...rates].map(([id, rate]) => [id, rate.ratePercent ?? 0]));
 
   const vendorNameRows = await Vendor.find({ _id: { $in: todayLineRows.map((r) => r._id.vendor) } })
     .select('name business.businessName')
@@ -228,7 +231,7 @@ async function getDropshipOverview(req, res) {
   const recentOrders = todayLineRows.slice(0, 8).map((row) => {
     const vendorId = row._id.vendor.toString();
     const orderId = row._id.order.toString();
-    const rate = rateByVendor.get(vendorId) ?? DEFAULT_COMMISSION_RATE;
+    const rate = rateByVendor.get(vendorId) ?? 0;
     const commission = Math.round(row.amount * (rate / 100));
     grossSalesToday += row.amount;
     platformMarginToday += commission;
@@ -277,9 +280,10 @@ async function getForwardedOrders(req, res) {
 
   const vendorIds = await b2bVendorIds();
   const vendorRows = await Vendor.find({ _id: { $in: vendorIds } })
-    .select('name business.businessName commissionRatePercent')
+    .select('name business.businessName')
     .lean();
   const vendorById = new Map(vendorRows.map((v) => [v._id.toString(), v]));
+  const rates = await sellerRatesFor(vendorRows.map((v) => v._id));
 
   const orders = await Order.find({ 'items.vendor': { $in: vendorIds } })
     .populate('user', 'name')
@@ -293,7 +297,7 @@ async function getForwardedOrders(req, res) {
       .filter((item) => item.vendor && vendorById.has(item.vendor.toString()))
       .forEach((item) => {
         const vendor = vendorById.get(item.vendor.toString());
-        const rate = vendor.commissionRatePercent ?? DEFAULT_COMMISSION_RATE;
+        const rate = rates.get(vendor._id.toString()).ratePercent ?? 0;
         const orderValue = item.price * item.quantity;
         const commissionAmount = Math.round(orderValue * (rate / 100));
 
@@ -349,8 +353,10 @@ async function getForwardedOrders(req, res) {
 // ---------------------------------------------------------------------------
 async function getDropshipMarginRules(req, res) {
   const vendors = await Vendor.find({ vendorType: 'B2B', isActive: true })
-    .select('name business.businessName commissionRatePercent updatedAt isActive')
+    .select('name business.businessName updatedAt isActive')
     .lean();
+  const config = await AccountingConfig.resolve();
+  const rates = await sellerRatesFor(vendors.map((v) => v._id), { config });
 
   const items = [
     {
@@ -359,7 +365,7 @@ async function getDropshipMarginRules(req, res) {
       scope: 'default',
       targetName: 'All dropshipping partners',
       commissionType: 'percentage',
-      value: DEFAULT_COMMISSION_RATE,
+      value: config.defaultCommissionPercent,
       manualOverrideAllowed: true,
       status: 'active',
     },
@@ -368,8 +374,8 @@ async function getDropshipMarginRules(req, res) {
       ruleName: `${vendorLabel(v)} commission`,
       scope: 'vendor',
       targetName: vendorLabel(v),
-      commissionType: 'percentage',
-      value: v.commissionRatePercent ?? DEFAULT_COMMISSION_RATE,
+      commissionType: rates.get(v._id.toString()).type === 'FIXED' ? 'fixed' : 'percentage',
+      value: rates.get(v._id.toString()).value,
       manualOverrideAllowed: true,
       status: v.isActive ? 'active' : 'inactive',
     })),

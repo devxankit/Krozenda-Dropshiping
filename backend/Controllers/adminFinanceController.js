@@ -8,10 +8,15 @@ const WalletTransaction = require('../Models/WalletTransaction');
 const User = require('../Models/User');
 const Product = require('../Models/Product');
 const { createNotification } = require('./notificationController');
+const { notifyVendorSettlementPaid } = require('../services/vendorAlertService');
 const { toPaise } = require('../utils/money');
 const settlementService = require('../services/settlementService');
 const refundService = require('../services/refundService');
 const posting = require('../services/accountingPosting');
+const AccountingConfig = require('../Models/AccountingConfig');
+const { sellerRatesFor } = require('../services/commissionResolver');
+const { setSellerRate } = require('../services/sellerCommissionRate');
+const { recordAudit } = require('../services/accountingAudit');
 
 // A line becomes payable once it's been DELIVERED for this many days — no
 // real "return window elapsed" signal exists beyond time, so this mirrors
@@ -19,7 +24,6 @@ const posting = require('../services/accountingPosting');
 // Now only a display default: the authoritative window is
 // AccountingConfig.settlementHoldDays, which the settlement service reads.
 const HOLD_DAYS = 7;
-const DEFAULT_COMMISSION_RATE = 10;
 
 // The Accounting module added statuses to Settlement (see Models/Settlement.js).
 // ELIGIBLE is its equivalent of AWAITING_APPROVAL and COMPLETED of SETTLED, so
@@ -470,7 +474,13 @@ async function approveSettlement(req, res) {
     type: 'SYSTEM',
     title: 'Settlement Paid',
     message: `₹${(s.netAmount).toLocaleString('en-IN')} has been settled to your account (UTR ${utr}).`,
-    actionType: 'NONE',
+    actionType: 'WALLET',
+  });
+  await notifyVendorSettlementPaid({
+    vendorId: s.vendor._id,
+    amount: s.netAmount,
+    reference: `UTR ${utr}`,
+    key: `SETTLEMENT:${s._id}`,
   });
 
   res.json({ success: true, message: 'Batch released', data: serializeSettlement(s) });
@@ -515,9 +525,9 @@ async function retrySettlement(req, res) {
 async function listVendorLedgers(req, res) {
   const { tab, search, page, rowsPerPage } = req.query;
 
-  const vendors = await Vendor.find({ isActive: true }).select('name business.businessName vendorType commissionRatePercent').lean();
+  const vendors = await Vendor.find({ isActive: true }).select('name business.businessName vendorType').lean();
 
-  const [earningsByVendor, settledByVendor] = await Promise.all([
+  const [earningsByVendor, settledByVendor, rates] = await Promise.all([
     Order.aggregate([
       { $unwind: '$items' },
       { $match: { 'items.status': 'DELIVERED', 'items.vendor': { $ne: null } } },
@@ -527,6 +537,7 @@ async function listVendorLedgers(req, res) {
       { $match: { status: 'SETTLED' } },
       { $group: { _id: '$vendor', net: { $sum: '$netAmount' }, lastSettledAt: { $max: '$approvedAt' } } },
     ]),
+    sellerRatesFor(vendors.map((v) => v._id)),
   ]);
 
   const earningsMap = new Map(earningsByVendor.map((r) => [r._id.toString(), r.gross]));
@@ -534,7 +545,9 @@ async function listVendorLedgers(req, res) {
 
   const allSerialized = vendors.map((v) => {
     const vid = v._id.toString();
-    const rate = v.commissionRatePercent ?? DEFAULT_COMMISSION_RATE;
+    // An estimate at the seller's headline rate; the Accounting ledger has
+    // the exact per-line figures.
+    const rate = rates.get(vid).ratePercent ?? 0;
     const gross = earningsMap.get(vid) || 0;
     const credited = Math.round(gross * (1 - rate / 100));
     const settled = settledMap.get(vid);
@@ -577,7 +590,7 @@ async function getVendorStatement(req, res) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
   }
 
-  const rate = vendor.commissionRatePercent ?? DEFAULT_COMMISSION_RATE;
+  const rate = (await sellerRatesFor([vendor._id])).get(String(vendor._id)).ratePercent ?? 0;
   const [orders, settlements] = await Promise.all([
     Order.find({ 'items.vendor': vendor._id, 'items.status': 'DELIVERED' }).sort({ deliveredAt: 1 }),
     Settlement.find({ vendor: vendor._id, status: 'SETTLED' }).sort({ approvedAt: 1 }),
@@ -618,16 +631,26 @@ async function getVendorStatement(req, res) {
 }
 
 // ---------------------------------------------------------------------------
-// Commission rules — read-only view over Vendor.commissionRatePercent, plus
-// one synthetic "default" row for the platform baseline. No arbitrary
-// product/category rule engine exists (see accounting-scope trade-off).
+// Commission rules — the older Finance screen's view of each seller's headline
+// rate, plus one "default" row for the platform baseline.
+//
+// Both read and write go through CommissionRule, the only place a rate lives:
+// a seller row is that seller's SELLER rule (else the default), and setting
+// it writes the SELLER rule. Vendor.commissionRatePercent is no longer read
+// or written — it used to be, which is how this screen and the ledger came to
+// charge different rates. Category and product rules are managed on
+// Accounting > Commissions.
 // ---------------------------------------------------------------------------
 
 async function listCommissionRules(req, res) {
-  const vendors = await Vendor.find({ isActive: true }).select('name business.businessName commissionRatePercent updatedAt').lean();
+  const vendors = await Vendor.find({ isActive: true }).select('name business.businessName updatedAt').lean();
 
-  const productCounts = await Product.aggregate([{ $match: { vendor: { $ne: null } } }, { $group: { _id: '$vendor', count: { $sum: 1 } } }]);
+  const [productCounts, config] = await Promise.all([
+    Product.aggregate([{ $match: { vendor: { $ne: null } } }, { $group: { _id: '$vendor', count: { $sum: 1 } } }]),
+    AccountingConfig.resolve(),
+  ]);
   const countMap = new Map(productCounts.map((r) => [r._id.toString(), r.count]));
+  const rates = await sellerRatesFor(vendors.map((v) => v._id), { config });
 
   const items = [
     {
@@ -635,19 +658,25 @@ async function listCommissionRules(req, res) {
       scope: 'default',
       target: 'All sellers',
       type: 'percentage',
-      value: DEFAULT_COMMISSION_RATE,
+      value: config.defaultCommissionPercent,
       appliesTo: vendors.length,
-      updatedAt: new Date(0).toISOString(),
+      updatedAt: config.updatedAt || new Date(0).toISOString(),
     },
-    ...vendors.map((v) => ({
-      id: v._id.toString(),
-      scope: 'vendor',
-      target: vendorLabel(v),
-      type: 'percentage',
-      value: v.commissionRatePercent ?? DEFAULT_COMMISSION_RATE,
-      appliesTo: countMap.get(v._id.toString()) || 0,
-      updatedAt: v.updatedAt,
-    })),
+    ...vendors.map((v) => {
+      const rate = rates.get(v._id.toString());
+      return {
+        id: v._id.toString(),
+        scope: 'vendor',
+        target: vendorLabel(v),
+        type: rate.type === 'FIXED' ? 'fixed' : 'percentage',
+        value: rate.value,
+        // Where the figure comes from: the seller's own rule, a global rule,
+        // or the platform default.
+        source: rate.source,
+        appliesTo: countMap.get(v._id.toString()) || 0,
+        updatedAt: v.updatedAt,
+      };
+    }),
   ];
 
   res.json({ success: true, data: { items } });
@@ -655,21 +684,65 @@ async function listCommissionRules(req, res) {
 
 async function updateVendorCommissionRate(req, res) {
   const { id } = req.params;
-  const { value } = req.body;
-  const rate = Number(value);
+  const rate = Number(req.body.value);
   if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
     return res.status(400).json({ success: false, message: 'Enter a commission rate between 0 and 100' });
   }
 
-  const vendor = await Vendor.findByIdAndUpdate(id, { $set: { commissionRatePercent: rate } }, { new: true });
+  // The "default" row is the platform default on AccountingConfig.
+  if (id === 'default') {
+    const config = await AccountingConfig.resolve();
+    if (rate > config.maxCommissionPercent) {
+      return res.status(400).json({
+        success: false,
+        message: `Commission cannot exceed the platform limit of ${config.maxCommissionPercent}%`,
+      });
+    }
+    const updated = await AccountingConfig.findOneAndUpdate(
+      { key: 'GLOBAL' },
+      { $set: { defaultCommissionPercent: rate, updatedBy: req.admin?._id || null } },
+      { new: true }
+    ).lean();
+    await recordAudit({
+      action: 'ACCOUNTING_CONFIG_UPDATED',
+      req,
+      entityType: 'AccountingConfig',
+      entityId: 'GLOBAL',
+      before: { defaultCommissionPercent: config.defaultCommissionPercent },
+      after: { defaultCommissionPercent: rate },
+      reason: String(req.body.reason || '').trim(),
+    });
+    return res.json({
+      success: true,
+      message: `Platform default commission set to ${rate}%`,
+      data: { id: 'default', scope: 'default', target: 'All sellers', type: 'percentage', value: rate, appliesTo: 0, updatedAt: updated.updatedAt },
+    });
+  }
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid vendor id' });
+  }
+  const vendor = await Vendor.findById(id).select('name business.businessName updatedAt').lean();
   if (!vendor) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
   }
 
+  const result = await setSellerRate({ vendor, ratePercent: rate, req, reason: String(req.body.reason || '').trim() });
+  if (!result.ok) return res.status(result.status).json({ success: false, message: result.message });
+
   res.json({
     success: true,
-    message: `${vendorLabel(vendor)} commission set to ${rate}%`,
-    data: { id: vendor._id.toString(), scope: 'vendor', target: vendorLabel(vendor), type: 'percentage', value: rate, appliesTo: 0, updatedAt: vendor.updatedAt },
+    message: `${vendorLabel(vendor)} commission set to ${rate}% — orders already charged keep the rate they were charged`,
+    data: {
+      id: vendor._id.toString(),
+      scope: 'vendor',
+      target: vendorLabel(vendor),
+      type: 'percentage',
+      value: rate,
+      source: 'SELLER',
+      appliesTo: 0,
+      updatedAt: result.rule.updatedAt,
+    },
   });
 }
 

@@ -5,6 +5,8 @@ import { InlineAlert, PermissionGate } from '../../components/feedback'
 import { Drawer } from '../../components/overlay/Drawer'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { SectionCard } from '../../components/display'
+import { SummaryCard } from '../../components/accounting/AccountingShell'
+import { getErrorMessage } from '../../../../lib/toast'
 import { COMMISSION_SCOPE_LABELS, ADMIN_PERMISSIONS } from '../../constants'
 import * as columns from '../../tableColumns/accountingColumns'
 import { withRowActions } from '../../tableColumns/rowActions'
@@ -12,7 +14,9 @@ import {
   useAccountingConfigController,
   useAccountingConfigWriteController,
   useCommissionOptionsController,
+  useCommissionPreviewController,
   useCommissionRuleListController,
+  useCommissionSummaryController,
   useCommissionRuleWriteController,
 } from '../../controllers/useAccountingController'
 
@@ -105,7 +109,7 @@ const MANAGE = ADMIN_PERMISSIONS.ACCOUNTING_COMMISSION_MANAGE
 const SCOPE_OPTIONS = Object.entries(COMMISSION_SCOPE_LABELS).map(([value, label]) => ({ value, label }))
 const TYPE_OPTIONS = [
   { value: 'PERCENTAGE', label: 'Percentage of the sale' },
-  { value: 'FIXED', label: 'Fixed amount per line' },
+  { value: 'FIXED', label: 'Fixed amount per unit sold' },
 ]
 
 const blankRule = () => ({
@@ -273,7 +277,7 @@ function RuleFormDrawer({ isOpen, onClose, rule, policy }) {
 
         <Input
           id="rule-value"
-          label={form.type === 'PERCENTAGE' ? 'Rate (%)' : 'Amount (₹ per line)'}
+          label={form.type === 'PERCENTAGE' ? 'Rate (%)' : 'Amount (₹ per unit)'}
           required
           inputMode="decimal"
           value={form.value}
@@ -282,7 +286,7 @@ function RuleFormDrawer({ isOpen, onClose, rule, policy }) {
           description={
             form.type === 'PERCENTAGE' && policy
               ? `Charged on: ${policy.commissionBase.toLowerCase().replace(/_/g, ' ')}`
-              : 'A fixed fee can never exceed the line it is charged on.'
+              : 'Charged once per unit sold, and never more than the line it is charged on.'
           }
         />
 
@@ -313,12 +317,200 @@ function RuleFormDrawer({ isOpen, onClose, rule, policy }) {
   )
 }
 
+// Where the commission the marketplace has charged stands now. Every figure is
+// the backend's aggregation over the ledger — there is no separate commission
+// status to drift out of step with it.
+function CommissionSummaryCard() {
+  const summary = useCommissionSummaryController()
+  const data = summary.data
+  if (!data) return null
+  return (
+    <SummaryCard
+      title="Commission"
+      description="Net of everything handed back on refunds and cancellations"
+      columns={4}
+      rows={[
+        { label: 'Net commission', value: data.netCommission },
+        { label: 'This month', value: data.thisMonth },
+        { label: 'Last month', value: data.lastMonth, tone: 'muted' },
+        { label: 'Total charged', value: data.totalCharged, tone: 'muted' },
+        { label: 'Earned (delivered)', value: data.earned, tone: 'positive' },
+        { label: 'Pending (not delivered)', value: data.pending },
+        { label: 'Reversed (refunds)', value: data.reversed, tone: 'negative' },
+        { label: 'Cancelled', value: data.cancelled, tone: 'negative' },
+      ]}
+    />
+  )
+}
+
+const FUNDED_BY_OPTIONS = [
+  { value: 'SELLER', label: 'The seller (their own coupon)' },
+  { value: 'PLATFORM', label: 'The platform (a platform promotion)' },
+]
+
+const SCOPE_NAME = { ...COMMISSION_SCOPE_LABELS, DEFAULT: 'Platform default' }
+
+const describeTerms = (type, value) => (type === 'FIXED' ? `₹${value} per unit` : `${value}%`)
+
+// "What would this be charged?" — the same resolver and commission base the
+// ledger posts with, on a product the admin picks. Nothing is saved.
+function PreviewDrawer({ isOpen, onClose }) {
+  const [productSearch, setProductSearch] = useState('')
+  const [form, setForm] = useState({
+    productId: '',
+    sellingPrice: '',
+    discount: '',
+    discountFundedBy: 'SELLER',
+    quantity: '1',
+  })
+  const options = useCommissionOptionsController(productSearch)
+  const preview = useCommissionPreviewController()
+  const result = preview.result
+
+  const set = (key) => (event) => setForm({ ...form, [key]: event.target.value })
+
+  function submit() {
+    if (!form.productId) return
+    preview.run({
+      productId: form.productId,
+      // Blank means "the product's own price".
+      sellingPrice: form.sellingPrice === '' ? undefined : Number(form.sellingPrice),
+      discount: form.discount === '' ? 0 : Number(form.discount),
+      discountFundedBy: form.discountFundedBy,
+      quantity: Number(form.quantity) || 1,
+    })
+  }
+
+  return (
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Preview commission"
+      description="What an order for this product placed right now would be charged. Nothing is saved."
+      width="md"
+      footer={
+        <>
+          <Button variant="secondary" size="control" onClick={onClose}>
+            Close
+          </Button>
+          <Button size="control" onClick={submit} disabled={!form.productId} isLoading={preview.isSubmitting}>
+            Calculate
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3.5 p-5">
+        <Input
+          id="preview-product-search"
+          label="Find a product"
+          placeholder="Type at least part of the name"
+          value={productSearch}
+          onChange={(event) => setProductSearch(event.target.value)}
+          icon="search"
+        />
+        <Select
+          id="preview-product"
+          label="Product"
+          required
+          value={form.productId}
+          onChange={set('productId')}
+          placeholder={productSearch ? 'Select a product' : 'Search for a product first'}
+          options={options.data?.products || []}
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Input
+            id="preview-price"
+            label="Price (₹/unit)"
+            inputMode="decimal"
+            placeholder="Product price"
+            value={form.sellingPrice}
+            onChange={set('sellingPrice')}
+          />
+          <Input
+            id="preview-discount"
+            label="Discount (₹/unit)"
+            inputMode="decimal"
+            placeholder="0"
+            value={form.discount}
+            onChange={set('discount')}
+          />
+          <Input
+            id="preview-quantity"
+            label="Quantity"
+            type="number"
+            min={1}
+            value={form.quantity}
+            onChange={set('quantity')}
+          />
+        </div>
+        <Select
+          id="preview-funded-by"
+          label="Discount funded by"
+          value={form.discountFundedBy}
+          onChange={set('discountFundedBy')}
+          options={FUNDED_BY_OPTIONS}
+        />
+
+        {preview.error && (
+          <InlineAlert tone="danger" title="Could not calculate">
+            {getErrorMessage(preview.error)}
+          </InlineAlert>
+        )}
+
+        {result && (
+          <>
+            <SummaryCard
+              title={result.productName || 'Result'}
+              description={`${SCOPE_NAME[result.source]} — ${result.ruleName}`}
+              rows={[
+                { label: 'Gross', value: result.grossAmount },
+                { label: 'Discount', value: result.discount, tone: 'muted' },
+                {
+                  label: `Commission base (${result.commissionBasis.toLowerCase().replace(/_/g, ' ')})`,
+                  value: result.commissionBase,
+                },
+                {
+                  label: `Commission (${describeTerms(result.commissionType, result.commissionValue)})`,
+                  value: result.commissionAmount,
+                  tone: 'negative',
+                },
+                { label: 'Seller payable', value: result.sellerPayable, tone: 'positive' },
+              ]}
+              footer="Seller payable is before gateway fees, shipping and any later refund."
+            />
+
+            <SectionCard title="How the rate was chosen" description="Every step, including the ones that did not apply">
+              <ol className="flex flex-col divide-y divide-border-subtle px-4 py-1 text-xs">
+                {result.chain.map((step) => (
+                  <li key={step.scope} className="flex items-baseline justify-between gap-4 py-2.5">
+                    <span className={step.applies ? 'font-semibold text-brand-700' : 'text-ink-subtle'}>
+                      {SCOPE_NAME[step.scope]}
+                      {step.applies && ' — applied'}
+                      {step.ruleName && step.scope !== 'DEFAULT' && (
+                        <span className="block text-2xs font-normal text-ink-faint">{step.ruleName}</span>
+                      )}
+                    </span>
+                    <span className={`tabular ${step.applies ? 'font-bold text-brand-700' : 'text-ink-subtle'}`}>
+                      {step.value === null ? 'Not set' : describeTerms(step.type, step.value)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </SectionCard>
+          </>
+        )}
+      </div>
+    </Drawer>
+  )
+}
+
 export function CommissionsPage() {
   const list = useCommissionRuleListController()
   const writer = useCommissionRuleWriteController()
   const [editing, setEditing] = useState(null)
   const [creating, setCreating] = useState(false)
   const [retiring, setRetiring] = useState(null)
+  const [previewing, setPreviewing] = useState(false)
 
   // The platform's fallback rate and ceiling ride along on the list response
   // rather than costing a second request.
@@ -358,21 +550,27 @@ export function CommissionsPage() {
         title="Commissions"
         description="What the marketplace charges, and on what. The most specific matching rule wins."
         actions={
-          <PermissionGate permission={MANAGE}>
-            <Button size="control" icon="add" onClick={() => setCreating(true)}>
-              New rule
+          <>
+            <Button variant="secondary" size="control" icon="search" onClick={() => setPreviewing(true)}>
+              Preview
             </Button>
-          </PermissionGate>
+            <PermissionGate permission={MANAGE}>
+              <Button size="control" icon="add" onClick={() => setCreating(true)}>
+                New rule
+              </Button>
+            </PermissionGate>
+          </>
         }
         banner={
           <>
+            <CommissionSummaryCard />
             <SellerSettlementAutomationCard />
             {rulePolicy && (
               <InlineAlert tone="info" title="How a rate is chosen">
-                Product → Seller → Category → Global, then the seller&rsquo;s own rate, then the
-                platform default of {rulePolicy.defaultCommissionPercent}%. Nothing may exceed{' '}
-                {rulePolicy.maxCommissionPercent}%. Editing a rule never changes what past orders were
-                charged.
+                Product → Seller → Category → Global, then the platform default of{' '}
+                {rulePolicy.defaultCommissionPercent}%. Nothing may exceed {rulePolicy.maxCommissionPercent}%.
+                The terms are frozen onto each order line at checkout, so editing a rule never changes
+                what an order already placed is charged.
               </InlineAlert>
             )}
           </>
@@ -387,10 +585,12 @@ export function CommissionsPage() {
         emptyTitle="No commission rules"
         emptyDescription={
           rulePolicy
-            ? `Without a rule, every seller is charged their own rate or the platform default of ${rulePolicy.defaultCommissionPercent}%.`
+            ? `Without a rule, every seller is charged the platform default of ${rulePolicy.defaultCommissionPercent}%.`
             : 'Add a rule to override the platform default.'
         }
       />
+
+      {previewing && <PreviewDrawer isOpen onClose={() => setPreviewing(false)} />}
 
       {creating && (
         <RuleFormDrawer isOpen onClose={() => setCreating(false)} rule={null} policy={rulePolicy} />

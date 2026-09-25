@@ -21,7 +21,7 @@ export function KpiStrip({ kpis = [] }) {
 
 // The four analytics screens share a header, a tab strip, a range picker, an
 // export and all four states — so each page is only its own charts.
-export function AnalyticsShell({ title, description, controller, onExport, children }) {
+export function AnalyticsShell({ title, description, controller, onExport, showTabs = true, toolbar = null, children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { range, setRange, data, isLoading, isFetching, error, refetch, updatedAt, isLive } =
@@ -57,7 +57,7 @@ export function AnalyticsShell({ title, description, controller, onExport, child
         }
       />
 
-      <Tabs items={TABS} activeId={pathname} onChange={(id) => navigate(id)} />
+      {showTabs && <Tabs items={TABS} activeId={pathname} onChange={(id) => navigate(id)} />}
 
       {/* A screen still reading fixtures says so, so nobody mistakes a
           placeholder for a measurement. */}
@@ -69,6 +69,9 @@ export function AnalyticsShell({ title, description, controller, onExport, child
 
       {isLoading && <PageSkeleton rows={2} />}
       {error && <ErrorState error={error} onRetry={refetch} />}
+      {/* A page's own filter (e.g. Revenue's channel switcher) sits above the
+          figures it changes. */}
+      {data && toolbar}
       {data && (
         <>
           <KpiGrid kpis={data.kpis} columns={4} />

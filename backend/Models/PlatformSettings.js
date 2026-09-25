@@ -8,6 +8,16 @@ const platformSettingsSchema = new mongoose.Schema(
     name: { type: String, default: 'Krozenda', trim: true },
     legalEntity: { type: String, default: 'Krozenda Commerce Private Limited', trim: true },
     gstin: { type: String, default: '27AAECK4821M1Z9', uppercase: true, trim: true },
+    // Where the platform is registered for GST. Printed as the supplier's
+    // address on every invoice for own-stock and CJ Dropshipping items, and its
+    // state is what decides CGST + SGST vs IGST on those invoices. The default
+    // is the address the invoice used to have hardcoded.
+    registeredAddress: {
+      addressLine: { type: String, default: 'Bandra Kurla Complex', trim: true },
+      city: { type: String, default: 'Mumbai', trim: true },
+      state: { type: String, default: 'Maharashtra', trim: true },
+      pincode: { type: String, default: '400051', trim: true },
+    },
     supportEmail: { type: String, default: 'support@krozenda.com', lowercase: true, trim: true },
     supportPhone: { type: String, default: '+91 98765 43210', trim: true },
     footerTagline: {

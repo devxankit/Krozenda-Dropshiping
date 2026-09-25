@@ -130,3 +130,64 @@ export const TOP_CITY_COLUMNS = Object.freeze([
     render: (city) => <MoneyCell amount={city.revenue} compact />,
   },
 ])
+
+// Revenue screen — one row per seller, money in paise.
+const VENDOR_TYPE_LABELS = Object.freeze({ B2C: 'Marketplace seller', B2B: 'Dropshipping partner' })
+
+export const SELLER_REVENUE_COLUMNS = Object.freeze([
+  {
+    key: 'name',
+    header: 'Seller',
+    render: (seller) => (
+      <PrimaryCell title={seller.name} subtitle={VENDOR_TYPE_LABELS[seller.vendorType] || seller.vendorType} />
+    ),
+  },
+  { key: 'orders', header: 'Orders', width: '5.5rem', align: 'right', cellClassName: 'tabular' },
+  {
+    key: 'netSales',
+    header: 'Net sales',
+    width: '8rem',
+    align: 'right',
+    render: (seller) => <MoneyCell amount={seller.netSales} compact />,
+  },
+  {
+    key: 'refunds',
+    header: 'Refunds',
+    width: '7rem',
+    align: 'right',
+    render: (seller) => <MoneyCell amount={seller.refunds} compact muted />,
+  },
+  {
+    key: 'commission',
+    header: 'Commission',
+    width: '8rem',
+    align: 'right',
+    render: (seller) => <MoneyCell amount={seller.commission} compact />,
+  },
+  {
+    key: 'sellerEarnings',
+    header: 'Seller earned',
+    width: '8rem',
+    align: 'right',
+    render: (seller) => <MoneyCell amount={seller.sellerEarnings} compact />,
+  },
+])
+
+export const PRODUCT_REVENUE_COLUMNS = Object.freeze([
+  { key: 'name', header: 'Product', render: (product) => <PrimaryCell title={product.name} /> },
+  { key: 'units', header: 'Units', width: '5rem', align: 'right', cellClassName: 'tabular' },
+  {
+    key: 'netSales',
+    header: 'Net sales',
+    width: '8rem',
+    align: 'right',
+    render: (product) => <MoneyCell amount={product.netSales} compact />,
+  },
+  {
+    key: 'sellerEarnings',
+    header: 'Earned',
+    width: '8rem',
+    align: 'right',
+    render: (product) => <MoneyCell amount={product.sellerEarnings} compact />,
+  },
+])

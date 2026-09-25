@@ -5,6 +5,7 @@ const Vendor = require('../Models/Vendor');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { notifyUser, notifyVendor } = require('../utils/realtime');
 const { sendToTokens } = require('../utils/pushHelper');
+const { linkForNotification } = require('../utils/notificationLinks');
 
 function serializeNotification(n) {
   return {
@@ -36,7 +37,12 @@ function serializeNotification(n) {
 //
 // 2 and 3 are fire-and-forget by design: a dead push token must never fail
 // the order that triggered it.
-async function createNotification({ userId, vendorId, type = 'SYSTEM', title, message, actionType = 'NONE', actionRefId = null }) {
+//
+// `link` overrides where tapping the push lands (default: derived from
+// actionType/actionRefId). Resolves to the push result ({ successCount, ... })
+// or null — callers that count deliveries (admin campaigns) read it, everyone
+// else ignores it.
+async function createNotification({ userId, vendorId, type = 'SYSTEM', title, message, actionType = 'NONE', actionRefId = null, link = null }) {
   let saved;
   try {
     saved = await Notification.create({
@@ -50,7 +56,7 @@ async function createNotification({ userId, vendorId, type = 'SYSTEM', title, me
     });
   } catch (err) {
     console.error('[createNotification] failed:', err.message);
-    return;
+    return null;
   }
 
   const payload = serializeNotification(saved);
@@ -66,31 +72,34 @@ async function createNotification({ userId, vendorId, type = 'SYSTEM', title, me
   // an unhandledRejection and take the process down under the handler in
   // index.js. The whole call is wrapped, so it still cannot fail the caller.
   try {
-    await pushFor({ userId, vendorId, type, title, message, actionType, actionRefId });
+    return await pushFor({ userId, vendorId, type, title, message, actionType, actionRefId, link });
   } catch (err) {
     console.error('[createNotification] push failed:', err.message);
+    return null;
   }
 }
 
 // Which prefs gate which notification type. A seller who turned promotions off
 // still gets told about an order — order updates are operational, not
-// marketing, and conflating them is how sellers miss orders.
+// marketing, and conflating them is how sellers miss orders. OFFER is the
+// stored type for marketing (Notification.TYPES has no PROMOTION).
 function allowsPush(prefs, type) {
   if (!prefs) return true;
-  if (type === 'PROMOTION') return prefs.promotions !== false;
+  if (type === 'OFFER' || type === 'PROMOTION') return prefs.promotions !== false;
   if (type === 'ORDER') return prefs.orderUpdates !== false;
   return true;
 }
 
-async function pushFor({ userId, vendorId, type, title, message, actionType, actionRefId }) {
+async function pushFor({ userId, vendorId, type, title, message, actionType, actionRefId, link }) {
   const Model = vendorId ? Vendor : Customer;
   const id = vendorId || userId;
-  if (!id) return;
+  if (!id) return null;
 
   const recipient = await Model.findById(id).select('fcmTokens notificationPrefs').lean();
-  if (!recipient?.fcmTokens?.length) return;
-  if (!allowsPush(recipient.notificationPrefs, type)) return;
+  if (!recipient?.fcmTokens?.length) return null;
+  if (!allowsPush(recipient.notificationPrefs, type)) return null;
 
+  const audience = vendorId ? 'vendor' : 'user';
   const tokens = recipient.fcmTokens.map((entry) => entry.token).filter(Boolean);
   const result = await sendToTokens(tokens, {
     title,
@@ -99,8 +108,9 @@ async function pushFor({ userId, vendorId, type, title, message, actionType, act
       type,
       actionType,
       actionRefId: actionRefId ? String(actionRefId) : '',
-      audience: vendorId ? 'vendor' : 'user',
+      audience,
     },
+    link: link || linkForNotification({ audience, type, actionType, actionRefId }),
   });
 
   // Uninstalled apps and revoked permissions leave tokens behind that will
@@ -109,6 +119,7 @@ async function pushFor({ userId, vendorId, type, title, message, actionType, act
   if (result.staleTokens.length > 0) {
     await Model.updateOne({ _id: id }, { $pull: { fcmTokens: { token: { $in: result.staleTokens } } } });
   }
+  return result;
 }
 
 // Was a flat `.limit(100)` with no way to reach anything older, and no unread
@@ -167,4 +178,4 @@ async function removeNotification(req, res) {
   res.json({ success: true, message: 'Notification removed', data: { id } });
 }
 
-module.exports = { createNotification, listNotifications, markAsRead, markAllRead, removeNotification, serializeNotification };
+module.exports = { createNotification, allowsPush, listNotifications, markAsRead, markAllRead, removeNotification, serializeNotification };

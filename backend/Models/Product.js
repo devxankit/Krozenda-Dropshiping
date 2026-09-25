@@ -86,6 +86,13 @@ const productSchema = new mongoose.Schema(
     // by defaulting straight to APPROVED, matching pre-marketplace behavior.
     approvalStatus: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'APPROVED' },
     rejectionReason: { type: String, default: '', trim: true },
+    // Set on a product created by an admin CSV import and cleared only by
+    // approving it (services/productImport). While set, the product is kept
+    // Draft and isActive: false — every buyer-facing query requires isActive,
+    // so a preview can be viewed and edited in the admin panel but never
+    // seen or bought until someone approves it.
+    importPreview: { type: Boolean, default: false, index: true },
+    importBatch: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductImport', default: null },
     price: { type: Number, required: true, min: 0 },
     mrp: { type: Number, default: null, min: 0 },
     costPrice: { type: Number, default: null, min: 0 },

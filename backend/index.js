@@ -13,6 +13,7 @@ const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
 const { scheduleCjSync } = require('./Jobs/cjSyncJob');
 const { scheduleCjTrackingPoller } = require('./Jobs/cjTrackingPoller');
 const { scheduleSettlementRelease } = require('./Jobs/settlementReleaseJob');
+const { scheduleEngagementJobs } = require('./Jobs/engagementJob');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
@@ -47,6 +48,9 @@ async function start() {
   // Releases held Razorpay Route transfers once their settlement's hold
   // window has passed — see Jobs/settlementReleaseJob.
   scheduleSettlementRelease();
+  // Payment/cart/review reminders, wishlist and low-stock alerts, and the
+  // "payment captured but no order" admin alert — see Jobs/engagementJob.
+  scheduleEngagementJobs();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

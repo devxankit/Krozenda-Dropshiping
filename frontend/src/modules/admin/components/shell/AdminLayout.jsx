@@ -5,6 +5,8 @@ import { ADMIN_ROUTES } from '../../../../config/routes'
 import { useAdminUiStore } from '../../stores/uiStore'
 import { useShellController } from '../../controllers/useShellController'
 import { useOwnStockController } from '../../controllers/useOwnStockController'
+import { unregisterAdminPush, useAdminAlertsController } from '../../controllers/useAdminAlertsController'
+import { disconnectRealtime } from '../../../../lib/realtime'
 import { canAccessNavItem, findNavItem, visibleNavGroups } from '../../lib/nav'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopbar } from './AdminTopbar'
@@ -38,6 +40,9 @@ export function AdminLayout() {
   // The switch itself lives on the dashboard (OwnStockCard).
   const ownStock = useOwnStockController()
 
+  // Live team alerts (toast) + this device's push registration.
+  useAdminAlertsController()
+
   // Sidebar hiding is a UX nicety, not security — this is what actually
   // stops a staff account from opening a module by typing its URL directly.
   const currentNavItem = findNavItem(location.pathname)
@@ -54,7 +59,9 @@ export function AdminLayout() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [setCommandPaletteOpen])
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    await unregisterAdminPush()
+    disconnectRealtime()
     clearSession()
     navigate(ADMIN_ROUTES.LOGIN, { replace: true })
   }

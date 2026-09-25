@@ -23,6 +23,7 @@ export const SCREEN_GROUPS = Object.freeze([
       { to: ADMIN_ROUTES.ANALYTICS_VENDORS, name: 'Vendor performance' },
       { to: ADMIN_ROUTES.ANALYTICS_CATALOG, name: 'Catalog performance' },
       { to: ADMIN_ROUTES.ANALYTICS_CUSTOMERS, name: 'Customer insights' },
+      { to: ADMIN_ROUTES.REVENUE, name: 'Revenue' },
     ],
   },
   {
@@ -32,7 +33,6 @@ export const SCREEN_GROUPS = Object.freeze([
       { to: ADMIN_ROUTES.PRODUCT_NEW, name: 'New product' },
       { to: adminPath.productDetail('prd-1'), name: 'Product detail' },
       { to: ADMIN_ROUTES.CATALOG_APPROVALS, name: 'Approval queue' },
-      { to: ADMIN_ROUTES.CATALOG_IMPORT, name: 'Bulk import' },
       { to: ADMIN_ROUTES.CATEGORIES, name: 'Categories & brands' },
       { to: ADMIN_ROUTES.ATTRIBUTES, name: 'Attributes' },
       { to: ADMIN_ROUTES.INVENTORY, name: 'Inventory' },

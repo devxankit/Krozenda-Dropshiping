@@ -7,7 +7,7 @@ const Product = require('../Models/Product');
 const Coupon = require('../Models/Coupon');
 const ReturnRequest = require('../Models/ReturnRequest');
 const { nextIds } = require('./accountingSequence');
-const { loadRules, resolveForLine } = require('./commissionResolver');
+const { loadRules, resolveForLine, chargeFor, SOURCES } = require('./commissionResolver');
 const { toPaise, percentOfPaise, allocateProportional } = require('../utils/money');
 const { lineDiscountsPaise, findLineIndex } = require('../utils/orderLines');
 
@@ -198,6 +198,134 @@ function isMoneyReceived(order) {
 }
 
 /**
+ * Every seller line of an order with the commission it is charged, WITHOUT
+ * writing anything. postOrderSale() posts exactly this, and the seller's
+ * earnings screen shows exactly this for a line that is not on the ledger yet
+ * (a COD order the courier has not remitted) — one function, so the estimate
+ * a seller sees is the amount that will actually be posted.
+ *
+ * A line carrying the terms frozen at checkout (Order item `commission`, see
+ * attachCommissionSnapshots) is charged by those terms and nothing else, so
+ * an admin editing, adding or retiring a rule after the buyer checked out
+ * cannot change what the order is charged — not even for a COD order posted
+ * days later on remittance (task §6, §15 Rule 6). A line without them (an
+ * order from before snapshots existed) is resolved against the rules in
+ * force on the ORDER date, never "now".
+ */
+async function priceOrderCommissions(order, { config: configInput = null, ignoreSnapshots = false } = {}) {
+  const config = configInput || (await AccountingConfig.resolve());
+
+  // Seller-funded vs platform-funded discount (see explodeOrderLines).
+  let couponFundedByVendor = false;
+  if (order.couponCode) {
+    const coupon = await Coupon.findOne({ code: order.couponCode }).select('vendorId').lean();
+    couponFundedByVendor = Boolean(coupon?.vendorId);
+  }
+
+  const lines = explodeOrderLines(order, { couponFundedByVendor });
+  const sellerLines = lines.filter((line) => line.vendor);
+  const frozenTerms = (line) => (ignoreSnapshots ? null : order.items[line.index]?.commission || null);
+
+  // Rules are only loaded if some line has no frozen terms to go on.
+  const unfrozen = sellerLines.filter((line) => !frozenTerms(line));
+  let rules = [];
+  let productCategory = new Map();
+  if (unfrozen.length > 0) {
+    const productIds = [...new Set(unfrozen.map((line) => String(line.product)))];
+    const products = await Product.find({ _id: { $in: productIds } }).select('category').lean();
+    productCategory = new Map(products.map((p) => [String(p._id), p.category ? String(p.category) : null]));
+    rules = await loadRules({
+      vendorIds: [...new Set(unfrozen.map((line) => String(line.vendor)))],
+      categoryIds: [...new Set([...productCategory.values()].filter(Boolean))],
+      productIds,
+      at: new Date(order.createdAt || Date.now()),
+    });
+  }
+
+  return {
+    config,
+    lines,
+    sellerLines: sellerLines.map((line) => {
+      const terms = frozenTerms(line);
+      if (terms) {
+        const basePaise = commissionBaseFor(line, { commissionBase: terms.basis });
+        const isDefault = terms.scope === 'DEFAULT';
+        const ratePercent = terms.type === 'PERCENTAGE' ? terms.value : null;
+        return {
+          ...line,
+          commission: {
+            amountPaise: chargeFor(terms, basePaise, line.quantity),
+            ratePercent,
+            source: isDefault ? SOURCES.PLATFORM_DEFAULT : SOURCES.RULE,
+            rule: null,
+            workings: {
+              ...(isDefault
+                ? { ratePercent }
+                : {
+                    ruleId: terms.ruleId ? String(terms.ruleId) : null,
+                    ruleName: terms.ruleName,
+                    ruleScope: terms.scope,
+                    ruleType: terms.type,
+                    ruleValue: terms.value,
+                  }),
+              quantity: line.quantity,
+              basePaise,
+              commissionBase: terms.basis,
+              frozenAtCheckout: true,
+            },
+          },
+        };
+      }
+
+      const commission = resolveForLine(
+        {
+          basePaise: commissionBaseFor(line, config),
+          vendorId: line.vendor,
+          categoryId: productCategory.get(String(line.product)),
+          productId: line.product,
+          quantity: line.quantity,
+        },
+        rules,
+        config
+      );
+      commission.workings = { ...commission.workings, commissionBase: config.commissionBase };
+      return { ...line, commission };
+    }),
+  };
+}
+
+/**
+ * Freeze the commission terms onto every seller line of orders that are
+ * about to be written. Call it on the plain order objects right before they
+ * are inserted — every place an order is created does (checkout, admin
+ * create). Mutates and returns them.
+ */
+async function attachCommissionSnapshots(orders) {
+  const config = await AccountingConfig.resolve();
+  const now = new Date();
+
+  for (const order of orders) {
+    const { sellerLines } = await priceOrderCommissions(
+      { ...order, createdAt: order.createdAt || now },
+      { config, ignoreSnapshots: true }
+    );
+    for (const line of sellerLines) {
+      const { commission } = line;
+      order.items[line.index].commission = {
+        ruleId: commission.rule ? commission.rule._id : null,
+        ruleName: commission.rule ? commission.rule.name : 'Platform default',
+        scope: commission.rule ? commission.rule.scope : 'DEFAULT',
+        type: commission.rule ? commission.rule.type : 'PERCENTAGE',
+        value: commission.rule ? commission.rule.value : commission.ratePercent,
+        basis: config.commissionBase,
+        amountPaise: commission.amountPaise,
+      };
+    }
+  }
+  return orders;
+}
+
+/**
  * Post SALE / COMMISSION / gateway fee / shipping for one order.
  *
  * Runs only once the money has actually been received, and is a no-op on
@@ -213,38 +341,7 @@ async function postOrderSale(orderInput, { session, createdBy = null } = {}) {
   if (!order) return { posted: 0, reason: 'order-not-found' };
   if (!isMoneyReceived(order)) return { posted: 0, reason: 'payment-not-received' };
 
-  const config = await AccountingConfig.resolve();
-
-  // Seller-funded vs platform-funded discount (see explodeOrderLines).
-  let couponFundedByVendor = false;
-  if (order.couponCode) {
-    const coupon = await Coupon.findOne({ code: order.couponCode }).select('vendorId').lean();
-    couponFundedByVendor = Boolean(coupon?.vendorId);
-  }
-
-  const lines = explodeOrderLines(order, { couponFundedByVendor });
-  const sellerLines = lines.filter((line) => line.vendor);
-
-  const vendorIds = [...new Set(sellerLines.map((line) => String(line.vendor)))];
-  const productIds = [...new Set(lines.map((line) => String(line.product)))];
-
-  const [vendors, products] = await Promise.all([
-    Vendor.find({ _id: { $in: vendorIds } }).select('commissionRatePercent name business.businessName').lean(),
-    Product.find({ _id: { $in: productIds } }).select('category').lean(),
-  ]);
-  const vendorRate = new Map(vendors.map((v) => [String(v._id), v.commissionRatePercent]));
-  const productCategory = new Map(products.map((p) => [String(p._id), p.category ? String(p.category) : null]));
-
-  // Rules are resolved as of when the ORDER was paid, not as of now, so a
-  // rule written today can never restate what an old order was charged
-  // (task §6, §15 Rule 6).
-  const appliedAt = order.codRemittedAt || order.createdAt || new Date();
-  const rules = await loadRules({
-    vendorIds,
-    categoryIds: [...new Set([...productCategory.values()].filter(Boolean))],
-    productIds,
-    at: new Date(appliedAt),
-  });
+  const { config, sellerLines } = await priceOrderCommissions(order);
 
   const rows = [];
   const orderRef = order._id;
@@ -283,17 +380,7 @@ async function postOrderSale(orderInput, { session, createdBy = null } = {}) {
       })
     );
 
-    const commission = resolveForLine(
-      {
-        basePaise: commissionBaseFor(line, config),
-        vendorId: line.vendor,
-        categoryId: productCategory.get(String(line.product)),
-        productId: line.product,
-        vendorRatePercent: vendorRate.get(String(line.vendor)),
-      },
-      rules,
-      config
-    );
+    const { commission } = line;
 
     if (commission.amountPaise > 0) {
       rows.push(
@@ -850,6 +937,8 @@ module.exports = {
   explodeOrderLines,
   commissionBaseFor,
   isMoneyReceived,
+  priceOrderCommissions,
+  attachCommissionSnapshots,
   postOrderSale,
   recordCodRemittance,
   postReturnRefund,

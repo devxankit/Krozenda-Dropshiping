@@ -121,20 +121,6 @@ export const inventorySchema = z.object({
   tabCounts: z.record(z.string(), z.number()),
 })
 
-export const importRunSchema = z.object({
-  fileName: z.string(),
-  uploadedAt: z.string(),
-  totalRows: z.number().int(),
-  validRows: z.number().int(),
-  errorRows: z.number().int(),
-  mapping: z.array(
-    z.object({ column: z.string(), field: z.string().nullable(), sample: z.string() }),
-  ),
-  errors: z.array(
-    z.object({ row: z.number().int(), column: z.string(), value: z.string(), message: z.string() }),
-  ),
-})
-
 export const supplierSyncSchema = z.object({
   adapters: z.array(
     z.object({

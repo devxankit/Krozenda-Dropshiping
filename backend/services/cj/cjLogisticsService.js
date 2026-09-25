@@ -44,6 +44,13 @@ async function calculateFreight({ startCountryCode, endCountryCode, zip, items }
 }
 
 function mapTrackingStatus(cjStatus) {
+  // CJ is not consistent about the spelling ("OUT_FOR_DELIVERY", "Out for
+  // delivery", "out-for-delivery"), and an unrecognised spelling silently
+  // falls back to PROCESSING — so normalise before looking it up.
+  const key = String(cjStatus || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
   const map = {
     IN_TRANSIT: 'IN_TRANSIT',
     OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
@@ -52,7 +59,7 @@ function mapTrackingStatus(cjStatus) {
     RETURNED: 'RTO',
     PICKED_UP: 'SHIPPED',
   };
-  return map[cjStatus] || 'PROCESSING';
+  return map[key] || 'PROCESSING';
 }
 
 // Pulls CJ's current tracking info for one shipment and writes it. Called by
@@ -70,6 +77,7 @@ async function syncShipment(cjShipment) {
   const data = body?.data;
   if (!data) return cjShipment;
 
+  const statusBefore = cjShipment.status;
   cjShipment.trackingNumber = data.trackingNumber || cjShipment.trackingNumber;
   cjShipment.carrier = data.logisticName || cjShipment.carrier;
   cjShipment.status = mapTrackingStatus(data.trackStatus);
@@ -81,6 +89,16 @@ async function syncShipment(cjShipment) {
   }));
   cjShipment.lastSyncedAt = new Date();
   await cjShipment.save();
+
+  // Out for delivery / failed attempt: tell the buyer, same as a Shiprocket
+  // parcel. Only on the change, so the hourly poll never repeats it. Never
+  // throws.
+  if (cjShipment.status !== statusBefore && ['OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(cjShipment.status)) {
+    const cjOrder = await CjOrder.findById(cjShipment.cjOrder).select('krozendaOrderId').lean();
+    // Lazy: the alert service reaches the notification controller and the
+    // Order model, which this low-level CJ module should not load up front.
+    await require('../buyerAlertService').notifyCjShipmentMilestone(cjShipment, cjOrder);
+  }
 
   return cjShipment;
 }
@@ -104,4 +122,4 @@ async function syncByCjOrderId(cjOrderId) {
   return syncShipment(shipment);
 }
 
-module.exports = { calculateFreight, syncShipment, syncByCjOrderId, getOrCreateShipment };
+module.exports = { calculateFreight, syncShipment, syncByCjOrderId, getOrCreateShipment, mapTrackingStatus };

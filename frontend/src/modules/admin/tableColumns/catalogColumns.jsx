@@ -168,32 +168,6 @@ export const CATEGORY_COLUMNS = Object.freeze([
   },
 ])
 
-export const IMPORT_ERROR_COLUMNS = Object.freeze([
-  { key: 'row', header: 'Row', width: '4.5rem', align: 'right', cellClassName: 'tabular' },
-  { key: 'column', header: 'Column', width: '9rem', cellClassName: 'font-medium text-slate-900' },
-  {
-    key: 'value',
-    header: 'Value',
-    width: '11rem',
-    render: (issue) => (
-      <code className="tabular rounded bg-danger-50 px-1.5 py-0.5 text-2xs text-danger-700">
-        {issue.value === '' ? '(empty)' : issue.value}
-      </code>
-    ),
-  },
-  { key: 'message', header: 'Problem', cellClassName: 'text-xs text-ink-muted' },
-])
-
-export const IMPORT_FIELD_OPTIONS = Object.freeze([
-  { value: 'name', label: 'Product name' },
-  { value: 'sku', label: 'SKU' },
-  { value: 'mrp', label: 'MRP' },
-  { value: 'price', label: 'Selling price' },
-  { value: 'tax.hsn', label: 'HSN code' },
-  { value: 'tax.gstRate', label: 'GST rate' },
-  { value: 'inventory.onHand', label: 'Quantity on hand' },
-])
-
 const SYNC_RUN_TONE = Object.freeze({ success: 'success', partial: 'warning', failed: 'danger' })
 
 export const SYNC_RUN_COLUMNS = Object.freeze([

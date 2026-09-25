@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const Order = require('../Models/Order');
 const Settlement = require('../Models/Settlement');
 const Payout = require('../Models/Payout');
+const AccountingTransaction = require('../Models/AccountingTransaction');
 const AccountingConfig = require('../Models/AccountingConfig');
-const { loadRules, resolveForLine } = require('../services/commissionResolver');
-const { toPaise, fromPaise } = require('../utils/money');
+const { sellerRatesFor } = require('../services/commissionResolver');
+const { priceOrderCommissions } = require('../services/accountingPosting');
+const { toPaise } = require('../utils/money');
 const { readPagination, buildPagination } = require('../utils/pagination');
 
 // What a seller is owed, read off the SAME ledger admin pays from.
@@ -20,9 +22,11 @@ const { readPagination, buildPagination } = require('../utils/pagination');
 //
 //   PAID       — a settlement batch that has actually been paid out.
 //   IN BATCH   — delivered, claimed by a live batch, money not yet sent.
-//   UNSETTLED  — delivered, past nothing yet, not claimed by any batch. This
-//                is the only figure still computed from orders, because by
-//                definition no settlement row exists for it.
+//   UNSETTLED  — delivered, not claimed by any batch. Read off the LEDGER's
+//                frozen SALE / COMMISSION rows, exactly as the settlement
+//                generator will read them. Only a line that is not on the
+//                ledger yet (COD the courier has not remitted) is estimated,
+//                and it is priced by the same function that will post it.
 //
 // Settlement carries both rupee fields (legacy) and integer-paise mirrors
 // (accounting). Batches written before the Accounting module have only the
@@ -38,64 +42,134 @@ const PAID = Settlement.PAID_STATUSES;
 // Everything that owns its lines but has not paid them out yet.
 const IN_FLIGHT = Settlement.CLAIMING_STATUSES.filter((s) => !PAID.includes(s));
 
-// The commission a line would actually be charged, resolved through the same
-// hierarchy the ledger uses: a matching CommissionRule first, then the
-// seller's own negotiated rate, then the platform default. The flat
-// `vendor.commissionRatePercent` this file used before was only the second of
-// those three, so any category or product rule an admin had written was
-// invisible to the seller.
-async function resolveCommission(vendorId, lines) {
-  if (lines.length === 0) return { rules: [], config: null, rate: null };
+// Every delivered line of this seller's that no live batch has claimed yet,
+// with gross / commission / net as the settlement will see them.
+//
+// A line on the ledger is read back off its posted rows — the commission that
+// was frozen when the order was paid, net of anything a refund has handed
+// back — never re-resolved against today's rules. Re-resolving is how an
+// admin editing a rule used to change the commission a seller saw on an order
+// that had already been charged at the old rate.
+//
+// A line NOT on the ledger yet (a COD order whose cash the courier still
+// holds) has no posted commission to read, so it is priced through
+// priceOrderCommissions() — the function postOrderSale() will post it with,
+// resolving rules as of the order date — and flagged `estimated`.
+async function unsettledLines(vendorId, claimed) {
+  const orders = await Order.find({ 'items.vendor': vendorId, 'items.status': 'DELIVERED' })
+    .select('items couponCode discountAmount shippingFee subtotal total deliveredAt createdAt paymentMethod')
+    .sort({ createdAt: -1 })
+    .lean();
+  if (orders.length === 0) return [];
 
-  const config = (await AccountingConfig.findOne().lean()) || { defaultCommissionPercent: 10 };
-  const rules = await loadRules({
-    vendorIds: [vendorId],
-    categoryIds: lines.map((l) => l.categoryId).filter(Boolean),
-    productIds: lines.map((l) => l.productId).filter(Boolean),
-  });
-  return { rules, config };
+  const ledger = await AccountingTransaction.aggregate([
+    {
+      $match: {
+        vendor: vendorId,
+        order: { $in: orders.map((order) => order._id) },
+        type: { $in: ['SALE', 'COMMISSION', 'PAYMENT_GATEWAY_FEE', 'SHIPPING_CHARGE', 'REFUND', 'REFUND_REVERSAL'] },
+      },
+    },
+    {
+      $group: {
+        _id: { order: '$order', product: '$product' },
+        salePaise: { $sum: { $cond: [{ $eq: ['$type', 'SALE'] }, '$credit', 0] } },
+        commissionPaise: { $sum: { $cond: [{ $eq: ['$type', 'COMMISSION'] }, '$debit', 0] } },
+        feesPaise: { $sum: { $cond: [{ $eq: ['$type', 'PAYMENT_GATEWAY_FEE'] }, '$debit', 0] } },
+        shippingPaise: { $sum: { $cond: [{ $eq: ['$type', 'SHIPPING_CHARGE'] }, '$credit', 0] } },
+        refundPaise: { $sum: { $cond: [{ $eq: ['$type', 'REFUND'] }, '$debit', 0] } },
+        commissionBackPaise: { $sum: { $cond: [{ $eq: ['$type', 'REFUND_REVERSAL'] }, '$credit', 0] } },
+      },
+    },
+  ]);
+  const posted = new Map(ledger.map((entry) => [`${entry._id.order}:${entry._id.product}`, entry]));
+
+  const config = await AccountingConfig.resolve();
+  const rows = [];
+
+  for (const order of orders) {
+    let estimate = null;
+
+    for (const item of order.items) {
+      if (String(item.vendor) !== String(vendorId) || item.status !== 'DELIVERED') continue;
+      const key = `${order._id}:${item.product}`;
+      if (claimed.has(key)) continue;
+
+      const base = {
+        order: order._id,
+        product: item.product,
+        name: item.name,
+        quantity: item.quantity,
+        deliveredAt: order.deliveredAt,
+      };
+
+      const entry = posted.get(key);
+      if (entry && entry.salePaise > 0) {
+        // Same arithmetic as settlementService.collectEligibleLines.
+        const commissionPaise = entry.commissionPaise - entry.commissionBackPaise;
+        const netPaise =
+          entry.salePaise +
+          entry.shippingPaise +
+          entry.commissionBackPaise -
+          entry.commissionPaise -
+          entry.feesPaise -
+          entry.refundPaise;
+        rows.push({ ...base, grossPaise: entry.salePaise, commissionPaise, netPaise, estimated: false });
+        continue;
+      }
+
+      // Priced once per order, however many of its lines are this seller's.
+      if (!estimate) estimate = await priceOrderCommissions(order, { config });
+      const line = estimate.sellerLines.find(
+        (candidate) =>
+          String(candidate.product) === String(item.product) && String(candidate.vendor) === String(vendorId)
+      );
+      if (!line) continue;
+      rows.push({
+        ...base,
+        grossPaise: line.sellerGrossPaise,
+        commissionPaise: line.commission.amountPaise,
+        netPaise: line.sellerGrossPaise - line.commission.amountPaise,
+        estimated: true,
+      });
+    }
+  }
+
+  return rows;
 }
 
-async function getMyEarningsSummary(req, res) {
-  const vendorId = req.vendor._id;
-
-  const [settlements, payouts, deliveredLines] = await Promise.all([
-    Settlement.find({ vendor: vendorId }).select(
-      'status grossAmount commissionAmount netAmount grossPaise commissionPaise netPayablePaise items paidAt'
-    ),
-    Payout.find({ vendor: vendorId, status: 'COMPLETED' }).select('amount'),
-    // Delivered lines, with the product's category, so unbatched earnings can
-    // be priced through the commission resolver rather than a flat rate.
-    Order.aggregate([
-      { $unwind: '$items' },
-      { $match: { 'items.vendor': vendorId } },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'items.product',
-          foreignField: '_id',
-          as: 'productDoc',
-        },
-      },
-      {
-        $project: {
-          status: '$items.status',
-          product: '$items.product',
-          category: { $arrayElemAt: ['$productDoc.category', 0] },
-          lineTotal: { $multiply: ['$items.price', '$items.quantity'] },
-        },
-      },
-    ]),
-  ]);
-
-  // Every order line already claimed by a batch, so it is not double-counted
-  // as "unsettled" below. Keyed by order+product, which is what a settlement
-  // item identifies.
+// Lines owned by a live batch, keyed the way a settlement item identifies one.
+function claimedKeys(settlements) {
   const claimed = new Set();
   for (const s of settlements) {
     if (!Settlement.CLAIMING_STATUSES.includes(s.status)) continue;
     for (const item of s.items) claimed.add(`${item.order}:${item.product}`);
   }
+  return claimed;
+}
+
+async function getMyEarningsSummary(req, res) {
+  const vendorId = req.vendor._id;
+
+  const [settlements, payouts, lineStates, rates] = await Promise.all([
+    Settlement.find({ vendor: vendorId }).select(
+      'status grossAmount commissionAmount netAmount grossPaise commissionPaise netPayablePaise items paidAt'
+    ),
+    Payout.find({ vendor: vendorId, status: 'COMPLETED' }).select('amount'),
+    // Every line's status and value, for the in-transit and delivered counts.
+    // No commission is worked out from these.
+    Order.aggregate([
+      { $unwind: '$items' },
+      { $match: { 'items.vendor': vendorId } },
+      {
+        $project: {
+          status: '$items.status',
+          lineTotal: { $multiply: ['$items.price', '$items.quantity'] },
+        },
+      },
+    ]),
+    sellerRatesFor([vendorId]),
+  ]);
 
   let paidPaise = 0;
   let inBatchPaise = 0;
@@ -116,52 +190,31 @@ async function getMyEarningsSummary(req, res) {
   }
 
   // Delivered but not yet in any batch.
-  const unbatched = deliveredLines.filter(
-    (l) => l.status === 'DELIVERED' && !claimed.has(`${l._id}:${l.product}`)
-  );
-
-  const { rules, config } = await resolveCommission(
-    vendorId,
-    unbatched.map((l) => ({ categoryId: l.category, productId: l.product }))
-  );
-
-  let unsettledGrossPaise = 0;
-  let unsettledCommissionPaise = 0;
-  for (const line of unbatched) {
-    const basePaise = toPaise(line.lineTotal);
-    unsettledGrossPaise += basePaise;
-    if (config) {
-      const resolved = resolveForLine(
-        {
-          basePaise,
-          vendorId,
-          categoryId: line.category,
-          productId: line.product,
-          vendorRatePercent: req.vendor.commissionRatePercent ?? null,
-        },
-        rules,
-        config
-      );
-      unsettledCommissionPaise += resolved.amountPaise;
-    }
-  }
+  const unbatched = await unsettledLines(vendorId, claimedKeys(settlements));
+  const unsettledGrossPaise = unbatched.reduce((sum, line) => sum + line.grossPaise, 0);
+  const unsettledCommissionPaise = unbatched.reduce((sum, line) => sum + line.commissionPaise, 0);
+  const unsettledNetPaise = unbatched.reduce((sum, line) => sum + line.netPaise, 0);
 
   // Value still moving: ordered, not cancelled, not delivered. Not earnings —
   // it is what MIGHT become earnings, and is labelled as such on screen.
-  const inTransitPaise = deliveredLines
+  const inTransitPaise = lineStates
     .filter((l) => !['DELIVERED', 'CANCELLED'].includes(l.status))
     .reduce((sum, l) => sum + toPaise(l.lineTotal), 0);
 
   const grossPaise = settledGrossPaise + unsettledGrossPaise;
   const commissionPaise = settledCommissionPaise + unsettledCommissionPaise;
+  const rate = rates.get(String(vendorId));
 
   res.json({
     success: true,
     data: {
-      // The seller's own negotiated rate, shown for context. It is NOT
-      // necessarily the rate every line was charged — a category or product
-      // rule outranks it — so the screen labels it as the default.
-      commissionRatePercent: req.vendor.commissionRatePercent ?? config?.defaultCommissionPercent ?? 10,
+      // The seller's headline rate (their SELLER rule, else the platform
+      // default), shown for context. It is NOT necessarily the rate every
+      // line was charged — a product rule outranks it — so the screen labels
+      // it as the default.
+      commissionRatePercent: rate.ratePercent,
+      commissionRateType: rate.type,
+      commissionRateValue: rate.value,
       totalSales: grossPaise,
       totalCommission: commissionPaise,
       netEarnings: grossPaise - commissionPaise,
@@ -169,12 +222,15 @@ async function getMyEarningsSummary(req, res) {
       // Real ledger figures now, not a constant.
       paidAmount: paidPaise,
       // Owed but not yet transferred, split by how far along it is.
-      pendingAmount: inBatchPaise + (unsettledGrossPaise - unsettledCommissionPaise),
+      pendingAmount: inBatchPaise + unsettledNetPaise,
       inBatchAmount: inBatchPaise,
-      unsettledAmount: unsettledGrossPaise - unsettledCommissionPaise,
+      unsettledAmount: unsettledNetPaise,
+      // Part of the unsettled figure that is not on the ledger yet (COD still
+      // with the courier), so the screen can say it is an estimate.
+      estimatedAmount: unbatched.filter((line) => line.estimated).reduce((sum, line) => sum + line.netPaise, 0),
 
       inTransitOrderValue: inTransitPaise,
-      deliveredOrdersCount: deliveredLines.filter((l) => l.status === 'DELIVERED').length,
+      deliveredOrdersCount: lineStates.filter((l) => l.status === 'DELIVERED').length,
       // So the screen can link straight to the payout that paid them.
       completedPayoutsCount: payouts.length,
     },
@@ -214,66 +270,26 @@ async function listMyEarningsEntries(req, res) {
         settlementStatus: s.status,
         state: isPaid ? 'PAID' : 'IN_BATCH',
         paidAt: isPaid ? s.paidAt : null,
+        estimated: false,
       });
     }
   }
 
-  const claimed = new Set(rows.map((r) => `${r.orderId}:${r.productName}`));
-
-  // Delivered, unbatched. Priced through the resolver so the commission shown
-  // here matches what the batch will charge when it is generated.
-  const orders = await Order.find({ 'items.vendor': vendorId, 'items.status': 'DELIVERED' })
-    .select('items deliveredAt createdAt')
-    .populate({ path: 'items.product', select: 'category' })
-    .sort({ createdAt: -1 })
-    .lean();
-
-  const pendingLines = [];
-  for (const order of orders) {
-    for (const item of order.items) {
-      if (item.vendor?.toString() !== vendorId.toString() || item.status !== 'DELIVERED') continue;
-      if (claimed.has(`${order._id}:${item.name}`)) continue;
-      pendingLines.push({ order, item });
-    }
-  }
-
-  const { rules, config } = await resolveCommission(
-    vendorId,
-    pendingLines.map(({ item }) => ({
-      categoryId: item.product?.category,
-      productId: item.product?._id,
-    }))
-  );
-
-  for (const { order, item } of pendingLines) {
-    const basePaise = toPaise(item.price * item.quantity);
-    const commissionPaise = config
-      ? resolveForLine(
-          {
-            basePaise,
-            vendorId,
-            categoryId: item.product?.category,
-            productId: item.product?._id,
-            vendorRatePercent: req.vendor.commissionRatePercent ?? null,
-          },
-          rules,
-          config
-        ).amountPaise
-      : 0;
-
+  for (const line of await unsettledLines(vendorId, claimedKeys(settlements))) {
     rows.push({
-      id: `unsettled-${order._id}-${item.product?._id || item.name}`,
-      orderId: order._id.toString(),
-      productName: item.name,
-      quantity: item.quantity,
-      grossAmount: basePaise,
-      commission: commissionPaise,
-      netAmount: basePaise - commissionPaise,
-      deliveredAt: order.deliveredAt,
+      id: `unsettled-${line.order}-${line.product}`,
+      orderId: String(line.order),
+      productName: line.name,
+      quantity: line.quantity,
+      grossAmount: line.grossPaise,
+      commission: line.commissionPaise,
+      netAmount: line.netPaise,
+      deliveredAt: line.deliveredAt,
       settlementId: null,
       settlementStatus: null,
       state: 'UNSETTLED',
       paidAt: null,
+      estimated: line.estimated,
     });
   }
 

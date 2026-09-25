@@ -10,6 +10,8 @@ import {
 import {
   catalogAnalyticsSchema,
   customerAnalyticsSchema,
+  revenueSchema,
+  sellerRevenueSchema,
   salesAnalyticsSchema,
   vendorAnalyticsSchema,
 } from '../schemas/analyticsSchema'
@@ -54,4 +56,19 @@ export function fetchAnalytics(kind, range = '30d') {
 // nobody mistakes a fixture for a measurement.
 export function isAnalyticsLive(kind) {
   return Boolean(ENDPOINTS[kind]?.live)
+}
+
+// Revenue by channel (own stock / CJ / sellers) and by seller. Backed by
+// Controllers/revenueController — the seller panel reads the same figures.
+export function fetchRevenue(range = '30d') {
+  return fetchResource({ path: '/admin/analytics/revenue', params: { range }, schema: revenueSchema, live: true })
+}
+
+export function fetchSellerRevenue(sellerId, range = '30d') {
+  return fetchResource({
+    path: `/admin/analytics/revenue/sellers/${sellerId}`,
+    params: { range },
+    schema: sellerRevenueSchema,
+    live: true,
+  })
 }

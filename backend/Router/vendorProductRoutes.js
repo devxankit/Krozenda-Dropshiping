@@ -12,27 +12,9 @@ const {
 const { protectVendor } = require('../Middlewares/vendorAuthMiddleware');
 const { upload, processImages, handleUploadError } = require('../Middlewares/uploadMiddleware');
 
-const multer = require('multer');
-const { importProducts, getImportTemplate } = require('../Controllers/vendorProductImportController');
+const { createProductImportRouter } = require('./productImportRoutes');
 
 const router = express.Router();
-
-// A separate multer instance: the image pipeline's filter rejects anything
-// that is not an image, and this endpoint takes exactly one CSV. 2MB is far
-// more than 500 rows of text.
-const uploadCsv = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
-  fileFilter: (req, file, cb) => {
-    // Browsers and Excel disagree about the mime type of a .csv, so the
-    // extension is what this trusts; the parser is the real validation.
-    const looksCsv =
-      /\.csv$/i.test(file.originalname || '') ||
-      ['text/csv', 'application/csv', 'text/plain', 'application/vnd.ms-excel'].includes(file.mimetype);
-    if (!looksCsv) return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
-    cb(null, true);
-  },
-});
 
 router.use(protectVendor);
 
@@ -44,11 +26,22 @@ const uploadProductImages = [
 
 router.get('/', listMyProducts);
 
-// Bulk upload. The template comes first in the file because it is the first
-// thing a seller needs, and `dryRun` lets the screen preview the outcome
-// before anything is written.
-router.get('/import/template', getImportTemplate);
-router.post('/import', uploadCsv.single('file'), importProducts);
+// Bulk CSV import, the same PREVIEW flow as admin: valid rows land in the
+// seller's product list straight away as hidden Draft previews, and approving
+// one submits it like a hand-added product. Mounted before '/:id' so
+// "import" is never read as a product id.
+router.use(
+  '/import',
+  createProductImportRouter({
+    scopeFrom: (req) => ({
+      ownerType: 'VENDOR',
+      mode: 'PREVIEW',
+      vendorId: req.vendor._id,
+      actorId: req.vendor._id,
+      actorName: req.vendor.name || '',
+    }),
+  })
+);
 router.get('/barcode/:code', getMyProductByBarcode);
 router.get('/:id/barcode.png', getMyProductBarcodeImage);
 router.get('/:id/qrcode.png', getMyProductQrImage);

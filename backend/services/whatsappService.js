@@ -71,12 +71,25 @@ function formatDate(value) {
 
 // Params are comma-separated on the wire, so a comma inside a value would
 // shift every variable after it. Newlines are rejected by Meta in variables.
-function cleanParam(value, fallback = '-') {
+// Links are the one thing allowed to run long by default: a link cut at 60
+// characters is a link that 404s. `maxLength` lifts the 60 for templates
+// whose variable IS the message (admin alerts) — Meta's real limit is the
+// whole body, 1024 characters, not a per-variable one.
+function cleanParam(value, fallback = '-', maxLength = 60) {
   const text = String(value ?? '')
+    // "₹2,500" → "₹2500", not "₹2 500": digit-grouping commas just go.
+    .replace(/(\d),(?=\d)/g, '$1')
     .replace(/[,\r\n\t]+/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  return (text || fallback).slice(0, 60);
+  return (text || fallback).slice(0, /^https?:\/\/\S+$/.test(text) ? Math.max(300, maxLength) : maxLength);
+}
+
+// Rupees WITHOUT digit grouping: the comma in "Rs.1,000" is the gateway's
+// param separator, and cleanParam turning it into "Rs.1 000" reads wrong.
+function rupees(amount) {
+  const value = Number(amount || 0);
+  return `Rs.${Number.isInteger(value) ? value : value.toFixed(2)}`;
 }
 
 // Indian mobile, 10 digits, as the gateway expects it (no country code).
@@ -95,7 +108,7 @@ function describe(order, event) {
   return {
     name: firstName || 'Customer',
     orderNumber: orderNumber(order._id),
-    amount: `Rs.${amount.toLocaleString('en-IN')}`,
+    amount: rupees(amount),
     date: formatDate(event === 'PLACED' ? order.createdAt : new Date()),
     courier: shipped?.courierName || 'our courier partner',
     tracking: shipped?.trackingNumber || 'shared soon',
@@ -219,8 +232,74 @@ async function sendOtpWhatsApp(mobileNumber, otp) {
   return messageId;
 }
 
+// ---------------------------------------------------------------------------
+// One-off template sends (seller alerts, reminders, refunds, admin alerts)
+// ---------------------------------------------------------------------------
+
+// Every template below is named by its own env var and documented in
+// docs/WHATSAPP_TEMPLATES.md. An empty env var means "not approved yet": the
+// send is skipped, never sent with another template's wording.
+const TEMPLATES = Object.freeze({
+  VENDOR_NEW_ORDER: 'WHATSAPP_TEMPLATE_VENDOR_NEW_ORDER',
+  VENDOR_SETTLEMENT: 'WHATSAPP_TEMPLATE_VENDOR_SETTLEMENT',
+  VENDOR_ACCOUNT: 'WHATSAPP_TEMPLATE_VENDOR_ACCOUNT',
+  PAYMENT_PENDING: 'WHATSAPP_TEMPLATE_PAYMENT_PENDING',
+  OUT_FOR_DELIVERY: 'WHATSAPP_TEMPLATE_OUT_FOR_DELIVERY',
+  DELIVERY_FAILED: 'WHATSAPP_TEMPLATE_DELIVERY_FAILED',
+  REFUND_PROCESSED: 'WHATSAPP_TEMPLATE_REFUND_PROCESSED',
+  CART_REMINDER: 'WHATSAPP_TEMPLATE_CART_REMINDER',
+  REVIEW_REQUEST: 'WHATSAPP_TEMPLATE_REVIEW_REQUEST',
+  ADMIN_ALERT: 'WHATSAPP_TEMPLATE_ADMIN_ALERT',
+});
+
+function firstName(name, fallback = 'Customer') {
+  return String(name || '').trim().split(/\s+/)[0] || fallback;
+}
+
+/**
+ * Send one template message at most once per `key`. The key is claimed in
+ * NotificationDispatch before the gateway is called, so a retried webhook or
+ * two server instances on the same cron tick never double-send.
+ *
+ * Returns { status } ('SENT' | 'FAILED'), or null when nothing was attempted
+ * (WhatsApp off, template not set, bad number, already sent). Never throws.
+ */
+async function sendTemplateOnce({ key, template, phone, params, maxLength = 60 }) {
+  try {
+    const templateName = process.env[TEMPLATES[template]];
+    if (!isEnabled() || !templateName) return null;
+    const to = normalisePhone(phone);
+    if (!to) return null;
+
+    // Required lazily, like the Order model requires this service.
+    const NotificationDispatch = require('../Models/NotificationDispatch');
+    if (!(await NotificationDispatch.claim(key, { event: template, channel: 'WHATSAPP' }))) return null;
+
+    try {
+      const messageId = await callGateway({
+        phone: to,
+        template: templateName,
+        params: params.map((p) => cleanParam(p, '-', maxLength)),
+      });
+      await NotificationDispatch.finish(key, { status: 'SENT', messageId });
+      return { status: 'SENT', messageId };
+    } catch (err) {
+      console.error(`[whatsapp] ${template} (${key}) failed:`, err.message);
+      await NotificationDispatch.finish(key, { status: 'FAILED', error: err.message });
+      return { status: 'FAILED' };
+    }
+  } catch (err) {
+    console.error(`[whatsapp] ${template} crashed:`, err.message);
+    return null;
+  }
+}
+
 module.exports = {
   notifyOrderEvent,
+  sendTemplateOnce,
+  TEMPLATES,
+  firstName,
+  rupees,
   sendOtpWhatsApp,
   isEnabled,
   isConfigured,

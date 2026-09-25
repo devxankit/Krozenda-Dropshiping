@@ -8,6 +8,7 @@ const { resolveCjVariant } = require('./shipping/checkoutQuoteService');
 const { createNotification } = require('../Controllers/notificationController');
 const { releaseCoupon } = require('../Controllers/couponController');
 const { toPaise } = require('../utils/money');
+const { alertAdmins } = require('./adminAlertService');
 
 // The life of a DROPSHIP (CJ-fulfilled) order after it has been paid for.
 //
@@ -25,6 +26,25 @@ const { toPaise } = require('../utils/money');
 
 function log(entry) {
   console.log(JSON.stringify({ scope: 'DROPSHIP', at: new Date().toISOString(), ...entry }));
+}
+
+function orderLabel(id) {
+  return `ORD-${String(id).slice(-8).toUpperCase()}`;
+}
+
+// A CJ order that did not go through after the buyer paid is money and goods
+// in limbo — the team hears about it straight away, not from the logs.
+function alertCjFailure(order, reason, { refunded }) {
+  return alertAdmins({
+    event: 'CJ_ORDER_FAILED',
+    title: refunded ? 'CJ order failed — buyer refunded' : 'CJ order needs reconciliation',
+    message: refunded
+      ? `Dropship order ${orderLabel(order._id)} (₹${Number(order.total || 0).toLocaleString('en-IN')}) was not accepted by CJ: ${reason}. It was cancelled and refunded automatically.`
+      : `CJ did not answer for dropship order ${orderLabel(order._id)} — it may or may not exist at CJ. Reconcile it before doing anything else.`,
+    link: '/admin/cj/orders',
+    key: `CJ_ORDER_FAILED:${order._id}`,
+    urgent: !refunded,
+  });
 }
 
 // Lazy: orderController requires this file.
@@ -99,6 +119,14 @@ async function refundAndCancel({ orderId, cancelledBy, reason, notify = true }) 
         amountPaise: toPaise(order.total),
         error: err?.error?.description || err.message,
       });
+      await alertAdmins({
+        event: 'DROPSHIP_REFUND_FAILED',
+        title: 'Refund failed — action needed',
+        message: `Cancelled dropship order ${orderLabel(order._id)} could not be refunded (₹${order.total.toLocaleString('en-IN')}): ${err?.error?.description || err.message}. Retry the refund from the order.`,
+        link: `/admin/orders/detail/${order._id}`,
+        key: `DROPSHIP_REFUND_FAILED:${order._id}`,
+        urgent: true,
+      });
     }
   }
 
@@ -165,6 +193,7 @@ async function fulfil(order, { logisticName = null } = {}) {
         cancelledBy: 'system',
         reason: 'the item could not be ordered from our supplier',
       });
+      await alertCjFailure(order, `no CJ variant mapped for "${item.name}"`, { refunded: true });
       return { outcome: 'refunded' };
     }
     cjItems.push({
@@ -204,9 +233,11 @@ async function fulfil(order, { logisticName = null } = {}) {
         cancelledBy: 'system',
         reason: 'our supplier could not accept the order',
       });
+      await alertCjFailure(order, err.message, { refunded: true });
       return { outcome: 'refunded' };
     }
     log({ event: 'DROPSHIP_CJ_CREATE_UNCERTAIN', orderId: String(order._id), code: err.code, error: err.message });
+    await alertCjFailure(order, err.message, { refunded: false });
     return { outcome: 'needs_reconcile' };
   }
 }

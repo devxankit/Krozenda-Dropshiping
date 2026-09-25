@@ -32,8 +32,8 @@ const accountingConfigSchema = new mongoose.Schema(
     key: { type: String, default: 'GLOBAL', unique: true, immutable: true },
 
     // --- commission ------------------------------------------------------
-    // Fallback when no CommissionRule matches and the seller carries no
-    // commissionRatePercent of their own.
+    // Fallback when no CommissionRule matches a line. Always present, so a
+    // line can never go uncharged for want of configuration.
     defaultCommissionPercent: { type: Number, default: 10, min: 0, max: 100 },
     // Business ceiling a CommissionRule is validated against (task §6).
     maxCommissionPercent: { type: Number, default: 30, min: 0, max: 100 },

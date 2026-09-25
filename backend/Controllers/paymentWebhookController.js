@@ -1,4 +1,6 @@
 const Order = require('../Models/Order');
+const CheckoutAttempt = require('../Models/CheckoutAttempt');
+const { notifyRefundProcessed } = require('../services/buyerAlertService');
 const { verifyRazorpaySignature } = require('../utils/razorpayWebhookVerify');
 
 // POST /webhook/payments — Razorpay's server-to-server event feed, the
@@ -57,6 +59,16 @@ async function handleRazorpayWebhook(req, res) {
           amount: paymentEntity.amount,
           reason: 'Captured payment has no matching order — needs manual reconciliation or refund',
         });
+        // Usually the buyer's own POST /user/orders is just a few seconds
+        // behind this webhook, so nobody is alerted yet: the engagement job
+        // alerts admins only if there is still no order a few minutes later,
+        // and never sends this buyer a "payment failed" reminder.
+        if (paymentEntity.order_id) {
+          await CheckoutAttempt.updateOne(
+            { razorpayOrderId: paymentEntity.order_id },
+            { $set: { capturedAt: new Date(), razorpayPaymentId: paymentEntity.id } }
+          );
+        }
       } else {
         for (const pending of orders.filter((o) => o.paymentStatus === 'PENDING')) {
           pending.paymentStatus = 'PAID';
@@ -70,6 +82,14 @@ async function handleRazorpayWebhook(req, res) {
         razorpayPaymentId: paymentEntity.id,
         razorpayOrderId: paymentEntity.order_id || null,
       });
+      // Feeds the "complete your payment" reminder (Jobs/engagementJob). Only
+      // the first failure is kept; a buyer retrying the card fails again.
+      if (paymentEntity.order_id) {
+        await CheckoutAttempt.updateOne(
+          { razorpayOrderId: paymentEntity.order_id, failedAt: null },
+          { $set: { failedAt: new Date(), failureReason: String(paymentEntity.error_description || '').slice(0, 200) } }
+        );
+      }
     } else if (eventType === 'refund.processed' && refundEntity) {
       // Which order the refund is for. Every refund this backend issues names
       // its order in `notes.orderId` — needed because a split checkout's two
@@ -93,6 +113,16 @@ async function handleRazorpayWebhook(req, res) {
         order.paymentStatus = 'REFUNDED';
         await order.save();
         log({ event: 'RAZORPAY_WEBHOOK_REFUND_RECONCILED', orderId: String(order._id) });
+      }
+      // The money has actually left for the buyer's card/UPI — tell them.
+      // Keyed on the Razorpay refund id, so a replayed webhook is silent.
+      if (order) {
+        await notifyRefundProcessed({
+          order,
+          amount: Number(refundEntity.amount || 0) / 100,
+          destination: 'original payment method',
+          key: `RAZORPAY:${refundEntity.id}`,
+        });
       }
     } else {
       log({ event: 'RAZORPAY_WEBHOOK_IGNORED', type: eventType });

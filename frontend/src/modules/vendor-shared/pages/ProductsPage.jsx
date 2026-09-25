@@ -9,6 +9,10 @@ import { UpdateStockModal } from '../components/modals/UpdateStockModal'
 import { VendorProductDetailModal } from '../components/modals/VendorProductDetailModal'
 import { ScanBarcodeModal } from '../../../components/common/ScanBarcodeModal'
 import { downloadTableCsv } from '../../admin/lib/exportCsv'
+import { ConfirmDialog } from '../../admin/components/overlay/ConfirmDialog'
+import { toast } from '../../admin/stores/toastStore'
+import { AdminImportModal } from '../../catalog-import/components/AdminImportModal'
+import { IMPORT_BASE, useApprovePreviewProducts } from '../../catalog-import/controllers/useProductImportController'
 
 function formatRupees(amount) {
   if (amount === null || amount === undefined) return '—'
@@ -16,6 +20,59 @@ function formatRupees(amount) {
 }
 
 const STATUS_TONE = { PENDING: 'warning', REJECTED: 'danger' }
+
+// What approving a seller's CSV preview does: submits it, exactly like adding
+// the product by hand.
+const APPROVE_NOTE =
+  'Check each one (view, edit or delete), then press Approve to submit it — it goes live once the platform approves it, or straight away if auto-approval is on.'
+
+function PreviewBadge({ floating = false }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ${
+        floating ? 'shadow-xs backdrop-blur-md' : ''
+      }`}
+      title="Imported from CSV — Draft, not submitted yet. Approve it to send it for review."
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      Preview · Draft
+    </span>
+  )
+}
+
+function ApproveButton({ onClick, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      disabled={disabled}
+      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+      title="Approve — submit this imported product"
+    >
+      <Icon name="check" className="h-3 w-3" />
+      Approve
+    </button>
+  )
+}
+
+function DeletePreviewButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/50 hover:border-rose-200 transition-all shadow-2xs"
+      title="Delete this imported preview"
+    >
+      <Icon name="delete" className="h-3.5 w-3.5" />
+    </button>
+  )
+}
 
 // Mirrors the admin Products screen's visual language (KPI cards, status
 // tabs, search, grid/table toggle, product cards) but the data underneath
@@ -31,14 +88,47 @@ export function VendorProductsPage() {
   const [viewingProduct, setViewingProduct] = useState(null)
   const [scanOpen, setScanOpen] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
+  const [importOpen, setImportOpen] = useState(false)
+  const [approveAllOpen, setApproveAllOpen] = useState(false)
+  const [deletingPreview, setDeletingPreview] = useState(null)
 
   const items = list.items || []
   const tabCounts = list.tabCounts || {}
   const searchValue = list.filters?.search || ''
+  const previewCount = tabCounts.preview ?? 0
 
   const setSearch = (value) => list.changeFilters({ ...list.filters, search: value })
 
-  const FILTER_TABS = VENDOR_PRODUCT_TABS.map((tab) => ({ ...tab, count: tabCounts[tab.id] ?? 0 }))
+  // CSV-imported products arrive as hidden Draft "previews"; approving one
+  // submits it (live at once only with auto-approval).
+  const approvePreviews = useApprovePreviewProducts(IMPORT_BASE.VENDOR, {
+    productQueryKeys: [['vendor', 'products'], ['vendor', 'inventory']],
+  })
+
+  async function approveImported(payload) {
+    try {
+      const res = await approvePreviews.mutateAsync(payload)
+      toast.success(res.data?.live ? 'Approved' : 'Submitted for review', res.message)
+    } catch (err) {
+      toast.error('Could not approve', err.message)
+    }
+  }
+
+  async function deletePreview(product) {
+    try {
+      await list.removeProduct(product.id)
+      toast.success('Preview deleted', product.name)
+    } catch (err) {
+      toast.error('Could not delete', err.message)
+    }
+  }
+
+  // The preview tab only appears while there is something in it (or it is
+  // the tab being looked at), like the admin panel's.
+  const FILTER_TABS = [
+    ...VENDOR_PRODUCT_TABS,
+    ...(previewCount > 0 || list.tab === 'preview' ? [{ id: 'preview', label: 'Import Preview' }] : []),
+  ].map((tab) => ({ ...tab, count: tabCounts[tab.id] ?? 0 }))
 
   // Built inline (not in tableColumns/vendorColumns.jsx) so the render fn can
   // close over setEditingProduct/setSelectedProduct — the shared columns file
@@ -48,10 +138,19 @@ export function VendorProductsPage() {
     {
       key: '__actions',
       header: 'Actions',
-      width: '9rem',
+      width: '15rem',
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1">
+          {row.importPreview && (
+            <>
+              <ApproveButton
+                disabled={approvePreviews.isPending}
+                onClick={() => approveImported({ productIds: [row.id] })}
+              />
+              <DeletePreviewButton onClick={() => setDeletingPreview(row)} />
+            </>
+          )}
           <button
             type="button"
             onClick={(e) => {
@@ -132,6 +231,15 @@ export function VendorProductsPage() {
               >
                 <Icon name="search" className="h-3.5 w-3.5" />
                 <span>Scan barcode</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                title="Import products from a CSV file — they stay hidden until you approve them"
+              >
+                <Icon name="upload" className="h-3.5 w-3.5" />
+                <span>Import CSV</span>
               </button>
               <button
                 type="button"
@@ -234,6 +342,43 @@ export function VendorProductsPage() {
             </div>
           </div>
         </div>
+
+        {previewCount > 0 && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2.5">
+              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">
+                  {previewCount} imported product{previewCount === 1 ? '' : 's'} waiting for your approval
+                </p>
+                <p className="text-xs text-amber-800">
+                  They are Drafts and hidden from buyers. View, edit or delete any that are wrong, then approve to
+                  submit them for platform review.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {list.tab !== 'preview' && (
+                <button
+                  type="button"
+                  onClick={() => list.changeTab('preview')}
+                  className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                >
+                  Review previews
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setApproveAllOpen(true)}
+                disabled={approvePreviews.isPending}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <Icon name="check" className="h-3.5 w-3.5" />
+                Approve all {previewCount}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Smart Toolbar */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
@@ -434,7 +579,9 @@ export function VendorProductsPage() {
 
                     {/* Top Right Status Badge */}
                     <div className="absolute top-2 right-2 z-10">
-                      {isPendingOrRejected ? (
+                      {item.importPreview ? (
+                        <PreviewBadge floating />
+                      ) : isPendingOrRejected ? (
                         <Badge
                           tone={STATUS_TONE[item.approvalStatus] || 'neutral'}
                           dot
@@ -559,6 +706,15 @@ export function VendorProductsPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
+                      {item.importPreview && (
+                        <>
+                          <ApproveButton
+                            disabled={approvePreviews.isPending}
+                            onClick={() => approveImported({ productIds: [item.id] })}
+                          />
+                          <DeletePreviewButton onClick={() => setDeletingPreview(item)} />
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -658,6 +814,44 @@ export function VendorProductsPage() {
         isOpen={Boolean(editingProduct)}
         onClose={() => setEditingProduct(null)}
         onEditProduct={list.editProduct}
+      />
+
+      <AdminImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        base={IMPORT_BASE.VENDOR}
+        approveNote={APPROVE_NOTE}
+        onFinished={() => list.refetch()}
+        onShowPreviews={() => {
+          list.refetch()
+          list.changeTab('preview')
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={approveAllOpen}
+        onClose={() => setApproveAllOpen(false)}
+        title={`Approve all ${previewCount} imported products?`}
+        description="They are submitted for platform review, like products you add by hand — live straight away only if auto-approval is on."
+        confirmLabel="Approve all"
+        isSubmitting={approvePreviews.isPending}
+        onConfirm={async () => {
+          await approveImported({ all: true })
+          setApproveAllOpen(false)
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingPreview)}
+        onClose={() => setDeletingPreview(null)}
+        title="Delete this imported preview?"
+        description={deletingPreview ? `"${deletingPreview.name}" is removed from your catalog. It was never live.` : ''}
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={async () => {
+          await deletePreview(deletingPreview)
+          setDeletingPreview(null)
+        }}
       />
 
       {/* Scoped to this seller's own catalog server-side — see

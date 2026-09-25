@@ -55,6 +55,9 @@ router.post('/seller-ledger/:sellerId/adjustments', ADJUSTMENT_MANAGE, accountin
 
 // --- commissions -----------------------------------------------------------
 router.get('/commissions/options', COMMISSION_VIEW, commission.getCommissionRuleOptions);
+router.get('/commissions/summary', COMMISSION_VIEW, commission.getCommissionSummary);
+// A read, despite the verb: it takes a body and writes nothing.
+router.post('/commissions/preview', COMMISSION_VIEW, commission.previewCommission);
 router.get('/commissions', COMMISSION_VIEW, commission.listCommissionRules);
 router.post('/commissions', COMMISSION_MANAGE, commission.createCommissionRule);
 router.put('/commissions/:id', COMMISSION_MANAGE, commission.updateCommissionRule);

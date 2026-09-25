@@ -9,6 +9,7 @@ const Payout = require('../Models/Payout');
 const Vendor = require('../Models/Vendor');
 const razorpayRouteService = require('./razorpayRouteService');
 const { createNotification } = require('../Controllers/notificationController');
+const { notifyRefundProcessed } = require('./buyerAlertService');
 const posting = require('./accountingPosting');
 const { toPaise, fromPaise } = require('../utils/money');
 
@@ -363,6 +364,18 @@ async function decideReturnRefund({ requestId, decision, reason = '', admin = nu
     actionType: decision === 'APPROVED' ? 'WALLET' : 'ORDER',
     actionRefId: decision === 'APPROVED' ? null : request.order,
   });
+
+  if (decision === 'APPROVED') {
+    const order = await Order.findById(request.order?._id || request.order).select('user shippingAddress').lean();
+    if (order) {
+      await notifyRefundProcessed({
+        order,
+        amount: request.refundAmount,
+        destination: 'Krozenda wallet',
+        key: `RETURN:${request._id}`,
+      });
+    }
+  }
 
   return { ok: true, request, posted };
 }

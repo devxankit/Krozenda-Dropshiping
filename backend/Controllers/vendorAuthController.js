@@ -8,6 +8,7 @@ const { getImageUrl } = require('../utils/imageHelper');
 const { updateLanguageFor } = require('./languageController');
 const { getRequiredAcceptancePages } = require('./cmsController');
 const emailService = require('../services/emailService');
+const { alertAdmins } = require('../services/adminAlertService');
 const { FSSAI_DOC_TYPE } = require('../utils/fssai');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
@@ -180,6 +181,20 @@ async function resolvePolicyAcceptances(submitted, ip) {
   };
 }
 
+// A seller waiting on review is a seller who may give up — the team hears
+// about every (re)submission as it happens. Keyed on the submission time, so
+// a resubmission after a rejection alerts again but a double click does not.
+function alertNewApplication(vendor) {
+  const at = new Date(vendor.updatedAt || Date.now()).getTime();
+  return alertAdmins({
+    event: 'SELLER_APPLICATION',
+    title: 'New seller application',
+    message: `${vendor.business?.businessName || vendor.name} (${vendor.vendorType}) submitted their application for review.`,
+    link: `/admin/people/sellers/${vendor._id}`,
+    key: `SELLER_APPLICATION:${vendor._id}:${at}`,
+  });
+}
+
 async function register(req, res) {
   const { documents, policyAcceptances, ...restPayload } = req.body;
 
@@ -236,6 +251,7 @@ async function register(req, res) {
 
   // Fire and forget: the email service never throws.
   emailService.sendVendorRegistrationReceived(vendor);
+  await alertNewApplication(vendor);
 
   res.status(201).json({
     success: true,
@@ -422,6 +438,7 @@ async function submitForVerification(req, res) {
   await vendor.save();
 
   emailService.sendVendorRegistrationReceived(vendor);
+  await alertNewApplication(vendor);
 
   res.json({
     success: true,

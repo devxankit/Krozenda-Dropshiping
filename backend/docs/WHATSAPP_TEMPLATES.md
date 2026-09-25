@@ -165,3 +165,162 @@ Sample: `Rehan, SAVE20, 20% off (up to Rs.200), Rs.499, 31-12-2026`
 ` on selected items` added when the coupon is limited to products,
 categories or sellers. `{{4}}` is `Rs.499` or `no minimum`. A customer with no
 name gets `there` for `{{1}}` ("Hi there, …").
+
+---
+
+# Seller, reminder, delivery, refund and admin templates
+
+Sent through `sendTemplateOnce` in `services/whatsappService.js`. Each send is
+claimed in the `NotificationDispatch` collection first, so a retried webhook or
+a second server instance never sends the same message twice. Same rule as
+above: **an empty env var means the message is skipped** (the push and in-app
+notification still go out).
+
+Amounts come as `Rs.1499`, with no comma, because a comma would split the
+variable. Links need `FRONTEND_URL` to be set. Without it, the variable reads
+`the Krozenda app`.
+
+| Template | Category | Env var | When |
+|---|---|---|---|
+| `vendor_new_order` | Utility | `WHATSAPP_TEMPLATE_VENDOR_NEW_ORDER` | a seller's product is ordered (skipped if the seller turned off order updates) |
+| `vendor_settlement` | Utility | `WHATSAPP_TEMPLATE_VENDOR_SETTLEMENT` | a settlement is marked paid, or a Razorpay Route transfer is confirmed |
+| `vendor_account` | Utility | `WHATSAPP_TEMPLATE_VENDOR_ACCOUNT` | admin approves or rejects a seller application |
+| `payment_pending` | Utility | `WHATSAPP_TEMPLATE_PAYMENT_PENDING` | checkout reached Razorpay but no order 30 min later; at most one per buyer per day |
+| `out_for_delivery` | Utility | `WHATSAPP_TEMPLATE_OUT_FOR_DELIVERY` | Shiprocket or CJ tracking marks the parcel out for delivery |
+| `delivery_failed` | Utility | `WHATSAPP_TEMPLATE_DELIVERY_FAILED` | the courier reports a failed delivery attempt (Shiprocket NDR, or CJ `DELIVERY_FAILED`) |
+| `refund_processed` | Utility | `WHATSAPP_TEMPLATE_REFUND_PROCESSED` | a return refund reaches the wallet, or Razorpay confirms a refund |
+| `cart_reminder` | **Marketing** | `WHATSAPP_TEMPLATE_CART_REMINDER` | cart left unchanged for 24 h (the 1 h reminder is push only) |
+| `review_request` | **Marketing** | `WHATSAPP_TEMPLATE_REVIEW_REQUEST` | 2–5 days after delivery, if an item is not reviewed yet |
+| `admin_alert` | Utility | `WHATSAPP_TEMPLATE_ADMIN_ALERT` | urgent alerts, sent to `ADMIN_ALERT_WHATSAPP_NUMBERS` |
+
+## vendor_new_order
+
+Variables: `{{1}}` seller first name · `{{2}}` order number · `{{3}}` item count · `{{4}}` amount
+
+```
+Hi {{1}}, you have a new Krozenda order! 🛒
+
+Order: {{2}}
+Items: {{3}}
+Value: {{4}}
+
+Please pack and dispatch it from Orders in your seller panel.
+```
+
+Sample: `Asha, ORD-9F3A21BC, 2, Rs.1998`
+
+## vendor_settlement
+
+Variables: `{{1}}` seller first name · `{{2}}` amount · `{{3}}` reference
+
+```
+Hi {{1}}, your Krozenda settlement of {{2}} has been paid to your bank account. 💰
+
+Reference: {{3}}
+
+You can see the details under Earnings in your seller panel.
+```
+
+Sample: `Asha, Rs.12450, UTR 412345678901`
+
+## vendor_account
+
+Variables: `{{1}}` seller first name · `{{2}}` `approved` / `not approved` · `{{3}}` next step or rejection reason
+
+```
+Hi {{1}}, your Krozenda seller application has been {{2}}.
+
+{{3}}.
+
+Log in to the seller panel for details.
+```
+
+Samples: `Asha, approved, Log in and list your first products` ·
+`Asha, not approved, GST certificate is not readable`
+
+## payment_pending
+
+Variables: `{{1}}` first name · `{{2}}` amount · `{{3}}` cart link
+
+```
+Hi {{1}}, your Krozenda order of {{2}} is not complete yet because the payment did not go through.
+
+Your cart is saved. Complete your order here: {{3}}
+```
+
+Sample: `Sana, Rs.1499, https://krozenda.com/app/cart`
+
+## out_for_delivery
+
+Variables: `{{1}}` first name · `{{2}}` order number · `{{3}}` courier · `{{4}}` tracking number
+
+```
+Hi {{1}}, your Krozenda order {{2}} is out for delivery today! 📦
+
+Courier: {{3}}
+Tracking number: {{4}}
+
+Please keep your phone reachable so the delivery partner can contact you.
+```
+
+## delivery_failed
+
+Variables: `{{1}}` first name · `{{2}}` order number · `{{3}}` courier · `{{4}}` tracking number
+
+```
+Hi {{1}}, {{3}} could not deliver your Krozenda order {{2}} today.
+
+Tracking number: {{4}}
+
+They will try again. Please keep your phone reachable, or contact us from Help & Support in the Krozenda app.
+```
+
+## refund_processed
+
+Variables: `{{1}}` first name · `{{2}}` order number · `{{3}}` amount · `{{4}}` where it went
+
+```
+Hi {{1}}, your refund of {{3}} for Krozenda order {{2}} has been processed.
+
+It has been {{4}}.
+```
+
+`{{4}}` is `credited to your Krozenda wallet` or
+`sent to your original payment method (5-7 working days)`.
+
+## cart_reminder (Marketing)
+
+Variables: `{{1}}` first name · `{{2}}` item count · `{{3}}` first product name · `{{4}}` cart link
+
+```
+Hi {{1}}, you left {{2}} item(s) in your Krozenda cart, including {{3}}. 🛍️
+
+They are still waiting for you. Complete your order here: {{4}}
+```
+
+## review_request (Marketing)
+
+Variables: `{{1}}` first name · `{{2}}` product(s) · `{{3}}` review link
+
+```
+Hi {{1}}, how are you liking {{2}}? ⭐
+
+Your review helps other shoppers choose. It takes less than a minute: {{3}}
+```
+
+## admin_alert
+
+Variables: `{{1}}` alert title · `{{2}}` details
+
+```
+Krozenda alert: {{1}}
+
+{{2}}
+
+Open the admin panel for details.
+```
+
+Unlike every other template, both variables go out in full: the title up to
+100 characters and the details up to 800. Other templates cap each variable at
+60, but a cut-off alert is useless. Meta's limit is 1024 characters for the
+whole body, so keep the template's own text short, as above.

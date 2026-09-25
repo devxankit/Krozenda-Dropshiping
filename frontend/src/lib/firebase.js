@@ -42,3 +42,26 @@ export async function onForegroundMessage(callback) {
   if (!instance) return () => {}
   return onMessage(instance, callback)
 }
+
+// The token this browser is registered under, WITHOUT prompting — for sign
+// out, so the device stops receiving pushes meant for the account that just
+// left. Null when permission was never granted or push is unavailable.
+export async function currentPushToken() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null
+  const instance = await messaging()
+  if (!instance) return null
+  const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+  if (!registration) return null
+  return getToken(instance, { vapidKey: env.firebase.vapidKey, serviceWorkerRegistration: registration })
+}
+
+// Title, body and deep link of an FCM payload, whichever block they came in.
+export function describePush(payload) {
+  const notification = payload?.notification || {}
+  const data = payload?.data || {}
+  return {
+    title: notification.title || data.title || '',
+    body: notification.body || data.body || '',
+    link: data.link || '',
+  }
+}

@@ -3,6 +3,7 @@ const ReturnRequest = require('../Models/ReturnRequest');
 const Order = require('../Models/Order');
 const { getImageUrl } = require('../utils/imageHelper');
 const { createNotification } = require('./notificationController');
+const { alertAdmins } = require('../services/adminAlertService');
 const { findDropshipIdsByProductIds } = require('../utils/dropship');
 const { linePaidPaise, findLineIndex } = require('../utils/orderLines');
 
@@ -176,6 +177,14 @@ async function createReturnRequest(req, res) {
         actionRefId: order._id,
       });
     }
+
+    await alertAdmins({
+      event: 'RETURN_REQUESTED',
+      title: requestType === 'REFUND' ? 'New refund request' : 'New replacement request',
+      message: `"${orderItem.name}" on ORD-${String(order._id).slice(-8).toUpperCase()} — ₹${request.refundAmount.toLocaleString('en-IN')}. Reason: ${reason.trim().slice(0, 120)}`,
+      link: `/admin/orders/returns/${request._id}`,
+      key: `RETURN_REQUESTED:${request._id}`,
+    });
 
     res.status(201).json({ success: true, message: 'Return request submitted', data: serializeRequest(request) });
   } catch (err) {

@@ -1,9 +1,9 @@
 const User = require('../Models/User');
 const Customer = require('../Models/Customer');
 const Vendor = require('../Models/Vendor');
-const Notification = require('../Models/Notification');
 const NotificationCampaign = require('../Models/NotificationCampaign');
 const { sendToTokens } = require('../utils/pushHelper');
+const { createNotification } = require('./notificationController');
 
 const AUDIENCE_LABELS = {
   customers: 'All customers',
@@ -72,24 +72,14 @@ async function listCampaigns(req, res) {
   });
 }
 
-async function tokensForAudience(audience) {
-  const wantsCustomers = audience === 'customers' || audience === 'both';
-  const wantsSellers = audience === 'sellers' || audience === 'both';
-
-  const [customers, sellers] = await Promise.all([
-    wantsCustomers
-      ? Customer.find({ isDeleted: false, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens')
-      : [],
-    wantsSellers
-      ? Vendor.find({ isActive: true, fcmTokens: { $ne: [] } }).select('fcmTokens')
-      : [],
-  ]);
-
+// Customers only. Sellers are reached one by one through createNotification
+// (see sendCampaign), which also writes their in-app row and applies their
+// notification preferences.
+async function customerTokens() {
+  const customers = await Customer.find({ isDeleted: false, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
   const tokens = new Set();
   customers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t.token)));
-  sellers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t.token)));
-
-  return Array.from(tokens);
+  return { tokens: Array.from(tokens), recipients: customers.length };
 }
 
 async function pruneStaleTokens(staleTokens) {
@@ -112,9 +102,9 @@ async function sendCampaign(req, res) {
     return res.status(400).json({ success: false, message: 'audience must be customers, sellers, both, or specific_seller' });
   }
 
-  let tokens = [];
   let targetVendorName = '';
   let targetVendor = null;
+  let sellerIds = [];
 
   if (audience === 'specific_seller') {
     if (!targetVendorId) {
@@ -125,61 +115,57 @@ async function sendCampaign(req, res) {
       return res.status(404).json({ success: false, message: 'Selected seller not found' });
     }
     targetVendorName = targetVendor.business?.businessName || targetVendor.name;
-    tokens = (targetVendor.fcmTokens || []).map((t) => t.token);
-
-    // Create in-app notification record so the seller sees it in their portal notification center
-    try {
-      await Notification.create({
-        vendor: targetVendor._id,
-        title: title.trim(),
-        message: message.trim(),
-        type: 'SYSTEM',
-        actionType: 'NONE',
-      });
-    } catch (e) {
-      console.error('Failed to create in-app notification:', e);
-    }
-  } else {
-    tokens = await tokensForAudience(audience);
-
-    // For audience including sellers, also deliver in-app notifications
-    if (audience === 'sellers' || audience === 'both') {
-      try {
-        const sellers = await Vendor.find({ isActive: true }).select('_id');
-        const docs = sellers.map((s) => ({
-          vendor: s._id,
-          title: title.trim(),
-          message: message.trim(),
-          type: 'SYSTEM',
-          actionType: 'NONE',
-        }));
-        if (docs.length > 0) {
-          await Notification.insertMany(docs);
-        }
-      } catch (e) {
-        console.error('Failed to insert in-app notifications for sellers:', e);
-      }
-    }
+    sellerIds = [targetVendor._id];
+  } else if (audience === 'sellers' || audience === 'both') {
+    sellerIds = (await Vendor.find({ isActive: true }).select('_id').lean()).map((v) => v._id);
   }
 
-  const { successCount, failureCount, staleTokens } = await sendToTokens(tokens, {
-    title: title.trim(),
-    body: message.trim(),
-    data: { type: 'admin_campaign' },
-  });
+  const cleanTitle = title.trim();
+  const cleanMessage = message.trim();
 
-  await pruneStaleTokens(staleTokens);
+  // Sellers: in-app row + socket + push each, through the shared path. A
+  // broadcast is marketing (OFFER) and respects the seller's "promotions"
+  // switch; a message to one chosen seller is direct (SYSTEM) and always
+  // pushed. The in-app row is written either way, so every seller counts as
+  // delivered.
+  const sellerType = audience === 'specific_seller' ? 'SYSTEM' : 'OFFER';
+  for (const vendorId of sellerIds) {
+    // eslint-disable-next-line no-await-in-loop
+    await createNotification({
+      vendorId,
+      type: sellerType,
+      title: cleanTitle,
+      message: cleanMessage,
+      actionType: 'NONE',
+      link: '/seller/notifications',
+    });
+  }
+
+  // Customers: one batched push, as before (no in-app row for broadcasts).
+  let customerRecipients = 0;
+  let pushed = { successCount: 0, failureCount: 0, staleTokens: [] };
+  if (audience === 'customers' || audience === 'both') {
+    const { tokens, recipients } = await customerTokens();
+    customerRecipients = recipients;
+    pushed = await sendToTokens(tokens, {
+      title: cleanTitle,
+      body: cleanMessage,
+      data: { type: 'admin_campaign' },
+      link: '/app/dashboard',
+    });
+    await pruneStaleTokens(pushed.staleTokens);
+  }
 
   const campaign = await NotificationCampaign.create({
-    title: title.trim(),
-    message: message.trim(),
+    title: cleanTitle,
+    message: cleanMessage,
     audience,
     targetVendor: targetVendor ? targetVendor._id : null,
     targetVendorName,
     createdBy: req.admin?._id || null,
-    audienceSize: audience === 'specific_seller' ? 1 : tokens.length,
-    delivered: audience === 'specific_seller' && tokens.length === 0 ? 1 : successCount,
-    failed: failureCount,
+    audienceSize: sellerIds.length + customerRecipients,
+    delivered: sellerIds.length + pushed.successCount,
+    failed: pushed.failureCount,
     status: 'sent',
     sentAt: new Date(),
   });

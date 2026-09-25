@@ -22,11 +22,14 @@ const { IST_TZ, buildBuckets, resolveRange } = require('../utils/analyticsRange'
 // Business model attribution
 //
 // This platform has no `businessModel` column: what a line item is depends on
-// who owns the product that was bought. That mapping lives here, once, so the
-// dashboard's revenue split and the analytics order mix can never disagree.
-//   - no vendor  -> own stock (platform-owned catalog)
-//   - B2C seller -> marketplace
-//   - B2B seller -> direct dropshipping
+// who fulfils it. That mapping lives here, once, so the dashboard's revenue
+// split and the analytics order mix can never disagree — and it matches the
+// three channels on the Revenue screen (services/revenueService):
+//   - CJ-fulfilled (a DROPSHIP order, or a CJ product) -> CJ Dropshipping
+//   - any seller's product (B2C or B2B)                -> Sellers
+//   - everything else (admin's own catalogue)          -> Own stock
+// The keys stay `dropshipping` / `marketplace` / `own_stock`: the panel's
+// charts and schemas are keyed on them.
 // ---------------------------------------------------------------------------
 const BUSINESS_MODEL = Object.freeze({
   DROPSHIPPING: 'dropshipping',
@@ -35,8 +38,8 @@ const BUSINESS_MODEL = Object.freeze({
 });
 
 const BUSINESS_MODEL_LABELS = Object.freeze({
-  [BUSINESS_MODEL.MARKETPLACE]: 'Marketplace',
-  [BUSINESS_MODEL.DROPSHIPPING]: 'Direct dropshipping',
+  [BUSINESS_MODEL.MARKETPLACE]: 'Sellers',
+  [BUSINESS_MODEL.DROPSHIPPING]: 'CJ Dropshipping',
   [BUSINESS_MODEL.OWN_STOCK]: 'Own stock',
 });
 
@@ -89,7 +92,7 @@ const ATTRIBUTE_LINES = [
       localField: 'items.product',
       foreignField: '_id',
       as: 'productDoc',
-      pipeline: [{ $project: { vendor: 1, category: 1 } }],
+      pipeline: [{ $project: { vendor: 1, category: 1, fulfillmentProvider: 1 } }],
     },
   },
   { $set: { productDoc: { $first: '$productDoc' } } },
@@ -109,8 +112,16 @@ const ATTRIBUTE_LINES = [
       model: {
         $switch: {
           branches: [
-            { case: { $eq: ['$vendorDoc.vendorType', 'B2B'] }, then: BUSINESS_MODEL.DROPSHIPPING },
-            { case: { $eq: ['$vendorDoc.vendorType', 'B2C'] }, then: BUSINESS_MODEL.MARKETPLACE },
+            {
+              case: {
+                $or: [
+                  { $eq: ['$fulfillmentType', 'DROPSHIP'] },
+                  { $eq: ['$productDoc.fulfillmentProvider', 'CJ'] },
+                ],
+              },
+              then: BUSINESS_MODEL.DROPSHIPPING,
+            },
+            { case: { $gt: ['$vendorId', null] }, then: BUSINESS_MODEL.MARKETPLACE },
           ],
           default: BUSINESS_MODEL.OWN_STOCK,
         },
@@ -993,7 +1004,7 @@ async function getCatalogAnalytics(req, res) {
       // cover" is estimated from units sold IN THIS RANGE (see below); the
       // low-stock candidate pool itself is just current on-hand stock.
       Product.find({ isActive: true }).sort({ stock: 1 }).limit(20).select('name sku stock').lean(),
-      Product.countDocuments({ approvalStatus: 'PENDING' }),
+      Product.countDocuments({ approvalStatus: 'PENDING', importPreview: { $ne: true } }),
     ]);
 
   const returnsByProduct = keyBy(
@@ -1263,6 +1274,7 @@ async function getCustomerAnalytics(req, res) {
 }
 
 module.exports = {
+  delta,
   getDashboard,
   getDashboardSummary,
   getSalesAnalytics,

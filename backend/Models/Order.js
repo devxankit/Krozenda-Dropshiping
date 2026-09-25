@@ -54,6 +54,35 @@ const orderItemSchema = new mongoose.Schema(
     // keep pointing at the seller who owned it when it was bought, even if
     // the product is reassigned or removed later.
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+    // The commission TERMS this seller line was sold under, frozen when the
+    // order was placed (accountingPosting.attachCommissionSnapshots). The
+    // ledger posts from these — for a COD order that can be days later — so
+    // an admin editing, adding or retiring a rule after checkout never
+    // changes what the order is charged. Null on platform lines (nothing to
+    // charge) and on orders written before snapshots existed; those are
+    // resolved against the rules as of the order date instead.
+    commission: {
+      type: new mongoose.Schema(
+        {
+          ruleId: { type: mongoose.Schema.Types.ObjectId, ref: 'CommissionRule', default: null },
+          ruleName: { type: String, default: '' },
+          // PRODUCT | SELLER | CATEGORY | GLOBAL, or DEFAULT for the
+          // platform default.
+          scope: { type: String, required: true },
+          type: { type: String, enum: ['PERCENTAGE', 'FIXED'], required: true },
+          // Percent for PERCENTAGE, rupees per unit for FIXED.
+          value: { type: Number, required: true, min: 0 },
+          // AccountingConfig.commissionBase in force at checkout.
+          basis: { type: String, required: true },
+          // What the terms came to at checkout, in paise — for display. The
+          // ledger recomputes from the terms above and lands on the same
+          // figure.
+          amountPaise: { type: Number, default: 0 },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     // Snapshotted from Product.isReturnable at order time, so the return
     // policy the buyer saw is the one they get. Lines written before this
     // existed read as true, which was the only policy back then.
@@ -170,6 +199,12 @@ const orderSchema = new mongoose.Schema(
       companyName: { type: String, trim: true, default: '' },
       gstin: { type: String, trim: true, uppercase: true, default: '' },
     },
+    // Who issued this order's invoice(s) — platform and/or sellers, with the
+    // GSTIN, name and address as they were when the invoice was first
+    // produced (services/invoiceService). Frozen so a seller changing their
+    // GSTIN later never rewrites an invoice already issued. Absent until then.
+    invoiceSuppliers: { type: [mongoose.Schema.Types.Mixed], default: undefined },
+    invoiceGeneratedAt: { type: Date, default: null },
     // One row per WhatsApp update sent to the buyer (see
     // services/whatsappService.js). Doubles as the idempotency claim, so each
     // event goes out at most once per order.

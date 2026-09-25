@@ -5,7 +5,16 @@ const AccountingTransaction = require('../Models/AccountingTransaction');
 const Vendor = require('../Models/Vendor');
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
-const { validateRuleInput, TARGET_FOR_SCOPE } = require('../services/commissionResolver');
+const Order = require('../Models/Order');
+const {
+  loadRules,
+  resolveForLine,
+  explainChain,
+  validateRuleInput,
+  TARGET_FOR_SCOPE,
+} = require('../services/commissionResolver');
+const { commissionBaseFor } = require('../services/accountingPosting');
+const { toPaise } = require('../utils/money');
 const { recordAudit } = require('../services/accountingAudit');
 const { paged, vendorLabel } = require('./adminAccountingController');
 
@@ -326,6 +335,222 @@ async function getCommissionRuleOptions(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// Preview — "what would this line be charged?"
+// ---------------------------------------------------------------------------
+
+// POST .../commissions/preview
+//
+// Runs the SAME resolver and commission base the posting engine uses, so the
+// number an admin previews is the number an order placed right now would
+// post. Nothing is written. Amounts in the response are integer paise, like
+// every other figure on the Accounting screens.
+//
+// Body: productId and/or vendorId / categoryId, plus sellingPrice and
+// discount (rupees, PER UNIT), quantity, and who funded the discount.
+async function previewCommission(req, res) {
+  const body = req.body || {};
+
+  for (const field of ['productId', 'vendorId', 'categoryId']) {
+    if (body[field] && !mongoose.isValidObjectId(body[field])) {
+      return res.status(400).json({ success: false, message: `Invalid ${field}` });
+    }
+  }
+
+  let product = null;
+  if (body.productId) {
+    product = await Product.findById(body.productId).select('name price vendor category').lean();
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  const vendorId = body.vendorId || (product?.vendor ? String(product.vendor) : null);
+  const categoryId = body.categoryId || (product?.category ? String(product.category) : null);
+  if (!vendorId && !categoryId && !product) {
+    return res.status(400).json({ success: false, message: 'Select a product, seller or category to preview' });
+  }
+  // Only seller lines are charged commission (see postOrderSale) — a product
+  // the platform sells itself has no one to charge it to.
+  if (product && !vendorId) {
+    return res.status(400).json({
+      success: false,
+      message: 'This product is sold by the platform itself — no commission applies to it',
+    });
+  }
+
+  const isBlank = (value) => value === undefined || value === null || value === '';
+  const quantity = isBlank(body.quantity) ? 1 : Number(body.quantity);
+  const unitPrice = isBlank(body.sellingPrice) ? product?.price : Number(body.sellingPrice);
+  const unitDiscount = isBlank(body.discount) ? 0 : Number(body.discount);
+
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) {
+    return res.status(400).json({ success: false, message: 'Enter a whole-number quantity of at least 1' });
+  }
+  if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+    return res.status(400).json({ success: false, message: 'Enter a selling price of zero or more' });
+  }
+  if (!Number.isFinite(unitDiscount) || unitDiscount < 0 || unitDiscount > unitPrice) {
+    return res.status(400).json({ success: false, message: 'The discount must be between zero and the selling price' });
+  }
+
+  const fundedBy = String(body.discountFundedBy || 'SELLER').toUpperCase();
+  if (!['SELLER', 'PLATFORM'].includes(fundedBy)) {
+    return res.status(400).json({ success: false, message: 'discountFundedBy must be SELLER or PLATFORM' });
+  }
+
+  const at = body.at ? new Date(body.at) : new Date();
+  if (Number.isNaN(at.getTime())) return res.status(400).json({ success: false, message: 'Enter a valid date' });
+
+  const config = await AccountingConfig.resolve();
+
+  // The line in the same shape explodeOrderLines() hands the posting engine.
+  const grossPaise = toPaise(unitPrice) * quantity;
+  const discountPaise = toPaise(unitDiscount) * quantity;
+  const sellerFundedDiscountPaise = fundedBy === 'SELLER' ? discountPaise : 0;
+  const line = {
+    grossPaise,
+    discountPaise,
+    sellerGrossPaise: grossPaise - sellerFundedDiscountPaise,
+  };
+  const basePaise = commissionBaseFor(line, config);
+
+  const rules = await loadRules({
+    vendorIds: vendorId ? [vendorId] : [],
+    categoryIds: categoryId ? [categoryId] : [],
+    productIds: product ? [String(product._id)] : [],
+    at,
+  });
+  const target = { basePaise, vendorId, categoryId, productId: product ? String(product._id) : null, quantity };
+  const commission = resolveForLine(target, rules, config);
+
+  res.json({
+    success: true,
+    message: 'Commission calculated successfully',
+    data: {
+      productName: product?.name || null,
+      quantity,
+      grossAmount: grossPaise,
+      discount: discountPaise,
+      discountFundedBy: fundedBy,
+      commissionBasis: config.commissionBase,
+      commissionBase: basePaise,
+      commissionType: commission.rule ? commission.rule.type : 'PERCENTAGE',
+      commissionRate: commission.ratePercent,
+      // For a FIXED rule: the rupee charge per unit.
+      commissionValue: commission.rule ? commission.rule.value : commission.ratePercent,
+      commissionAmount: commission.amountPaise,
+      source: commission.rule ? commission.rule.scope : 'DEFAULT',
+      ruleId: commission.rule ? String(commission.rule._id) : null,
+      ruleName: commission.rule ? commission.rule.name : 'Platform default',
+      // Before gateway fees, shipping and refunds — the commission's effect
+      // on its own.
+      sellerPayable: line.sellerGrossPaise - commission.amountPaise,
+      chain: explainChain(target, rules, config),
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Summary — the commission dashboard, read straight off the ledger
+// ---------------------------------------------------------------------------
+
+function monthStart(date, offset = 0) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+
+// GET .../commissions/summary
+//
+// No separate commission-status field exists or is needed: the frozen
+// COMMISSION rows, the REFUND_REVERSAL rows that hand commission back (the
+// only thing that row type is ever written for), and the order line's own
+// status already say everything.
+//
+//   PENDING    charged on a line that has not been delivered yet
+//   EARNED     charged on a delivered line, net of any partial refund
+//   REVERSED   handed back because the buyer was refunded (return, refund)
+//   CANCELLED  handed back because the line was cancelled
+async function getCommissionSummary(req, res) {
+  const now = new Date();
+  const thisMonth = monthStart(now);
+  const lastMonth = monthStart(now, -1);
+
+  const [lines, months] = await Promise.all([
+    AccountingTransaction.aggregate([
+      { $match: { type: { $in: ['COMMISSION', 'REFUND_REVERSAL'] }, vendor: { $ne: null } } },
+      {
+        $group: {
+          _id: { order: '$order', product: '$product', vendor: '$vendor' },
+          chargedPaise: { $sum: { $cond: [{ $eq: ['$type', 'COMMISSION'] }, '$debit', 0] } },
+          backPaise: { $sum: { $cond: [{ $eq: ['$type', 'REFUND_REVERSAL'] }, '$credit', 0] } },
+        },
+      },
+    ]),
+    // Net commission by the month it was POSTED in: a charge counts in the
+    // month it was charged, a reversal in the month it was reversed.
+    AccountingTransaction.aggregate([
+      {
+        $match: {
+          type: { $in: ['COMMISSION', 'REFUND_REVERSAL'] },
+          vendor: { $ne: null },
+          createdAt: { $gte: lastMonth },
+        },
+      },
+      {
+        $group: {
+          _id: { $cond: [{ $gte: ['$createdAt', thisMonth] }, 'this', 'last'] },
+          netPaise: { $sum: { $subtract: ['$debit', '$credit'] } },
+        },
+      },
+    ]),
+  ]);
+
+  const orders = await Order.find({ _id: { $in: [...new Set(lines.map((l) => String(l._id.order)))] } })
+    .select('status items.product items.vendor items.status')
+    .lean();
+  // Cancelling a whole order sets only the order's status, not each line's,
+  // so an order-level CANCELLED wins over whatever its lines still say.
+  const statusOf = new Map();
+  for (const order of orders) {
+    for (const item of order.items) {
+      statusOf.set(
+        `${order._id}:${item.product}:${item.vendor}`,
+        order.status === 'CANCELLED' ? 'CANCELLED' : item.status
+      );
+    }
+  }
+
+  const summary = {
+    totalCharged: 0,
+    netCommission: 0,
+    pending: 0,
+    earned: 0,
+    reversed: 0,
+    cancelled: 0,
+    thisMonth: 0,
+    lastMonth: 0,
+    lines: lines.length,
+  };
+
+  for (const line of lines) {
+    const status = statusOf.get(`${line._id.order}:${line._id.product}:${line._id.vendor}`);
+    const net = line.chargedPaise - line.backPaise;
+    summary.totalCharged += line.chargedPaise;
+    summary.netCommission += net;
+
+    if (status === 'CANCELLED') summary.cancelled += line.backPaise;
+    else summary.reversed += line.backPaise;
+
+    if (status === 'DELIVERED') summary.earned += net;
+    else if (status !== 'CANCELLED') summary.pending += net;
+  }
+
+  for (const month of months) {
+    if (month._id === 'this') summary.thisMonth = month.netPaise;
+    else summary.lastMonth = month.netPaise;
+  }
+
+  res.json({ success: true, message: 'Accounting data fetched successfully', data: summary });
+}
+
+// ---------------------------------------------------------------------------
 // Accounting policy (task §11 — "make the fee calculation configurable")
 // ---------------------------------------------------------------------------
 
@@ -451,6 +676,8 @@ module.exports = {
   updateCommissionRule,
   setCommissionRuleStatus,
   getCommissionRuleOptions,
+  previewCommission,
+  getCommissionSummary,
   getAccountingConfig,
   updateAccountingConfig,
   decorateRules,

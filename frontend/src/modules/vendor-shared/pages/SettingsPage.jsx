@@ -43,7 +43,12 @@ function SettingsForm({ settingsData, updateSettings, isSubmitting }) {
             <h3 className="text-sm font-semibold text-slate-900">Payout Bank Account</h3>
             <p className="text-xs text-ink-subtle">Used for settlement payouts once your account is approved.</p>
           </div>
-          <Badge tone="brand" size="sm">Commission {settingsData.commissionRatePercent}%</Badge>
+          <Badge tone="brand" size="sm">
+            Commission{' '}
+            {settingsData.commissionRateType === 'FIXED'
+              ? `₹${settingsData.commissionRateValue}/unit`
+              : `${settingsData.commissionRatePercent}%`}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
