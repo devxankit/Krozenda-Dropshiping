@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon, Input, Select, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
 import { STATIC_BANNER_PRODUCTS } from '../../constants'
@@ -41,6 +41,7 @@ const THEME_OPTIONS = [
 export function BannerFormDrawer({ isOpen, onClose, banner, writer }) {
   const editing = Boolean(banner)
   const [imageFile, setImageFile] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [form, setForm] = useState(() => ({
     title: banner?.title ?? '',
     productId: banner?.productId ?? '',
@@ -96,7 +97,33 @@ export function BannerFormDrawer({ isOpen, onClose, banner, writer }) {
     mutation.run(editing ? { id: banner.id, ...payload } : payload)
   }
 
-  const previewSrc = imageFile ? URL.createObjectURL(imageFile) : banner?.image || undefined
+  function pickFile(file) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setIssue('Only image files can be used as a banner')
+      return
+    }
+    setIssue(null)
+    setImageFile(file)
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault()
+    setIsDragging(true)
+  }
+
+  function handleDrop(event) {
+    event.preventDefault()
+    setIsDragging(false)
+    pickFile(event.dataTransfer.files?.[0])
+  }
+
+  // One object URL per picked file, released when the file changes or the
+  // drawer closes — creating it inline leaked a new blob URL every render.
+  const objectUrl = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : null), [imageFile])
+  useEffect(() => () => objectUrl && URL.revokeObjectURL(objectUrl), [objectUrl])
+
+  const previewSrc = objectUrl || banner?.image || undefined
 
   return (
     <FormDrawer
@@ -124,31 +151,59 @@ export function BannerFormDrawer({ isOpen, onClose, banner, writer }) {
           <label className="text-xs font-semibold uppercase tracking-wider text-ink-subtle">
             Banner image
           </label>
-          <div className="overflow-hidden rounded-xl border border-dashed border-slate-200 bg-slate-50/70 transition-colors hover:border-brand-300">
-            <div className="flex aspect-[16/6] w-full items-center justify-center bg-slate-100">
-              {previewSrc ? (
-                <img src={previewSrc} alt="Banner preview" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center gap-1.5 text-ink-faint">
-                  <Icon name="banners" className="h-6 w-6" />
-                  <span className="text-2xs">No image uploaded yet</span>
-                </div>
+          {/* The whole preview is the drop target and the click target, so
+              the upload action sits in the middle of the image instead of in
+              a footer the admin has to hunt for. */}
+          <label
+            onDragEnter={handleDragOver}
+            onDragOver={handleDragOver}
+            onDragLeave={(event) => {
+              // dragleave also fires when crossing into a child element.
+              if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false)
+            }}
+            onDrop={handleDrop}
+            className={`group relative block cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-colors ${
+              isDragging
+                ? 'border-brand-500 bg-brand-50'
+                : 'border-slate-200 bg-slate-100 hover:border-brand-300'
+            }`}
+          >
+            <div className="relative flex aspect-[16/9] sm:aspect-[21/9] w-full items-center justify-center">
+              {previewSrc && (
+                <img src={previewSrc} alt="Banner preview" className="absolute inset-0 h-full w-full object-cover" />
               )}
+              <div
+                className={`relative z-10 flex flex-col items-center gap-2 rounded-xl px-5 py-4 text-center transition-opacity ${
+                  previewSrc
+                    ? 'bg-slate-900/60 text-white opacity-0 backdrop-blur-sm group-hover:opacity-100 focus-within:opacity-100'
+                    : 'text-ink-faint'
+                } ${isDragging ? 'opacity-100' : ''}`}
+              >
+                <Icon name={previewSrc ? 'banners' : 'add'} className="h-6 w-6" />
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold shadow-sm ring-1 ring-inset ${
+                    previewSrc
+                      ? 'bg-white/15 text-white ring-white/40'
+                      : 'bg-white text-slate-700 ring-slate-300 group-hover:text-brand-600'
+                  }`}
+                >
+                  {isDragging ? 'Drop image here' : previewSrc ? 'Change image' : 'Upload image'}
+                </span>
+                <span className={`text-2xs ${previewSrc ? 'text-white/80' : ''}`}>
+                  or drag &amp; drop it here
+                </span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => pickFile(event.target.files?.[0])}
+              />
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-dashed border-slate-200 bg-white px-3.5 py-2.5">
-              <p className="text-2xs text-ink-faint">Optimized to WebP automatically. Landscape 1600×600 recommended.</p>
-              <label className="inline-flex w-fit shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:text-brand-600">
-                <Icon name="add" className="h-3.5 w-3.5" />
-                {previewSrc ? 'Change image' : 'Upload image'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => setImageFile(event.target.files?.[0] || null)}
-                />
-              </label>
-            </div>
-          </div>
+          </label>
+          <p className="text-2xs text-ink-faint">
+            Optimized to WebP automatically. Recommended size: 1920×960 px or 1920×1080 px (16:9 ratio) for large edge-to-edge hero banners.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

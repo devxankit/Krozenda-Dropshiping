@@ -1,5 +1,7 @@
 const VendorDocument = require('../Models/VendorDocument');
+const Vendor = require('../Models/Vendor');
 const { getImageUrl } = require('../utils/imageHelper');
+const { FSSAI_DOC_TYPE, getFssaiStatus } = require('../utils/fssai');
 
 function serializeDocument(doc) {
   return {
@@ -28,6 +30,19 @@ async function uploadDocument(req, res) {
     return res.status(400).json({ success: false, message: 'A file is required' });
   }
 
+  const isFssai = documentType.trim() === FSSAI_DOC_TYPE;
+  if (isFssai) {
+    if (!documentNumber?.trim()) {
+      return res.status(400).json({ success: false, message: 'FSSAI licence number is required' });
+    }
+    // One licence in review at a time — otherwise admin could approve a stale
+    // copy while the seller thinks the newer one is what's being checked.
+    const pending = await VendorDocument.exists({ vendorId: req.vendor._id, documentType: FSSAI_DOC_TYPE, status: 'PENDING' });
+    if (pending) {
+      return res.status(409).json({ success: false, message: 'Your FSSAI licence is already under admin review' });
+    }
+  }
+
   const doc = await VendorDocument.create({
     vendorId: req.vendor._id,
     documentType: documentType.trim(),
@@ -35,6 +50,12 @@ async function uploadDocument(req, res) {
     documentNumber: documentNumber ? documentNumber.trim() : '',
     documentUrl: req.file.url,
   });
+
+  // Uploading a licence is the seller changing their "do you sell food?"
+  // answer to yes, whatever they picked at sign-up.
+  if (isFssai && !req.vendor.sellsFood) {
+    await Vendor.updateOne({ _id: req.vendor._id }, { $set: { sellsFood: true } });
+  }
 
   res.status(201).json({
     success: true,
@@ -61,4 +82,18 @@ async function deleteMyDocument(req, res) {
   res.json({ success: true, message: 'Document removed', data: { id } });
 }
 
-module.exports = { uploadDocument, listMyDocuments, deleteMyDocument, serializeDocument };
+// GET /vendor/documents/fssai — drives the FSSAI card on Store Profile and
+// the warning in the Add Category drawer.
+async function getMyFssaiStatus(req, res) {
+  const { status, document } = await getFssaiStatus(req.vendor._id);
+  res.json({
+    success: true,
+    data: {
+      status,
+      sellsFood: req.vendor.sellsFood === true,
+      document: document ? serializeDocument(document) : null,
+    },
+  });
+}
+
+module.exports = { uploadDocument, listMyDocuments, deleteMyDocument, getMyFssaiStatus, serializeDocument };

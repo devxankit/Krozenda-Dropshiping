@@ -387,13 +387,13 @@ export function CatalogFilterPanel({
             <legend className="text-xs font-black uppercase tracking-wide text-slate-500">
               Product type
             </legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
               {SOURCE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => patch({ source: option.value })}
-                  className={chipClass(draft.source === option.value)}
+                  className={`shrink-0 whitespace-nowrap ${chipClass(draft.source === option.value)}`}
                 >
                   {option.label}
                 </button>

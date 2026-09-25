@@ -144,6 +144,13 @@ export async function uploadVendorKycDocument(formData) {
   return data.data
 }
 
+// { status: 'MISSING' | 'PENDING' | 'APPROVED' | 'REJECTED', sellsFood, document }
+// — gates food categories (see backend utils/fssai.js).
+export async function fetchVendorFssaiStatus() {
+  const { data } = await api.get('/vendor/documents/fssai')
+  return data.data
+}
+
 export async function deleteVendorKycDocument(id) {
   const { data } = await api.delete(`/vendor/documents/${id}`)
   return data.data

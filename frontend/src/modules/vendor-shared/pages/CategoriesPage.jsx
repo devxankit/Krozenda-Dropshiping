@@ -68,15 +68,27 @@ export function CategoriesPage() {
     [filteredCategories, currentPage],
   )
 
-  async function handleSubmit({ name, image }) {
+  async function handleSubmit({ name, image, isFood }) {
     const formData = new FormData()
     formData.append('name', name)
+    formData.append('isFood', String(Boolean(isFood)))
     if (image) formData.append('image', image)
 
     setIsSubmitting(true)
     try {
-      await categories.createCategory(formData)
-      toast.success('Submitted for review', `"${name}" was sent to admin for approval.`)
+      const created = await categories.createCategory(formData)
+      // Food category without an approved FSSAI licence: saved, but blocked
+      // in admin's queue until the licence is approved.
+      if (created?.fssaiRequired) {
+        toast.warning(
+          'FSSAI licence required',
+          created.fssaiStatus === 'PENDING'
+            ? `"${name}" will be reviewed once admin approves your FSSAI licence.`
+            : `"${name}" is saved, but admin can approve it only after you upload an FSSAI licence from Store Profile and it is approved.`,
+        )
+      } else {
+        toast.success('Submitted for review', `"${name}" was sent to admin for approval.`)
+      }
       setDrawerOpen(false)
     } catch (err) {
       toast.error('Could not submit', err?.response?.data?.message || 'Something went wrong')
@@ -319,7 +331,11 @@ export function CategoriesPage() {
                     {formatDate(item.createdAt)}
                   </span>
                   {item.mine && <span className="rounded-full bg-brand-50 px-1.5 py-0.5 font-semibold text-brand-700">Added by you</span>}
+                  {item.isFood && <span className="rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">Food · FSSAI</span>}
                 </div>
+                {item.mine && item.isFood && item.approvalStatus === 'PENDING' && (
+                  <p className="mt-1.5 text-2xs text-amber-700">Approved only after your FSSAI licence is approved (Store Profile).</p>
+                )}
                 {item.mine && item.approvalStatus === 'REJECTED' && item.rejectionReason && (
                   <p className="mt-1.5 text-2xs text-danger-600">{item.rejectionReason}</p>
                 )}

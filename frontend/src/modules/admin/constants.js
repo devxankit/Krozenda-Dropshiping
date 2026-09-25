@@ -221,6 +221,7 @@ export const NAV_TREE = Object.freeze([
       {
         label: 'Products',
         to: ADMIN_ROUTES.PRODUCTS,
+        ownStockModule: true,
         icon: 'products',
         permission: ADMIN_PERMISSIONS.CATALOG_PRODUCTS,
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
@@ -228,6 +229,7 @@ export const NAV_TREE = Object.freeze([
       {
         label: 'Categories',
         to: ADMIN_ROUTES.CATEGORIES,
+        ownStockModule: true,
         icon: 'categories',
         permission: ADMIN_PERMISSIONS.CATALOG_CATEGORIES,
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
@@ -235,6 +237,7 @@ export const NAV_TREE = Object.freeze([
       {
         label: 'Brands',
         to: ADMIN_ROUTES.BRANDS,
+        ownStockModule: true,
         icon: 'brands',
         permission: ADMIN_PERMISSIONS.CATALOG_CATEGORIES,
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
@@ -242,17 +245,10 @@ export const NAV_TREE = Object.freeze([
       {
         label: 'Inventory',
         to: ADMIN_ROUTES.INVENTORY,
+        ownStockModule: true,
         icon: 'inventory',
         permission: ADMIN_PERMISSIONS.CATALOG_INVENTORY,
         legacyPermission: ADMIN_PERMISSIONS.CATALOG_VIEW,
-      },
-      {
-        label: 'Approvals',
-        to: ADMIN_ROUTES.CATALOG_APPROVALS,
-        icon: 'approvals',
-        permission: ADMIN_PERMISSIONS.CATALOG_APPROVE,
-        badge: 'productApprovals',
-        badgeTone: 'warning',
       },
     ],
   },
@@ -367,6 +363,14 @@ export const NAV_TREE = Object.freeze([
         icon: 'sellers',
         permission: ADMIN_PERMISSIONS.PEOPLE_SELLERS,
         legacyPermission: ADMIN_PERMISSIONS.PEOPLE_VIEW,
+      },
+      {
+        label: 'Approvals',
+        to: ADMIN_ROUTES.CATALOG_APPROVALS,
+        icon: 'approvals',
+        permission: ADMIN_PERMISSIONS.CATALOG_APPROVE,
+        badge: 'productApprovals',
+        badgeTone: 'warning',
       },
       {
         label: 'Customers',

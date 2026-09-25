@@ -3,6 +3,8 @@ const Product = require('../Models/Product');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
+const { getFssaiStatus, fssaiBlockMessage } = require('../utils/fssai');
 
 const SELLER_ONLY_MESSAGE =
   'Seller-only catalog mode is on: new categories can only be submitted by sellers. Review them in the approval queue instead.';
@@ -23,6 +25,7 @@ function serializeCategory(cat) {
     createdByVendor: cat.createdByVendor ? cat.createdByVendor.toString() : null,
     approvalStatus: cat.approvalStatus || 'APPROVED',
     rejectionReason: cat.rejectionReason || '',
+    isFood: cat.isFood === true,
     createdAt: cat.createdAt,
     updatedAt: cat.updatedAt,
   };
@@ -47,8 +50,17 @@ async function listPublicCategories(req, res) {
   // "1,240 Products" badge counted products still awaiting approval (and
   // rejected ones), so the count on the card never matched the number of
   // products the listing page then showed.
+  // Hidden own-stock products are left out of the count too, or the card
+  // would promise products the listing then doesn't show.
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
   const productStats = await Product.aggregate([
-    { $match: { isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER } },
+    {
+      $match: {
+        isActive: true,
+        approvalStatus: PUBLIC_APPROVAL_FILTER,
+        ...(hideOwnStock ? EXCLUDE_OWN_STOCK : {}),
+      },
+    },
     {
       $group: {
         _id: '$category',
@@ -57,7 +69,11 @@ async function listPublicCategories(req, res) {
       },
     },
   ]);
-  const statsByCategory = new Map(productStats.map((stat) => [stat._id.toString(), stat]));
+  // A product with no category groups under _id: null — skip it, or
+  // null.toString() throws and the whole categories page comes back empty.
+  const statsByCategory = new Map(
+    productStats.filter((stat) => stat._id).map((stat) => [stat._id.toString(), stat])
+  );
 
   const items = categories.map((cat) => {
     const stat = statsByCategory.get(cat._id.toString());
@@ -114,7 +130,7 @@ async function createCategory(req, res) {
 
 async function updateCategory(req, res) {
   const { id } = req.params;
-  const { name, isActive, isTopCategory } = req.body;
+  const { name, isActive, isTopCategory, isFood } = req.body;
 
   const category = await Category.findById(id);
   if (!category) {
@@ -131,6 +147,10 @@ async function updateCategory(req, res) {
 
   if (isTopCategory !== undefined) {
     category.isTopCategory = toBool(isTopCategory, category.isTopCategory);
+  }
+
+  if (isFood !== undefined) {
+    category.isFood = toBool(isFood, category.isFood);
   }
 
   if (req.file?.url) {
@@ -204,6 +224,14 @@ async function decideCategoryApproval(req, res) {
   const category = await Category.findById(id);
   if (!category) {
     return res.status(404).json({ success: false, message: 'Category not found' });
+  }
+
+  // Same rule as the approval queue (adminApprovalController.decide).
+  if (decision === 'APPROVED' && category.isFood && category.createdByVendor) {
+    const { status } = await getFssaiStatus(category.createdByVendor);
+    if (status !== 'APPROVED') {
+      return res.status(409).json({ success: false, code: 'FSSAI_NOT_APPROVED', message: fssaiBlockMessage(status) });
+    }
   }
 
   category.approvalStatus = decision;

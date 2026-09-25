@@ -3,6 +3,8 @@ const Brand = require('../Models/Brand');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { looksLikeFood, getFssaiStatus } = require('../utils/fssai');
+const { createNotification } = require('./notificationController');
 
 function serializeCategory(cat) {
   return {
@@ -12,6 +14,7 @@ function serializeCategory(cat) {
     isActive: cat.isActive !== false,
     approvalStatus: cat.approvalStatus || 'APPROVED',
     rejectionReason: cat.rejectionReason || '',
+    isFood: cat.isFood === true,
     mine: Boolean(cat.createdByVendor),
     createdAt: cat.createdAt,
   };
@@ -48,7 +51,7 @@ async function listMyCategories(req, res) {
 }
 
 async function createMyCategory(req, res) {
-  const { name } = req.body;
+  const { name, isFood } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Category name is required' });
   }
@@ -60,17 +63,43 @@ async function createMyCategory(req, res) {
 
   const { autoApprovalEnabled } = await CatalogSettings.getSettings();
 
+  // A food category never auto-approves on a seller whose FSSAI licence
+  // isn't approved yet — it waits in the queue, blocked, until it is.
+  const food = isFood === true || isFood === 'true' || looksLikeFood(name);
+  const fssaiStatus = food ? (await getFssaiStatus(req.vendor._id)).status : null;
+  const fssaiBlocked = food && fssaiStatus !== 'APPROVED';
+
   const category = await Category.create({
     name: name.trim(),
     image: req.file?.url || null,
     createdByVendor: req.vendor._id,
-    approvalStatus: autoApprovalEnabled ? 'APPROVED' : 'PENDING',
+    isFood: food,
+    approvalStatus: autoApprovalEnabled && !fssaiBlocked ? 'APPROVED' : 'PENDING',
   });
+
+  const fssaiMessage =
+    fssaiStatus === 'PENDING'
+      ? `"${category.name}" is a food category. It will be reviewed once admin approves your FSSAI licence.`
+      : `"${category.name}" is a food category and you have not added a valid FSSAI licence. Upload it from Store Profile — the category can only be approved after your licence is approved.`;
+
+  if (fssaiBlocked) {
+    await createNotification({
+      vendorId: req.vendor._id,
+      type: 'SYSTEM',
+      title: 'FSSAI licence required',
+      message: fssaiMessage,
+      actionType: 'NONE',
+    });
+  }
 
   res.status(201).json({
     success: true,
-    message: autoApprovalEnabled ? 'Category created' : 'Category submitted for admin approval',
-    data: serializeCategory(category),
+    message: fssaiBlocked
+      ? fssaiMessage
+      : category.approvalStatus === 'APPROVED'
+        ? 'Category created'
+        : 'Category submitted for admin approval',
+    data: { ...serializeCategory(category), fssaiRequired: fssaiBlocked, fssaiStatus },
   });
 }
 

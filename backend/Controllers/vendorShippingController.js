@@ -592,7 +592,7 @@ async function suggestPackageForOrder(req, res) {
 
   const [settings, products, vendor] = await Promise.all([
     ShippingSettings.getSettings(),
-    Product.find({ _id: { $in: myItems.map((i) => i.product) } }).select('weight dimensions').lean(),
+    Product.find({ _id: { $in: myItems.map((i) => i.product) } }).select('weight dimensions variants._id variants.weight').lean(),
     Vendor.findById(req.vendor._id).select('defaultPackage').lean(),
   ]);
 
@@ -601,6 +601,7 @@ async function suggestPackageForOrder(req, res) {
     myItems.map((item) => ({
       quantity: item.quantity,
       product: productById.get(String(item.product)) || {},
+      variantId: item.variantId,
     })),
     { settings, vendorDefault: vendor?.defaultPackage || null }
   );

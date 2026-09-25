@@ -80,8 +80,16 @@ async function suggestPackage(lines, { vendorDefault = null, settings = null } =
       source = 'PLATFORM_DEFAULT';
     }
 
+    // A chosen option's own weight wins over the parent's (an XL ships
+    // heavier than an S); an option without one inherits the parent's.
+    const variant = line.variantId
+      ? (product.variants || []).find((v) => String(v._id) === String(line.variantId))
+      : null;
+
     const weight =
-      Number(product.weight) > 0
+      Number(variant?.weight) > 0
+        ? Number(variant.weight)
+        : Number(product.weight) > 0
         ? Number(product.weight)
         : Number(vendorDefault?.weightKg) > 0
           ? Number(vendorDefault.weightKg)

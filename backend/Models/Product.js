@@ -24,7 +24,14 @@ const productVariantSchema = new mongoose.Schema(
     // differs by stock should not have to restate the price.
     price: { type: Number, default: null, min: 0 },
     salePrice: { type: Number, default: null, min: 0 },
+    // Admin-only, like the parent's costPrice — never sent to the storefront.
+    costPrice: { type: Number, default: null, min: 0 },
     stock: { type: Number, default: 0, min: 0 },
+    // Shipping weight in KILOGRAMS. Null means "same as the parent" — an XL
+    // jacket and an S jacket ship at different weights, a Red and a Blue do not.
+    weight: { type: Number, default: null, min: 0 },
+    // One of the parent's `images`, not a separate upload: the gallery is the
+    // single place photos live, and a variant only points at its own.
     image: { type: String, default: null },
     isActive: { type: Boolean, default: true },
   },

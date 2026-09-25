@@ -20,6 +20,7 @@ import {
   fetchVendorEarningsSummary,
   fetchVendorInventory,
   fetchVendorKycDocs,
+  fetchVendorFssaiStatus,
   fetchVendorNotifications,
   fetchVendorOrders,
   fetchVendorPayouts,
@@ -302,7 +303,10 @@ export function useVendorUploadKycController() {
   const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: uploadVendorKycDocument,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendor', 'kyc-documents'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'kyc-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'fssai'] })
+    },
   })
   return { upload: mutation.mutateAsync, isSubmitting: mutation.isPending }
 }
@@ -311,9 +315,17 @@ export function useVendorDeleteKycController() {
   const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: deleteVendorKycDocument,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendor', 'kyc-documents'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'kyc-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['vendor', 'fssai'] })
+    },
   })
   return { remove: mutation.mutateAsync }
+}
+
+export function useVendorFssaiController() {
+  const query = useQuery({ queryKey: ['vendor', 'fssai'], queryFn: fetchVendorFssaiStatus })
+  return { data: query.data, isLoading: query.isLoading }
 }
 
 export function useVendorProfileController() {

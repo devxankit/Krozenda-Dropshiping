@@ -12,6 +12,9 @@ const categorySchema = new mongoose.Schema(
     createdByVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
     approvalStatus: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'APPROVED' },
     rejectionReason: { type: String, default: '', trim: true },
+    // Food categories need the proposing seller's FSSAI licence approved
+    // before admin can approve the category (see utils/fssai.js).
+    isFood: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

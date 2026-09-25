@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Cart = require('../Models/Cart');
 const Product = require('../Models/Product');
+const { isOwnStockProduct, isOwnStockVisibleToCustomers } = require('../utils/ownStock');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const {
   checkMoq,
@@ -29,7 +30,10 @@ function round2(n) {
 // the final word on stock — createOrder re-reserves it atomically at
 // checkout — but it stops the cart from lying to the user well before then.
 async function loadPurchasableProduct(productId) {
-  return Product.findOne({ _id: productId, isActive: true });
+  const product = await Product.findOne({ _id: productId, isActive: true });
+  // Admin's "Own stock" switch is off: admin's own products can't be bought.
+  if (product && isOwnStockProduct(product) && !(await isOwnStockVisibleToCustomers())) return null;
+  return product;
 }
 
 // Stock is resolved per VARIANT when one is chosen — a colour that ran out
@@ -94,7 +98,7 @@ function clampMessage(requested, applied, product, okMessage, variantId = null) 
 // say "Only 2 left" or "no longer available" — it could only show a line as
 // if everything were fine and then fail at checkout. Those states are
 // computed here, from live product data, and the client renders them.
-function serializeItem(entry) {
+function serializeItem(entry, { hideOwnStock = false } = {}) {
   const p = entry.product;
   const variantId = entry.variantId ? entry.variantId.toString() : null;
   const variant = findVariant(p, variantId);
@@ -107,6 +111,8 @@ function serializeItem(entry) {
 
   let availability = 'AVAILABLE';
   if (!p.isActive) availability = 'UNAVAILABLE';
+  // Admin switched "Own stock" off after this went into the cart.
+  else if (hideOwnStock && isOwnStockProduct(p)) availability = 'UNAVAILABLE';
   // A variant that was removed or deactivated after it went into the cart.
   else if (variantId && !variant) availability = 'UNAVAILABLE';
   else if (stock <= 0) availability = 'OUT_OF_STOCK';
@@ -173,7 +179,8 @@ async function getCart(req, res) {
   // flagged UNAVAILABLE — dropping those silently is how a buyer ended up
   // looking at a cart that no longer matched what they had put in it.
   const entries = (cart?.items || []).filter((entry) => entry.product);
-  const items = entries.map(serializeItem);
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
+  const items = entries.map((entry) => serializeItem(entry, { hideOwnStock }));
 
   const purchasable = items.filter((item) => item.availability !== 'UNAVAILABLE' && item.availability !== 'OUT_OF_STOCK');
 
@@ -236,10 +243,11 @@ async function mergeCart(req, res) {
   }
 
   const cart = await getOrCreateCart(req.user._id);
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
 
   if (requested.size === 0) {
     await cart.populate('items.product');
-    return res.json({ success: true, message: 'Nothing to merge', data: { items: (cart.items || []).filter((e) => e.product).map(serializeItem), adjustments: [] } });
+    return res.json({ success: true, message: 'Nothing to merge', data: { items: (cart.items || []).filter((e) => e.product).map((e) => serializeItem(e, { hideOwnStock })), adjustments: [] } });
   }
 
   // One query for every product being merged, rather than one per item.
@@ -247,7 +255,11 @@ async function mergeCart(req, res) {
     _id: { $in: [...new Set([...requested.values()].map((r) => r.productId))] },
     isActive: true,
   }).lean();
-  const productById = new Map(products.map((p) => [p._id.toString(), p]));
+  // Left out of the map, a hidden own-stock product is reported UNAVAILABLE
+  // below like any deactivated one.
+  const productById = new Map(
+    products.filter((p) => !(hideOwnStock && isOwnStockProduct(p))).map((p) => [p._id.toString(), p])
+  );
 
   const adjustments = [];
 
@@ -305,7 +317,7 @@ async function mergeCart(req, res) {
     success: true,
     message: adjustments.length ? 'Cart merged with adjustments' : 'Cart merged',
     data: {
-      items: (cart.items || []).filter((entry) => entry.product).map(serializeItem),
+      items: (cart.items || []).filter((entry) => entry.product).map((entry) => serializeItem(entry, { hideOwnStock })),
       adjustments,
     },
   });

@@ -238,12 +238,16 @@ async function createShipment({
     pkg = buildPackageSnapshot(confirmedPackage, settings.volumetricDivisor);
   } else {
     const [products, vendor] = await Promise.all([
-      Product.find({ _id: { $in: myItems.map((i) => i.product) } }).select('weight dimensions sku').lean(),
+      Product.find({ _id: { $in: myItems.map((i) => i.product) } }).select('weight dimensions sku variants._id variants.weight').lean(),
       vendorId ? Vendor.findById(vendorId).select('defaultPackage').lean() : null,
     ]);
     const productById = new Map(products.map((p) => [String(p._id), p]));
     pkg = await suggestPackage(
-      myItems.map((item) => ({ quantity: item.quantity, product: productById.get(String(item.product)) || {} })),
+      myItems.map((item) => ({
+        quantity: item.quantity,
+        product: productById.get(String(item.product)) || {},
+        variantId: item.variantId,
+      })),
       { settings, vendorDefault: vendor?.defaultPackage || null }
     );
   }

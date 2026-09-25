@@ -65,7 +65,7 @@ async function quoteGroup({ vendorId, entries, deliveryPincode, cod, settings })
   // Everything from this seller travels in one box, so the package is worked
   // out from the whole group — not per line.
   const pkg = await suggestPackage(
-    entries.map((entry) => ({ quantity: entry.quantity, product: entry.product })),
+    entries.map((entry) => ({ quantity: entry.quantity, product: entry.product, variantId: entry.variantId })),
     { settings, vendorDefault: vendor?.defaultPackage || null }
   );
 

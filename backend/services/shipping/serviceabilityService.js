@@ -352,7 +352,7 @@ async function checkForOrder({
     //   product dimensions -> this vendor's default carton -> platform default
     const [products, vendor] = await Promise.all([
       Product.find({ _id: { $in: myItems.map((i) => i.product) } })
-        .select('weight dimensions')
+        .select('weight dimensions variants._id variants.weight')
         .lean(),
       vendorId ? Vendor.findById(vendorId).select('defaultPackage').lean() : null,
     ]);
@@ -362,6 +362,7 @@ async function checkForOrder({
       myItems.map((item) => ({
         quantity: item.quantity,
         product: productById.get(String(item.product)) || {},
+        variantId: item.variantId,
       })),
       { settings, vendorDefault: vendor?.defaultPackage || null }
     );

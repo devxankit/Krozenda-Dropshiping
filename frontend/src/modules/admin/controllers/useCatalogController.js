@@ -42,8 +42,16 @@ export function useProductDetailController(productId) {
 }
 
 export const useApprovalQueueController = () => useCatalogResource('approvals', fetchApprovalQueue)
-export const useApprovalSettingsController = () =>
-  useCatalogResource('approval-settings', service.fetchApprovalSettings)
+// `enabled` lets the always-mounted sidebar skip the call for staff who lack
+// the approve permission (the endpoint would just answer 403).
+export function useApprovalSettingsController({ enabled = true } = {}) {
+  const query = useQuery({
+    queryKey: ['admin', 'catalog', 'approval-settings'],
+    queryFn: service.fetchApprovalSettings,
+    enabled,
+  })
+  return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
+}
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
 export const useAttributesController = () => useCatalogResource('attributes', fetchAttributes)
@@ -99,8 +107,8 @@ export const useApprovalSettingsWriteController = () => ({
     success: (data, variables) => {
       if (variables.sellerOnlyMode !== undefined) {
         return variables.sellerOnlyMode
-          ? 'Seller-only catalog mode turned on — admin can no longer add products, categories or brands directly'
-          : 'Seller-only catalog mode turned off'
+          ? 'Own stock turned off — admin products are hidden from buyers and admin can no longer add products, categories or brands'
+          : 'Own stock turned on — admin products are back on the storefront'
       }
       return data.autoApprovalEnabled ? 'Auto-approval turned on' : 'Auto-approval turned off'
     },

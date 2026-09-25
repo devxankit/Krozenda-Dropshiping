@@ -127,6 +127,12 @@ const vendorSchema = new mongoose.Schema(
 
     gstRegistered: { type: Boolean, default: false },
 
+    // The sign-up answer to "Will you sell food products?". Yes means an
+    // FSSAI licence was required at registration; No lets them skip it, but
+    // any food category they propose later stays blocked until they upload
+    // one from Store Profile and admin approves it (see utils/fssai.js).
+    sellsFood: { type: Boolean, default: false },
+
     business: { type: businessSchema, default: () => ({}) },
     contactPerson: { type: contactPersonSchema, default: () => ({}) },
     address: { type: addressSchema, default: () => ({}) },

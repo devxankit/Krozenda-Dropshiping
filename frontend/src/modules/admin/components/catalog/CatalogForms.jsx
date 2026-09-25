@@ -1,9 +1,11 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
 import { InlineAlert } from '../feedback'
 import { ConfirmDialog } from '../overlay/ConfirmDialog'
 import { ProductBarcode } from '../../../../components/common/ProductBarcode'
+import { ProductVariantsSection } from '../../../../components/catalog/ProductVariantsSection'
+import { buildVariantsPayload, variantFromProduct } from '../../../../components/catalog/productVariants'
 import {
   attributeWriteSchema,
   brandWriteSchema,
@@ -511,6 +513,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
   }))
   const [keptImages, setKeptImages] = useState(() => product?.images ?? [])
   const [newFiles, setNewFiles] = useState([])
+  const [variants, setVariants] = useState(() => (product?.variants ?? []).map((v) => variantFromProduct(v, product.price)))
   const [issue, setIssue] = useState(null)
 
   const mutation = editing ? writer.update : writer.create
@@ -543,13 +546,27 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     setNewFiles((current) => [...current, ...files].slice(0, Math.max(0, MAX_PRODUCT_IMAGES - keptImages.length)))
   }
 
+  // A variant pointing at a photo that is being removed would point at nothing.
+  function clearVariantImage(key) {
+    setVariants((current) => current.map((v) => (v.image === key ? { ...v, image: null } : v)))
+  }
+
   function removeKeptImage(url) {
     setKeptImages((current) => current.filter((img) => img !== url))
+    clearVariantImage(url)
   }
 
   function removeNewFile(index) {
+    clearVariantImage(newFiles[index])
     setNewFiles((current) => current.filter((_, i) => i !== index))
   }
+
+  // One object URL per file, not one per render.
+  const newFilePreviews = useMemo(() => newFiles.map((file) => URL.createObjectURL(file)), [newFiles])
+  const gallery = [
+    ...keptImages.map((url) => ({ key: url, src: url })),
+    ...newFiles.map((file, i) => ({ key: file, src: newFilePreviews[i] })),
+  ]
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -592,12 +609,21 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
       return
     }
 
+    const variantResult = buildVariantsPayload(variants, { galleryFiles: newFiles })
+    if (variantResult.error) {
+      setIssue(variantResult.error)
+      return
+    }
+
     setIssue(null)
 
     const body = {
       ...payload,
       images: newFiles,
       gstRate: form.gstRate,
+      // Always sent, empty included: an empty list is the admin removing
+      // every variant, which the server only does when the field is present.
+      variants: variantResult.variants,
     }
 
     if (editing) {
@@ -962,6 +988,9 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
           {form.status === 'Inactive' && 'Inactive: Disabled from catalog browsing and customer checkout.'}
         </p>
       </div>
+
+      {/* SECTION 7: VARIANTS */}
+      <ProductVariantsSection variants={variants} onChange={setVariants} gallery={gallery} />
 
       {/* FEATURED / SPOTLIGHT TOGGLES */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

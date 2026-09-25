@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
 import { api } from '../../../../lib/axios'
+import { ProductVariantsSection } from '../../../../components/catalog/ProductVariantsSection'
+import { buildVariantsPayload } from '../../../../components/catalog/productVariants'
 
 const GST_RATE_OPTIONS = [
   { value: '', label: 'Select GST slab (optional)' },
@@ -38,6 +40,7 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
   const [previews, setPreviews] = useState([])
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
+  const [variants, setVariants] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -54,6 +57,8 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
   }
 
   function handleRemoveImage(index) {
+    // A variant pointing at the removed photo would point at nothing.
+    setVariants((prev) => prev.map((v) => (v.image === files[index] ? { ...v, image: null } : v)))
     setFiles((prev) => prev.filter((_, i) => i !== index))
     setPreviews((prev) => prev.filter((_, i) => i !== index))
   }
@@ -89,6 +94,11 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
       toast.error('Missing Main Image', 'Main image is required. Please upload at least one image.')
       return
     }
+    const variantResult = buildVariantsPayload(variants, { galleryFiles: files })
+    if (variantResult.error) {
+      toast.error('Check your variants', variantResult.error)
+      return
+    }
 
     const body = new FormData()
     body.append('name', formData.name.trim())
@@ -109,6 +119,8 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
     body.append('isTrending', formData.isTrending)
     body.append('isReturnable', formData.isReturnable)
 
+    if (variantResult.variants.length > 0) body.append('variants', JSON.stringify(variantResult.variants))
+
     files.forEach((f) => body.append('images', f))
 
     setIsSubmitting(true)
@@ -122,12 +134,15 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
       setFormData(EMPTY_FORM)
       setFiles([])
       setPreviews([])
+      setVariants([])
     } catch (err) {
       toast.error('Could not add product', err?.response?.data?.message || 'Something went wrong')
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  const gallery = files.map((file, i) => ({ key: file, src: previews[i] }))
 
   return (
     <Modal
@@ -390,6 +405,9 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
             {formData.status === 'Inactive' && 'Inactive products remain disabled.'}
           </p>
         </div>
+
+        {/* SECTION 7: VARIANTS */}
+        <ProductVariantsSection variants={variants} onChange={setVariants} gallery={gallery} />
 
         {/* FEATURED / SPOTLIGHT TOGGLES */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

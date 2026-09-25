@@ -1,12 +1,25 @@
 import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Badge, Icon, Input } from '../../../../components/ui'
 import { FormDrawer } from '../../../admin/components/forms'
 import { InlineAlert } from '../../../admin/components/feedback'
+import { useVendorFssaiController } from '../../controllers/useVendorController'
+
+const FSSAI_WARNING = {
+  MISSING: 'You have not uploaded an FSSAI licence. Admin will not approve a food category until you upload one from Store Profile and it is approved.',
+  PENDING: 'Your FSSAI licence is under review. This category will be reviewed once admin approves the licence.',
+  REJECTED: 'Your FSSAI licence was rejected. Re-upload a valid licence from Store Profile — until then this category cannot be approved.',
+}
 
 export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitting }) {
   const [imageFile, setImageFile] = useState(null)
   const [name, setName] = useState('')
+  const [isFood, setIsFood] = useState(false)
   const [issue, setIssue] = useState(null)
+  const { data: fssai } = useVendorFssaiController()
+  const { pathname } = useLocation()
+  const profilePath = `/${pathname.split('/')[1]}/profile`
+  const fssaiWarning = isFood && fssai && fssai.status !== 'APPROVED' ? FSSAI_WARNING[fssai.status] : null
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -15,7 +28,7 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
       return
     }
     setIssue(null)
-    onSubmit({ name: name.trim(), image: imageFile })
+    onSubmit({ name: name.trim(), image: imageFile, isFood })
   }
 
   const previewSrc = imageFile ? URL.createObjectURL(imageFile) : undefined
@@ -67,6 +80,33 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
       </div>
 
       <Input id="vendor-category-name" label="Category Name" required placeholder="e.g. Ayurvedic Wellness" value={name} onChange={(event) => setName(event.target.value)} />
+
+      <label className="flex cursor-pointer select-none items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+        <input
+          type="checkbox"
+          checked={isFood}
+          onChange={(event) => setIsFood(event.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
+        />
+        <span className="text-xs text-slate-600">
+          <span className="font-semibold text-slate-900">This is a food category</span>
+          <span className="block text-2xs text-slate-500">Food, grocery, beverages, snacks etc. — needs an approved FSSAI licence.</span>
+        </span>
+      </label>
+
+      {fssaiWarning && (
+        <InlineAlert
+          tone="warning"
+          title="FSSAI licence required"
+          action={
+            <Link to={profilePath} onClick={onClose} className="text-xs font-semibold underline">
+              Go to Store Profile
+            </Link>
+          }
+        >
+          {fssaiWarning}
+        </InlineAlert>
+      )}
 
       <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
         <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Live Card Preview</span>

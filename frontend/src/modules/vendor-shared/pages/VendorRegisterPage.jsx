@@ -36,6 +36,8 @@ const BLANK = {
   password: '',
   confirmPassword: '',
   gstRegistered: 'false',
+  sellsFood: 'false',
+  fssaiNumber: '',
   businessName: '',
   businessType: '',
   tradeName: '',
@@ -88,6 +90,10 @@ function validateStep(step, form, docs, policyAcceptances) {
     if (form.gstRegistered === 'true' && !docs.gstDoc?.url) {
       errors.gstDoc = 'Please upload your GST registration certificate'
     }
+    if (form.sellsFood === 'true') {
+      if (!/^\d{14}$/.test(form.fssaiNumber.trim())) errors.fssaiNumber = 'Enter your 14-digit FSSAI licence number'
+      if (!docs.fssaiDoc?.url) errors.fssaiDoc = 'Please upload your FSSAI licence'
+    }
   }
 
   if (step === 3) {
@@ -132,6 +138,7 @@ export function VendorRegisterPage() {
   const [docs, setDocs] = useState({
     panDoc: null, // { url, filename, originalname, uploading }
     gstDoc: null,
+    fssaiDoc: null,
   })
 
   const isB2B = form.vendorType === 'B2B'
@@ -217,6 +224,14 @@ export function VendorRegisterPage() {
         documentUrl: docs.gstDoc.url,
       })
     }
+    if (form.sellsFood === 'true' && docs.fssaiDoc?.url) {
+      documents.push({
+        documentType: 'FSSAI_LICENSE',
+        documentLabel: 'FSSAI Food Safety Licence',
+        documentNumber: form.fssaiNumber.trim(),
+        documentUrl: docs.fssaiDoc.url,
+      })
+    }
 
     const payload = {
       vendorType: form.vendorType,
@@ -226,6 +241,7 @@ export function VendorRegisterPage() {
       password: form.password,
       confirmPassword: form.confirmPassword,
       gstRegistered: form.gstRegistered === 'true',
+      sellsFood: form.sellsFood === 'true',
       business: {
         businessName: form.businessName.trim(),
         businessType: form.businessType || null,
@@ -628,6 +644,49 @@ export function VendorRegisterPage() {
                   {errors.gstin && <p className="mt-1 text-[11px] text-red-500">{errors.gstin}</p>}
                 </div>
               )}
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Will you sell food products? <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={form.sellsFood}
+                  onChange={set('sellsFood')}
+                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium"
+                >
+                  <option value="false">No, I will not sell food items</option>
+                  <option value="true">Yes, I will sell food / grocery / beverages</option>
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {form.sellsFood === 'true'
+                    ? 'An FSSAI licence is mandatory to sell food. Upload it below.'
+                    : 'You can add an FSSAI licence later from Store Profile if you start selling food.'}
+                </p>
+              </div>
+
+              {form.sellsFood === 'true' && (
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    FSSAI Licence Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={14}
+                    value={form.fssaiNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      setForm((p) => ({ ...p, fssaiNumber: value }))
+                      setErrors((prev) => (prev.fssaiNumber ? { ...prev, fssaiNumber: undefined } : prev))
+                    }}
+                    placeholder="14-digit licence number"
+                    className={`w-full bg-white border ${
+                      errors.fssaiNumber ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
+                    } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono font-semibold`}
+                  />
+                  {errors.fssaiNumber && <p className="mt-1 text-[11px] text-red-500">{errors.fssaiNumber}</p>}
+                </div>
+              )}
             </div>
 
             {/* DIRECT DOCUMENT UPLOAD SECTION */}
@@ -720,6 +779,47 @@ export function VendorRegisterPage() {
                 )}
                 {errors.gstDoc && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.gstDoc}</p>}
               </div>
+
+              {/* Upload 3: FSSAI Licence — only for food sellers */}
+              {form.sellsFood === 'true' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    3. FSSAI Licence <span className="text-red-500">*</span>
+                  </label>
+                  {docs.fssaiDoc?.url ? (
+                    <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
+                      <div className="flex items-center space-x-2 text-emerald-800">
+                        <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-semibold truncate max-w-xs">{docs.fssaiDoc.originalname}</span>
+                        <span className="text-[10px] text-emerald-600 font-bold uppercase">(Uploaded ✓)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDocs((p) => ({ ...p, fssaiDoc: null }))}
+                        className="text-slate-400 hover:text-red-600 p-1"
+                        title="Remove file"
+                      >
+                        <HiOutlineTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
+                      <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
+                      <span className="text-xs font-semibold text-slate-600 group-hover:text-blue-600">
+                        {docs.fssaiDoc?.uploading ? 'Uploading FSSAI licence…' : 'Choose FSSAI Licence (Image or PDF)'}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        onChange={(e) => handleFileUpload('fssaiDoc', e.target.files?.[0])}
+                        className="hidden"
+                        disabled={docs.fssaiDoc?.uploading}
+                      />
+                    </label>
+                  )}
+                  {errors.fssaiDoc && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.fssaiDoc}</p>}
+                </div>
+              )}
             </div>
 
             {/* B2B Authorised Contact Person */}

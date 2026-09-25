@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Wishlist = require('../Models/Wishlist');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { readPagination, buildPagination } = require('../utils/pagination');
+const { isOwnStockProduct, isOwnStockVisibleToCustomers } = require('../utils/ownStock');
 
 const LOW_STOCK_THRESHOLD = 5;
 // A wishlist that can grow without bound is a payload that can grow without
@@ -10,13 +11,15 @@ const MAX_WISHLIST_ITEMS = 200;
 
 // Shaped to match frontend/src/lib/wishlistStore.js's item shape directly,
 // so a hydrate response can be dropped straight into the store.
-function serializeItem(entry) {
+function serializeItem(entry, { hideOwnStock = false } = {}) {
   const p = entry.product;
 
   // A wishlisted product that was later deactivated or sold out must say so,
   // rather than rendering as an ordinary card that fails on "Move to Cart".
   let availability = 'AVAILABLE';
   if (!p.isActive) availability = 'UNAVAILABLE';
+  // Admin switched "Own stock" off, so admin's own products can't be bought.
+  else if (hideOwnStock && isOwnStockProduct(p)) availability = 'UNAVAILABLE';
   else if (p.stock <= 0) availability = 'OUT_OF_STOCK';
   else if (p.stock <= LOW_STOCK_THRESHOLD) availability = 'LOW_STOCK';
 
@@ -51,7 +54,7 @@ async function getWishlist(req, res) {
 
   const wishlist = await Wishlist.findOne({ user: req.user._id }).populate({
     path: 'items.product',
-    select: 'name images price salePrice discountPercent stock isActive rating reviewsCount category brand',
+    select: 'name images price salePrice discountPercent stock isActive rating reviewsCount category brand vendor fulfillmentProvider',
     populate: [
       { path: 'category', select: 'name' },
       { path: 'brand', select: 'name' },
@@ -63,7 +66,8 @@ async function getWishlist(req, res) {
   // buyer learns why they can't buy it any more.
   const all = (wishlist?.items || []).filter((entry) => entry.product);
   const total = all.length;
-  const items = all.slice(skip, skip + limit).map(serializeItem);
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
+  const items = all.slice(skip, skip + limit).map((entry) => serializeItem(entry, { hideOwnStock }));
 
   res.json({
     success: true,

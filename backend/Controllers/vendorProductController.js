@@ -4,6 +4,7 @@ const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
+const { normaliseVariants, validateVariants, resolveVariantImages } = require('../utils/productVariants');
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 
 function toBool(value, fallback) {
@@ -80,27 +81,6 @@ function validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers }) {
   return null;
 }
 
-// Variants are replaced wholesale when the field is sent, not merged: the
-// seller's form owns the whole list, and a merge would make removing one
-// impossible. Existing variants keep their _id (and therefore their identity
-// on open carts and orders) when the client sends it back.
-function normaliseVariants(raw) {
-  if (!Array.isArray(raw)) return null;
-  return raw
-    .filter((v) => v && String(v.name || '').trim())
-    .map((v) => ({
-      ...(v.id && mongoose.isValidObjectId(v.id) ? { _id: v.id } : {}),
-      name: String(v.name).trim(),
-      attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
-      sku: String(v.sku || '').trim(),
-      price: toNumber(v.price),
-      salePrice: toNumber(v.salePrice),
-      stock: Math.max(0, Math.round(toNumber(v.stock, 0))),
-      image: v.image || null,
-      isActive: v.isActive !== false,
-    }));
-}
-
 function toRelativePath(url) {
   const index = url.indexOf('/uploads/');
   return index === -1 ? url : url.slice(index);
@@ -166,7 +146,9 @@ function serializeProduct(p) {
       barcode: v.barcode || '',
       price: v.price ?? null,
       salePrice: v.salePrice ?? null,
+      costPrice: v.costPrice ?? null,
       stock: v.stock ?? 0,
+      weight: v.weight ?? null,
       image: v.image ? getImageUrl(v.image) : null,
       isActive: v.isActive !== false,
     })),
@@ -350,7 +332,7 @@ async function createMyProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Product name is required' });
   }
 
-  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers });
+  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers }) || validateVariants(variants);
   if (b2bError) {
     return res.status(400).json({ success: false, message: b2bError });
   }
@@ -416,6 +398,7 @@ async function createMyProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Main image is required' });
     }
   }
+  resolveVariantImages(variants, uploadedImages);
 
   const { autoApprovalEnabled } = await CatalogSettings.getSettings();
   const validStatuses = ['Draft', 'Active', 'Inactive'];
@@ -538,7 +521,7 @@ async function updateMyProduct(req, res) {
   if (shortDescription !== undefined) product.shortDescription = String(shortDescription || '').trim();
   if (description !== undefined) product.description = description;
 
-  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers });
+  const b2bError = validateTaxAndB2B({ hsnCode, gstRate, moq, priceTiers }) || validateVariants(variants);
   if (b2bError) {
     return res.status(400).json({ success: false, message: b2bError });
   }
@@ -585,6 +568,7 @@ async function updateMyProduct(req, res) {
   }
 
   let images = product.images || [];
+  let removeSet = new Set();
   if (removeImages) {
     let toRemove = [];
     try {
@@ -592,7 +576,7 @@ async function updateMyProduct(req, res) {
     } catch {
       toRemove = [];
     }
-    const removeSet = new Set(toRemove.map(toRelativePath));
+    removeSet = new Set(toRemove.map(toRelativePath));
     images = images.filter((img) => !removeSet.has(toRelativePath(img)));
   }
   const newImages = (req.files || []).map((file) => file.url);
@@ -601,6 +585,9 @@ async function updateMyProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Product must have at least one main image' });
   }
   product.images = combinedImages;
+  // Always, not only when variants were sent: removing a gallery photo must
+  // also clear it from any option that pointed at it.
+  resolveVariantImages(product.variants, newImages, removeSet);
 
   await product.save();
   await product.populate([{ path: 'category', select: 'name' }, { path: 'brand', select: 'name' }]);

@@ -3,6 +3,13 @@ const Brand = require('../Models/Brand');
 const Product = require('../Models/Product');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { createNotification } = require('./notificationController');
+const { getFssaiStatus, getFssaiStatusMap, fssaiBlockMessage } = require('../utils/fssai');
+
+const FSSAI_CONTEXT = {
+  MISSING: 'Food category · FSSAI licence not uploaded',
+  PENDING: 'Food category · FSSAI licence awaiting review',
+  REJECTED: 'Food category · FSSAI licence rejected',
+};
 
 // GET /admin/catalog/approvals/settings — current auto-approval policy.
 async function getApprovalSettings(req, res) {
@@ -67,17 +74,27 @@ async function listApprovalQueue(req, res) {
 
   const vendorLabel = (v) => v?.business?.businessName || v?.name || 'Unknown seller';
 
+  // Food categories stay blocked until the proposing seller's FSSAI licence
+  // is approved; admin sees why instead of a bare disabled button.
+  const foodVendorIds = categories.filter((c) => c.isFood && c.createdByVendor).map((c) => c.createdByVendor._id);
+  const fssaiByVendor = foodVendorIds.length ? await getFssaiStatusMap(foodVendorIds) : new Map();
+  const fssaiOf = (c) => (c.isFood && c.createdByVendor ? fssaiByVendor.get(c.createdByVendor._id.toString()) : null);
+
   const items = [
-    ...categories.map((c) => ({
-      id: `category:${c._id}`,
-      kind: 'category',
-      name: c.name,
-      context: 'New category proposal',
-      submittedBy: vendorLabel(c.createdByVendor),
-      submittedAt: c.createdAt,
-      waitingDays: daysSince(c.createdAt),
-      blockedBy: null,
-    })),
+    ...categories.map((c) => {
+      const fssai = fssaiOf(c);
+      const blocked = fssai && fssai !== 'APPROVED';
+      return {
+        id: `category:${c._id}`,
+        kind: 'category',
+        name: c.name,
+        context: blocked ? FSSAI_CONTEXT[fssai] : c.isFood ? 'Food category · FSSAI licence approved' : 'New category proposal',
+        submittedBy: vendorLabel(c.createdByVendor),
+        submittedAt: c.createdAt,
+        waitingDays: daysSince(c.createdAt),
+        blockedBy: blocked ? 'FSSAI licence' : null,
+      };
+    }),
     ...brands.map((b) => ({
       id: `brand:${b._id}`,
       kind: 'brand',
@@ -129,6 +146,13 @@ async function decide(req, res, decision) {
   const doc = await Model.findOne({ _id: parsed.rawId, approvalStatus: 'PENDING' });
   if (!doc) {
     return res.status(404).json({ success: false, message: 'Item not found or already decided' });
+  }
+
+  if (decision === 'APPROVED' && parsed.kind === 'category' && doc.isFood && doc.createdByVendor) {
+    const { status } = await getFssaiStatus(doc.createdByVendor);
+    if (status !== 'APPROVED') {
+      return res.status(409).json({ success: false, code: 'FSSAI_NOT_APPROVED', message: fssaiBlockMessage(status) });
+    }
   }
 
   doc.approvalStatus = decision;

@@ -265,7 +265,7 @@ export function ApprovalsPage() {
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed max-w-2xl">
                   {isSellerOnlyOn
-                    ? 'Admin can no longer add products, categories, or brands directly — only sellers can submit new listings, and admin’s role here is limited to approving or rejecting them.'
+                    ? 'Own stock is off (sidebar switch): admin can no longer add products, categories, or brands, and admin’s own products are hidden from buyers — only seller and dropshipping products are sold.'
                     : 'Both admin and sellers can add new products, categories, and brands directly.'}
                 </p>
               </div>
@@ -361,7 +361,16 @@ export function ApprovalsPage() {
             canApprove={canApprove}
             isApproving={writer.approve.isSubmitting}
             onApprove={(item) => writer.approve.run({ id: item.id })}
-            onReject={setRejecting}
+            onReject={(item) => {
+              setRejecting(item)
+              // Food category held up by the seller's missing/unapproved
+              // FSSAI licence — start from the message they need to see.
+              if (item.blockedBy === 'FSSAI licence') {
+                setReason(
+                  'You have not added an approved FSSAI licence. Upload your FSSAI licence from Store Profile; once admin approves it, you can resubmit this food category.',
+                )
+              }
+            }}
             searchQuery={searchQuery}
             onClearSearch={() => setSearchQuery('')}
             tab={tab}

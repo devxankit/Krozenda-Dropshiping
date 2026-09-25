@@ -207,7 +207,7 @@ export function HomeCenterFeed({
         { label: 'Safe Escrow Protection', icon: 'sparkles' },
         { label: 'Express 24-48h Dispatch', icon: 'truck' },
       ],
-      image: '/images/hero_banner_mega_sale.png',
+      image: '/images/banner_smartphone_carnival.webp',
       ctaText: 'SHOP NOW →',
       ctaPath: USER_ROUTES.LISTING,
       bgGradient: 'from-blue-700 via-indigo-700 to-slate-950',
@@ -223,7 +223,7 @@ export function HomeCenterFeed({
         { label: 'Escrow Protected', icon: 'shield' },
         { label: 'Pan-India Air Cargo', icon: 'truck' },
       ],
-      image: '/images/banner_wholesale_deals.png',
+      image: '/images/banner_factory_dropship.webp',
       ctaText: 'EXPLORE DEALS →',
       ctaPath: USER_ROUTES.LISTING,
       bgGradient: 'from-blue-600 via-indigo-600 to-blue-800',
@@ -231,7 +231,7 @@ export function HomeCenterFeed({
   ]
 
   const heroBanners = (banners || [])
-    .filter((b) => b.placement === 'hero' || !b.placement)
+    .filter((b) => (b.placement === 'hero' || !b.placement) && b.image)
     .slice(0, 5)
 
   const activeBanners = heroBanners.length > 0 ? heroBanners : fallbackBanners
@@ -258,7 +258,6 @@ export function HomeCenterFeed({
 
   const formatTime = (val) => val.toString().padStart(2, '0')
   const curBanner = activeBanners[currentBannerIndex] || activeBanners[0]
-
   const hasCategories = categories.length > 0
   const hasFlashSale = flashSale.length > 0
   const hasTrending = trending.length > 0
@@ -266,8 +265,10 @@ export function HomeCenterFeed({
 
   return (
     <main className={`flex-1 min-w-0 space-y-5 sm:space-y-7 md:space-y-8 ${className}`}>
-      {/* 1. HERO BANNER (Blue Marketplace Theme with Feature Badges) */}
-      <div className="w-full relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-card group cursor-pointer aspect-[16/9] sm:aspect-[21/9] lg:aspect-[24/9] min-h-[190px] sm:min-h-[260px] lg:min-h-[300px] bg-blue-700 text-white">
+      {/* 1. HERO BANNER — large hero banner size
+          (Strict 16:9 widescreen ratio across all devices matching 1920x1080 banner assets).
+          Zero cutoff, zero cropping, and zero letterboxing on web and app views. */}
+      <div className="w-full relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-card group cursor-pointer aspect-[16/9] bg-slate-900 text-white">
         <div
           onClick={() => {
             navigate(curBanner.ctaPath || (curBanner.productId ? userPath.product(curBanner.productId) : USER_ROUTES.LISTING))
@@ -286,70 +287,25 @@ export function HomeCenterFeed({
                 x: { type: 'spring', stiffness: 300, damping: 30 },
                 opacity: { duration: 0.35 },
               }}
-              className="absolute inset-0 h-full w-full flex items-center justify-between overflow-hidden bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-900 p-4 sm:p-7 md:p-8"
+              className="absolute inset-0 h-full w-full overflow-hidden"
             >
-              {/* Left Column Text & CTAs */}
-              <div className="z-10 max-w-[62%] sm:max-w-md lg:max-w-lg space-y-1.5 sm:space-y-3">
-                {curBanner.tag && (
-                  <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/15 text-blue-100 font-extrabold text-[9px] sm:text-[10px] tracking-wider uppercase border border-white/20 backdrop-blur-xs">
-                    {curBanner.tag}
-                  </span>
-                )}
-
-                <h1 className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight line-clamp-2">
-                  {curBanner.title || 'Verified Quality Wholesale & Dropshipping'}
-                </h1>
-
-                <p className="text-[11px] sm:text-sm text-blue-100 font-normal line-clamp-2">
-                  {curBanner.subtitle || 'Source directly from verified manufacturers • White-label dispatch'}
-                </p>
-
-                {/* Feature Tags Row (Desktop/Tablet) */}
-                <div className="hidden sm:flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-white">
-                  <span className="flex items-center gap-1 bg-white/15 backdrop-blur-xs px-2.5 py-1 rounded-full shadow-2xs border border-white/20">
-                    <HiCheckBadge className="w-3.5 h-3.5 text-blue-300" /> 100% Quality Checked
-                  </span>
-                  <span className="flex items-center gap-1 bg-white/15 backdrop-blur-xs px-2.5 py-1 rounded-full shadow-2xs border border-white/20">
-                    <HiShieldCheck className="w-3.5 h-3.5 text-blue-300" /> Safe Escrow
-                  </span>
-                  <span className="flex items-center gap-1 bg-white/15 backdrop-blur-xs px-2.5 py-1 rounded-full shadow-2xs border border-white/20">
-                    <HiTruck className="w-3.5 h-3.5 text-blue-300" /> Fast 24-48h Dispatch
-                  </span>
-                </div>
-
-                {/* Shop Now CTA button */}
-                <div className="pt-1 sm:pt-2">
-                  <button
-                    type="button"
-                    className="touch-auto-target inline-flex items-center space-x-1 sm:space-x-1.5 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-white hover:bg-blue-50 text-blue-700 font-bold text-[11px] sm:text-xs shadow-md hover:scale-103 active:scale-95 transition-all"
-                  >
-                    <span>{curBanner.ctaText || 'SHOP NOW'}</span>
-                    <HiChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Side Visual / Photography */}
-              <div className="relative w-[38%] sm:w-1/2 h-full flex items-center justify-end pointer-events-none">
-                <div className="absolute top-2 right-2 text-right hidden sm:block">
-                  <span className="text-xs font-semibold text-blue-200/90">
-                    {curBanner.tagline || 'Verified B2B & B2C Marketplace 🛡️'}
-                  </span>
-                </div>
-                {curBanner.image && (
-                  <div className="w-full max-w-[130px] sm:max-w-[280px] md:max-w-[360px] h-[85%] relative">
-                    <SmartImage
-                      src={curBanner.image}
-                      alt={curBanner.title}
-                      priority
-                      sizes="(max-width: 640px) 130px, 360px"
-                      ratio="auto"
-                      fit="contain"
-                      className="w-full h-full object-contain filter drop-shadow-2xl"
-                    />
-                  </div>
-                )}
-              </div>
+              {curBanner.image && (
+                <img
+                  src={curBanner.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover blur-xl opacity-30"
+                />
+              )}
+              <SmartImage
+                src={curBanner.image}
+                alt={curBanner.title || 'Krozenda offer'}
+                priority
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                ratio="16 / 9"
+                fit="cover"
+                className="relative h-full w-full !bg-transparent"
+              />
             </motion.div>
           </AnimatePresence>
         </div>

@@ -6,8 +6,10 @@ const CatalogSettings = require('../Models/CatalogSettings');
 const CjSettings = require('../Models/CjSettings');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
+const { normaliseVariants, validateVariants, resolveVariantImages } = require('../utils/productVariants');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { isOwnStockProduct, isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 
 // Admin > CJ Dropshipping > Settings > "Show Dropshipping Products to
@@ -84,27 +86,6 @@ function validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers }) {
   return null;
 }
 
-// Replaced wholesale when sent, never merged: the form owns the list, and a
-// merge would make removing a variant impossible. An existing variant keeps
-// its _id (and therefore its identity on live carts and orders) when the
-// client sends it back.
-function normaliseVariants(raw) {
-  if (!Array.isArray(raw)) return null;
-  return raw
-    .filter((v) => v && String(v.name || '').trim())
-    .map((v) => ({
-      ...(v.id && mongoose.isValidObjectId(v.id) ? { _id: v.id } : {}),
-      name: String(v.name).trim(),
-      attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
-      sku: String(v.sku || '').trim(),
-      price: toNumber(v.price),
-      salePrice: toNumber(v.salePrice),
-      stock: Math.max(0, Math.round(toNumber(v.stock, 0))),
-      image: v.image || null,
-      isActive: v.isActive !== false,
-    }));
-}
-
 const DEFAULT_PRODUCT_IMAGE = '/images/default-product.png';
 
 function serializeProduct(p) {
@@ -160,7 +141,9 @@ function serializeProduct(p) {
       barcode: v.barcode || '',
       price: v.price ?? null,
       salePrice: v.salePrice ?? null,
+      costPrice: v.costPrice ?? null,
       stock: v.stock ?? 0,
+      weight: v.weight ?? null,
       image: v.image ? getImageUrl(v.image) : null,
       isActive: v.isActive !== false,
     })),
@@ -365,7 +348,7 @@ async function createProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Product name is required' });
   }
 
-  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers });
+  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers }) || validateVariants(variants);
   if (b2bError) {
     return res.status(400).json({ success: false, message: b2bError });
   }
@@ -431,6 +414,7 @@ async function createProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Main image is required' });
     }
   }
+  resolveVariantImages(variants, uploadedImages);
 
   const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
   const validStatuses = ['Draft', 'Active', 'Inactive'];
@@ -594,7 +578,7 @@ async function updateProduct(req, res) {
     }
   }
 
-  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers });
+  const b2bError = validateCatalogB2B({ hsnCode, gstRate, moq, priceTiers }) || validateVariants(variants);
   if (b2bError) {
     return res.status(400).json({ success: false, message: b2bError });
   }
@@ -647,6 +631,7 @@ async function updateProduct(req, res) {
   }
 
   let images = product.images || [];
+  let removeSet = new Set();
   if (removeImages) {
     let toRemove = [];
     try {
@@ -654,7 +639,7 @@ async function updateProduct(req, res) {
     } catch {
       toRemove = [];
     }
-    const removeSet = new Set(toRemove.map(toRelativePath));
+    removeSet = new Set(toRemove.map(toRelativePath));
     images = images.filter((img) => !removeSet.has(toRelativePath(img)));
   }
 
@@ -664,6 +649,9 @@ async function updateProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Product must have at least one main image' });
   }
   product.images = combinedImages;
+  // Always, not only when variants were sent: removing a gallery photo must
+  // also clear it from any option that pointed at it.
+  resolveVariantImages(product.variants, newImages, removeSet);
 
   await product.save();
   await product.populate([
@@ -887,11 +875,14 @@ function objectIdFilter(value) {
 // already enforce server-side; this just lets the UI stop asking for what it
 // knows will come back empty/filtered.
 async function getPublicCatalogSettings(req, res) {
-  const dropshippingEnabled = await isDropshippingVisibleToCustomers();
+  const [dropshippingEnabled, ownStockEnabled] = await Promise.all([
+    isDropshippingVisibleToCustomers(),
+    isOwnStockVisibleToCustomers(),
+  ]);
   res.json({
     success: true,
     message: 'Catalog settings fetched successfully',
-    data: { dropshippingEnabled },
+    data: { dropshippingEnabled, ownStockEnabled },
   });
 }
 
@@ -969,6 +960,10 @@ async function listPublicProducts(req, res) {
   // before this field existed, which has no fulfillmentProvider at all.
   if (source === 'dropship') query.fulfillmentProvider = 'CJ';
   else if (source === 'normal' || !dropshippingEnabled) query.fulfillmentProvider = { $ne: 'CJ' };
+
+  // Admin's "Own stock" switch is off: admin's own products leave the
+  // storefront, seller and dropship products stay.
+  if (!(await isOwnStockVisibleToCustomers())) Object.assign(query, EXCLUDE_OWN_STOCK);
 
   const minDiscountNum = Number(minDiscount);
   if (Number.isFinite(minDiscountNum) && minDiscountNum > 0) {
@@ -1178,6 +1173,10 @@ async function getPublicProduct(req, res) {
   if (product.fulfillmentProvider === 'CJ' && !(await isDropshippingVisibleToCustomers())) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
+  // Same for admin's own stock while the "Own stock" switch is off.
+  if (isOwnStockProduct(product) && !(await isOwnStockVisibleToCustomers())) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
 
   const data = serializePublicProduct(product);
 
@@ -1226,6 +1225,7 @@ async function listRelatedProducts(req, res) {
   if (!(await isDropshippingVisibleToCustomers())) {
     base.fulfillmentProvider = { $ne: 'CJ' };
   }
+  if (!(await isOwnStockVisibleToCustomers())) Object.assign(base, EXCLUDE_OWN_STOCK);
 
   // Same category first, then same brand to top up when the category is thin —
   // rather than one $or query, which would rank brand matches above category

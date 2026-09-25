@@ -46,6 +46,9 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('home')
   const [mobileSearchQuery, setMobileSearchQuery] = useState('')
+  // While the mobile search is focused the logo and the icon cluster slide
+  // away so the input can take the whole header row.
+  const [mobileSearchFocused, setMobileSearchFocused] = useState(false)
   const cartCount = useCartCount()
   const unreadCount = useUnreadNotificationCount()
   const [timeLeft, setTimeLeft] = useState(getTimeUntilMidnight())
@@ -129,18 +132,24 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
       <div className="flex-1 pb-20 md:pb-12">
         {/* MOBILE TOP HEADER & SEARCH (For phones/WebViews < md) */}
         <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-          <div className="px-3.5 py-2.5 flex items-center justify-between gap-2.5">
+          <div className="px-3.5 py-2.5 flex items-center justify-between">
             <Link
               to={USER_ROUTES.DASHBOARD}
-              className="flex items-center shrink-0 cursor-pointer transition-opacity hover:opacity-90"
+              tabIndex={mobileSearchFocused ? -1 : undefined}
+              aria-hidden={mobileSearchFocused || undefined}
+              className={`flex items-center shrink-0 overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:opacity-90 ${
+                mobileSearchFocused ? 'max-w-0 opacity-0 mr-0' : 'max-w-[96px] opacity-100 mr-2.5'
+              }`}
               title="Krozenda Home"
             >
-              <img src="/images/logo.png" alt="Krozenda Logo" className="h-8 w-auto object-contain" />
+              <img src="/images/logo.png" alt="Krozenda Logo" className="h-8 w-auto max-w-none object-contain" />
             </Link>
 
             <form
               onSubmit={handleMobileSearchSubmit}
-              className="flex-1 flex items-center bg-slate-100/90 border border-slate-200/80 rounded-full px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition-all shadow-2xs"
+              onFocus={() => setMobileSearchFocused(true)}
+              onBlur={() => setMobileSearchFocused(false)}
+              className="flex-1 min-w-0 flex items-center bg-slate-100/90 border border-slate-200/80 rounded-full px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition-all duration-300 ease-out shadow-2xs"
             >
               <HiMagnifyingGlass className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input
@@ -152,7 +161,14 @@ export function HomeScreen({ onNavigateTab = () => {} }) {
               />
             </form>
 
-            <div className="flex items-center space-x-1.5 shrink-0">
+            <div
+              aria-hidden={mobileSearchFocused || undefined}
+              className={`flex items-center space-x-1.5 shrink-0 overflow-hidden -my-1 py-1 transition-all duration-300 ease-out ${
+                mobileSearchFocused
+                  ? 'max-w-0 opacity-0 ml-0 pointer-events-none'
+                  : 'max-w-[200px] opacity-100 ml-2.5'
+              }`}
+            >
               <LanguageSwitcher variant="compact" />
               <button
                 type="button"

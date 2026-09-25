@@ -30,6 +30,7 @@ const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping')
 const dropshipOrderService = require('../services/dropshipOrderService');
 const { refundCancelledOrderToWallet } = require('../services/orderCancellationService');
 const { findDropshipProductIds, isDropshipOrder } = require('../utils/dropship');
+const { isOwnStockProduct, isOwnStockVisibleToCustomers } = require('../utils/ownStock');
 const { toPaise, allocateProportional } = require('../utils/money');
 
 // Accounting is posted alongside the order, never in front of it. A ledger
@@ -153,7 +154,12 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   // items in their cart could be charged for two without ever being told —
   // the order just came out smaller than the summary they had agreed to.
   // Now checkout stops and names them so the buyer decides.
-  const unavailable = allEntries.filter((entry) => !entry.product || !entry.product.isActive);
+  // Admin's own-stock products also count as unavailable while the admin
+  // has the "Own stock" switch off.
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
+  const unavailable = allEntries.filter(
+    (entry) => !entry.product || !entry.product.isActive || (hideOwnStock && isOwnStockProduct(entry.product))
+  );
   if (unavailable.length > 0) {
     const names = unavailable.map((entry) => entry.product?.name).filter(Boolean);
     return {
@@ -1208,10 +1214,11 @@ async function reorder(req, res) {
 
   let addedCount = 0;
   const skippedItems = [];
+  const hideOwnStock = !(await isOwnStockVisibleToCustomers());
 
   for (const item of order.items) {
     const product = await Product.findOne({ _id: item.product, isActive: true });
-    if (!product) {
+    if (!product || (hideOwnStock && isOwnStockProduct(product))) {
       skippedItems.push({ name: item.name, reason: 'Product is no longer available' });
       continue;
     }

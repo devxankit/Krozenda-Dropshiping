@@ -15,7 +15,10 @@ router.use(protectAdmin, requirePermission('admin.marketing.banners'));
 
 const uploadBannerImage = [
   upload.single('image'),
-  processImage('banners', { width: 1600, height: 600, fit: 'cover' }),
+  // 'inside', not 'cover': banner artwork carries its own text and prices
+  // right up to the edges, and a 1600x600 cover-crop was slicing those off
+  // any banner that wasn't already exactly 8:3. Now it is only scaled down.
+  processImage('banners', { width: 1920, height: 1080, fit: 'inside' }),
   handleUploadError,
 ];
 

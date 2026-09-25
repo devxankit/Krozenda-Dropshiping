@@ -3,7 +3,6 @@ import {
   HiMagnifyingGlass,
   HiOutlineShoppingBag,
   HiChevronRight,
-  HiSparkles,
   HiCheckBadge,
   HiBuildingStorefront,
   HiArrowRight,
@@ -74,6 +73,8 @@ export function CategoryListScreen() {
     const matchesSearch = searchQuery.trim() === '' || cat.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesFilter && matchesSearch
   })
+  const topCount = categories.filter((cat) => cat.isTopCategory).length
+  const noTopCategories = selectedFilter === 'top' && topCount === 0
 
   const handleCategoryClick = (cat) => {
     // In the URL, so the filtered listing is shareable, survives a reload
@@ -89,7 +90,7 @@ export function CategoryListScreen() {
         <WebHeader />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-4 pb-28 md:py-8 space-y-6">
         {/* Header Bar */}
         <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -170,10 +171,12 @@ export function CategoryListScreen() {
           </div>
 
           {/* Category Filter Chips */}
-          <div className="flex items-center space-x-2 overflow-x-auto pt-2 pb-1 scrollbar-none">
+          <div className="flex items-center space-x-2 overflow-x-auto pt-2 pb-1 no-scrollbar">
             {FILTER_CHIPS.map((chip) => (
               <button
                 key={chip.id}
+                type="button"
+                aria-pressed={selectedFilter === chip.id}
                 onClick={() => setSelectedFilter(chip.id)}
                 className={`px-4 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all ${
                   selectedFilter === chip.id
@@ -181,37 +184,9 @@ export function CategoryListScreen() {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/60'
                 }`}
               >
-                {chip.label}
+                {chip.label} ({chip.id === 'top' ? topCount : categories.length})
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Featured Banner */}
-        <div
-          onClick={() => navigate(USER_ROUTES.LISTING)}
-          className="w-full relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 md:p-8 text-white shadow-lg cursor-pointer group border border-slate-800"
-        >
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-xl">
-              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black uppercase tracking-wider">
-                <HiSparkles className="w-3.5 h-3.5" />
-                <span>Featured Brand Mega Deals</span>
-              </span>
-              <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
-                Up to 70% Off On Premium Tech & Fashion Bulk Tiers
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300">
-                White-label dropshipping products with guaranteed profit margins and zero inventory hold.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-3 shrink-0">
-              <button className="px-5 py-2.5 rounded-xl bg-blue-600 group-hover:bg-blue-500 text-white text-xs font-extrabold flex items-center space-x-2 shadow-lg transition-all">
-                <span>Explore All Deals</span>
-                <HiArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -231,13 +206,31 @@ export function CategoryListScreen() {
           <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-10 flex flex-col items-center text-center gap-2">
             <HiOutlineSquares2X2 className="w-9 h-9 text-slate-300" />
             <h3 className="text-sm font-bold text-slate-700">
-              {categories.length === 0 ? 'No categories published yet' : 'No categories match your search'}
+              {categories.length === 0
+                ? 'No categories published yet'
+                : noTopCategories
+                  ? 'No top categories yet'
+                  : 'No categories match your search'}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm">
               {categories.length === 0
                 ? 'Check back soon — new wholesale categories are added regularly.'
-                : 'Try a different search term or filter.'}
+                : noTopCategories
+                  ? 'Top picks will show up here once they are featured.'
+                  : 'Try a different search term or filter.'}
             </p>
+            {categories.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFilter('all')
+                  setSearchQuery('')
+                }}
+                className="mt-1 text-xs font-bold text-blue-600 hover:underline"
+              >
+                View all categories
+              </button>
+            )}
           </div>
         ) : layoutMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">

@@ -3,6 +3,8 @@ import { Badge, Button, Icon, Input, Modal, Select, SegmentedControl, Textarea }
 import { InlineAlert } from '../../../admin/components/feedback'
 import { toast } from '../../../admin/stores/toastStore'
 import { api } from '../../../../lib/axios'
+import { ProductVariantsSection } from '../../../../components/catalog/ProductVariantsSection'
+import { buildVariantsPayload, variantFromProduct } from '../../../../components/catalog/productVariants'
 
 const GST_RATE_OPTIONS = [
   { value: '', label: 'Select GST slab (optional)' },
@@ -43,6 +45,7 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
   const [newPreviews, setNewPreviews] = useState([])
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
+  const [variants, setVariants] = useState(() => (product?.variants ?? []).map((v) => variantFromProduct(v, product.price)))
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -60,12 +63,19 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
     setNewPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))])
   }
 
+  // A variant pointing at a removed photo would point at nothing.
+  function clearVariantImage(key) {
+    setVariants((prev) => prev.map((v) => (v.image === key ? { ...v, image: null } : v)))
+  }
+
   function handleRemoveNewImage(index) {
+    clearVariantImage(newFiles[index])
     setNewFiles((prev) => prev.filter((_, i) => i !== index))
     setNewPreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   function handleRemoveExistingImage(url) {
+    clearVariantImage(url)
     setExistingImages((prev) => prev.filter((img) => img !== url))
     setRemovedImages((prev) => [...prev, url])
   }
@@ -101,6 +111,11 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
       toast.error('Missing Main Image', 'Main image is required. Please keep or upload at least one image.')
       return
     }
+    const variantResult = buildVariantsPayload(variants, { galleryFiles: newFiles })
+    if (variantResult.error) {
+      toast.error('Check your variants', variantResult.error)
+      return
+    }
 
     const body = new FormData()
     body.append('name', formData.name.trim())
@@ -121,6 +136,10 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
     body.append('isTrending', formData.isTrending)
     body.append('isReturnable', formData.isReturnable)
 
+    // Always sent, empty included: an empty list is the seller removing every
+    // variant, which the server only does when the field is present.
+    body.append('variants', JSON.stringify(variantResult.variants))
+
     if (removedImages.length > 0) body.append('removeImages', JSON.stringify(removedImages))
     newFiles.forEach((f) => body.append('images', f))
 
@@ -137,6 +156,10 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
   }
 
   const totalImages = existingImages.length + newPreviews.length
+  const gallery = [
+    ...existingImages.map((url) => ({ key: url, src: url })),
+    ...newFiles.map((file, i) => ({ key: file, src: newPreviews[i] })),
+  ]
 
   return (
     <Modal
@@ -431,6 +454,9 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
             {formData.status === 'Inactive' && 'Inactive products remain disabled.'}
           </p>
         </div>
+
+        {/* SECTION 7: VARIANTS */}
+        <ProductVariantsSection variants={variants} onChange={setVariants} gallery={gallery} />
 
         {/* FEATURED / SPOTLIGHT TOGGLES */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

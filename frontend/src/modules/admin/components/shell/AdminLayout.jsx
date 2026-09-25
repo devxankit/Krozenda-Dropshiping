@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../../lib/authStore'
 import { ADMIN_ROUTES } from '../../../../config/routes'
 import { useAdminUiStore } from '../../stores/uiStore'
 import { useShellController } from '../../controllers/useShellController'
+import { useOwnStockController } from '../../controllers/useOwnStockController'
 import { canAccessNavItem, findNavItem, visibleNavGroups } from '../../lib/nav'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopbar } from './AdminTopbar'
@@ -32,6 +33,10 @@ export function AdminLayout() {
 
   const { counts, notifications, markAllRead } = useShellController()
   const groups = useMemo(() => visibleNavGroups(permissions, role), [permissions, role])
+
+  // Read-only here: the sidebar greys the own-stock modules while it's off.
+  // The switch itself lives on the dashboard (OwnStockCard).
+  const ownStock = useOwnStockController()
 
   // Sidebar hiding is a UX nicety, not security — this is what actually
   // stops a staff account from opening a module by typing its URL directly.
@@ -67,6 +72,7 @@ export function AdminLayout() {
           groups={groups}
           collapsed={sidebarCollapsed}
           counts={counts}
+          ownStock={ownStock}
           onToggle={toggleSidebar}
           onSignOut={handleSignOut}
         />

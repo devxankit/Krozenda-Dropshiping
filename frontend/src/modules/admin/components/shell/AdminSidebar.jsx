@@ -10,7 +10,10 @@ const BADGE_TONE = Object.freeze({
   brand: 'bg-brand-100 text-brand-700',
 })
 
-function NavItem({ item, collapsed, count }) {
+// `muted`: an own-stock module while the admin has "Own stock" switched off.
+// It stays clickable (existing products can still be viewed and edited), it
+// just reads as parked.
+function NavItem({ item, collapsed, count, muted = false }) {
   const { pathname } = useLocation()
   const active = isNavItemActive(item, pathname)
 
@@ -19,12 +22,21 @@ function NavItem({ item, collapsed, count }) {
       to={item.to}
       className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
         active
-          ? 'bg-brand-50 font-semibold text-brand-700'
-          : 'font-medium text-ink-muted hover:bg-surface-muted hover:text-slate-900'
+          ? muted
+            ? 'bg-surface-sunken font-semibold text-ink-subtle'
+            : 'bg-brand-50 font-semibold text-brand-700'
+          : muted
+            ? 'font-medium text-ink-faint opacity-70 hover:bg-surface-muted hover:opacity-100'
+            : 'font-medium text-ink-muted hover:bg-surface-muted hover:text-slate-900'
       } ${collapsed ? 'w-9 justify-center px-0' : ''}`}
     >
       <Icon name={item.icon} className="h-4 w-4 shrink-0" />
       {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && muted && (
+        <span className="ml-auto shrink-0 rounded-sm bg-surface-sunken px-1 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+          Off
+        </span>
+      )}
       {!collapsed && count > 0 && (
         <span
           className={`ml-auto shrink-0 rounded-full px-1.5 text-2xs font-semibold ${BADGE_TONE[item.badgeTone] || BADGE_TONE.brand}`}
@@ -41,7 +53,10 @@ function NavItem({ item, collapsed, count }) {
   if (!collapsed) return link
 
   return (
-    <Tooltip label={count > 0 ? `${item.label} (${count})` : item.label} placement="right">
+    <Tooltip
+      label={`${item.label}${count > 0 ? ` (${count})` : ''}${muted ? ' — own stock off' : ''}`}
+      placement="right"
+    >
       <span className="relative">{link}</span>
     </Tooltip>
   )
@@ -144,7 +159,28 @@ function SignOutButton({ collapsed, onSignOut }) {
   )
 }
 
-export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onToggle, onSignOut }) {
+// The "Own stock" group header only shows the state; the switch is on the
+// dashboard (OwnStockCard).
+function OwnStockHeader({ label, ownStock }) {
+  const off = ownStock.isKnown && !ownStock.enabled
+  return (
+    <p className={`px-2 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider ${off ? 'text-ink-faint/70' : 'text-ink-faint'}`}>
+      {label}
+      {off && <span className="ml-1.5 normal-case tracking-normal text-warning-700">· off</span>}
+    </p>
+  )
+}
+
+export function AdminSidebar({
+  groups = [],
+  collapsed = false,
+  counts = {},
+  ownStock = null,
+  onToggle,
+  onSignOut,
+}) {
+  const ownStockOff = Boolean(ownStock?.isKnown && !ownStock.enabled)
+
   return (
     <aside
       className={`flex h-full shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 ${collapsed ? 'w-rail items-center' : 'w-sidebar'}`}
@@ -177,6 +213,8 @@ export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onTo
             {group.label &&
               (collapsed ? (
                 <div className="mx-auto my-2 h-px w-6 bg-border" />
+              ) : group.id === 'catalog' && ownStock ? (
+                <OwnStockHeader label={group.label} ownStock={ownStock} />
               ) : (
                 <p className="px-2 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-ink-faint">
                   {group.label}
@@ -191,6 +229,7 @@ export function AdminSidebar({ groups = [], collapsed = false, counts = {}, onTo
                   item={item}
                   collapsed={collapsed}
                   count={item.badge ? counts[item.badge] : 0}
+                  muted={ownStockOff && Boolean(item.ownStockModule)}
                 />
               ))
             )}

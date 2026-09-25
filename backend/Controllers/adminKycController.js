@@ -2,6 +2,7 @@ const Vendor = require('../Models/Vendor');
 const VendorDocument = require('../Models/VendorDocument');
 const Category = require('../Models/Category');
 const { getImageUrl } = require('../utils/imageHelper');
+const { FSSAI_DOC_TYPE } = require('../utils/fssai');
 
 // The KYC queue is every vendor whose verification is still in the admin's
 // hands — PENDING (just submitted) or UNDER_REVIEW (a reviewer picked it up).
@@ -59,9 +60,16 @@ function fileNameFromUrl(url) {
 // overdue) happens client-side against this one list, same as every other
 // ListScreen in the panel.
 async function listKycQueue(req, res) {
-  const vendors = await Vendor.find({ verificationStatus: { $in: QUEUE_STATUSES } })
+  // Already-approved sellers who uploaded an FSSAI licence later (from Store
+  // Profile, to unblock a food category) also need a reviewer, so they join
+  // the queue for as long as that licence is PENDING.
+  const fssaiVendorIds = await VendorDocument.distinct('vendorId', { documentType: FSSAI_DOC_TYPE, status: 'PENDING' });
+  const vendors = await Vendor.find({
+    $or: [{ verificationStatus: { $in: QUEUE_STATUSES } }, { _id: { $in: fssaiVendorIds } }],
+  })
     .sort({ createdAt: 1 })
     .lean();
+  const fssaiPending = new Set(fssaiVendorIds.map(String));
 
   const vendorIds = vendors.map((v) => v._id);
   const documents = await VendorDocument.find({ vendorId: { $in: vendorIds } }).lean();
@@ -74,15 +82,16 @@ async function listKycQueue(req, res) {
 
   const items = vendors.map((vendor) => {
     const docs = docsByVendor.get(vendor._id.toString()) || [];
+    const isFssaiRecheck = vendor.verificationStatus === 'APPROVED' && fssaiPending.has(vendor._id.toString());
     return {
       id: vendor._id.toString(),
       vendorName: vendor.business?.businessName || vendor.name,
-      role: vendorRole(vendor),
+      role: isFssaiRecheck ? `${vendorRole(vendor)} · FSSAI licence review` : vendorRole(vendor),
       submittedAt: formatDate(vendor.createdAt),
       waitingDays: daysSince(vendor.createdAt),
       documentsApproved: docs.filter((d) => d.status === 'APPROVED').length,
       documentsRequired: docs.length,
-      status: toReviewStatus(vendor.verificationStatus),
+      status: isFssaiRecheck ? 'reviewing' : toReviewStatus(vendor.verificationStatus),
     };
   });
 

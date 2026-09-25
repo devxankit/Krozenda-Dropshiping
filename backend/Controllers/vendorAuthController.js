@@ -8,6 +8,7 @@ const { getImageUrl } = require('../utils/imageHelper');
 const { updateLanguageFor } = require('./languageController');
 const { getRequiredAcceptancePages } = require('./cmsController');
 const emailService = require('../services/emailService');
+const { FSSAI_DOC_TYPE } = require('../utils/fssai');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
@@ -27,6 +28,7 @@ function serializeVendor(vendor) {
     profileImage: getImageUrl(vendor.profileImage),
     category: vendor.category ? vendor.category.toString() : null,
     gstRegistered: vendor.gstRegistered,
+    sellsFood: vendor.sellsFood === true,
     business: vendor.business || {},
     contactPerson: vendor.contactPerson || {},
     address: vendor.address || {},
@@ -64,6 +66,7 @@ async function createVendorAccount(
     confirmPassword,
     category,
     gstRegistered,
+    sellsFood,
     business,
     contactPerson,
     address,
@@ -118,6 +121,7 @@ async function createVendorAccount(
     password,
     category: category || null,
     gstRegistered: isGstRegistered,
+    sellsFood: sellsFood === true || sellsFood === 'true',
     business: business || {},
     contactPerson: vendorType === 'B2B' ? contactPerson || {} : {},
     address: address || {},
@@ -178,6 +182,24 @@ async function resolvePolicyAcceptances(submitted, ip) {
 
 async function register(req, res) {
   const { documents, policyAcceptances, ...restPayload } = req.body;
+
+  // "Yes, I sell food" at sign-up means the FSSAI licence is part of the
+  // application, not something to chase later.
+  if (restPayload.sellsFood === true || restPayload.sellsFood === 'true') {
+    const fssaiDoc = Array.isArray(documents)
+      ? documents.find((d) => d?.documentType === FSSAI_DOC_TYPE && d.documentUrl)
+      : null;
+    if (!fssaiDoc) {
+      return res.status(400).json({
+        success: false,
+        code: 'FSSAI_REQUIRED',
+        message: 'Please upload your FSSAI licence since you will be selling food products',
+      });
+    }
+    if (!String(fssaiDoc.documentNumber || '').trim()) {
+      return res.status(400).json({ success: false, code: 'FSSAI_REQUIRED', message: 'FSSAI licence number is required' });
+    }
+  }
 
   const policies = await resolvePolicyAcceptances(policyAcceptances, req.ip);
   if (policies.error) {

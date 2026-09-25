@@ -420,7 +420,7 @@ export function ProductsPage() {
                   type="button"
                   onClick={() => setEditingProduct('new')}
                   disabled={isSellerOnlyOn}
-                  title={isSellerOnlyOn ? 'Seller-only catalog mode is on — sellers add products, admin only approves them' : undefined}
+                  title={isSellerOnlyOn ? 'Own stock is off — turn it on from the sidebar to add products' : undefined}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <Icon name="add" className="h-3.5 w-3.5" />

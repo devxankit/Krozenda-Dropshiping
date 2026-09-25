@@ -8,6 +8,8 @@ const { serializeVendor, createVendorAccount } = require('./vendorAuthController
 const { serializeDocument } = require('./vendorDocumentController');
 const razorpayRouteService = require('../services/razorpayRouteService');
 const emailService = require('../services/emailService');
+const { createNotification } = require('./notificationController');
+const { FSSAI_DOC_TYPE } = require('../utils/fssai');
 
 // Live SKU count and gross sales per vendor, read from the catalog and the
 // order line items that snapshot their vendor at order time — the directory
@@ -271,6 +273,21 @@ async function reviewVendorDocument(req, res) {
   if (status === 'REJECTED') {
     const vendor = await Vendor.findById(vendorId).select('name email vendorType');
     if (vendor) emailService.sendVendorDocumentRejected(vendor, doc);
+  }
+
+  // The FSSAI decision is what unblocks (or keeps blocked) the seller's food
+  // categories, so tell them in-panel as well.
+  if (doc.documentType === FSSAI_DOC_TYPE) {
+    await createNotification({
+      vendorId,
+      type: 'SYSTEM',
+      title: status === 'APPROVED' ? 'FSSAI licence approved' : 'FSSAI licence rejected',
+      message:
+        status === 'APPROVED'
+          ? 'Your FSSAI licence is approved. Your food categories can now be reviewed by admin.'
+          : `Your FSSAI licence was rejected: ${doc.rejectionReason}. Upload a valid licence from Store Profile.`,
+      actionType: 'NONE',
+    });
   }
 
   res.json({

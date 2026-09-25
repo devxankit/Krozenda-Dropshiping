@@ -10,9 +10,11 @@ import {
   IntegrationHealthStrip,
   KpiGrid,
   OrderPipeline,
+  OwnStockCard,
   RecentSubOrders,
 } from '../components/dashboard'
 import { DASHBOARD_RANGES, useDashboardController } from '../controllers/useDashboardController'
+import { useOwnStockController } from '../controllers/useOwnStockController'
 import { downloadCsv, rupees } from '../lib/exportCsv'
 
 // Fixed series order — a model keeps its colour no matter how many are shown.
@@ -79,6 +81,7 @@ function exportDashboard(data, range) {
 export function DashboardPage() {
   const { range, setRange, data, isLoading, isFetching, isError, error, refetch, updatedAt } =
     useDashboardController()
+  const ownStock = useOwnStockController()
 
   if (isLoading) {
     return (
@@ -120,6 +123,10 @@ export function DashboardPage() {
           </>
         }
       />
+
+      {ownStock.canToggle && ownStock.isKnown && (
+        <OwnStockCard enabled={ownStock.enabled} isSaving={ownStock.isSaving} onChange={ownStock.setEnabled} />
+      )}
 
       <IntegrationHealthStrip
         integrations={data.integrations}
