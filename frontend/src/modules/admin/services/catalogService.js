@@ -43,8 +43,10 @@ export async function fetchApprovalSettings() {
   return data.data
 }
 
-export async function updateApprovalSettings({ autoApprovalEnabled, sellerOnlyMode }) {
-  const { data } = await api.put('/admin/catalog/approvals/settings', { autoApprovalEnabled, sellerOnlyMode })
+// `commission` ({ type, value } or null) rides along only when turning
+// auto-approval on: the common rate for everything that gets auto-approved.
+export async function updateApprovalSettings({ autoApprovalEnabled, sellerOnlyMode, commission }) {
+  const { data } = await api.put('/admin/catalog/approvals/settings', { autoApprovalEnabled, sellerOnlyMode, commission })
   return data.data
 }
 
@@ -162,8 +164,10 @@ export async function deleteProduct({ id }) {
   return data.data
 }
 
-export const approveQueueItem = ({ id }) =>
-  mutateResource({ path: `/admin/catalog/approvals/${id}/approve`, body: { id }, fixture: () => fixtures.approveQueueItemFixture(id), schema: queueDecisionSchema, live: true })
+// `commission` ({type, value} or null): set while approving a seller's
+// category or product, or skipped.
+export const approveQueueItem = ({ id, commission = null }) =>
+  mutateResource({ path: `/admin/catalog/approvals/${id}/approve`, body: { id, commission }, fixture: () => fixtures.approveQueueItemFixture(id), schema: queueDecisionSchema, live: true })
 
 export const rejectQueueItem = ({ id, reason }) =>
   mutateResource({ path: `/admin/catalog/approvals/${id}/reject`, body: { reason }, fixture: (p) => fixtures.rejectQueueItemFixture(id, p), schema: queueDecisionSchema, live: true })

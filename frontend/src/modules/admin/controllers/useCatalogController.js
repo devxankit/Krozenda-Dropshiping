@@ -108,7 +108,11 @@ export const useApprovalSettingsWriteController = () => ({
           ? 'Own stock turned off — admin products are hidden from buyers and admin can no longer add products, categories or brands'
           : 'Own stock turned on — admin products are back on the storefront'
       }
-      return data.autoApprovalEnabled ? 'Auto-approval turned on' : 'Auto-approval turned off'
+      if (!data.autoApprovalEnabled) return 'Auto-approval turned off'
+      const rate = variables.commission
+      return rate
+        ? `Auto-approval turned on — common commission ${rate.type === 'FIXED' ? `₹${rate.value} / unit` : `${rate.value}%`}`
+        : 'Auto-approval turned on'
     },
   }),
 })

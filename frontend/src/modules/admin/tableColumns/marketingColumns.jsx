@@ -1,6 +1,7 @@
 import { Badge, Icon } from '../../../components/ui'
 import { adminPath } from '../../../config/routes'
 import { MoneyCell, PrimaryCell, StatusPill } from '../components/display'
+import { CopyCodeButton } from '../components/marketing/CopyCodeButton'
 
 // Rule 07: column definitions and filter schemas are DATA.
 
@@ -46,66 +47,158 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+const SCOPE_LABEL = Object.freeze({
+  PRODUCTS: ['product', 'products'],
+  CATEGORIES: ['category', 'categories'],
+  VENDORS: ['seller', 'sellers'],
+})
+
+const ELIGIBILITY_LABEL = Object.freeze({
+  NEW: 'New customers',
+  EXISTING: 'Returning customers',
+  SPECIFIC: 'Selected customers',
+})
+
+// "All products", or "3 categories" — what the code can be spent on.
+function scopeLabel(row) {
+  const words = SCOPE_LABEL[row.applicableTo]
+  if (!words) return 'All products'
+  const count = { PRODUCTS: row.productIds, CATEGORIES: row.categoryIds, VENDORS: row.vendorIds }[row.applicableTo]
+    ?.length
+  return `${count} ${count === 1 ? words[0] : words[1]}`
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// A plain-language hint under the dates: how long is left, or how long ago.
+function runHint(row) {
+  const now = Date.now()
+  const start = new Date(row.startDate).getTime()
+  const end = new Date(row.endDate).getTime()
+  const days = (ms) => Math.max(1, Math.ceil(ms / DAY_MS))
+  if (start > now) return { text: `Starts in ${days(start - now)}d`, tone: 'text-brand-700' }
+  if (end < now) return { text: `Ended ${days(now - end)}d ago`, tone: 'text-ink-faint' }
+  const left = days(end - now)
+  return { text: `${left}d left`, tone: left <= 3 ? 'text-warning-700 font-semibold' : 'text-success-700' }
+}
+
 export const COUPON_COLUMNS = Object.freeze([
   {
     key: 'code',
-    header: 'Code',
-    width: '12rem',
+    header: 'Coupon',
+    width: '16rem',
     render: (row) => (
-      <span className="block min-w-0">
-        <span className="tabular block font-semibold text-slate-900">{row.code}</span>
-        <span className="block truncate text-2xs text-ink-faint">{row.description}</span>
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ${
+            row.status === 'ACTIVE'
+              ? 'bg-brand-50 text-brand-600 ring-brand-100'
+              : 'bg-surface-muted text-ink-faint ring-border'
+          }`}
+        >
+          <Icon name="coupons" className="h-4 w-4" />
+        </span>
+        <span className="min-w-0">
+          <span className="flex items-center gap-1">
+            <span className="rounded-md border border-dashed border-brand-300 bg-brand-50/60 px-1.5 py-0.5 font-mono text-xs font-bold tracking-wide text-brand-800">
+              {row.code}
+            </span>
+            <CopyCodeButton code={row.code} />
+          </span>
+          <span className="mt-0.5 block truncate text-2xs text-ink-subtle" title={row.description}>
+            {row.description || 'No description'}
+          </span>
+        </span>
       </span>
     ),
   },
   {
     key: 'discountValue',
     header: 'Discount',
-    width: '8rem',
+    width: '11rem',
     render: (row) => (
-      <span className="text-xs font-medium text-slate-800">{discountLabel(row)}</span>
+      <span className="flex flex-col items-start gap-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-success-50 px-2 py-0.5 text-xs font-bold text-success-700 ring-1 ring-success-200">
+          <Icon name={row.discountType === 'PERCENTAGE' ? 'percent' : 'money'} className="h-3 w-3" />
+          {discountLabel(row)}
+        </span>
+        <span className="flex items-center gap-1 text-2xs text-ink-subtle">
+          {row.discountType === 'PERCENTAGE' && row.maxDiscountAmount
+            ? `up to ₹${(row.maxDiscountAmount / 100).toLocaleString('en-IN')} · `
+            : ''}
+          {scopeLabel(row)}
+        </span>
+      </span>
     ),
   },
   {
     key: 'minOrderAmount',
     header: 'Minimum cart',
-    width: '8rem',
-    align: 'right',
-    render: (row) =>
-      row.minOrderAmount ? <MoneyCell amount={row.minOrderAmount} muted /> : <span className="text-2xs text-ink-faint">none</span>,
-  },
-  {
-    key: 'usedCount',
-    header: 'Redeemed',
     width: '9rem',
-    align: 'right',
-    sortable: true,
     render: (row) => (
-      <span className="flex flex-col items-end gap-0.5">
-        <span className="tabular text-xs font-semibold text-slate-900">
-          {row.usedCount.toLocaleString('en-IN')}
-          {row.usageLimit ? ` / ${row.usageLimit.toLocaleString('en-IN')}` : ''}
-        </span>
-        {row.usageLimit && (
-          <span className="h-1 w-16 overflow-hidden rounded-full bg-surface-sunken">
-            <span
-              className={`block h-1 rounded-full ${row.usedCount >= row.usageLimit ? 'bg-danger-500' : 'bg-brand-600'}`}
-              style={{ width: `${Math.min(100, (row.usedCount / row.usageLimit) * 100)}%` }}
-            />
-          </span>
+      <span className="flex items-center gap-1.5">
+        <Icon name="cart" className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+        {row.minOrderAmount ? (
+          <MoneyCell amount={row.minOrderAmount} />
+        ) : (
+          <span className="text-2xs text-ink-faint">No minimum</span>
         )}
       </span>
     ),
   },
   {
+    key: 'usedCount',
+    header: 'Redeemed',
+    width: '10rem',
+    sortable: true,
+    render: (row) => {
+      const pct = row.usageLimit ? Math.min(100, (row.usedCount / row.usageLimit) * 100) : 0
+      const full = row.usageLimit && row.usedCount >= row.usageLimit
+      return (
+        <span className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5">
+            <Icon name="users" className="h-3.5 w-3.5 text-ink-faint" />
+            <span className="tabular text-xs font-semibold text-slate-900">
+              {row.usedCount.toLocaleString('en-IN')}
+              <span className="font-normal text-ink-faint">
+                {row.usageLimit ? ` / ${row.usageLimit.toLocaleString('en-IN')}` : ' · no limit'}
+              </span>
+            </span>
+          </span>
+          {row.usageLimit ? (
+            <span className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-sunken">
+              <span
+                className={`block h-1.5 rounded-full ${full ? 'bg-danger-500' : pct >= 80 ? 'bg-warning-500' : 'bg-brand-600'}`}
+                style={{ width: `${pct}%` }}
+              />
+            </span>
+          ) : null}
+          <span className="text-2xs text-ink-faint">
+            {row.perUserLimit ? `${row.perUserLimit} per customer` : 'Unlimited per customer'}
+            {ELIGIBILITY_LABEL[row.customerEligibility] ? ` · ${ELIGIBILITY_LABEL[row.customerEligibility]}` : ''}
+          </span>
+        </span>
+      )
+    },
+  },
+  {
     key: 'endDate',
     header: 'Runs',
-    width: '11rem',
-    render: (row) => (
-      <span className="text-2xs text-ink-muted">
-        {formatDate(row.startDate)} → {formatDate(row.endDate)}
-      </span>
-    ),
+    width: '12rem',
+    render: (row) => {
+      const hint = runHint(row)
+      return (
+        <span className="flex items-start gap-1.5">
+          <Icon name="calendar" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" />
+          <span className="flex flex-col">
+            <span className="text-2xs text-ink-muted">
+              {formatDate(row.startDate)} → {formatDate(row.endDate)}
+            </span>
+            <span className={`text-2xs ${hint.tone}`}>{hint.text}</span>
+          </span>
+        </span>
+      )
+    },
   },
   {
     key: 'status',

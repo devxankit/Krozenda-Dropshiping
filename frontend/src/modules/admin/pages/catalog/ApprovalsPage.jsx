@@ -4,6 +4,7 @@ import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { ApprovalQueueList } from '../../components/catalog/ApprovalQueueList'
+import { ApproveWithCommissionDialog } from '../../components/commission/CommissionField'
 import { ADMIN_PERMISSIONS } from '../../constants'
 import {
   useApprovalQueueController,
@@ -27,6 +28,12 @@ export function ApprovalsPage() {
   const [tab, setTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [rejecting, setRejecting] = useState(null)
+  // A seller's category or product asks for its commission (or Skip) on
+  // approval; a brand has no commission and approves straight away.
+  const [approving, setApproving] = useState(null)
+  // Turning auto-approval on asks for one common commission (or Skip), since
+  // auto-approved items never reach the per-item approve prompt.
+  const [enablingAuto, setEnablingAuto] = useState(false)
   const [reason, setReason] = useState('')
 
   const writer = useApprovalWriteController({
@@ -232,7 +239,9 @@ export function ApprovalsPage() {
                 checked={isAutoApprovalOn}
                 disabled={!canApprove || !settings || settingsWriter.update.isSubmitting}
                 onChange={(event) =>
-                  settingsWriter.update.run({ autoApprovalEnabled: event.target.checked })
+                  event.target.checked
+                    ? setEnablingAuto(true)
+                    : settingsWriter.update.run({ autoApprovalEnabled: false })
                 }
                 label={isAutoApprovalOn ? 'Enabled' : 'Disabled'}
               />
@@ -360,7 +369,9 @@ export function ApprovalsPage() {
             items={filteredItems}
             canApprove={canApprove}
             isApproving={writer.approve.isSubmitting}
-            onApprove={(item) => writer.approve.run({ id: item.id })}
+            onApprove={(item) =>
+              item.kind === 'brand' ? writer.approve.run({ id: item.id }) : setApproving(item)
+            }
             onReject={(item) => {
               setRejecting(item)
               // Food category held up by the seller's missing/unapproved
@@ -378,6 +389,55 @@ export function ApprovalsPage() {
           />
         </div>
       </PageBody>
+
+      {enablingAuto && (
+        <ApproveWithCommissionDialog
+          isOpen
+          onClose={() => setEnablingAuto(false)}
+          title="Turn on auto-approval?"
+          description="Seller categories, brands and products will go live without review, so there is no approve step to set commission on. Set one common commission for them, or skip."
+          skipHint={`No common commission — the seller's or category's own rate applies, else the platform default of ${settings?.defaultCommissionPercent ?? 10}%.`}
+          initial={settings?.commonCommission || null}
+          skipLabel="Skip & turn on"
+          confirmLabel={(label) => `Turn on with ${label}`}
+          isSubmitting={settingsWriter.update.isSubmitting}
+          onApprove={async (commission) => {
+            try {
+              await settingsWriter.update.runAsync({ autoApprovalEnabled: true, commission })
+              setEnablingAuto(false)
+            } catch {
+              // useAdminMutation already shows the error toast; keep the dialog open.
+            }
+          }}
+        />
+      )}
+
+      {approving && (
+        <ApproveWithCommissionDialog
+          isOpen
+          onClose={() => setApproving(null)}
+          title={`Approve ${approving.name}?`}
+          description={
+            approving.kind === 'product'
+              ? 'Set a commission just for this product, or skip it.'
+              : 'Set a commission for every product in this category, or skip it.'
+          }
+          skipHint={
+            approving.kind === 'product'
+              ? "No product commission — the seller's, the category's, or the platform default applies."
+              : "No category commission — the seller's commission, or the platform default, applies."
+          }
+          isSubmitting={writer.approve.isSubmitting}
+          onApprove={async (commission) => {
+            try {
+              await writer.approve.runAsync({ id: approving.id, commission })
+              setApproving(null)
+            } catch {
+              // useAdminMutation already shows the error toast; keep the dialog open.
+            }
+          }}
+        />
+      )}
 
       {/* Reject Confirmation Dialog with Reason */}
       <ConfirmDialog

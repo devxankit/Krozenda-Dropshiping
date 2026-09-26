@@ -2,8 +2,11 @@ const Category = require('../Models/Category');
 const Brand = require('../Models/Brand');
 const Product = require('../Models/Product');
 const CatalogSettings = require('../Models/CatalogSettings');
+const CommissionRule = require('../Models/CommissionRule');
+const AccountingConfig = require('../Models/AccountingConfig');
 const { createNotification } = require('./notificationController');
 const { getFssaiStatus, getFssaiStatusMap, fssaiBlockMessage } = require('../utils/fssai');
+const { prepareCommission, setBaseCommission, CommissionInputError } = require('../services/quickCommission');
 
 const FSSAI_CONTEXT = {
   MISSING: 'Food category · FSSAI licence not uploaded',
@@ -11,13 +14,34 @@ const FSSAI_CONTEXT = {
   REJECTED: 'Food category · FSSAI licence rejected',
 };
 
+// The common commission auto-approved items fall back to: the base GLOBAL
+// rule (undated, priority 0), else the platform default. Sent with the
+// settings so the "turn on auto-approval" prompt opens pre-filled.
+async function commonCommission() {
+  const [rule, config] = await Promise.all([
+    CommissionRule.findOne({ scope: 'GLOBAL', isActive: true, startDate: null, endDate: null, priority: 0 })
+      .select('type value')
+      .lean(),
+    AccountingConfig.resolve(),
+  ]);
+  return {
+    commonCommission: rule ? { type: rule.type, value: rule.value } : null,
+    defaultCommissionPercent: config.defaultCommissionPercent,
+  };
+}
+
+async function serializeSettings(settings) {
+  return {
+    autoApprovalEnabled: settings.autoApprovalEnabled,
+    sellerOnlyMode: settings.sellerOnlyMode,
+    ...(await commonCommission()),
+  };
+}
+
 // GET /admin/catalog/approvals/settings — current auto-approval policy.
 async function getApprovalSettings(req, res) {
   const settings = await CatalogSettings.getSettings();
-  res.json({
-    success: true,
-    data: { autoApprovalEnabled: settings.autoApprovalEnabled, sellerOnlyMode: settings.sellerOnlyMode },
-  });
+  res.json({ success: true, data: await serializeSettings(settings) });
 }
 
 // PUT /admin/catalog/approvals/settings — flip the auto-approval and/or
@@ -39,16 +63,43 @@ async function updateApprovalSettings(req, res) {
     return res.status(400).json({ success: false, message: 'sellerOnlyMode must be true or false' });
   }
 
+  // Turning auto-approval on skips the per-item "set commission" prompt, so
+  // the admin may set ONE common commission with it (or skip). It is the
+  // GLOBAL base rule, and is validated before the switch flips so a bad rate
+  // never leaves auto-approval on with the admin thinking it was saved.
+  let commission = null;
+  if (autoApprovalEnabled === true) {
+    try {
+      commission = await prepareCommission(req, 'GLOBAL', null);
+    } catch (err) {
+      if (err instanceof CommissionInputError) {
+        return res.status(err.status).json({ success: false, message: err.message });
+      }
+      throw err;
+    }
+  }
+
   const settings = await CatalogSettings.getSettings();
   if (autoApprovalEnabled !== undefined) settings.autoApprovalEnabled = autoApprovalEnabled;
   if (sellerOnlyMode !== undefined) settings.sellerOnlyMode = sellerOnlyMode;
   settings.updatedBy = req.admin?._id || null;
   await settings.save();
 
+  if (commission) {
+    await setBaseCommission({
+      scope: 'GLOBAL',
+      targetId: null,
+      input: commission,
+      name: 'All sellers — common commission',
+      req,
+      reason: 'Set while turning on auto-approval',
+    });
+  }
+
   res.json({
     success: true,
     message: 'Approval settings updated',
-    data: { autoApprovalEnabled: settings.autoApprovalEnabled, sellerOnlyMode: settings.sellerOnlyMode },
+    data: await serializeSettings(settings),
   });
 }
 
@@ -161,10 +212,33 @@ async function decide(req, res, decision) {
     }
   }
 
+  // "Set commission or skip" for a seller's category or product.
+  const commissionScope = { category: 'CATEGORY', product: 'PRODUCT' }[parsed.kind];
+  let commission = null;
+  if (decision === 'APPROVED' && commissionScope) {
+    try {
+      commission = await prepareCommission(req, commissionScope, doc._id);
+    } catch (err) {
+      if (err instanceof CommissionInputError) return res.status(err.status).json({ success: false, message: err.message });
+      throw err;
+    }
+  }
+
   doc.approvalStatus = decision;
   if (decision === 'REJECTED') doc.rejectionReason = (req.body.reason || '').trim();
   if (decision === 'APPROVED' && parsed.kind === 'product') doc.isActive = true;
   await doc.save();
+
+  if (commission) {
+    await setBaseCommission({
+      scope: commissionScope,
+      targetId: doc._id,
+      input: commission,
+      name: `${doc.name} — commission`,
+      req,
+      reason: `Set while approving the ${parsed.kind}`,
+    });
+  }
 
   const vendorId = doc[VENDOR_FIELD_BY_KIND[parsed.kind]];
   if (vendorId) {
@@ -180,7 +254,7 @@ async function decide(req, res, decision) {
     });
   }
 
-  res.json({ success: true, message: `${parsed.kind} ${decision.toLowerCase()}`, data: { id: req.params.id, kind: parsed.kind, name: doc.name } });
+  res.json({ success: true, message: `${parsed.kind} ${decision.toLowerCase()}`, data: { id: req.params.id, kind: parsed.kind, name: doc.name, commission } });
 }
 
 const approveQueueItem = (req, res) => decide(req, res, 'APPROVED');

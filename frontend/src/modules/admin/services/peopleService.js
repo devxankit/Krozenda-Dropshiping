@@ -145,10 +145,13 @@ export const fetchKycApplication = (applicationId) =>
 // The application-level decision (approve/reject the vendor) and the
 // per-document decision are two different endpoints on the vendor resource —
 // see adminVendorController.updateVendorStatus / reviewVendorDocument.
-export async function decideKycApplication({ vendorId, verificationStatus, rejectionReason }) {
+// `commission` ({type, value} or null) is the optional "set commission or
+// skip" from the approve dialog.
+export async function decideKycApplication({ vendorId, verificationStatus, rejectionReason, commission = null }) {
   const { data } = await api.patch(`/admin/vendors/${vendorId}/status`, {
     verificationStatus,
     rejectionReason,
+    commission,
   })
   return data.data.vendor
 }

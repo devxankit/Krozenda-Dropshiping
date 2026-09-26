@@ -115,7 +115,9 @@ export function HomeLeftSidebar({ categories = [], isLoading = false, className 
                             alt={cat.name}
                             sizes="24px"
                             ratio="1 / 1"
-                            className="w-full h-full object-cover"
+                            fit="cover"
+                            className="w-full h-full rounded-full overflow-hidden object-cover"
+                            imgClassName="w-full h-full rounded-full object-cover"
                           />
                         ) : (
                           <IconComponent className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-600" />

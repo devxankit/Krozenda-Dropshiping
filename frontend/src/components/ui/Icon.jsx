@@ -97,6 +97,10 @@ import {
   FiX,
   FiXCircle,
   FiZap,
+  FiMessageCircle,
+  FiPauseCircle,
+  FiPlayCircle,
+  FiShoppingCart,
 } from 'react-icons/fi'
 
 const ICONS = Object.freeze({
@@ -216,6 +220,11 @@ const ICONS = Object.freeze({
   location: FiMapPin,
   user: FiUser,
   users: FiUsers,
+  pause: FiPauseCircle,
+  play: FiPlayCircle,
+  message: FiMessageCircle,
+  cart: FiShoppingCart,
+  percent: FiPercent,
 })
 
 export const ICON_NAMES = Object.freeze(Object.keys(ICONS))

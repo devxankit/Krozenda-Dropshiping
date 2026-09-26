@@ -5,6 +5,12 @@ const { getImageUrl } = require('../utils/imageHelper');
 const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
 const { isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
 const { getFssaiStatus, fssaiBlockMessage } = require('../utils/fssai');
+const {
+  prepareCommission,
+  setBaseCommission,
+  baseCommissionsFor,
+  CommissionInputError,
+} = require('../services/quickCommission');
 
 const SELLER_ONLY_MESSAGE =
   'Seller-only catalog mode is on: new categories can only be submitted by sellers. Review them in the approval queue instead.';
@@ -89,7 +95,13 @@ async function listPublicCategories(req, res) {
 
 async function listCategories(req, res) {
   const categories = await Category.find().sort({ createdAt: -1 }).lean();
-  const items = categories.map(serializeCategory);
+  // Each category's own commission (null = none set, so the seller or
+  // platform default applies), shown on the list and pre-filled on edit.
+  const commissions = await baseCommissionsFor('CATEGORY', categories.map((c) => c._id));
+  const items = categories.map((cat) => ({
+    ...serializeCategory(cat),
+    commission: commissions.get(cat._id.toString()) || null,
+  }));
 
   const stats = {
     total: items.length,
@@ -114,6 +126,14 @@ async function createCategory(req, res) {
     return res.status(400).json({ success: false, message: 'Category name is required' });
   }
 
+  let commission;
+  try {
+    commission = await prepareCommission(req, 'CATEGORY', null);
+  } catch (err) {
+    if (err instanceof CommissionInputError) return res.status(err.status).json({ success: false, message: err.message });
+    throw err;
+  }
+
   const category = await Category.create({
     name: name.trim(),
     image: req.file?.url || null,
@@ -121,10 +141,21 @@ async function createCategory(req, res) {
     isTopCategory: toBool(isTopCategory, false),
   });
 
+  if (commission) {
+    await setBaseCommission({
+      scope: 'CATEGORY',
+      targetId: category._id,
+      input: commission,
+      name: `${category.name} — commission`,
+      req,
+      reason: 'Set while creating the category',
+    });
+  }
+
   res.status(201).json({
     success: true,
     message: 'Category created successfully',
-    data: serializeCategory(category),
+    data: { ...serializeCategory(category), commission },
   });
 }
 
@@ -157,7 +188,26 @@ async function updateCategory(req, res) {
     category.image = req.file.url;
   }
 
+  let commission;
+  try {
+    commission = await prepareCommission(req, 'CATEGORY', category._id);
+  } catch (err) {
+    if (err instanceof CommissionInputError) return res.status(err.status).json({ success: false, message: err.message });
+    throw err;
+  }
+
   await category.save();
+
+  if (commission) {
+    await setBaseCommission({
+      scope: 'CATEGORY',
+      targetId: category._id,
+      input: commission,
+      name: `${category.name} — commission`,
+      req,
+      reason: 'Set while editing the category',
+    });
+  }
 
   res.json({
     success: true,

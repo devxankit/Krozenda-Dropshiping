@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { DocumentList, DocumentViewer } from '../../components/people/KycReview'
 import { DecisionStrip } from '../../components/people/KycDecision'
 import { KycMetaRail } from '../../components/people/KycMetaRail'
+import { ApproveWithCommissionDialog } from '../../components/commission/CommissionField'
 import { ADMIN_PERMISSIONS, REVIEW_STATUS_LABELS, REVIEW_STATUS_TONE } from '../../constants'
 import { useKycApplicationController, useKycDecisionController } from '../../controllers/usePeopleController'
 
@@ -15,7 +16,7 @@ export function KycReviewPage() {
   const { data: application, isLoading, error, refetch } = useKycApplicationController(applicationId)
   const [selectedId, setSelectedId] = useState(null)
   const [docNote, setDocNote] = useState('')
-  const [appDecision, setAppDecision] = useState(null) // 'REJECTED' | 'UNDER_REVIEW'
+  const [appDecision, setAppDecision] = useState(null) // 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW'
   const [appReason, setAppReason] = useState('')
 
   const decisions = useKycDecisionController({
@@ -46,8 +47,9 @@ export function KycReviewPage() {
     application.documents.find((document) => document.id === selectedId && document.fileName) ||
     application.documents.find((document) => document.fileName)
 
-  const approveApplication = () =>
-    decisions.decideApplication.run({ vendorId: application.vendorId, verificationStatus: 'APPROVED' })
+  // Approving asks for this seller's commission first (or Skip).
+  const approveApplication = (commission) =>
+    decisions.decideApplication.run({ vendorId: application.vendorId, verificationStatus: 'APPROVED', commission })
 
   return (
     <PageBody>
@@ -79,7 +81,7 @@ export function KycReviewPage() {
                 <Button
                   size="control"
                   icon="check"
-                  onClick={approveApplication}
+                  onClick={() => setAppDecision('APPROVED')}
                   isLoading={decisions.decideApplication.isSubmitting}
                 >
                   Approve seller
@@ -152,6 +154,16 @@ export function KycReviewPage() {
 
         <KycMetaRail application={application} />
       </div>
+
+      <ApproveWithCommissionDialog
+        isOpen={appDecision === 'APPROVED'}
+        onClose={() => setAppDecision(null)}
+        title={`Approve ${application.vendorName}?`}
+        description="Set this seller's commission now, or skip it. It applies to all of their products unless a product has its own."
+        skipHint="No seller commission — their category commission, or the platform default, applies."
+        isSubmitting={decisions.decideApplication.isSubmitting}
+        onApprove={approveApplication}
+      />
 
       <ConfirmDialog
         isOpen={appDecision === 'REJECTED'}

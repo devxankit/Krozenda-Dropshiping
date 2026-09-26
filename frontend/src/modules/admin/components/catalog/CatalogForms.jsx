@@ -7,6 +7,12 @@ import { ProductBarcode } from '../../../../components/common/ProductBarcode'
 import { ProductVariantsSection } from '../../../../components/catalog/ProductVariantsSection'
 import { buildVariantsPayload, variantFromProduct } from '../../../../components/catalog/productVariants'
 import {
+  CommissionField,
+  CommissionGate,
+  commissionPayload,
+  initialCommission,
+} from '../commission/CommissionField'
+import {
   attributeWriteSchema,
   brandWriteSchema,
   categoryWriteSchema,
@@ -23,6 +29,7 @@ export function CategoryFormDrawer({ isOpen, onClose, category, writer }) {
     isTopCategory: category?.isTopCategory ?? false,
   }))
   const [issue, setIssue] = useState(null)
+  const [commission, setCommission] = useState(() => initialCommission(category?.commission))
 
   const mutation = editing ? writer.update : writer.create
 
@@ -44,6 +51,17 @@ export function CategoryFormDrawer({ isOpen, onClose, category, writer }) {
 
     if (imageFile) {
       payload.image = imageFile
+    }
+
+    // Skip sends nothing, so an edit leaves an existing commission alone.
+    const rate = commissionPayload(commission)
+    if (commission.mode === 'set' && !rate) {
+      setIssue('Enter the commission, or choose Skip')
+      return
+    }
+    if (rate) {
+      payload.commissionType = rate.type
+      payload.commissionValue = rate.value
     }
 
     mutation.run(editing ? { id: category.id, ...payload } : payload)
@@ -113,6 +131,19 @@ export function CategoryFormDrawer({ isOpen, onClose, category, writer }) {
         value={form.name}
         onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))}
       />
+
+      <CommissionGate>
+        <CommissionField
+          id="category-commission"
+          state={commission}
+          onChange={setCommission}
+          skipHint={
+            editing && category?.commission
+              ? 'Keeps the current commission unchanged.'
+              : "No category commission — each seller's commission, or the platform default, applies."
+          }
+        />
+      </CommissionGate>
 
       {/* Top Category Feature Flag */}
       <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-yellow-50/30 p-4 transition-all">

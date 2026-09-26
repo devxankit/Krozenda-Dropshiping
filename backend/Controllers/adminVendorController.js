@@ -9,6 +9,8 @@ const emailService = require('../services/emailService');
 const { createNotification } = require('./notificationController');
 const { notifyVendorAccountDecision } = require('../services/vendorAlertService');
 const { FSSAI_DOC_TYPE } = require('../utils/fssai');
+const { prepareCommission, setBaseCommission, CommissionInputError } = require('../services/quickCommission');
+const { sellerLabel } = require('../services/sellerCommissionRate');
 
 // Live SKU count and gross sales per vendor, read from the catalog and the
 // order line items that snapshot their vendor at order time — the directory
@@ -143,6 +145,19 @@ async function updateVendorStatus(req, res) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
   }
 
+  // Optional "set commission or skip" from the approve dialog. Checked
+  // before anything is saved, so a bad rate never leaves the seller
+  // approved with the admin thinking the rate went through.
+  let commission = null;
+  if (verificationStatus === 'APPROVED') {
+    try {
+      commission = await prepareCommission(req, 'SELLER', vendor._id);
+    } catch (err) {
+      if (err instanceof CommissionInputError) return res.status(err.status).json({ success: false, message: err.message });
+      throw err;
+    }
+  }
+
   const previousStatus = vendor.verificationStatus;
   vendor.verificationStatus = verificationStatus;
   vendor.rejectionReason = verificationStatus === 'REJECTED' ? rejectionReason.trim() : '';
@@ -154,6 +169,17 @@ async function updateVendorStatus(req, res) {
   }
 
   await vendor.save();
+
+  if (commission) {
+    await setBaseCommission({
+      scope: 'SELLER',
+      targetId: vendor._id,
+      input: commission,
+      name: `${sellerLabel(vendor)} — commission`,
+      req,
+      reason: 'Set while approving the seller',
+    });
+  }
 
   // Email on every rejection (the reason may have changed), but on approval
   // only when the account actually becomes active, so re-saving an already
@@ -176,7 +202,7 @@ async function updateVendorStatus(req, res) {
   res.json({
     success: true,
     message: `Vendor marked ${verificationStatus.toLowerCase().replace('_', ' ')}`,
-    data: { vendor: serializeVendor(vendor) },
+    data: { vendor: serializeVendor(vendor), commission },
   });
 }
 

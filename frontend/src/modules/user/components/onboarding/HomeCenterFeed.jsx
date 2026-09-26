@@ -418,15 +418,16 @@ export function HomeCenterFeed({
                       whileHover={{ y: -3, scale: 1.06 }}
                       whileTap={{ scale: 0.95 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${bg} overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300 border border-slate-200/70 flex items-center justify-center p-1`}
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${bg} overflow-hidden shadow-card group-hover:shadow-card-hover transition-all duration-300 border-2 border-slate-200/80 flex items-center justify-center`}
                     >
                       <SmartImage
                         src={item.image}
                         alt={item.name}
                         sizes="70px"
                         ratio="1 / 1"
-                        fit="contain"
-                        className="h-full w-full !bg-transparent object-contain transition-transform group-hover:scale-108"
+                        fit="cover"
+                        className="h-full w-full rounded-full overflow-hidden !bg-transparent"
+                        imgClassName="h-full w-full rounded-full object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                     </motion.div>
                     <span className="text-[11px] sm:text-xs font-semibold text-slate-700 group-hover:text-blue-600 transition-colors text-center leading-tight line-clamp-1 w-full mt-1.5">
