@@ -72,6 +72,18 @@ export function RazorpaySyncPanel({ vendorId, routeLinkedHint }) {
                   </Badge>
                 ),
               },
+              {
+                label: 'Eligibility decided by',
+                value:
+                  razorpay.eligibilitySetBy === 'ADMIN'
+                    ? 'Admin (automation will not change it)'
+                    : razorpay.eligibilitySetBy === 'SYSTEM'
+                      ? 'Razorpay activation (automatic)'
+                      : '—',
+              },
+              ...(razorpay.onboardingError
+                ? [{ label: 'Last onboarding error', value: <span className="text-danger">{razorpay.onboardingError}</span> }]
+                : []),
               { label: 'Linked account ID', value: <span className="tabular">{razorpay.accountId || '—'}</span> },
               { label: 'Bank on file', value: <span className="tabular">{sync.data.bankAccountMasked || '—'}</span> },
               {
@@ -83,8 +95,8 @@ export function RazorpaySyncPanel({ vendorId, routeLinkedHint }) {
         ) : (
           <p className="text-2xs text-ink-faint">
             {routeLinkedHint
-              ? 'This vendor is approved, so a linked account should exist — press Sync to check its current status.'
-              : 'Not checked yet this session — press Sync to create or read the linked account.'}
+              ? 'This vendor is approved, so Route onboarding runs automatically — press Sync to see where it stands.'
+              : 'Not checked yet this session — press Sync to run or read the Route onboarding.'}
           </p>
         )}
 

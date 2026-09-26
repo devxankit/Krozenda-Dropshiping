@@ -168,6 +168,9 @@ export const vendorRazorpaySyncSchema = z.object({
     ]),
     kycStatus: z.string().nullable(),
     isSettlementEligible: z.boolean(),
+    // SYSTEM follows Razorpay's activation; ADMIN is pinned by hand.
+    eligibilitySetBy: z.enum(['SYSTEM', 'ADMIN']).nullable().optional(),
+    onboardingError: z.string().optional(),
     lastSyncedAt: z.string().nullable(),
   }),
   bankAccountMasked: z.string().nullable(),
