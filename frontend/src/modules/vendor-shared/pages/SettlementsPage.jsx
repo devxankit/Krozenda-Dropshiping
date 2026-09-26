@@ -112,12 +112,12 @@ const PAYOUT_COLUMNS = [
 
 function Tile({ label, value, caption, tone }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
-      <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">{label}</span>
-      <div className={`mt-2 text-xl font-bold ${tone || 'text-slate-900'}`}>
+    <div className="rounded-xl border border-slate-200/80 bg-surface p-3 sm:p-5 shadow-2xs">
+      <span className="text-[10px] sm:text-2xs font-semibold uppercase tracking-wider text-ink-subtle">{label}</span>
+      <div className={`mt-1 sm:mt-2 text-base sm:text-xl font-bold tracking-tight ${tone || 'text-slate-900'}`}>
         <MoneyCell amount={value} className={tone} />
       </div>
-      {caption && <span className="mt-1 block text-2xs text-ink-subtle">{caption}</span>}
+      {caption && <span className="mt-0.5 sm:mt-1 block text-[10px] sm:text-2xs text-ink-subtle line-clamp-1 sm:line-clamp-none">{caption}</span>}
     </div>
   )
 }
@@ -134,7 +134,7 @@ export function EarningsPage() {
       />
 
       {summary && (
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-3 sm:mb-6 grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <Tile label="Net earnings" value={summary.netEarnings} caption={`on ${summary.deliveredOrdersCount} delivered items`} />
           <Tile
             label="Paid out"
@@ -148,15 +148,13 @@ export function EarningsPage() {
       )}
 
       {summary && (
-        <p className="mb-4 text-2xs text-ink-subtle">
-          Commission shown per line is what was actually charged, fixed when the order was placed. Your default
-          rate is{' '}
-          {summary.commissionRateType === 'FIXED'
-            ? `₹${summary.commissionRateValue} per unit`
-            : `${summary.commissionRatePercent}%`}
-          , but a product rule set by the platform can override it on individual items. Lines marked
-          &ldquo;estimate&rdquo; are cash-on-delivery orders whose payment the courier has not handed over yet.
-        </p>
+        <div className="mb-3 rounded-xl border border-slate-200/70 bg-slate-50/70 p-2.5 sm:p-3 text-[11px] sm:text-2xs text-ink-subtle leading-relaxed">
+          Commission rate: <span className="font-semibold text-slate-800">
+            {summary.commissionRateType === 'FIXED'
+              ? `₹${summary.commissionRateValue} per unit`
+              : `${summary.commissionRatePercent}%`}
+          </span>. Lines marked &ldquo;estimate&rdquo; are cash-on-delivery orders awaiting courier remittance.
+        </div>
       )}
 
       <Tabs

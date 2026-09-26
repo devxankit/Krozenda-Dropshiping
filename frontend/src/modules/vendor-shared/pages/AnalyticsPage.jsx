@@ -23,7 +23,7 @@ export function AnalyticsPage() {
     <PageBody>
       <PageHeader title="Analytics" description="Sales trend, top products and order mix for the last 30 days." />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Revenue (30d)" value={`₹${(totalRevenue / 100).toLocaleString('en-IN')}`} tone="brand" />
         <StatTile label="Orders (30d)" value={totalOrders} />
         <StatTile label="Active Products" value={data.productsActive} caption={`of ${data.productsTotal} total`} />

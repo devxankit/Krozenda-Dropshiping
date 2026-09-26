@@ -186,6 +186,12 @@
   color: #0f172a;
 }
 
+@media (max-width: 1023px) {
+  .vendor-root {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
 /* Slim scrollbars inside admin panes — a 40-row grid next to a full-width
    scrollbar wastes real estate the density is trying to buy back. */
 .admin-scroll {

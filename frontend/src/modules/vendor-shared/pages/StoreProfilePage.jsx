@@ -140,7 +140,7 @@ function StoreProfileForm({ vendor, updateProfile, isSubmitting }) {
   return (
     <>
       <SectionCard title="Business Details">
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
+        <div className="grid gap-2.5 p-3.5 sm:gap-3 sm:p-4 sm:grid-cols-2">
           <Input label="Contact Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Input label="Mobile Number" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
           <Input label="Store / Business Name" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} className="sm:col-span-2" />
@@ -148,7 +148,7 @@ function StoreProfileForm({ vendor, updateProfile, isSubmitting }) {
       </SectionCard>
 
       <SectionCard title="Pickup Address">
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
+        <div className="grid gap-2.5 p-3.5 sm:gap-3 sm:p-4 sm:grid-cols-2">
           <Input label="Address Line" value={form.addressLine} onChange={(e) => setForm({ ...form, addressLine: e.target.value })} className="sm:col-span-2" />
           <Input label="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           <Input label="State" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
@@ -156,8 +156,8 @@ function StoreProfileForm({ vendor, updateProfile, isSubmitting }) {
         </div>
       </SectionCard>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSubmitting} icon="save">
+      <div className="flex justify-end pt-1">
+        <Button onClick={handleSave} disabled={isSubmitting} icon="save" className="w-full sm:w-auto">
           {isSubmitting ? 'Saving…' : 'Save changes'}
         </Button>
       </div>

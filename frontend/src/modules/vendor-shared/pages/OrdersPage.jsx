@@ -16,7 +16,7 @@ export function OrdersPage() {
   const [openShipmentId, setOpenShipmentId] = useState(null)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       <ListScreen
         title="Orders"
         description="Orders containing your products. Move each item through processing, shipping and delivery."

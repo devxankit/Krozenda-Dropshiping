@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { VendorSidebar } from './VendorSidebar'
 import { VendorTopbar } from './VendorTopbar'
+import { VendorBottomNav } from './VendorBottomNav'
 
 import { useAuthStore } from '../../../../lib/authStore'
 import { disconnectRealtime } from '../../../../lib/realtime'
@@ -69,9 +70,17 @@ export function VendorLayout() {
           <VendorTopbar onOpenMobileNav={() => setMobileOpen(true)} isPartner={isPartner} />
         </div>
 
-        <main className="admin-scroll flex-1 overflow-y-auto print:h-auto print:overflow-visible">
+        <main className="admin-scroll flex-1 overflow-y-auto pb-24 lg:pb-0 print:h-auto print:overflow-visible">
           <Outlet />
         </main>
+
+        {/* Mobile App Bottom Navigation */}
+        <div className="print:hidden">
+          <VendorBottomNav
+            onOpenMobileNav={() => setMobileOpen(true)}
+            isPartner={isPartner}
+          />
+        </div>
       </div>
 
       {/* Mobile Drawer Navigation */}

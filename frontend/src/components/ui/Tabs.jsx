@@ -6,7 +6,7 @@ export function Tabs({ items = [], activeId, onChange, className = '' }) {
   return (
     <div
       role="tablist"
-      className={`no-scrollbar flex items-center gap-6 overflow-x-auto overflow-y-hidden border-b border-border ${className}`}
+      className={`no-scrollbar flex items-center gap-1.5 sm:gap-6 overflow-x-auto overflow-y-hidden border-b border-border pb-1 sm:pb-0 ${className}`}
     >
       {items.map((item) => {
         const isActive = item.id === activeId
@@ -17,17 +17,17 @@ export function Tabs({ items = [], activeId, onChange, className = '' }) {
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange?.(item.id)}
-            className={`-mb-px flex h-10 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
+            className={`flex h-7.5 sm:h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg sm:rounded-none sm:-mb-px sm:border-b-2 px-2.5 sm:px-0 text-xs sm:text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
               isActive
-                ? 'border-brand-600 font-semibold text-slate-900'
-                : 'border-transparent font-medium text-ink-subtle hover:text-slate-700'
+                ? 'bg-brand-50 sm:bg-transparent border border-brand-200/80 sm:border-0 sm:border-b-2 sm:border-brand-600 font-bold text-brand-700 sm:text-slate-900 shadow-xs sm:shadow-none'
+                : 'border border-transparent font-medium text-slate-500 hover:text-slate-800'
             }`}
           >
             {item.label}
             {item.count !== undefined && (
               <span
-                className={`rounded-full px-1.5 py-0.5 text-2xs font-semibold ${
-                  isActive ? 'bg-brand-100 text-brand-700' : 'bg-surface-sunken text-ink-subtle'
+                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                  isActive ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {item.count}

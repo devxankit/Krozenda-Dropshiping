@@ -57,29 +57,29 @@ export function KycDocumentsPage() {
       />
 
       {/* Compliance Overview Banner */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
-          <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
+      <div className="mb-3 sm:mb-6 grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-4">
+        <div className="rounded-xl border border-slate-200/80 bg-surface p-3.5 sm:p-5 shadow-2xs">
+          <span className="text-[10px] sm:text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
             KYC Verification Status
           </span>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge tone={isFullyApproved ? 'success' : 'warning'} size="md">
+          <div className="mt-1.5 sm:mt-2 flex items-center gap-2">
+            <Badge tone={isFullyApproved ? 'success' : 'warning'} size="sm">
               {isFullyApproved ? 'Fully Approved' : 'Review Pending'}
             </Badge>
           </div>
-          <span className="mt-1 block text-2xs text-ink-subtle">
+          <span className="mt-1 block text-[10px] sm:text-2xs text-ink-subtle">
             {isFullyApproved ? 'All submitted documents are verified' : 'Some documents are awaiting admin review'}
           </span>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
-          <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
+        <div className="rounded-xl border border-slate-200/80 bg-surface p-3.5 sm:p-5 shadow-2xs">
+          <span className="text-[10px] sm:text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
             Documents Submitted
           </span>
-          <div className="mt-2 text-xl font-bold text-slate-900">
+          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-bold text-slate-900 tracking-tight">
             {approvedCount} of {kycList.length} Verified
           </div>
-          <span className="mt-1 block text-2xs text-ink-subtle">
+          <span className="mt-1 block text-[10px] sm:text-2xs text-ink-subtle">
             PAN, GST & Bank proof recommended
           </span>
         </div>
@@ -88,20 +88,20 @@ export function KycDocumentsPage() {
             These two genuinely differ: every document can be APPROVED while
             the account itself is still UNDER_REVIEW, because an admin approves
             the account separately (adminVendorController.updateVendorStatus). */}
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-2xs">
-          <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
+        <div className="rounded-xl border border-slate-200/80 bg-surface p-3.5 sm:p-5 shadow-2xs">
+          <span className="text-[10px] sm:text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
             Account Status
           </span>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-1.5 sm:mt-2 flex items-center gap-2">
             {isLoadingStatus || !status ? (
               <Skeleton className="h-6 w-32 rounded-full" />
             ) : (
-              <Badge tone={VENDOR_VERIFICATION_TONE[status] || 'neutral'} size="md">
+              <Badge tone={VENDOR_VERIFICATION_TONE[status] || 'neutral'} size="sm">
                 {VENDOR_STATUS_LABELS[status.toLowerCase()] || status}
               </Badge>
             )}
           </div>
-          <span className="mt-1 block text-2xs text-ink-subtle">
+          <span className="mt-1 block text-[10px] sm:text-2xs text-ink-subtle">
             {status === 'PENDING'
               ? 'Upload your documents, then submit for review'
               : status === 'UNDER_REVIEW'
@@ -116,9 +116,9 @@ export function KycDocumentsPage() {
       {isLoading ? (
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : (
-        <div className="rounded-xl border border-border bg-surface shadow-2xs overflow-hidden">
-          <div className="border-b border-border bg-surface-subtle px-5 py-3.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+        <div className="rounded-xl border border-slate-200/80 bg-surface shadow-2xs overflow-hidden">
+          <div className="border-b border-border bg-surface-subtle px-3.5 py-2.5 sm:px-5 sm:py-3.5">
+            <h3 className="text-2xs sm:text-xs font-semibold uppercase tracking-wider text-slate-700">
               Uploaded KYC Document Repository
             </h3>
           </div>

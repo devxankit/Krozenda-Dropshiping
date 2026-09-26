@@ -36,12 +36,12 @@ function SettingsForm({ settingsData, updateSettings, isSubmitting }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-4xl">
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs">
-        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 sm:gap-6 max-w-4xl">
+      <div className="rounded-xl border border-slate-200/80 bg-surface p-3.5 sm:p-6 shadow-2xs">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between border-b border-border pb-2.5 sm:pb-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Payout Bank Account</h3>
-            <p className="text-xs text-ink-subtle">Used for settlement payouts once your account is approved.</p>
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-900">Payout Bank Account</h3>
+            <p className="text-[11px] sm:text-xs text-ink-subtle">Used for settlement payouts once your account is approved.</p>
           </div>
           <Badge tone="brand" size="sm">
             Commission{' '}
@@ -51,7 +51,7 @@ function SettingsForm({ settingsData, updateSettings, isSubmitting }) {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:gap-4 sm:grid-cols-2">
           <Input label="Account Holder Name" value={formData.accountHolderName} onChange={(e) => handleChange('accountHolderName', e.target.value)} />
           <Input label="Bank Name" value={formData.bankName} onChange={(e) => handleChange('bankName', e.target.value)} />
           <Input label="Account Number" value={formData.accountNumber} onChange={(e) => handleChange('accountNumber', e.target.value)} />
@@ -59,11 +59,11 @@ function SettingsForm({ settingsData, updateSettings, isSubmitting }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-2xs">
-        <div className="mb-4 border-b border-border pb-3">
-          <h3 className="text-sm font-semibold text-slate-900">Notification Preferences</h3>
+      <div className="rounded-xl border border-slate-200/80 bg-surface p-3.5 sm:p-6 shadow-2xs">
+        <div className="mb-3 sm:mb-4 border-b border-border pb-2.5 sm:pb-3">
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-900">Notification Preferences</h3>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5 sm:gap-3">
           <label className="flex items-center gap-2 text-xs">
             <Checkbox checked={formData.orderUpdates} onChange={(e) => handleChange('orderUpdates', e.target.checked)} />
             Order updates (new orders, status changes, returns)
@@ -75,8 +75,8 @@ function SettingsForm({ settingsData, updateSettings, isSubmitting }) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <Button type="submit" variant="primary" size="md" disabled={isSubmitting}>
+      <div className="flex justify-end gap-3 pt-1 sm:pt-2">
+        <Button type="submit" variant="primary" size="md" disabled={isSubmitting} className="w-full sm:w-auto">
           {isSubmitting ? 'Saving…' : 'Save Settings'}
         </Button>
       </div>

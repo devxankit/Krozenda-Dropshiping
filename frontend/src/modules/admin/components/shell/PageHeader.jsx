@@ -16,11 +16,11 @@ export function PageHeader({ title, description, actions, trail = [], children }
   ].filter(Boolean)
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-1.5 sm:gap-3">
       {crumbs.length > 0 && (
         <nav
           aria-label="Breadcrumb"
-          className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-faint"
+          className="hidden sm:flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-faint"
         >
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1
@@ -48,15 +48,15 @@ export function PageHeader({ title, description, actions, trail = [], children }
         </nav>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h1>
+          <h1 className="text-base sm:text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
           {description && (
-            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink-subtle">{description}</p>
+            <p className="mt-0.5 max-w-3xl text-xs sm:text-sm leading-normal sm:leading-relaxed text-ink-subtle line-clamp-2 sm:line-clamp-none">{description}</p>
           )}
           {children}
         </div>
-        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2 sm:shrink-0">{actions}</div>}
       </div>
     </div>
   )

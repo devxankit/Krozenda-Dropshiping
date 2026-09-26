@@ -6,7 +6,7 @@ export function PageBody({ children, className = '', width = 'full' }) {
   const widthClass = width === 'narrow' ? 'max-w-5xl' : 'max-w-[100rem]'
   return (
     <div
-      className={`mx-auto flex w-full min-w-0 animate-fade-in flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6 print:max-w-none print:animate-none print:gap-0 print:p-0 ${widthClass} ${className}`}
+      className={`mx-auto flex w-full min-w-0 animate-fade-in flex-col gap-2.5 px-3 py-2.5 sm:gap-5 sm:px-6 sm:py-6 print:max-w-none print:animate-none print:gap-0 print:p-0 ${widthClass} ${className}`}
     >
       {children}
     </div>

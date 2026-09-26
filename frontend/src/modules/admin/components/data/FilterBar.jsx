@@ -11,25 +11,25 @@ export function FilterBar({ filters = [], value = {}, onChange, searchPlaceholde
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
       <div className="relative flex w-full items-center sm:w-72">
-        <Icon name="search" className="pointer-events-none absolute left-3 h-4 w-4 text-ink-faint" />
+        <Icon name="search" className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-ink-faint" />
         <input
           value={value.search || ''}
           onChange={(event) => set('search', event.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
           type="search"
-          className="h-control w-full rounded-md border border-border bg-surface pl-9 pr-8 text-sm text-slate-900 shadow-xs transition-[border-color,box-shadow] placeholder:text-ink-faint hover:border-border-strong focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
+          className="h-8.5 sm:h-control w-full rounded-xl sm:rounded-md border border-border bg-surface pl-8 pr-7 text-xs sm:text-sm text-slate-900 shadow-xs transition-[border-color,box-shadow] placeholder:text-ink-faint hover:border-border-strong focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
         />
         {value.search && (
           <button
             type="button"
             onClick={() => set('search', '')}
             aria-label="Clear search"
-            className="touch-auto-target absolute right-2 flex h-5 w-5 items-center justify-center rounded text-ink-faint transition-colors hover:bg-surface-sunken hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="touch-auto-target absolute right-2 flex h-4 w-4 items-center justify-center rounded text-ink-faint transition-colors hover:bg-surface-sunken hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
-            <Icon name="close" className="h-3.5 w-3.5" />
+            <Icon name="close" className="h-3 w-3" />
           </button>
         )}
       </div>
@@ -40,7 +40,7 @@ export function FilterBar({ filters = [], value = {}, onChange, searchPlaceholde
             value={value[filter.key] || ''}
             onChange={(event) => set(filter.key, event.target.value)}
             aria-label={filter.label}
-            className={`h-control w-full min-w-[8.5rem] cursor-pointer appearance-none rounded-md border pl-3 pr-8 text-sm shadow-xs transition-[border-color,box-shadow,background-color] focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 ${
+            className={`h-8.5 sm:h-control w-full min-w-[7.5rem] cursor-pointer appearance-none rounded-xl sm:rounded-md border pl-2.5 pr-7 text-xs sm:text-sm shadow-xs transition-[border-color,box-shadow,background-color] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/15 ${
               value[filter.key]
                 ? 'border-brand-200 bg-brand-50 font-semibold text-brand-700'
                 : 'border-border bg-surface text-ink-muted hover:border-border-strong'
@@ -55,7 +55,7 @@ export function FilterBar({ filters = [], value = {}, onChange, searchPlaceholde
           </select>
           <Icon
             name="chevronDown"
-            className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-ink-faint"
+            className="pointer-events-none absolute right-2 h-3 w-3 text-ink-faint"
           />
         </div>
       ))}

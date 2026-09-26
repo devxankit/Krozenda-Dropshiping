@@ -67,18 +67,18 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus, 
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title={`Order #${order.id.slice(-8).toUpperCase()}`} description={`Placed ${new Date(order.createdAt).toLocaleString('en-IN')}`} width="lg">
-      <div className="flex flex-col gap-6 p-5">
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface-muted p-4">
+      <div className="flex flex-col gap-3.5 sm:gap-6 p-3.5 sm:p-5">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-surface-muted p-3 sm:p-4">
           <div>
-            <span className="text-2xs font-semibold uppercase text-ink-faint">Status</span>
+            <span className="text-[10px] sm:text-2xs font-semibold uppercase text-ink-faint">Status</span>
             <div className="mt-1">
               <StatusPill status={order.status} tones={VENDOR_ORDER_STATUS_TONE} size="md" />
             </div>
           </div>
           <div className="text-right">
-            <span className="text-2xs font-semibold uppercase text-ink-faint">Your Items Value</span>
+            <span className="text-[10px] sm:text-2xs font-semibold uppercase text-ink-faint">Your Items Value</span>
             <div className="mt-1">
-              <MoneyCell amount={order.itemsValue} compact className="text-success-600 text-lg font-bold" />
+              <MoneyCell amount={order.itemsValue} compact className="text-success-600 text-base sm:text-lg font-bold" />
             </div>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus, 
         <div className="flex flex-col gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Your Items</h3>
           {order.items.map((item) => (
-            <div key={item.productId} className="rounded-lg border border-border p-3.5 text-xs flex flex-col gap-2">
+            <div key={item.productId} className="rounded-xl border border-slate-200/80 p-3 sm:p-3.5 text-xs flex flex-col gap-2">
               <div className="flex items-center justify-between font-medium text-slate-900">
                 <span>{item.name}{item.variant ? ` · ${item.variant}` : ''}</span>
                 <span>Qty: {item.quantity}</span>
@@ -184,7 +184,7 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus, 
 
         <div className="flex flex-col gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Delivery Address</h3>
-          <div className="rounded-lg border border-border p-3.5 text-xs flex flex-col gap-1">
+          <div className="rounded-xl border border-slate-200/80 p-3 sm:p-3.5 text-xs flex flex-col gap-1">
             <span className="font-semibold text-slate-900">{order.shippingAddress?.fullName}</span>
             <span className="text-ink-muted">{order.shippingAddress?.phone}</span>
             <span className="mt-1 text-ink-subtle">

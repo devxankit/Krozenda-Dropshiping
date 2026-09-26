@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Badge, Button, Table } from '../../../components/ui'
 import { Skeleton } from '../../../components/ui'
 import { useVendorAnalyticsController, useVendorDashboardController, useVendorOrdersController } from '../controllers/useVendorController'
@@ -10,6 +10,7 @@ import { PageBody, PageHeader } from '../../admin/components/shell'
 import { KpiGrid, OrderPipeline } from '../../admin/components/dashboard'
 import { AreaTrend, ChartFrame, formatAxisRupees } from '../../admin/components/charts'
 import { formatMoney } from '../../admin/components/display'
+import { MobileSellerDashboard } from '../components/dashboard/MobileSellerDashboard'
 
 // Order lifecycle stages shown in the funnel, in the order they occur. Not
 // every vendor status enum shows up here — CANCELLED is an exception branch,
@@ -30,6 +31,8 @@ function shortDate(dateStr) {
 }
 
 export function VendorDashboardPage() {
+  const location = useLocation()
+  const basePath = location.pathname.startsWith('/partner') ? '/partner' : '/seller'
   const { data: summary, isLoading, isError, error } = useVendorDashboardController()
   const { data: analytics, isLoading: isAnalyticsLoading } = useVendorAnalyticsController()
   const orders = useVendorOrdersController()
@@ -138,95 +141,110 @@ export function VendorDashboardPage() {
   ]
 
   return (
-    <PageBody>
-      <PageHeader
-        title={summary.storeName}
-        description="Seller Operations Dashboard"
-        actions={
-          <>
-            <Link to="../kyc-documents">
-              <Button variant="secondary" size="sm">
-                KYC Documents
-              </Button>
-            </Link>
-            <Link to="../products">
-              <Button size="sm" icon="add">
-                Add Product
-              </Button>
-            </Link>
-          </>
-        }
-      >
-        <Badge tone="brand" size="sm">
-          {VENDOR_STATUS_LABELS[summary.status] ?? summary.status}
-        </Badge>
-      </PageHeader>
+    <>
+      {/* Mobile App View (Visible only on mobile/tablet < lg) */}
+      <div className="block lg:hidden">
+        <MobileSellerDashboard
+          summary={summary}
+          analytics={analytics}
+          orders={orders}
+          basePath={basePath}
+        />
+      </div>
 
-      {summary.kycStatus !== 'approved' && (
-        <InlineAlert tone="warning" title="KYC Verification Required">
-          Upload your PAN, GSTIN, and Bank Account proof under KYC Documents to get your seller account fully approved.
-        </InlineAlert>
-      )}
+      {/* Desktop Dashboard View (Visible only on desktop >= lg) */}
+      <div className="hidden lg:block">
+        <PageBody>
+          <PageHeader
+            title={summary.storeName}
+            description="Seller Operations Dashboard"
+            actions={
+              <>
+                <Link to="../kyc-documents">
+                  <Button variant="secondary" size="sm">
+                    KYC Documents
+                  </Button>
+                </Link>
+                <Link to="../products">
+                  <Button size="sm" icon="add">
+                    Add Product
+                  </Button>
+                </Link>
+              </>
+            }
+          >
+            <Badge tone="brand" size="sm">
+              {VENDOR_STATUS_LABELS[summary.status] ?? summary.status}
+            </Badge>
+          </PageHeader>
 
-      <KpiGrid kpis={kpis} columns={4} />
-
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <ChartFrame
-          title="Revenue trend"
-          description="Daily gross revenue, last 30 days"
-          series={REVENUE_SERIES}
-          height={280}
-        >
-          {hasRevenue ? (
-            <AreaTrend
-              data={chartData}
-              series={REVENUE_SERIES}
-              formatAxis={formatAxisRupees}
-              formatValue={(value) => formatMoney(value, { compact: true })}
-              stacked={false}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-ink-subtle">
-              No revenue in the last 30 days
-            </div>
+          {summary.kycStatus !== 'approved' && (
+            <InlineAlert tone="warning" title="KYC Verification Required">
+              Upload your PAN, GSTIN, and Bank Account proof under KYC Documents to get your seller account fully approved.
+            </InlineAlert>
           )}
-        </ChartFrame>
 
-        <OrderPipeline pipeline={pipeline} exceptions={exceptions} />
+          <KpiGrid kpis={kpis} columns={4} />
+
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <ChartFrame
+              title="Revenue trend"
+              description="Daily gross revenue, last 30 days"
+              series={REVENUE_SERIES}
+              height={280}
+            >
+              {hasRevenue ? (
+                <AreaTrend
+                  data={chartData}
+                  series={REVENUE_SERIES}
+                  formatAxis={formatAxisRupees}
+                  formatValue={(value) => formatMoney(value, { compact: true })}
+                  stacked={false}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-ink-subtle">
+                  No revenue in the last 30 days
+                </div>
+              )}
+            </ChartFrame>
+
+            <OrderPipeline pipeline={pipeline} exceptions={exceptions} />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <Link to="../products" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Products</h3>
+              <p className="mt-1 text-2xs text-ink-subtle">Manage your catalog, pricing, and stock availability.</p>
+            </Link>
+            <Link to="../orders" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Orders</h3>
+              <p className="mt-1 text-2xs text-ink-subtle">Process, pack and ship items from your orders.</p>
+            </Link>
+            <Link to="../earnings" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Earnings & Settlements</h3>
+              <p className="mt-1 text-2xs text-ink-subtle">View your sales, commission and net earnings.</p>
+            </Link>
+            <Link to="../kyc-documents" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
+              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">KYC Documents</h3>
+              <p className="mt-1 text-2xs text-ink-subtle">Upload GST certificate, PAN and bank proof.</p>
+            </Link>
+          </div>
+
+          <SectionCard
+            title="Recent Orders"
+            description="Latest orders containing your products."
+            actions={
+              <Link to="../orders">
+                <Button variant="ghost" size="sm" icon="arrowRight">
+                  View all orders
+                </Button>
+              </Link>
+            }
+          >
+            <Table className="rounded-none border-0 border-t" columns={columns} data={orders.items.slice(0, 5)} getRowKey={(row) => row.id} density="compact" />
+          </SectionCard>
+        </PageBody>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Link to="../products" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Products</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Manage your catalog, pricing, and stock availability.</p>
-        </Link>
-        <Link to="../orders" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Orders</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Process, pack and ship items from your orders.</p>
-        </Link>
-        <Link to="../earnings" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">Earnings & Settlements</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">View your sales, commission and net earnings.</p>
-        </Link>
-        <Link to="../kyc-documents" className="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-300 hover:shadow-xs">
-          <h3 className="text-xs font-semibold text-slate-900 group-hover:text-brand-700">KYC Documents</h3>
-          <p className="mt-1 text-2xs text-ink-subtle">Upload GST certificate, PAN and bank proof.</p>
-        </Link>
-      </div>
-
-      <SectionCard
-        title="Recent Orders"
-        description="Latest orders containing your products."
-        actions={
-          <Link to="../orders">
-            <Button variant="ghost" size="sm" icon="arrowRight">
-              View all orders
-            </Button>
-          </Link>
-        }
-      >
-        <Table className="rounded-none border-0 border-t" columns={columns} data={orders.items.slice(0, 5)} getRowKey={(row) => row.id} density="compact" />
-      </SectionCard>
-    </PageBody>
+    </>
   )
 }

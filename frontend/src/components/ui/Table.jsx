@@ -15,17 +15,17 @@ const ALIGN = Object.freeze({
 })
 
 const DENSITY = Object.freeze({
-  relaxed: 'h-16 px-5 py-4 text-sm',
-  comfortable: 'h-14 px-3.5 py-3 text-sm',
-  default: 'h-row px-4 text-sm',
-  compact: 'h-9 px-3 text-xs',
+  relaxed: 'h-12 sm:h-16 px-3 sm:px-5 py-2 sm:py-4 text-xs sm:text-sm',
+  comfortable: 'h-11 sm:h-14 px-3 sm:px-3.5 py-2 sm:py-3 text-xs sm:text-sm',
+  default: 'h-10 sm:h-row px-2.5 sm:px-4 text-xs sm:text-sm',
+  compact: 'h-8 sm:h-9 px-2 sm:px-3 text-2xs sm:text-xs',
 })
 
 const HEADER_DENSITY = Object.freeze({
-  relaxed: 'h-12 px-5 text-xs',
-  comfortable: 'h-11 px-3.5 text-xs font-semibold',
-  default: 'h-10 px-4 text-xs font-semibold',
-  compact: 'h-9 px-3 text-2xs',
+  relaxed: 'h-10 sm:h-12 px-3 sm:px-5 text-2xs sm:text-xs',
+  comfortable: 'h-9 sm:h-11 px-3 sm:px-3.5 text-2xs sm:text-xs font-semibold',
+  default: 'h-8.5 sm:h-10 px-2.5 sm:px-4 text-[10px] sm:text-xs font-semibold',
+  compact: 'h-7 sm:h-9 px-2 sm:px-3 text-[9px] sm:text-2xs',
 })
 
 // Staggered skeleton widths, so a loading table reads as rows of data rather
