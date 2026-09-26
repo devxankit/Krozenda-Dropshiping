@@ -2,7 +2,7 @@ const Shipment = require('../../Models/Shipment');
 const TrackingEvent = require('../../Models/TrackingEvent');
 const { resolveForShipment } = require('./shippingAccountResolver');
 const shiprocketService = require('./shiprocketService');
-const { mapShiprocketStatus, POLLABLE_STATUSES } = require('../../Config/shipping');
+const { mapStatusForShipment, POLLABLE_STATUSES } = require('../../Config/shipping');
 const { syncOrderFromShipment } = require('./shipmentService');
 const buyerAlerts = require('../buyerAlertService');
 
@@ -138,7 +138,8 @@ async function applyScans(shipment, scans, { source = 'WEBHOOK', summary = null 
     });
 
   for (const scan of ordered) {
-    const mapped = mapShiprocketStatus(scan.carrierStatus);
+    // Return parcels read the same words differently — see mapStatusForShipment.
+    const mapped = mapStatusForShipment(scan.carrierStatus, shipment.shipmentType);
     if (!mapped) unmappedStatuses.push(scan.carrierStatus);
 
     // A scan with no timestamp cannot be deduplicated reliably against a
@@ -185,7 +186,7 @@ async function applyScans(shipment, scans, { source = 'WEBHOOK', summary = null 
     // The summary can be ahead of the scan list (the scans lag on some
     // couriers), so it gets a chance to move the status too — through the same
     // guarded path.
-    const mappedSummary = mapShiprocketStatus(summary.currentStatus);
+    const mappedSummary = mapStatusForShipment(summary.currentStatus, shipment.shipmentType);
     if (mappedSummary && shipment.applyStatus(mappedSummary, { source, note: 'carrier summary status' })) {
       statusChanged = true;
     } else if (!mappedSummary) {

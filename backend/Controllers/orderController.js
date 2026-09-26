@@ -929,30 +929,61 @@ function placedResponse(orders, message) {
   return { success: true, message, data: { ...serialized[0], orders: serialized } };
 }
 
+// One Shiprocket parcel per seller on the order — and one for Krozenda's own
+// stock (lines with no vendor), which used to be skipped entirely: every
+// own-stock order was placed and never reached Shiprocket.
+//
+// A parcel that cannot be created (no pickup location, carrier refused) is
+// not the buyer's problem at checkout, but it must not be silent either: the
+// admin is alerted with the reason, and the seller is told when it is theirs
+// to fix.
 async function autoCreateShipmentsForOrder(order, items) {
   try {
     const shipmentService = require('../services/shipping/shipmentService');
-    const vendorIds = [...new Set(items.filter((i) => i.vendor).map((i) => i.vendor.toString()))];
+    const groups = [...new Set(items.map((i) => (i.vendor ? i.vendor.toString() : '')))];
 
-    for (const vendorId of vendorIds) {
-      const vendorItems = items.filter((i) => i.vendor?.toString() === vendorId);
-      const firstItemProductId = vendorItems[0]?.product || vendorItems[0]?.productId;
+    for (const key of groups) {
+      const vendorId = key || null;
+      const groupItems = items.filter((i) => (i.vendor ? i.vendor.toString() : '') === key);
+      const firstItemProductId = groupItems[0]?.product || groupItems[0]?.productId;
       const isCj = await ProductFulfillmentMapping.exists({ product: firstItemProductId, provider: 'CJ' });
       if (isCj) continue; // Handled by CJ dropshipping pipeline
 
+      const label = vendorId ? `vendor ${vendorId}` : 'Krozenda stock';
+      let res;
       try {
-        const res = await shipmentService.createShipment({
-          orderId: order._id,
-          vendorId,
-          actor: 'SYSTEM',
-        });
-        if (res.ok) {
-          console.log(`[SHIPPING] Auto-created Shiprocket shipment ${res.shipment?._id} for order ${order._id}, vendor ${vendorId}`);
-        } else {
-          console.warn(`[SHIPPING] Shiprocket auto-shipment skipped for order ${order._id}, vendor ${vendorId}: ${res.reason || res.message}`);
-        }
+        res = await shipmentService.createShipment({ orderId: order._id, vendorId, actor: 'SYSTEM' });
       } catch (shipmentErr) {
-        console.error(`[SHIPPING] Error creating auto-shipment for order ${order._id}, vendor ${vendorId}:`, shipmentErr.message);
+        res = { ok: false, reason: 'ERROR', message: shipmentErr.message };
+      }
+      if (res.ok) {
+        console.log(`[SHIPPING] Auto-created Shiprocket shipment ${res.shipment?._id} for order ${order._id}, ${label}`);
+        continue;
+      }
+      // The shipping services report why as `code`; the account resolver as `reason`.
+      const why = res.code || res.reason || 'ERROR';
+      // Shipping switched off is a setting, not a failure.
+      if (why === 'SHIPPING_DISABLED') {
+        console.warn(`[SHIPPING] Shiprocket auto-shipment skipped for order ${order._id}, ${label}: ${res.message}`);
+        continue;
+      }
+      console.warn(`[SHIPPING] Shiprocket auto-shipment failed for order ${order._id}, ${label}: ${why} ${res.message}`);
+      await alertAdmins({
+        event: 'AUTO_SHIPMENT_FAILED',
+        title: 'Order not sent to Shiprocket',
+        message: `ORD-${String(order._id).slice(-8).toUpperCase()} (${label}): ${res.message || why}. Create the shipment from the order once fixed.`,
+        link: `/admin/orders/detail/${order._id}`,
+        key: `AUTO_SHIPMENT_FAILED:${order._id}:${key || 'platform'}`,
+      });
+      if (vendorId && ['NO_PICKUP_LOCATION', 'PICKUP_NOT_REGISTERED'].includes(why)) {
+        await createNotification({
+          vendorId,
+          type: 'ORDER',
+          title: 'Add a pickup address to ship this order',
+          message: `Order ORD-${String(order._id).slice(-8).toUpperCase()} could not be booked with the courier: ${res.message}`,
+          actionType: 'ORDER',
+          actionRefId: order._id,
+        });
       }
     }
   } catch (err) {
@@ -1052,8 +1083,13 @@ async function cancelOrder(req, res) {
 
   const order = await Order.findOneAndUpdate(
     { _id: id, user: req.user._id, status: { $in: USER_CANCELLABLE_STATUSES } },
-    { $set: { status: 'CANCELLED', cancelledBy: 'buyer' }, $push: { statusHistory: { status: 'CANCELLED', at: new Date() } } },
-    { new: false }
+    // The lines go with the order: the seller's panel reads a line's status,
+    // and a cancelled order showing a PROCESSING line invites shipping it.
+    {
+      $set: { status: 'CANCELLED', cancelledBy: 'buyer', 'items.$[live].status': 'CANCELLED' },
+      $push: { statusHistory: { status: 'CANCELLED', at: new Date() } },
+    },
+    { new: false, arrayFilters: [{ 'live.status': { $nin: ['CANCELLED', 'DELIVERED'] } }] }
   );
 
   if (!order) {
@@ -1081,6 +1117,13 @@ async function cancelOrder(req, res) {
 
   // The coupon slot comes back once nothing bought with it is still live.
   await dropshipOrderService.releaseCouponIfWholeCheckoutCancelled({ ...order.toObject(), status: 'CANCELLED' });
+
+  // Stop the courier: the Shiprocket parcel for this order is cancelled too.
+  await require('../services/shipping/shipmentService').cancelShipmentsForOrder({
+    orderId: order._id,
+    reason: 'Cancelled by buyer',
+    actor: 'BUYER',
+  });
 
   await createNotification({
     userId: req.user._id,

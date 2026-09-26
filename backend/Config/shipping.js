@@ -232,6 +232,31 @@ const SHIPROCKET_STATUS_MAP = Object.freeze({
   'unmapped status': null,
 });
 
+// A reverse (RETURN) parcel is reported by Shiprocket either with its own
+// "return ..." wording or with the ordinary forward words — "Picked Up",
+// "Delivered" — meaning the item reached the seller. Read through the forward
+// map, "Delivered" would try to move a return back onto the forward branch,
+// which the rank rule refuses, and the return would never be received.
+const RETURN_STATUS_MAP = Object.freeze({
+  'return pickup generated': 'RETURN_PICKUP_SCHEDULED',
+  'return pickup scheduled': 'RETURN_PICKUP_SCHEDULED',
+  'return out for pickup': 'RETURN_PICKUP_SCHEDULED',
+  'return picked up': 'RETURN_IN_TRANSIT',
+  'return in transit': 'RETURN_IN_TRANSIT',
+  'return out for delivery': 'RETURN_IN_TRANSIT',
+  'return delivered': 'RETURN_DELIVERED',
+  'return cancelled': 'CANCELLED',
+});
+const FORWARD_TO_RETURN = Object.freeze({
+  PICKUP_SCHEDULED: 'RETURN_PICKUP_SCHEDULED',
+  PICKED_UP: 'RETURN_IN_TRANSIT',
+  IN_TRANSIT: 'RETURN_IN_TRANSIT',
+  OUT_FOR_DELIVERY: 'RETURN_IN_TRANSIT',
+  DELIVERED: 'RETURN_DELIVERED',
+  CANCELLED: 'CANCELLED',
+  FAILED: 'FAILED',
+});
+
 function normaliseCarrierStatus(raw) {
   return String(raw || '')
     .trim()
@@ -246,6 +271,16 @@ function mapShiprocketStatus(raw) {
   const key = normaliseCarrierStatus(raw);
   if (!key) return null;
   return SHIPROCKET_STATUS_MAP[key] ?? null;
+}
+
+// The internal status for a carrier status on THIS kind of parcel.
+function mapStatusForShipment(raw, shipmentType = 'FORWARD') {
+  if (shipmentType !== 'RETURN') return mapShiprocketStatus(raw);
+  const key = normaliseCarrierStatus(raw);
+  if (!key) return null;
+  if (RETURN_STATUS_MAP[key]) return RETURN_STATUS_MAP[key];
+  const forward = SHIPROCKET_STATUS_MAP[key] ?? null;
+  return forward ? FORWARD_TO_RETURN[forward] ?? null : null;
 }
 
 // How an internal shipment status should read to the BUYER. Shipment states
@@ -301,6 +336,8 @@ module.exports = {
   BRANCH_ENTRY_STATUSES,
   canTransitionTo,
   SHIPROCKET_STATUS_MAP,
+  RETURN_STATUS_MAP,
+  mapStatusForShipment,
   normaliseCarrierStatus,
   mapShiprocketStatus,
   BUYER_FACING_ORDER_STATUS,

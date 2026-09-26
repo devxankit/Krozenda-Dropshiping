@@ -53,11 +53,20 @@ function log(entry) {
 // never widens Order.STATUSES — doing so would ripple through the admin,
 // vendor and buyer panels for no benefit.
 async function syncOrderFromShipment(shipment) {
+  // A return parcel's progress belongs to its ReturnRequest (the Shipment
+  // save hook marks it received). Mirrored onto the order it would overwrite
+  // the delivered line's AWB with the return's, and a cancelled pickup would
+  // mark an item the buyer received as CANCELLED.
+  if (shipment.shipmentType === 'RETURN') return null;
   const buyerStatus = BUYER_FACING_ORDER_STATUS[shipment.internalStatus];
   if (!buyerStatus) return null;
 
   const order = await Order.findById(shipment.order);
   if (!order) return null;
+  // A cancelled order's lines stay as they are: the carrier confirming the
+  // cancel (CANCEL_REQUESTED reads as "in the courier's hands") must not
+  // turn them into SHIPPED.
+  if (order.status === 'CANCELLED') return order;
 
   const shippedProductIds = new Set(shipment.items.map((i) => String(i.product)));
   let changed = false;
@@ -912,6 +921,50 @@ async function createReturnShipment({ shipmentId, vendorId = null, reason = '', 
   }
 }
 
+// Cancel, at the carrier, every live forward parcel of an order whose items
+// are all cancelled now — called after an order or a line is cancelled, so a
+// courier never turns up for goods nobody is buying. Never throws: the
+// cancellation itself has already happened; a carrier refusal (the parcel is
+// already with the courier) is logged and alerted for a human, not undone.
+async function cancelShipmentsForOrder({ orderId, reason = '', actor = 'SYSTEM' }) {
+  const results = [];
+  try {
+    const order = await Order.findById(orderId).select('status items.product items.status').lean();
+    if (!order) return results;
+    const liveProducts = new Set(
+      order.status === 'CANCELLED'
+        ? []
+        : order.items.filter((item) => item.status !== 'CANCELLED').map((item) => String(item.product))
+    );
+    const shipments = await Shipment.find({ order: orderId, shipmentType: 'FORWARD' });
+    for (const shipment of shipments) {
+      if (shipment.isTerminal() || ['CANCEL_REQUESTED', 'CANCELLED'].includes(shipment.internalStatus)) continue;
+      // Still carrying something the buyer wants: leave it.
+      if (shipment.items.some((item) => liveProducts.has(String(item.product)))) continue;
+      const result = await cancelShipment({ shipmentId: shipment._id, reason, actor });
+      results.push({ shipmentId: String(shipment._id), ok: result.ok, reason: result.code || result.reason || null });
+      if (!result.ok) {
+        log({ event: 'AUTO_CANCEL_SHIPMENT_FAILED', shipmentId: String(shipment._id), reason: result.code || result.reason, message: result.message });
+        try {
+          await require('../adminAlertService').alertAdmins({
+            event: 'SHIPMENT_CANCEL_FAILED',
+            title: 'Cancelled order still has a live shipment',
+            message: `Order ${String(orderId).slice(-8).toUpperCase()} was cancelled, but its Shiprocket parcel could not be cancelled: ${result.message}`,
+            link: `/admin/orders/detail/${orderId}`,
+            key: `SHIPMENT_CANCEL_FAILED:${shipment._id}`,
+            urgent: true,
+          });
+        } catch (alertErr) {
+          log({ event: 'AUTO_CANCEL_ALERT_FAILED', shipmentId: String(shipment._id), message: alertErr.message });
+        }
+      }
+    }
+  } catch (err) {
+    log({ event: 'AUTO_CANCEL_SHIPMENTS_ERROR', orderId: String(orderId), message: err.message });
+  }
+  return results;
+}
+
 // The return payload, in Shiprocket's own field names. Verified against the
 // official Postman collection's "Create a Return Order" request.
 function buildReturnPayload({ forward, doc, returnItems }) {
@@ -1208,6 +1261,7 @@ module.exports = {
   assignAwb,
   schedulePickup,
   cancelShipment,
+  cancelShipmentsForOrder,
   createReturnShipment,
   buildReturnPayload,
   CANCELLABLE_STATUSES,

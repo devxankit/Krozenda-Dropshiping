@@ -265,13 +265,19 @@ async function updateOrderStatus(req, res) {
   const update = { $push: { statusHistory: { status, at: new Date() } } };
   const setFields = { status };
   if (status === 'DELIVERED') setFields.deliveredAt = new Date();
-  if (status === 'CANCELLED') setFields.cancelledBy = 'admin';
+  if (status === 'CANCELLED') {
+    setFields.cancelledBy = 'admin';
+    // The lines go with the order (see the buyer cancel in orderController).
+    setFields['items.$[live].status'] = 'CANCELLED';
+  }
   update.$set = setFields;
 
   const order = await Order.findOneAndUpdate(
     { _id: id, status: { $in: fromStatuses } },
     update,
-    { new: true }
+    status === 'CANCELLED'
+      ? { new: true, arrayFilters: [{ 'live.status': { $nin: ['CANCELLED', 'DELIVERED'] } }] }
+      : { new: true }
   );
 
   if (!order) {
@@ -292,6 +298,12 @@ async function updateOrderStatus(req, res) {
   if (status === 'CANCELLED') {
     // Only lines still live: a line cancelled on its own already gave its stock back.
     await releaseStock(order.items.filter((item) => item.status !== 'CANCELLED'));
+    // Stop the courier as well.
+    await require('../services/shipping/shipmentService').cancelShipmentsForOrder({
+      orderId: order._id,
+      reason: 'Cancelled by admin',
+      actor: 'ADMIN',
+    });
     if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
       // What is still owed: lines cancelled on their own were refunded already.
       await refundCancelledOrderToWallet(order);

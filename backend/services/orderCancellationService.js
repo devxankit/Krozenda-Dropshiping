@@ -151,6 +151,14 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
     }
   }
 
+  // A parcel whose every item is now cancelled is cancelled at the carrier.
+  // Lazy: shipmentService pulls in the carrier client.
+  await require('./shipping/shipmentService').cancelShipmentsForOrder({
+    orderId,
+    reason: reason || 'Item cancelled',
+    actor: cancelledBy === 'admin' ? 'ADMIN' : 'SELLER',
+  });
+
   return { ok: true, order, item: order.items[lineIndex], refunded };
 }
 

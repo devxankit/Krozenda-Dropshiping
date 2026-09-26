@@ -47,7 +47,11 @@ function serializeVendorOrder(order, vendorId) {
     paymentStatus: order.paymentStatus,
     // Aggregate status across only this vendor's own items — the order-level
     // `status` field belongs to admin/the buyer's full cart, not one seller.
-    status: myItems.every((i) => i.status === 'DELIVERED')
+    // A cancelled order is cancelled for the seller too, whatever its lines
+    // say (orders cancelled before the lines were cancelled with them).
+    status: order.status === 'CANCELLED'
+      ? 'CANCELLED'
+      : myItems.every((i) => i.status === 'DELIVERED')
       ? 'DELIVERED'
       : myItems.some((i) => i.status === 'CANCELLED') && myItems.every((i) => ['CANCELLED', 'DELIVERED'].includes(i.status))
         ? 'CANCELLED'
