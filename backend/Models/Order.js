@@ -303,6 +303,25 @@ function isFullyDelivered(order) {
   return live.length > 0 && live.every((item) => item.status === 'DELIVERED');
 }
 
+// The order follows its lines forward. A seller moves their LINE (see
+// vendorOrderController); the order sits at the least advanced live line —
+// it is not DELIVERED until every line is. Forward only: an admin who moved
+// the whole order on by hand is never dragged back by a later line save.
+// Must run before markCodPaidOnDelivery below.
+orderSchema.pre('save', function rollUpFromLines() {
+  if (this.isNew || !this.isModified('items') || this.status === 'CANCELLED') return;
+  const live = (this.items || []).filter((item) => item.status !== 'CANCELLED');
+  if (live.length === 0) return;
+  const lowest = live.reduce(
+    (acc, item) => ((STATUS_RANK[item.status] ?? 0) < STATUS_RANK[acc] ? item.status : acc),
+    'DELIVERED'
+  );
+  if ((STATUS_RANK[lowest] ?? 0) <= (STATUS_RANK[this.status] ?? 0)) return;
+  this.status = lowest;
+  this.statusHistory.push({ status: lowest, at: new Date() });
+  if (lowest === 'DELIVERED' && !this.deliveredAt) this.deliveredAt = new Date();
+});
+
 // A COD order is paid the moment it is delivered: the buyer handed the cash
 // to the courier. Whether the courier has passed that cash on to us is a
 // separate question, tracked by `codRemittedAt` — the ledger waits for that,

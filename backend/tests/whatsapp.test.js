@@ -20,6 +20,10 @@ beforeAll(async () => {
     WHATSAPP_TEMPLATE_ORDER_SHIPPED: 'order_shipped',
     WHATSAPP_TEMPLATE_ORDER_CANCELLED: 'order_cancelled',
     WHATSAPP_TEMPLATE_ORDER_CONFIRMED: '',
+    // Cleared, not inherited: a template name in the developer's .env would
+    // otherwise replace the fallback these tests are about.
+    WHATSAPP_TEMPLATE_ORDER_PLACED: '',
+    WHATSAPP_TEMPLATE_ORDER_DELIVERED: '',
   });
   global.fetch = jest.fn(async (url) => {
     sent.push(new URL(url).searchParams);
