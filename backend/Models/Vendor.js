@@ -90,6 +90,23 @@ const razorpaySchema = new mongoose.Schema(
     },
     kycStatus: { type: String },
     isSettlementEligible: { type: Boolean, default: false },
+    // Who last decided isSettlementEligible. The onboarding sync only ever
+    // flips it on its own when this is not 'ADMIN' — an admin who switched a
+    // seller off on purpose is never overridden by Razorpay activating them.
+    eligibilitySetBy: { type: String, enum: ['SYSTEM', 'ADMIN', null], default: null },
+    // Route onboarding is three calls after the account itself: a
+    // stakeholder, a `route` product configuration, and that product's
+    // settlement bank account. Their ids are kept so every step is
+    // idempotent and a half-finished onboarding resumes where it stopped.
+    stakeholderId: { type: String },
+    productId: { type: String },
+    // Last onboarding failure, verbatim from Razorpay, for the admin panel.
+    onboardingError: { type: String, default: '' },
+    // The seller changed their bank account after onboarding. Payouts stay
+    // paused (isSettlementEligible off) until the new account has been sent
+    // to Razorpay and Razorpay has activated the product again — see
+    // vendorRouteOnboarding.markBankChanged.
+    bankSyncPending: { type: Boolean, default: false },
     lastSyncedAt: { type: Date },
 
     // Recovery owed BACK from this vendor because a refund/return was
@@ -97,16 +114,11 @@ const razorpaySchema = new mongoose.Schema(
     // been RELEASED or COMPLETED — money that may have already left for the
     // seller's bank, so it cannot be clawed back with an automatic Route
     // reversal (see refundService.js's Scenario C handling). This is a
-    // running total in integer paise, incremented there and intended to be
-    // subtracted from a FUTURE settlement's payable for this vendor.
-    //
-    // NOT YET WIRED: settlementService.js's collectEligibleLines/
-    // generateSettlements (the only settlement generator) does not currently
-    // read or deduct this field when computing a new settlement's
-    // netPayablePaise — that wiring is out of scope for the sub-task that
-    // added this field and is a required follow-up. Until it lands, this is
-    // a correct record of what is owed back, not an amount actually being
-    // withheld anywhere automatically.
+    // running total in integer paise, incremented there and subtracted from a
+    // FUTURE settlement's payable for this vendor:
+    // settlementService.generateSettlements deducts it from the seller's next
+    // batch(es) and decrements it by what it took; cancelling such a batch
+    // gives the amount back (Settlement.recoveryAppliedPaise).
     pendingRecoveryPaise: { type: Number, default: 0, min: 0 },
   },
   { _id: false }

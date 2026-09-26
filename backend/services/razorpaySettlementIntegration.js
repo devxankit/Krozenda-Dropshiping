@@ -29,6 +29,9 @@ const SYSTEM_ACTOR = { _id: null, name: 'SYSTEM_RAZORPAY_ROUTE_AUTOMATION' };
 // see backend/Models/Settlement.js: ELIGIBLE is the accounting module's name
 // for what the legacy Finance screens call AWAITING_APPROVAL/PENDING.
 const TRANSFERABLE_STATUS = 'ELIGIBLE';
+// FAILED is a retry: its previous transfer must be confirmed dead first
+// (isTransferDead), which initiateRazorpayTransferForSettlement checks.
+const TRANSFERABLE_STATUSES = [TRANSFERABLE_STATUS, 'FAILED'];
 
 // ReturnRequest.STATUSES = ['PENDING', 'APPROVED', 'REJECTED']. Only REJECTED
 // is a dead end for the buyer's claim; PENDING and APPROVED both mean the
@@ -146,17 +149,65 @@ async function checkSettlementSafeForTransfer(settlementId) {
   return { ok: true, settlement, vendor, orders, ordersById };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * When a settlement's money may actually go to the seller: its eligibleAt
+ * plus AccountingConfig.sellerSettlementWindowDays — the extra buffer after
+ * batching in which a problem can still be caught while the transfer is
+ * held. The release job and direct-mode transfers both gate on this.
+ */
+function settlementReleaseAt(settlement, config) {
+  if (!settlement?.eligibleAt) return null;
+  const windowDays = Number(config?.sellerSettlementWindowDays) || 0;
+  return new Date(new Date(settlement.eligibleAt).getTime() + windowDays * DAY_MS);
+}
+
+// Payout statuses that mean a transfer is (or may still be) in flight or
+// done. Any of these on a settlement makes a new transfer a duplicate.
+const LIVE_PAYOUT_STATUSES = ['PENDING', 'PROCESSING', 'RELEASED', 'COMPLETED'];
+
+/**
+ * True only when Razorpay confirms a transfer can no longer pay anything
+ * out: it failed, or it has been reversed in full. A payout that never got a
+ * transfer id never moved money either. Anything else — including not being
+ * able to ask Razorpay — is treated as possibly live, because creating a
+ * second transfer next to a live one pays the seller twice.
+ */
+async function isTransferDead(payout) {
+  if (!payout?.razorpayTransferId) return true;
+  try {
+    const transfer = await razorpayRouteService.fetchTransfer(payout.razorpayTransferId);
+    if (['failed', 'reversed'].includes(transfer?.status)) return true;
+    return Number(transfer?.amount_reversed || 0) >= Number(transfer?.amount || payout.amount);
+  } catch (err) {
+    console.error(
+      `[razorpaySettlementIntegration] could not fetch transfer ${payout.razorpayTransferId}:`,
+      razorpayRouteService.errorText(err)
+    );
+    return false;
+  }
+}
+
 /**
  * Initiate (or return the already-existing) Razorpay Route transfer for one
- * ELIGIBLE settlement.
+ * ELIGIBLE settlement — or a FAILED one being retried, once its previous
+ * transfer is confirmed dead.
+ *
+ * `payment` mode (default): a transfer on the batch's one captured payment,
+ * on hold with no expiry — only this codebase's release step (after its
+ * safety re-check) ever lifts it. `direct` mode: a transfer from the
+ * platform balance, which cannot be held, so it is only made once the
+ * settlement is due and goes straight to RELEASED.
  *
  * @param {string} settlementId
  * @param {object} [options]
  * @param {boolean} [options.force]  Skip the sellerSettlementMode==='AUTO'
- *   gate — for a later admin "release now" manual action. Every other safety
- *   check below still applies regardless of `force`.
+ *   gate and, in direct mode, the "is it due yet" gate — for an admin
+ *   "release now" action. Every other safety check below still applies.
  * @returns {Promise<object>} { ok, outcome, ...detail } — outcome is one of
- *   'TRANSFER_CREATED' | 'ALREADY_EXISTS' | 'HELD' | 'SKIPPED_MANUAL_MODE' | 'FAILED'.
+ *   'TRANSFER_CREATED' | 'ALREADY_EXISTS' | 'HELD' | 'SKIPPED_MANUAL_MODE' |
+ *   'NOT_DUE' | 'PREVIOUS_TRANSFER_LIVE' | 'NOT_TRANSFERABLE' | 'NOT_FOUND' | 'FAILED'.
  */
 async function initiateRazorpayTransferForSettlement(settlementId, { force = false } = {}) {
   const settlement = await Settlement.findById(settlementId).lean();
@@ -164,11 +215,11 @@ async function initiateRazorpayTransferForSettlement(settlementId, { force = fal
     return { ok: false, outcome: 'NOT_FOUND', message: 'Settlement not found' };
   }
 
-  // --- idempotency: a transfer already exists for this settlement --------
+  // --- idempotency: a live transfer already exists for this settlement ----
   const existingPayout = await Payout.findOne({
     settlement: settlement._id,
     method: 'RAZORPAY_ROUTE',
-    razorpayTransferId: { $exists: true, $ne: null },
+    status: { $in: LIVE_PAYOUT_STATUSES },
   }).lean();
   if (existingPayout) {
     return {
@@ -179,13 +230,28 @@ async function initiateRazorpayTransferForSettlement(settlementId, { force = fal
     };
   }
 
-  // --- settlement must be in the transferable state -----------------------
-  if (settlement.status !== TRANSFERABLE_STATUS) {
+  // --- settlement must be in a transferable state -------------------------
+  if (!TRANSFERABLE_STATUSES.includes(settlement.status)) {
     return {
       ok: false,
       outcome: 'NOT_TRANSFERABLE',
-      message: `Settlement is ${settlement.status}, not ${TRANSFERABLE_STATUS} — nothing to transfer`,
+      message: `Settlement is ${settlement.status}, not ${TRANSFERABLE_STATUSES.join('/')} — nothing to transfer`,
     };
+  }
+
+  // --- a retry must never sit next to a transfer that can still pay ------
+  if (settlement.status === 'FAILED') {
+    const lastAttempt = await Payout.findOne({ settlement: settlement._id, method: 'RAZORPAY_ROUTE' })
+      .sort({ attempt: -1 })
+      .lean();
+    if (lastAttempt && !(await isTransferDead(lastAttempt))) {
+      return {
+        ok: false,
+        outcome: 'PREVIOUS_TRANSFER_LIVE',
+        message: `The previous transfer ${lastAttempt.razorpayTransferId} is not confirmed failed or fully reversed on Razorpay — reconcile it before retrying`,
+        payout: lastAttempt,
+      };
+    }
   }
 
   // --- vendor eligibility / per-line issues / amount sanity — one source of
@@ -206,44 +272,53 @@ async function initiateRazorpayTransferForSettlement(settlementId, { force = fal
   const rzp = vendor.razorpay || {};
 
   // --- AUTO vs MANUAL settlement mode gate ---------------------------------
-  if (!force) {
-    const config = await AccountingConfig.resolve();
-    if (config.sellerSettlementMode !== 'AUTO') {
-      return {
-        ok: true,
-        outcome: 'SKIPPED_MANUAL_MODE',
-        message: 'sellerSettlementMode is MANUAL — awaiting an explicit admin release',
-      };
-    }
+  const config = await AccountingConfig.resolve();
+  if (!force && config.sellerSettlementMode !== 'AUTO') {
+    return {
+      ok: true,
+      outcome: 'SKIPPED_MANUAL_MODE',
+      message: 'sellerSettlementMode is MANUAL — awaiting an explicit admin release',
+    };
   }
 
-  // --- resolve the underlying Razorpay payment(s) --------------------------
-  // A Settlement's items[] each carry their own `order`, and
-  // settlementService.generateSettlements batches every eligible delivered
-  // line for a vendor in one call — which can span multiple orders, and
-  // therefore multiple distinct captured Razorpay payments. Razorpay Route
-  // transfers are created against ONE captured payment
-  // (razorpay.payments.transfer(paymentId, ...)), so a settlement backed by
-  // more than one distinct payment cannot be expressed as a single transfer.
-  //
-  // Decision: rather than silently transferring against only one of several
-  // payments (wrong amount attribution) or splitting into several payouts
-  // under a schema that only carries ONE razorpayTransferId per Payout
-  // (backend/Models/Payout.js — a schema change is out of scope for this
-  // sub-task), a genuinely multi-payment settlement is held for a human to
-  // resolve rather than guessed at. Every settlement produced by the current
-  // generateSettlements in a normal COD/prepaid mix will usually collapse to
-  // one distinct paymentId per vendor batch in the common case (a batch
-  // drawn from a short delivery window for one vendor); the multi-payment
-  // case is the one this sub-task flags rather than silently mishandles.
+  const mode = razorpayRouteService.transferMode();
+  const notes = { settlementId: settlement.settlementId || String(settlement._id) };
+
+  if (mode === 'direct') {
+    // Nothing to hold a direct transfer with, so the settlement window is
+    // enforced here, before any money moves.
+    const releaseAt = settlementReleaseAt(settlement, config);
+    if (!force && (!releaseAt || releaseAt > new Date())) {
+      return { ok: true, outcome: 'NOT_DUE', message: 'Settlement window has not passed yet', releaseAt };
+    }
+    return createTransfer({
+      settlement,
+      rzp,
+      callRazorpay: () =>
+        razorpayRouteService.createDirectTransfer({
+          vendorAccountId: rzp.accountId,
+          amountPaise: settlement.netPayablePaise,
+          notes,
+        }),
+      releaseImmediately: true,
+    });
+  }
+
+  // --- resolve the underlying Razorpay payment -----------------------------
+  // A Route transfer is made against ONE captured payment
+  // (razorpay.payments.transfer(paymentId, ...)). generateSettlements
+  // batches per payment in this mode, so a new batch always resolves to one;
+  // a batch spanning several payments (made before the split, or in direct
+  // mode and switched back) is held, and the automation job cancels it so
+  // its lines are re-batched per payment.
   const distinctPaymentIds = new Set(
     orders.filter((order) => order.paymentMethod === 'RAZORPAY').map((order) => order.razorpayPaymentId).filter(Boolean)
   );
 
   if (distinctPaymentIds.size === 0) {
     // Every line is COD/WALLET — there is no captured Razorpay payment to
-    // transfer against at all. Not a Route case; hold for a human to pay
-    // this out by a non-Route method instead.
+    // transfer against at all. Paid by direct transfer (direct mode) or by
+    // hand (bank transfer + UTR) instead.
     const hold = await setSettlementHold({
       settlementId: settlement._id,
       hold: true,
@@ -263,14 +338,36 @@ async function initiateRazorpayTransferForSettlement(settlementId, { force = fal
       outcome: 'HELD',
       reason: 'MULTI_ORDER_SETTLEMENT_UNSUPPORTED',
       message:
-        'This settlement spans more than one captured Razorpay payment; automated single-transfer Route payout is not supported yet — see comments in razorpaySettlementIntegration.js',
+        'This settlement spans more than one captured Razorpay payment; the automation job will cancel and re-batch it per payment',
       hold,
     };
   }
 
   const [razorpayPaymentId] = distinctPaymentIds;
 
-  // --- create the Payout record (pre-transfer state) -----------------------
+  const result = await createTransfer({
+    settlement,
+    rzp,
+    // No on_hold_until: an expiry would let Razorpay release the money on
+    // its own clock, skipping the safety re-check in releaseSinglePayout.
+    callRazorpay: () =>
+      razorpayRouteService.createHeldTransfer({
+        razorpayPaymentId,
+        vendorAccountId: rzp.accountId,
+        amountPaise: settlement.netPayablePaise,
+        notes,
+      }),
+    releaseImmediately: false,
+  });
+  return result.outcome === 'TRANSFER_CREATED' ? { ...result, razorpayPaymentId } : result;
+}
+
+/**
+ * Payout record -> Razorpay call -> record the transfer. Shared by both
+ * transfer modes; `releaseImmediately` is for a direct transfer, which is
+ * never held and so goes PROCESSING -> RELEASED at once.
+ */
+async function createTransfer({ settlement, rzp, callRazorpay, releaseImmediately }) {
   const created = await payoutService.createPayout({
     settlementId: settlement._id,
     admin: SYSTEM_ACTOR,
@@ -287,59 +384,49 @@ async function initiateRazorpayTransferForSettlement(settlementId, { force = fal
   }
 
   const payout = created.payout;
-  const onHoldUntil = settlement.eligibleAt || new Date();
 
-  // --- call out to Razorpay -------------------------------------------------
   let transfer;
   try {
-    transfer = await razorpayRouteService.createHeldTransfer({
-      razorpayPaymentId,
-      vendorAccountId: rzp.accountId,
-      amountPaise: settlement.netPayablePaise,
-      onHoldUntil,
-      notes: { settlementId: settlement.settlementId || String(settlement._id) },
-    });
+    transfer = await callRazorpay();
   } catch (err) {
     // Nothing moved. Mark the Payout FAILED (via the sanctioned state
     // machine) so the settlement rolls back to a retryable state — see
-    // payoutService.settlePayoutStatus's FAILED branch, which sets the
-    // Settlement back to FAILED rather than any PAID/terminal status, ready
-    // for a future retry job to pick up. Never swallowed: re-thrown below.
+    // payoutService.settlePayoutStatus's FAILED branch.
+    const message = razorpayRouteService.errorText(err) || 'Razorpay transfer creation failed';
     await payoutService.settlePayoutStatus({
       payoutId: payout._id,
       status: 'FAILED',
-      failureReason: err?.error?.description || err.message || 'Razorpay transfer creation failed',
+      failureReason: message,
       admin: SYSTEM_ACTOR,
     });
-    return {
-      ok: false,
-      outcome: 'FAILED',
-      message: err?.error?.description || err.message || 'Razorpay transfer creation failed',
-      payoutId: payout._id,
-      error: err,
-    };
+    return { ok: false, outcome: 'FAILED', message, payoutId: payout._id, error: err };
   }
 
-  // --- success: record the transfer and move the Payout to PROCESSING ------
+  // --- success: record the transfer and move the Payout on -----------------
   await Payout.updateOne(
     { _id: payout._id },
     { $set: { razorpayTransferId: transfer.id, razorpayAccountId: rzp.accountId } }
   );
-  const settled = await payoutService.settlePayoutStatus({
+  let settled = await payoutService.settlePayoutStatus({
     payoutId: payout._id,
     status: 'PROCESSING',
     providerReference: transfer.id,
     admin: SYSTEM_ACTOR,
   });
+  if (releaseImmediately && settled.ok) {
+    settled = await payoutService.settlePayoutStatus({
+      payoutId: payout._id,
+      status: 'RELEASED',
+      admin: SYSTEM_ACTOR,
+    });
+  }
 
   return {
     ok: true,
     outcome: 'TRANSFER_CREATED',
     payout: settled.ok ? settled.payout : payout,
     transferId: transfer.id,
-    razorpayPaymentId,
     amountPaise: settlement.netPayablePaise,
-    onHoldUntil,
   };
 }
 
@@ -432,6 +519,10 @@ module.exports = {
   initiateRazorpayTransferForSettlement,
   checkSettlementSafeForTransfer,
   releaseSinglePayout,
+  settlementReleaseAt,
+  isTransferDead,
   TRANSFERABLE_STATUS,
+  TRANSFERABLE_STATUSES,
+  LIVE_PAYOUT_STATUSES,
   SYSTEM_ACTOR,
 };

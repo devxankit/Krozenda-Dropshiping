@@ -16,6 +16,7 @@ function NavItem({ item, collapsed, count, muted = false }) {
     <NavLink
       to={item.to}
       aria-label={collapsed ? item.label : undefined}
+      title={!collapsed ? item.description : undefined}
       className={navItemClass({ active, muted, collapsed })}
     >
       <Icon name={item.icon} className={navIconClass(active && !muted)} />

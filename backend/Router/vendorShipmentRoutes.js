@@ -6,6 +6,7 @@ const {
   listShipments,
   getShipment,
   cancelShipment,
+  restockRtoShipment,
   createReturn,
   getTracking,
   getShipmentDocument,
@@ -33,6 +34,7 @@ router.post('/:id/pickup', schedulePickup);
 // Both are real carrier calls that change state, so they share the order
 // limiter with create/awb/pickup.
 router.post('/:id/cancel', cancelShipment);
+router.post('/:id/restock', restockRtoShipment);
 router.post('/:id/return', createReturn);
 
 // Label / manifest / invoice. A GET because it is a read of a document the

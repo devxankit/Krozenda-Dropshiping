@@ -2,7 +2,7 @@
 // and are the ONLY thing pages/ are allowed to call into.
 
 import { useQuery } from '@tanstack/react-query'
-import { createOrder, fetchOrderDetail, fetchOrders, updateOrderStatus } from '../services/orderService'
+import { createOrder, deleteOrder, fetchOrderDetail, fetchOrders, updateOrderStatus } from '../services/orderService'
 import { useAdminMutation } from './useAdminMutation'
 import { useListController } from './useListController'
 
@@ -29,6 +29,14 @@ export const useOrderStatusController = () =>
     mutationFn: updateOrderStatus,
     invalidate: [['admin', 'orders']],
     success: () => 'Order status updated',
+  })
+
+export const useOrderDeleteController = ({ onDone } = {}) =>
+  useAdminMutation({
+    mutationFn: deleteOrder,
+    invalidate: [['admin', 'orders']],
+    success: () => 'Order deleted',
+    onDone,
   })
 
 export function useOrderDetailController(orderId) {

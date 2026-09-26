@@ -79,7 +79,7 @@ async function createPayout({ settlementId, admin = null, method = 'BANK_TRANSFE
   // not be duplicated. The attempt number rolls forward so the failed attempt
   // stays on the record rather than being overwritten (task §22 case 16).
   const attempts = await Payout.find({ settlement: settlement._id }).sort({ attempt: -1 }).lean();
-  const live = attempts.find((payout) => ['PENDING', 'PROCESSING', 'COMPLETED'].includes(payout.status));
+  const live = attempts.find((payout) => ['PENDING', 'PROCESSING', 'RELEASED', 'COMPLETED'].includes(payout.status));
   if (live) {
     return {
       ok: true,

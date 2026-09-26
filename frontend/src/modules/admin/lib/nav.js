@@ -13,8 +13,19 @@ import { NAV_TREE } from '../constants'
 // Transactions sits at /admin/accounting/transactions). Without it that
 // landing page would read as active on every sibling screen, and findNavItem
 // would hand the breadcrumb the wrong item.
+function matchesOwnPath(item, pathname) {
+  return pathname === item.to || pathname.startsWith(`${item.to}/`)
+}
+
 export function isNavItemActive(item, pathname) {
   if (pathname === item.to) return true
+  // A deeper nav item owns its own subtree: Orders sits at /admin/orders and
+  // Shiprocket Shipments at /admin/orders/carrier-shipments, and without this
+  // both lit up and the breadcrumb read "Orders" on the shipments page.
+  const deeper = flatNavItems().some(
+    (other) => other !== item && other.to !== item.to && other.to.startsWith(`${item.to}/`) && matchesOwnPath(other, pathname)
+  )
+  if (deeper) return false
   if (!item.exact && pathname.startsWith(`${item.to}/`)) return true
   if (item.match && pathname.startsWith(item.match)) return true
   return false

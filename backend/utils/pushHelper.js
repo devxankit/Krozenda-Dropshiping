@@ -16,6 +16,9 @@ const STALE_TOKEN_ERRORS = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-argument',
   'messaging/invalid-registration-token',
+  // Issued by a different Firebase project (an old app build or config) —
+  // this project can never deliver to it.
+  'messaging/mismatched-credential',
 ]);
 
 // Sends one push to every token, in batches. Best-effort per token — a few

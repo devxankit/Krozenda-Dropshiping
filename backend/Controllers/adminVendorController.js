@@ -5,6 +5,7 @@ const Order = require('../Models/Order');
 const { serializeVendor, createVendorAccount } = require('./vendorAuthController');
 const { serializeDocument } = require('./vendorDocumentController');
 const razorpayRouteService = require('../services/razorpayRouteService');
+const vendorRouteOnboarding = require('../services/vendorRouteOnboarding');
 const emailService = require('../services/emailService');
 const { createNotification } = require('./notificationController');
 const { notifyVendorAccountDecision } = require('../services/vendorAlertService');
@@ -186,6 +187,15 @@ async function updateVendorStatus(req, res) {
   // approved vendor doesn't resend it. Fire and forget: never throws.
   if (verificationStatus === 'APPROVED' && previousStatus !== 'APPROVED') {
     emailService.sendVendorAccountApproved(vendor);
+    // Start Razorpay Route onboarding so the seller can be paid without an
+    // admin click. Detached — approval never waits on Razorpay, and a
+    // failure is recorded on the vendor and retried by
+    // Jobs/settlementAutomationJob. Not in tests: it calls Razorpay for real.
+    if (process.env.ENV !== 'test') {
+      vendorRouteOnboarding.onboardVendor(vendor._id).catch((err) => {
+        console.error(`[adminVendorController] Route onboarding for vendor ${vendor._id} failed:`, err.message);
+      });
+    }
   } else if (verificationStatus === 'REJECTED') {
     emailService.sendVendorApplicationRejected(vendor, vendor.rejectionReason);
   }
@@ -293,9 +303,10 @@ async function reviewVendorDocument(req, res) {
 // (razorpayRouteService.mapAccountStatusToOnboardingStatus) is not fully
 // confirmed, so an admin who has actually looked at this vendor's linked
 // account on the Razorpay dashboard can override what the automated sync
-// concluded. Ensures the linked account exists (idempotent — createLinkedAccount
-// no-ops if vendor.razorpay.accountId is already set), then lets the admin
-// set isSettlementEligible and/or onboardingStatus directly.
+// concluded. Runs/resumes the full Route onboarding
+// (vendorRouteOnboarding.syncVendorOnboarding — idempotent at every step),
+// then lets the admin set isSettlementEligible and/or onboardingStatus
+// directly. An admin-set eligibility is never overridden by the automation.
 //
 // No amount, bank detail, or anything financial is accepted here beyond the
 // linked-account bookkeeping itself — this endpoint only ever flips
@@ -319,18 +330,23 @@ async function syncVendorRazorpay(req, res) {
     return res.status(404).json({ success: false, message: 'Vendor not found' });
   }
 
-  try {
-    // Idempotent: no-ops and returns the existing id if already linked.
-    await razorpayRouteService.createLinkedAccount(vendor);
-  } catch (err) {
-    return res.status(502).json({
+  const hasOverride = isSettlementEligible !== undefined || onboardingStatus !== undefined;
+
+  // Runs (or resumes) the full onboarding — account, stakeholder, route
+  // product with the seller's bank account — then reads back Razorpay's
+  // activation. Idempotent at every step.
+  const synced = await vendorRouteOnboarding.syncVendorOnboarding(vendor);
+  if (!synced.ok && !hasOverride) {
+    return res.status(synced.skipped ? 400 : 502).json({
       success: false,
-      message: err?.error?.description || err.message || 'Could not create/sync the Razorpay linked account',
+      message: synced.message || 'Could not create/sync the Razorpay linked account',
     });
   }
 
   if (isSettlementEligible !== undefined) {
     vendor.razorpay.isSettlementEligible = isSettlementEligible;
+    // From now on the automation leaves this seller's eligibility alone.
+    vendor.razorpay.eligibilitySetBy = 'ADMIN';
   }
   if (onboardingStatus !== undefined) {
     vendor.razorpay.onboardingStatus = onboardingStatus;
@@ -348,6 +364,8 @@ async function syncVendorRazorpay(req, res) {
         onboardingStatus: vendor.razorpay.onboardingStatus,
         kycStatus: vendor.razorpay.kycStatus || null,
         isSettlementEligible: Boolean(vendor.razorpay.isSettlementEligible),
+        eligibilitySetBy: vendor.razorpay.eligibilitySetBy || null,
+        onboardingError: vendor.razorpay.onboardingError || '',
         lastSyncedAt: vendor.razorpay.lastSyncedAt,
       },
       // Masked, never the full number — see razorpayRouteService.maskAccountNumber.

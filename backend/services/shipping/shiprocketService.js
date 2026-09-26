@@ -252,6 +252,23 @@ async function cancelOrder(integration, { orderIds }, opts = {}) {
   );
 }
 
+// One order as Shiprocket holds it. Read-only; used to confirm that a
+// cancellation actually took.
+async function getOrder(integration, { orderId }, opts = {}) {
+  return withAuth(
+    integration,
+    (token) =>
+      call({
+        method: 'GET',
+        path: `/v1/external/orders/show/${encodeURIComponent(orderId)}`,
+        token,
+        idempotent: true,
+        onLog: opts.onLog,
+      }),
+    opts
+  );
+}
+
 // Cancel SHIPMENTS by AWB, once one has been assigned.
 //
 // The collection documents this as answering 204 WITH a body ("Bulk Shipment
@@ -437,6 +454,7 @@ const CAPABILITIES = Object.freeze({
 });
 
 module.exports = {
+  getOrder,
   checkServiceability,
   createOrder,
   assignAWB,

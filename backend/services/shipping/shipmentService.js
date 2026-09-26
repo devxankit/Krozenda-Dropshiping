@@ -583,6 +583,11 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
   // MUST choose — we never silently pick on their behalf.
   let chosenCourierId = courierId;
   let quotedRate = null;
+  // Other couriers the lane offered, tried in turn when Shiprocket refuses
+  // the first choice at booking time ("Selected courier not available
+  // between …" — the rate list and the booking step do not always agree).
+  let fallbackCouriers = [];
+  const rateByCourier = new Map();
   if (!chosenCourierId) {
     const rates = await serviceabilityService.checkLane({
       vendorId: doc.vendor,
@@ -595,8 +600,17 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
       onLog: log,
     });
 
+    for (const c of rates.couriers || []) {
+      if (c.courierId && Number.isFinite(c.rate)) rateByCourier.set(c.courierId, c.rate);
+    }
     if (rates.ok && rates.recommended) {
       chosenCourierId = rates.recommended.courierId;
+      fallbackCouriers = (rates.couriers || [])
+        .filter((c) => c.courierId && c.courierId !== chosenCourierId)
+        .filter((c) => doc.paymentMethod !== 'COD' || c.supportsCod)
+        .sort((a, b) => (a.rate ?? Infinity) - (b.rate ?? Infinity))
+        .slice(0, 3)
+        .map((c) => c.courierId);
       // The AWB response carries no price (confirmed against the official
       // collection's "Generate AWB for Shipment" sample), so the quote we were
       // just given for this courier is the only figure available at booking
@@ -618,24 +632,83 @@ async function assignAwb({ shipmentId, vendorId = null, courierId = null, actor 
   }
 
   try {
-    const { body } = await shiprocketService.assignAWB(
-      resolution.integration,
-      { shipmentId: doc.shiprocketShipmentId, courierId: chosenCourierId },
-      { onLog: log }
-    );
+    // The chosen courier, then the lane's other couriers, then — when the
+    // caller did not insist on one — Shiprocket's own pick. Only a "courier
+    // not available" refusal moves on; anything else (wallet, KYC) stops.
+    const candidates = [...new Set([chosenCourierId, ...fallbackCouriers, ...(courierId ? [] : [null])])];
+    let body = null;
+    let data = {};
+    let awb = null;
+    let usedCourier = chosenCourierId;
+    let reason = '';
+    for (const candidate of candidates) {
+      ({ body } = await shiprocketService.assignAWB(
+        resolution.integration,
+        { shipmentId: doc.shiprocketShipmentId, courierId: candidate },
+        { onLog: log }
+      ));
+      data = body?.response?.data || body?.data || body || {};
+      awb = data.awb_code ?? data.awb;
+      if (awb) {
+        usedCourier = candidate;
+        break;
+      }
+      // Shiprocket refuses with a 200 and the reason inside the body.
+      reason =
+        data.awb_assign_error ||
+        body?.response?.data?.awb_assign_error ||
+        body?.message ||
+        body?.response?.message ||
+        '';
+      log({
+        event: 'SHIPROCKET_AWB_NOT_RETURNED',
+        shipmentId: String(doc._id),
+        courierId: candidate,
+        status: body?.awb_assign_status ?? null,
+        reason: String(reason).slice(0, 300),
+      });
 
-    const data = body?.response?.data || body?.data || body || {};
-    const awb = data.awb_code ?? data.awb;
+      // Shiprocket answers "Selected courier not available" and then assigns
+      // one of its own couriers in the background; the next request is told
+      // "AWB is already assigned with awb - …". Either way the parcel HAS an
+      // AWB, and asking again would only be refused. Adopt it.
+      const already = String(reason).match(/already assigned with awb\s*-?\s*([A-Za-z0-9]+)/i);
+      if (already) {
+        awb = already[1];
+        usedCourier = null;
+        break;
+      }
+      const assigned = await readCarrierAwb(resolution.integration, doc.shiprocketOrderId);
+      if (assigned?.awb) {
+        awb = assigned.awb;
+        data = { ...data, courier_name: assigned.courier || data.courier_name };
+        usedCourier = null;
+        break;
+      }
+
+      if (!/not available|not serviceable|unavailable|no courier/i.test(String(reason))) break;
+    }
+
+    // An adopted AWB comes without a courier name in the refusal; read it.
+    if (awb && !data.courier_name) {
+      const assigned = await readCarrierAwb(resolution.integration, doc.shiprocketOrderId);
+      if (assigned?.courier) data = { ...data, courier_name: assigned.courier };
+    }
 
     if (!awb) {
-      doc.errorMessage = 'Shiprocket did not return an AWB for this shipment.';
+      doc.errorMessage = reason
+        ? `Shiprocket did not assign an AWB: ${String(reason).slice(0, 200)}`
+        : 'Shiprocket did not return an AWB for this shipment.';
       doc.retryCount += 1;
       await doc.save();
       return fail('AWB_NOT_RETURNED', doc.errorMessage, { shipment: doc });
     }
+    if (usedCourier !== chosenCourierId) {
+      quotedRate = usedCourier ? rateByCourier.get(usedCourier) ?? null : null;
+    }
 
     doc.awbCode = String(awb);
-    doc.courierId = Number(data.courier_company_id ?? chosenCourierId) || null;
+    doc.courierId = Number(data.courier_company_id ?? usedCourier) || null;
     doc.courierName = data.courier_name || '';
 
     // The weight the carrier says it will bill on. This is the one number in
@@ -747,6 +820,22 @@ async function schedulePickup({ shipmentId, vendorId = null, actor = 'SELLER' })
       return fail('CARRIER_TIMEOUT', doc.errorMessage, { shipment: doc });
     }
 
+    // "Already in Pickup Queue": the pickup IS booked — Shiprocket queues it
+    // on its own when the AWB is assigned on some accounts, or an earlier
+    // request got through without us hearing back. That is the outcome we
+    // wanted, so record it as scheduled instead of showing an error with no
+    // way forward.
+    const carrierText = `${err.message || ''} ${JSON.stringify(err.body || '')}`;
+    if (/already in pickup queue|pickup (is )?already (scheduled|generated|requested)/i.test(carrierText)) {
+      doc.applyStatus('PICKUP_SCHEDULED', { source: actor, note: 'Already in the carrier pickup queue' });
+      if (!doc.pickupScheduledAt) doc.pickupScheduledAt = new Date();
+      doc.errorMessage = '';
+      await doc.save();
+      log({ event: 'SHIPROCKET_PICKUP_ALREADY_QUEUED', shipmentId: String(doc._id), awb: doc.awbCode });
+      await syncOrderFromShipment(doc);
+      return { ok: true, shipment: doc, alreadyExisted: true };
+    }
+
     doc.errorMessage = safeCarrierMessage(err);
     doc.retryCount += 1;
     await doc.save();
@@ -757,16 +846,17 @@ async function schedulePickup({ shipmentId, vendorId = null, actor = 'SELLER' })
 // ---------------------------------------------------------------------------
 // Cancellation  (task 3f)
 // ---------------------------------------------------------------------------
-// Two different carrier calls, and picking the wrong one is the whole risk
-// here. Before an AWB exists there is no shipment at the carrier, only an
-// order: cancelling by AWB would do nothing and leave a live parcel the seller
-// believes is dead. After an AWB exists the ORDER cancel is the wrong call.
+// Cancelling at Shiprocket, as observed against the live API (2026-09-26):
 //
-// The carrier's shipment cancel is ASYNCHRONOUS (it answers 204 "cancellation
-// is in progress"), so a success here means ACCEPTED, not cancelled. The
-// shipment therefore moves to CANCEL_REQUESTED and only the webhook moves it
-// to CANCELLED. Claiming CANCELLED on a 204 would be inventing a carrier
-// outcome we have not been told.
+//   * the AWB cancel only releases the courier booking — the shipment goes
+//     back to PENDING and the ORDER stays NEW, still live in the panel;
+//   * the ORDER cancel cancels the order and its shipment, AWB or not, until
+//     the courier has picked it up.
+//
+// So a parcel with an AWB gets both (AWB first, to free the booking), and
+// every cancel is then read back from Shiprocket and settled as CANCELLED
+// only when Shiprocket shows it. Unconfirmed, it stays CANCEL_REQUESTED with
+// a note, the admin is alerted, and a later webhook can still settle it.
 async function cancelShipment({ shipmentId, vendorId = null, reason = '', actor = 'SELLER' }) {
   const loaded = await loadOwnedShipment(shipmentId, vendorId);
   if (!loaded.ok) return loaded;
@@ -804,17 +894,46 @@ async function cancelShipment({ shipmentId, vendorId = null, reason = '', actor 
   const resolution = await resolveForShipment(doc, { operation: 'CANCEL' });
   if (!resolution.ok) return fail(resolution.reason, resolution.message);
 
+  let unconfirmed = false;
   try {
     if (doc.awbCode) {
       await shiprocketService.cancelShipment(resolution.integration, { awbs: [doc.awbCode] }, { onLog: log });
-    } else {
+    }
+    if (doc.shiprocketOrderId) {
       await shiprocketService.cancelOrder(resolution.integration, { orderIds: [doc.shiprocketOrderId] }, { onLog: log });
+      // Shiprocket has been seen answering "cancelled" while leaving the
+      // order NEW (a refused AWB request still being processed behind it).
+      // So read it back, try once more if it did not take, and settle here.
+      const confirmed = await confirmOrderCancelled(resolution.integration, doc.shiprocketOrderId);
+      if (confirmed) {
+        doc.applyStatus('CANCELLED', { source: actor, note: reason || 'Cancelled at carrier (confirmed)' });
+        doc.cancellationReason = reason || '';
+        doc.errorMessage = '';
+        await doc.save();
+        log({ event: 'SHIPMENT_CANCELLED_CONFIRMED', shipmentId: String(doc._id) });
+        await syncOrderFromShipment(doc);
+        return { ok: true, shipment: doc, cancelledAtCarrier: true };
+      }
+      unconfirmed = true;
+      try {
+        await require('../adminAlertService').alertAdmins({
+          event: 'SHIPMENT_CANCEL_UNCONFIRMED',
+          title: 'Shiprocket did not confirm a cancellation',
+          message: `Shiprocket order ${doc.shiprocketOrderId} still shows as open after being cancelled. Cancel it in the Shiprocket panel.`,
+          link: '/admin/orders/carrier-shipments',
+          key: `SHIPMENT_CANCEL_UNCONFIRMED:${doc._id}`,
+        });
+      } catch (alertErr) {
+        log({ event: 'CANCEL_ALERT_FAILED', shipmentId: String(doc._id), message: alertErr.message });
+      }
     }
 
     // ACCEPTED, not done. Only a webhook moves this to CANCELLED.
     doc.applyStatus('CANCEL_REQUESTED', { source: actor, note: reason || 'Cancellation requested' });
     doc.cancellationReason = reason || '';
-    doc.errorMessage = '';
+    doc.errorMessage = unconfirmed
+      ? 'Shiprocket accepted the cancellation but still shows the order as open. Check it in the Shiprocket panel.'
+      : '';
     await doc.save();
 
     log({
@@ -966,6 +1085,76 @@ async function createReturnShipment({ shipmentId, vendorId = null, reason = '', 
     await doc.save();
     return fail('CARRIER_ERROR', doc.errorMessage, { shipment: doc });
   }
+}
+
+// An RTO parcel is back at the warehouse: put its units back on sale. Once
+// per parcel (the timestamp is claimed atomically), variant-aware, and only
+// after the carrier says it was delivered back — not while it is on the way.
+async function restockRto({ shipmentId, vendorId = null, actor = 'ADMIN' }) {
+  const loaded = await loadOwnedShipment(shipmentId, vendorId);
+  if (!loaded.ok) return loaded;
+  if (loaded.shipment.internalStatus !== 'RTO_DELIVERED') {
+    return fail('NOT_BACK_YET', 'Restock once the courier has delivered the parcel back to the warehouse.');
+  }
+  const doc = await Shipment.findOneAndUpdate(
+    { _id: loaded.shipment._id, rtoRestockedAt: null },
+    { $set: { rtoRestockedAt: new Date() } },
+    { new: true }
+  );
+  if (!doc) return fail('ALREADY_RESTOCKED', 'This parcel was already put back into stock.');
+
+  const order = await Order.findById(doc.order).select('items.product items.variantId').lean();
+  for (const item of doc.items) {
+    const line = order?.items?.find((l) => String(l.product) === String(item.product));
+    if (line?.variantId) {
+      await Product.updateOne({ _id: item.product, 'variants._id': line.variantId }, { $inc: { 'variants.$.stock': item.quantity } });
+    } else {
+      await Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } });
+    }
+  }
+  log({ event: 'RTO_RESTOCKED', shipmentId: String(doc._id), actor });
+  return { ok: true, shipment: doc };
+}
+
+// Whether Shiprocket now shows the order cancelled; one retry of the cancel
+// if not. Never throws — an unreadable answer counts as "not confirmed".
+// The AWB and courier Shiprocket currently holds for an order, or null.
+// Never throws.
+async function readCarrierAwb(integration, shiprocketOrderId) {
+  if (!shiprocketOrderId) return null;
+  try {
+    const { body } = await shiprocketService.getOrder(integration, { orderId: shiprocketOrderId }, { onLog: log });
+    const shipment = body?.data?.shipments || {};
+    const awbValue = shipment.awb || body?.data?.awb_data?.awb || null;
+    return awbValue ? { awb: String(awbValue), courier: shipment.courier || '' } : null;
+  } catch {
+    return null;
+  }
+}
+
+// Shiprocket has been seen answering "cancelled", showing CANCELED, and then
+// putting the order back to NEW a moment later (after a refused AWB request).
+// So the answer is read after a short settle, not the instant it is given.
+const CANCEL_SETTLE_MS = process.env.ENV === 'test' ? 0 : Number(process.env.SHIPROCKET_CANCEL_SETTLE_MS || 3000);
+const settle = () => new Promise((resolve) => setTimeout(resolve, CANCEL_SETTLE_MS));
+
+async function confirmOrderCancelled(integration, shiprocketOrderId) {
+  const isCancelled = async () => {
+    await settle();
+    try {
+      const { body } = await shiprocketService.getOrder(integration, { orderId: shiprocketOrderId }, { onLog: log });
+      return /cancel/i.test(String(body?.data?.status || ''));
+    } catch {
+      return false;
+    }
+  };
+  if (await isCancelled()) return true;
+  try {
+    await shiprocketService.cancelOrder(integration, { orderIds: [shiprocketOrderId] }, { onLog: log });
+  } catch {
+    return false;
+  }
+  return isCancelled();
 }
 
 // Cancel, at the carrier, every live forward parcel of an order whose items
@@ -1310,6 +1499,7 @@ module.exports = {
   schedulePickup,
   cancelShipment,
   cancelShipmentsForOrder,
+  restockRto,
   createReturnShipment,
   buildReturnPayload,
   CANCELLABLE_STATUSES,

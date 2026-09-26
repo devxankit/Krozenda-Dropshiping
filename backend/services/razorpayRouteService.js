@@ -48,8 +48,117 @@ function mapAccountStatusToOnboardingStatus(status) {
   if (normalized === 'under_review' || normalized === 'needs_clarification') return 'KYC_PENDING';
   if (normalized === 'rejected') return 'REJECTED';
   if (normalized === 'suspended') return 'SUSPENDED';
-  if (normalized === 'created') return 'ONBOARDING';
+  if (normalized === 'created' || normalized === 'requested') return 'ONBOARDING';
   return 'ONBOARDING';
+}
+
+// How a settlement reaches the seller:
+//
+//   payment (default) — a transfer against the ONE captured payment that
+//     paid for the batch's lines (POST /payments/:id/transfers), created on
+//     hold and released later. Needs a batch per payment, which
+//     settlementService.generateSettlements produces in this mode. Cannot
+//     pay COD/wallet lines — there is no payment to transfer from.
+//   direct — a transfer from the platform's Razorpay balance
+//     (POST /transfers). One transfer per seller batch, COD included, but it
+//     cannot be put on hold, so it is only created once the batch is due.
+//     Razorpay has to enable direct transfers on the account first.
+function transferMode() {
+  return String(process.env.RAZORPAY_ROUTE_TRANSFER_MODE || '').toLowerCase() === 'direct' ? 'direct' : 'payment';
+}
+
+function errorText(err) {
+  return err?.error?.description || err?.message || String(err);
+}
+
+// A personal PAN has P as its fourth character. A stakeholder is a person,
+// so a company/firm PAN is never sent as their KYC.
+function personalPan(pan) {
+  const value = String(pan || '').trim().toUpperCase();
+  return /^[A-Z]{3}P[A-Z][0-9]{4}[A-Z]$/.test(value) ? value : '';
+}
+
+/**
+ * Add the seller's contact person as the linked account's stakeholder.
+ * Idempotent on vendor.razorpay.stakeholderId. Saves onto `vendor`.
+ */
+async function ensureStakeholder(vendor) {
+  if (vendor.razorpay?.stakeholderId) return vendor.razorpay.stakeholderId;
+
+  const contactPerson = vendor.contactPerson || {};
+  const pan = personalPan(vendor.business?.pan);
+  const payload = {
+    name: contactPerson.name || vendor.name,
+    email: contactPerson.email || vendor.email,
+    phone: { primary: String(contactPerson.mobile || vendor.mobile || '').replace(/\D/g, '').slice(-10) },
+    ...(pan ? { kyc: { pan } } : {}),
+    notes: { vendorId: String(vendor._id) },
+  };
+
+  let stakeholder;
+  try {
+    stakeholder = await razorpay.stakeholders.create(vendor.razorpay.accountId, payload);
+  } catch (err) {
+    console.error(`[razorpayRouteService] ensureStakeholder failed for vendor ${vendor._id}:`, errorText(err));
+    throw err;
+  }
+
+  vendor.razorpay.stakeholderId = stakeholder.id;
+  await vendor.save();
+  return stakeholder.id;
+}
+
+/**
+ * Request the `route` product on the linked account and give it the seller's
+ * settlement bank account — the step that actually tells Razorpay where the
+ * seller's money goes. Idempotent on vendor.razorpay.productId for the
+ * request; the bank details are (re)sent every call so a corrected account
+ * reaches Razorpay. Saves onto `vendor` and returns the product.
+ */
+async function ensureRouteProduct(vendor) {
+  const accountId = vendor.razorpay.accountId;
+  const bank = vendor.bank || {};
+  if (!bank.accountNumber || !bank.ifsc) {
+    throw new Error('Seller has no bank account on file — cannot configure Razorpay Route settlements');
+  }
+
+  try {
+    if (!vendor.razorpay.productId) {
+      const requested = await razorpay.products.requestProductConfiguration(accountId, {
+        product_name: 'route',
+        tnc_accepted: true,
+      });
+      vendor.razorpay.productId = requested.id;
+      await vendor.save();
+    }
+
+    return await razorpay.products.edit(accountId, vendor.razorpay.productId, {
+      settlements: {
+        account_number: String(bank.accountNumber).replace(/\s+/g, ''),
+        ifsc_code: bank.ifsc,
+        beneficiary_name: bank.accountHolderName || vendor.business?.businessName || vendor.name,
+      },
+      tnc_accepted: true,
+    });
+  } catch (err) {
+    console.error(
+      `[razorpayRouteService] ensureRouteProduct failed for vendor ${vendor._id} (bank ${maskAccountNumber(bank.accountNumber)}):`,
+      errorText(err)
+    );
+    throw err;
+  }
+}
+
+/**
+ * The linked account's current Route activation, as our onboardingStatus.
+ */
+async function fetchRouteProductStatus(vendor) {
+  const product = await razorpay.products.fetch(vendor.razorpay.accountId, vendor.razorpay.productId);
+  return {
+    activationStatus: product.activation_status || null,
+    onboardingStatus: mapAccountStatusToOnboardingStatus(product.activation_status),
+    requirements: Array.isArray(product.requirements) ? product.requirements : [],
+  };
 }
 
 /**
@@ -184,6 +293,37 @@ async function createHeldTransfer({ razorpayPaymentId, vendorAccountId, amountPa
 }
 
 /**
+ * A transfer from the platform's own Razorpay balance, not tied to any
+ * payment — see transferMode(). Not holdable: the money is on its way the
+ * moment this returns, so callers only make it once a settlement is due.
+ */
+async function createDirectTransfer({ vendorAccountId, amountPaise, notes = {} }) {
+  if (!vendorAccountId) throw new Error('vendorAccountId is required');
+  if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
+    throw new Error('amountPaise must be a positive integer');
+  }
+
+  try {
+    const transfer = await razorpay.transfers.create({
+      account: vendorAccountId,
+      amount: amountPaise,
+      currency: 'INR',
+      notes,
+    });
+    if (!transfer?.id) throw new Error('Razorpay did not return a transfer id for createDirectTransfer');
+    return transfer;
+  } catch (err) {
+    console.error(`[razorpayRouteService] createDirectTransfer failed -> account ${vendorAccountId}:`, errorText(err));
+    throw err;
+  }
+}
+
+async function fetchTransfer(transferId) {
+  if (!transferId) throw new Error('transferId is required');
+  return razorpay.transfers.fetch(transferId);
+}
+
+/**
  * Release a transfer's settlement hold so Razorpay proceeds to settle it.
  *
  * @param {string} transferId
@@ -233,8 +373,16 @@ async function reverseTransfer(transferId, amountPaise) {
 
 module.exports = {
   createLinkedAccount,
+  ensureStakeholder,
+  ensureRouteProduct,
+  fetchRouteProductStatus,
   createHeldTransfer,
+  createDirectTransfer,
+  fetchTransfer,
   releaseTransfer,
   reverseTransfer,
   maskAccountNumber,
+  mapAccountStatusToOnboardingStatus,
+  transferMode,
+  errorText,
 };

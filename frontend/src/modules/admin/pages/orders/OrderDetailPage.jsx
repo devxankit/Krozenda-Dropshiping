@@ -1,12 +1,20 @@
-import { useParams } from 'react-router-dom'
-import { Badge } from '../../../../components/ui'
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Badge, Button } from '../../../../components/ui'
+import { useAuthStore } from '../../../../lib/authStore'
+import { ADMIN_ROUTES } from '../../../../config/routes'
+import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { DateCell, SectionCard, Timeline } from '../../components/display'
 import { OrderItemsCard } from '../../components/orders/OrderItemsCard'
 import { OrderSummaryRail } from '../../components/orders/OrderSummaryRail'
 import { ORDER_FLOW_STATUS_LABELS, ORDER_FLOW_STATUS_TONE } from '../../constants'
-import { useOrderDetailController, useOrderStatusController } from '../../controllers/useOrderController'
+import {
+  useOrderDeleteController,
+  useOrderDetailController,
+  useOrderStatusController,
+} from '../../controllers/useOrderController'
 
 // Reference implementation for every detail screen: header with the primary
 // actions, a stack of section cards, and a right rail for money and metadata.
@@ -14,6 +22,10 @@ export function OrderDetailPage() {
   const { orderId } = useParams()
   const { order, isLoading, error, refetch } = useOrderDetailController(orderId)
   const statusMutation = useOrderStatusController()
+  const navigate = useNavigate()
+  const isSuperAdmin = useAuthStore((state) => state.roles.includes('admin'))
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deletion = useOrderDeleteController({ onDone: () => navigate(ADMIN_ROUTES.ORDERS, { replace: true }) })
 
   if (isLoading) {
     return (
@@ -35,7 +47,19 @@ export function OrderDetailPage() {
 
   return (
     <PageBody>
-      <PageHeader title={`Order ${shortId}`} trail={[{ label: shortId }]}>
+      <PageHeader
+        title={`Order ${shortId}`}
+        trail={[{ label: shortId }]}
+        actions={
+          // Only a cancelled order can be removed (test data); the server
+          // also refuses one money moved for, and says why.
+          isSuperAdmin && order.status === 'CANCELLED' ? (
+            <Button variant="dangerOutline" size="control" icon="delete" onClick={() => setConfirmDelete(true)}>
+              Delete order
+            </Button>
+          ) : null
+        }
+      >
         <div className="mt-1.5 flex flex-wrap items-center gap-2.5 text-xs text-ink-subtle">
           <Badge tone={ORDER_FLOW_STATUS_TONE[order.status]} dot>
             {ORDER_FLOW_STATUS_LABELS[order.status]}
@@ -73,6 +97,16 @@ export function OrderDetailPage() {
           isUpdatingStatus={statusMutation.isSubmitting}
         />
       </div>
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => deletion.run({ id: order.id })}
+        isSubmitting={deletion.isSubmitting}
+        title={`Delete order ${shortId}?`}
+        description="The order, its parcels, return requests and notifications are removed for good. Only cancelled orders that were never paid can be deleted."
+        confirmLabel="Delete order"
+        confirmPhrase={shortId}
+      />
     </PageBody>
   )
 }

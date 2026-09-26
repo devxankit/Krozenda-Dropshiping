@@ -38,13 +38,9 @@ import { DropshippingOrdersPage } from './pages/dropshipping/DropshippingOrdersP
 import { DropshippingMarginsPage } from './pages/dropshipping/DropshippingMarginsPage'
 import { OrdersPage } from './pages/orders/OrdersPage'
 import { OrderDetailPage } from './pages/orders/OrderDetailPage'
-import { SubOrdersPage } from './pages/fulfilment/SubOrdersPage'
 import { SubOrderDetailPage } from './pages/fulfilment/SubOrderDetailPage'
-import { ShipmentsPage } from './pages/fulfilment/ShipmentsPage'
-import { RtoPage } from './pages/fulfilment/RtoPage'
 import { ReturnsPage } from './pages/fulfilment/ReturnsPage'
 import { ReturnDetailPage } from './pages/fulfilment/ReturnDetailPage'
-import { CancellationsPage } from './pages/fulfilment/CancellationsPage'
 import { InvoicesPage } from './pages/fulfilment/InvoicesPage'
 import { InvoiceDetailPage } from './pages/fulfilment/InvoiceDetailPage'
 import { CustomersPage } from './pages/people/CustomersPage'
@@ -259,15 +255,17 @@ export default function AdminRoutes() {
                 and detail screen is assembled the same way. */}
               <Route path={rel(ADMIN_ROUTES.ORDERS)} element={<OrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.ORDER_DETAIL)} element={<OrderDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.SUB_ORDERS)} element={<SubOrdersPage />} />
+              {/* Sales is four screens: Orders, Shipments, Returns, Invoices.
+                The older lists these replaced redirect to their successor. */}
+              <Route path={rel(ADMIN_ROUTES.SUB_ORDERS)} element={<Navigate to={ADMIN_ROUTES.ORDERS} replace />} />
               <Route path={rel(ADMIN_ROUTES.SUB_ORDER_DETAIL)} element={<SubOrderDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.SHIPMENTS)} element={<ShipmentsPage />} />
+              <Route path={rel(ADMIN_ROUTES.SHIPMENTS)} element={<Navigate to={ADMIN_ROUTES.CARRIER_SHIPMENTS} replace />} />
               <Route path={rel(ADMIN_ROUTES.CARRIER_SHIPMENTS)} element={<CarrierShipmentsPage />} />
               <Route path={rel(ADMIN_ROUTES.CARRIER_ACCOUNTS)} element={<CarrierAccountsPage />} />
-              <Route path={rel(ADMIN_ROUTES.RTO)} element={<RtoPage />} />
+              <Route path={rel(ADMIN_ROUTES.RTO)} element={<Navigate to={ADMIN_ROUTES.CARRIER_SHIPMENTS} replace />} />
               <Route path={rel(ADMIN_ROUTES.RETURNS)} element={<ReturnsPage />} />
               <Route path={rel(ADMIN_ROUTES.RETURN_DETAIL)} element={<ReturnDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.CANCELLATIONS)} element={<CancellationsPage />} />
+              <Route path={rel(ADMIN_ROUTES.CANCELLATIONS)} element={<Navigate to={ADMIN_ROUTES.ORDERS} replace />} />
               <Route path={rel(ADMIN_ROUTES.INVOICES)} element={<InvoicesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVOICE_DETAIL)} element={<InvoiceDetailPage />} />
 

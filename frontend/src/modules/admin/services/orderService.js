@@ -32,6 +32,13 @@ export async function createOrder(payload) {
   return orderDetailSchema.parse(data.data)
 }
 
+// Super admin only; the server refuses anything but a cancelled order no
+// money ever moved for, and says why.
+export async function deleteOrder({ id }) {
+  const { data } = await api.delete(`/admin/orders/${id}`)
+  return data.data
+}
+
 export async function updateOrderStatus({ id, status }) {
   const { data } = await api.patch(`/admin/orders/${id}/status`, { status })
   return orderDetailSchema.parse(data.data)

@@ -196,6 +196,8 @@ const shipmentSchema = new mongoose.Schema(
     cancelledAt: { type: Date, default: null },
     rtoInitiatedAt: { type: Date, default: null },
     rtoDeliveredAt: { type: Date, default: null },
+    // Set once the parcel's units were put back into stock after an RTO.
+    rtoRestockedAt: { type: Date, default: null },
     returnRequestedAt: { type: Date, default: null },
     returnedAt: { type: Date, default: null },
     estimatedDeliveryAt: { type: Date, default: null },

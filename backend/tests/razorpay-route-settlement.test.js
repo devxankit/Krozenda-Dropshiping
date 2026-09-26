@@ -262,7 +262,9 @@ describe('initiateRazorpayTransferForSettlement — happy path', () => {
     expect(payload.transfers[0].amount).toBe(settlement.netPayablePaise);
     expect(payload.transfers[0].account).toBe(vendor.razorpay.accountId);
     expect(payload.transfers[0].on_hold).toBe(true);
-    expect(payload.transfers[0].on_hold_until).toBe(Math.floor(settlement.eligibleAt.getTime() / 1000));
+    // No expiry on the hold: only settlementReleaseJob (after its safety
+    // re-check) may release it, never Razorpay's own clock.
+    expect(payload.transfers[0].on_hold_until).toBeUndefined();
 
     const payout = await Payout.findOne({ settlement: settlement._id });
     expect(payout.status).toBe('PROCESSING');
@@ -475,7 +477,9 @@ describe('refundService — Razorpay Route refund scenarios', () => {
     });
     expect(result.ok).toBe(true);
 
-    expect(razorpay.transfers.reverse).toHaveBeenCalledWith('trf_scenb', { amount: 50000 });
+    // The whole held transfer, not just the ₹500 refund — the batch is
+    // re-generated from the ledger, so nothing of the old transfer may stay.
+    expect(razorpay.transfers.reverse).toHaveBeenCalledWith('trf_scenb', { amount: 90000 });
 
     const payout = await Payout.findOne({ settlement: settlement._id });
     expect(payout.status).toBe('FAILED');

@@ -40,6 +40,8 @@ jest.mock('../services/shipping/shiprocketService', () => {
       response: { data: { awb_code: `AWB${payload.shipmentId}`, courier_name: 'Delhivery Surface', courier_company_id: 10 } },
     })),
     schedulePickup: record('schedulePickup', { pickup_status: 1, response: { pickup_scheduled_date: '2026-09-27 10:00:00' } }),
+    // Shiprocket confirms a pre-AWB cancel when asked.
+    getOrder: record('getOrder', { data: { status: 'CANCELED' } }),
     cancelOrder: record('cancelOrder', { status: 200, message: 'Order cancelled' }),
     cancelShipment: record('cancelShipment', { status: 200, message: 'Shipment cancelled' }),
     createReturn: record('createReturn', () => ({ order_id: 950001, shipment_id: 850001, status: 'RETURN PENDING' })),
@@ -172,6 +174,84 @@ describe('Shiprocket order flow', () => {
     expect(order.items[0].courierName).toBe('Delhivery Surface');
   });
 
+  test('AWB: when Shiprocket refuses the chosen courier, the next option is tried', async () => {
+    const shiprocketService = require('../services/shipping/shiprocketService');
+    const product = await createProduct({ price: 240, stock: 5, weight: 0.3 });
+    const { orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+
+    shiprocketService.assignAWB.mockResolvedValueOnce({
+      status: 200,
+      body: { awb_assign_status: 0, response: { data: { awb_assign_error: 'Selected courier not available between 411002 and 452001' } } },
+    });
+    const before = shiprocketService.assignAWB.mock.calls.length;
+    const result = await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    expect(result.ok).toBe(true);
+    expect((await Shipment.findById(shipment._id)).awbCode).toBeTruthy();
+    // jest's own call log: a mockResolvedValueOnce answer skips the recorder.
+    const tried = shiprocketService.assignAWB.mock.calls.slice(before).map(([, payload]) => payload.courierId);
+    expect(tried).toEqual([10, null]);
+  });
+
+  test('AWB: Shiprocket refuses the courier but assigns its own — that AWB is adopted', async () => {
+    const shiprocketService = require('../services/shipping/shiprocketService');
+    const product = await createProduct({ price: 255, stock: 5, weight: 0.3 });
+    const { orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+
+    // As seen live: "not available", and on asking again "already assigned".
+    shiprocketService.assignAWB
+      .mockResolvedValueOnce({ status: 200, body: { awb_assign_status: 0, response: { data: { awb_assign_error: 'Selected courier not available between 411002 and 452010' } } } })
+      .mockResolvedValueOnce({ status: 200, body: { awb_assign_status: 0, response: { data: { awb_assign_error: 'AWB is already assigned with awb - 1091403258165 and status - AWB ASSIGNED' } } } });
+    shiprocketService.getOrder
+      .mockResolvedValueOnce({ status: 200, body: { data: { status: 'NEW', shipments: {} } } })
+      .mockResolvedValueOnce({ status: 200, body: { data: { status: 'AWB ASSIGNED', shipments: { awb: '1091403258165', courier: 'Xpressbees Surface' } } } });
+
+    const result = await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    expect(result.ok).toBe(true);
+    const fresh = await Shipment.findById(shipment._id);
+    expect(fresh.awbCode).toBe('1091403258165');
+    expect(fresh.courierName).toBe('Xpressbees Surface');
+    expect(fresh.internalStatus).toBe('AWB_ASSIGNED');
+  });
+
+  test('AWB: a refusal that another courier cannot fix (wallet) is shown with its reason', async () => {
+    const shiprocketService = require('../services/shipping/shiprocketService');
+    const product = await createProduct({ price: 245, stock: 5, weight: 0.3 });
+    const { orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+
+    shiprocketService.assignAWB.mockResolvedValueOnce({
+      status: 200,
+      body: { awb_assign_status: 0, response: { data: { awb_assign_error: 'Insufficient wallet balance' } } },
+    });
+    const before = shiprocketService.assignAWB.mock.calls.length;
+    const result = await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Insufficient wallet balance/);
+    // Another courier cannot fix a wallet problem: tried once.
+    expect(shiprocketService.assignAWB.mock.calls.length - before).toBe(1);
+  });
+
+  test('"Already in Pickup Queue" from Shiprocket counts as scheduled, not an error', async () => {
+    const product = await createProduct({ price: 250, stock: 5, weight: 0.3 });
+    const { orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+    expect((await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' })).ok).toBe(true);
+
+    const shiprocketService = require('../services/shipping/shiprocketService');
+    const { ShiprocketError } = require('../services/shipping/shiprocketClient');
+    shiprocketService.schedulePickup.mockRejectedValueOnce(
+      new ShiprocketError('Already in Pickup Queue.', { status: 400, code: 'SHIPROCKET_VALIDATION', body: { message: 'Already in Pickup Queue.' } })
+    );
+    const result = await shipmentService.schedulePickup({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    expect(result.ok).toBe(true);
+    const fresh = await Shipment.findById(shipment._id);
+    expect(fresh.internalStatus).toBe('PICKUP_SCHEDULED');
+    expect(fresh.pickupScheduledAt).toBeTruthy();
+    expect(fresh.errorMessage).toBe('');
+  });
+
   test('webhooks walk the order to DELIVERED; COD becomes paid', async () => {
     // A forged webhook is refused.
     expect((await webhook({ awb: ctx.awb, current_status: 'DELIVERED' }, 'wrong-token')).status).toBe(401);
@@ -202,6 +282,38 @@ describe('Shiprocket order flow', () => {
     expect((await webhook({ awb: 'NOT-OURS', current_status: 'DELIVERED' })).status).toBe(200);
   });
 
+  test('RTO: a parcel the courier brings back sits in the RTO tab and is restocked once', async () => {
+    const Product = require('../Models/Product');
+    const product = await createProduct({ price: 350, stock: 10, weight: 0.3 });
+    const { orderId } = await buyerOrder(product);
+    expect((await Product.findById(product._id)).stock).toBe(9);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+    await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    const awb = (await Shipment.findById(shipment._id)).awbCode;
+
+    await webhook({ awb, current_status: 'PICKED UP', current_timestamp: '2026-09-27 10:00:00' });
+    await webhook({ awb, current_status: 'RTO INITIATED', current_timestamp: '2026-09-28 10:00:00' });
+    // Not back yet: restocking now would put stock on sale that is still on a truck.
+    expect((await shipmentService.restockRto({ shipmentId: String(shipment._id) })).ok).toBe(false);
+    await webhook({ awb, current_status: 'RTO DELIVERED', current_timestamp: '2026-09-30 10:00:00' });
+    expect((await Shipment.findById(shipment._id)).internalStatus).toBe('RTO_DELIVERED');
+
+    const { token: adminToken } = await createAdmin();
+    const rtoTab = await request(app).get('/admin/shipping/shipments?group=RTO').set('Authorization', `Bearer ${adminToken}`);
+    expect(rtoTab.status).toBe(200);
+    expect(rtoTab.body.data.items.some((row) => row.id === String(shipment._id))).toBe(true);
+    expect(rtoTab.body.data.groupCounts.RTO).toBeGreaterThanOrEqual(1);
+
+    const restock = await request(app).post(`/admin/shipping/shipments/${shipment._id}/restock`).set('Authorization', `Bearer ${adminToken}`).send({});
+    expect(restock.status).toBe(200);
+    expect((await Product.findById(product._id)).stock).toBe(10);
+    // Twice is refused; stock does not double.
+    const again = await request(app).post(`/admin/shipping/shipments/${shipment._id}/restock`).set('Authorization', `Bearer ${adminToken}`).send({});
+    expect(again.status).toBeGreaterThanOrEqual(400);
+    expect((await Product.findById(product._id)).stock).toBe(10);
+    expect(await NotificationDispatch.exists({ key: `ADMIN:RTO_DELIVERED:${shipment._id}` })).toBeTruthy();
+  });
+
   test('a cancelled order has its Shiprocket parcel cancelled too', async () => {
     const product = await createProduct({ price: 300, stock: 5, weight: 0.3 });
     const { token, orderId } = await buyerOrder(product);
@@ -216,11 +328,50 @@ describe('Shiprocket order flow', () => {
     expect((await Order.findById(orderId)).items.every((i) => i.status === 'CANCELLED')).toBe(true);
     expect(calls('cancelOrder')).toHaveLength(before + 1);
     expect(calls('cancelOrder').at(-1).payload.orderIds).toEqual([shipment.shiprocketOrderId]);
-    expect((await Shipment.findById(shipment._id)).internalStatus).toBe('CANCEL_REQUESTED');
-
-    // Shiprocket confirms by webhook; the order stays cancelled.
+    // Before an AWB there is no webhook to wait for: Shiprocket is asked
+    // straight away and confirms it.
+    expect((await Shipment.findById(shipment._id)).internalStatus).toBe('CANCELLED');
+    // A late webhook changes nothing; the order stays cancelled.
     await webhook({ shipment_id: shipment.shiprocketShipmentId, current_status: 'CANCELED' });
     expect((await Shipment.findById(shipment._id)).internalStatus).toBe('CANCELLED');
+    expect((await Order.findById(orderId)).status).toBe('CANCELLED');
+  });
+
+  test('cancelling after an AWB cancels the AWB AND the order at Shiprocket', async () => {
+    const product = await createProduct({ price: 330, stock: 5, weight: 0.3 });
+    const { token, orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+    await shipmentService.assignAwb({ shipmentId: String(shipment._id), actor: 'ADMIN' });
+    const awb = (await Shipment.findById(shipment._id)).awbCode;
+
+    const awbBefore = calls('cancelShipment').length;
+    const orderBefore = calls('cancelOrder').length;
+    await request(app).patch(`/user/orders/${orderId}/cancel`).set('Authorization', `Bearer ${token}`).send({});
+
+    // The AWB cancel alone leaves the Shiprocket order NEW (seen live).
+    expect(calls('cancelShipment').slice(awbBefore).map((c) => c.payload.awbs)).toEqual([[awb]]);
+    expect(calls('cancelOrder').slice(orderBefore).map((c) => c.payload.orderIds)).toEqual([[shipment.shiprocketOrderId]]);
+    expect((await Shipment.findById(shipment._id)).internalStatus).toBe('CANCELLED');
+  });
+
+  test('a cancel Shiprocket accepts but does not apply is retried, then flagged for a human', async () => {
+    const shiprocketService = require('../services/shipping/shiprocketService');
+    const product = await createProduct({ price: 310, stock: 5, weight: 0.3 });
+    const { token, orderId } = await buyerOrder(product);
+    const shipment = await Shipment.findOne({ order: orderId, shipmentType: 'FORWARD' });
+
+    // Still NEW after the cancel, and after the retry.
+    shiprocketService.getOrder
+      .mockResolvedValueOnce({ status: 200, body: { data: { status: 'NEW' } } })
+      .mockResolvedValueOnce({ status: 200, body: { data: { status: 'NEW' } } });
+    const before = calls('cancelOrder').length;
+    await request(app).patch(`/user/orders/${orderId}/cancel`).set('Authorization', `Bearer ${token}`).send({});
+
+    expect(calls('cancelOrder')).toHaveLength(before + 2);
+    const fresh = await Shipment.findById(shipment._id);
+    expect(fresh.internalStatus).toBe('CANCEL_REQUESTED');
+    expect(fresh.errorMessage).toMatch(/still shows the order as open/);
+    expect(await NotificationDispatch.exists({ key: `ADMIN:SHIPMENT_CANCEL_UNCONFIRMED:${shipment._id}` })).toBeTruthy();
     expect((await Order.findById(orderId)).status).toBe('CANCELLED');
   });
 
@@ -291,5 +442,38 @@ describe('Shiprocket order flow', () => {
       .send({ restock: true });
     expect(done.status).toBe(200);
     expect((await Customer.findById(ctx.user._id)).walletBalance).toBe(walletBefore + request1.refundAmount);
+  });
+
+  test('delete: only a cancelled, never-paid order; its parcel goes too; only a super admin', async () => {
+    const { token: adminToken } = await createAdmin();
+    const del = (path, token = adminToken) => request(app).delete(path).set('Authorization', `Bearer ${token}`);
+
+    // A live order cannot be deleted.
+    const product = await createProduct({ price: 220, stock: 10, weight: 0.3 });
+    const live = await buyerOrder(product);
+    const liveShipment = await Shipment.findOne({ order: live.orderId });
+    expect((await del(`/admin/orders/${live.orderId}`)).status).toBe(409);
+    // Nor its parcel while it is open at Shiprocket.
+    expect((await del(`/admin/shipping/shipments/${liveShipment._id}`)).status).toBe(409);
+
+    // Cancelled COD order: deleted, with its parcel and notifications.
+    await request(app).patch(`/user/orders/${live.orderId}/cancel`).set('Authorization', `Bearer ${live.token}`).send({});
+    const staff = await createAdmin({ role: 'staff' });
+    expect((await del(`/admin/orders/${live.orderId}`, staff.token)).status).toBe(403);
+    const gone = await del(`/admin/orders/${live.orderId}`);
+    expect(gone.status).toBe(200);
+    expect(await Order.exists({ _id: live.orderId })).toBeNull();
+    expect(await Shipment.exists({ order: live.orderId })).toBeNull();
+
+    // A cancelled order that was paid and refunded is kept for the accounts.
+    const paid = await buyerOrder(product);
+    await Order.updateOne({ _id: paid.orderId }, { $set: { status: 'CANCELLED', paymentStatus: 'REFUNDED', paymentMethod: 'RAZORPAY' } });
+    const refused = await del(`/admin/orders/${paid.orderId}`);
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('MONEY_MOVED');
+    expect(await Order.exists({ _id: paid.orderId })).toBeTruthy();
+
+    // A delivered order is kept.
+    expect((await del(`/admin/orders/${ctx.orderId}`)).status).toBe(409);
   });
 });

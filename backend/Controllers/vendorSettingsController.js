@@ -2,6 +2,7 @@
 // profile (name/logo/address) is covered by vendorAuthController.updateProfile
 // — kept separate since that endpoint already owns `vendor.business/address`.
 const { sellerRatesFor } = require('../services/commissionResolver');
+const { markBankChanged } = require('../services/vendorRouteOnboarding');
 
 // The seller's headline rate comes from their CommissionRule (else the
 // platform default) — the rule the ledger charges — not the legacy
@@ -26,7 +27,11 @@ async function updateMySettings(req, res) {
   const { bank, notificationPrefs } = req.body;
   const vendor = req.vendor;
 
-  if (bank) vendor.bank = { ...vendor.bank.toObject(), ...bank };
+  if (bank) {
+    const previousBank = vendor.bank.toObject();
+    vendor.bank = { ...previousBank, ...bank };
+    markBankChanged(vendor, previousBank);
+  }
   if (notificationPrefs) {
     vendor.notificationPrefs = {
       orderUpdates: notificationPrefs.orderUpdates !== undefined ? Boolean(notificationPrefs.orderUpdates) : vendor.notificationPrefs.orderUpdates,

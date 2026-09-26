@@ -13,7 +13,7 @@ export function InvoicesPage() {
   return (
     <ListScreen
       title="Invoices"
-      description="One GST invoice per sub-order, issued by whoever is the seller of record for that model."
+      description="GST tax invoices for every order — one per seller of record."
       actions={<ExportMenu onExport={() => downloadTableCsv('invoices.csv', INVOICE_COLUMNS, list.items)} />}
       banner={
         <InlineAlert tone="info" title="Seller of record differs by business model">

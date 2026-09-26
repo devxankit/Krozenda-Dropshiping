@@ -217,6 +217,21 @@ async function applyScans(shipment, scans, { source = 'WEBHOOK', summary = null 
     if (shipment.internalStatus !== statusBefore) {
       await buyerAlerts.notifyShipmentMilestone(shipment);
     }
+    // A parcel the courier brought back: someone has to restock it (and
+    // refund a prepaid buyer). Said once, on arrival. Never throws.
+    if (shipment.internalStatus === 'RTO_DELIVERED' && statusBefore !== 'RTO_DELIVERED') {
+      try {
+        await require('../adminAlertService').alertAdmins({
+          event: 'RTO_DELIVERED',
+          title: 'Undelivered parcel is back (RTO)',
+          message: `Parcel ${shipment.awbCode || String(shipment._id).slice(-8).toUpperCase()} came back to the warehouse. Restock it from Shipments → RTO, and refund the buyer if the order was prepaid.`,
+          link: `/admin/orders/carrier-shipments`,
+          key: `RTO_DELIVERED:${shipment._id}`,
+        });
+      } catch (err) {
+        log({ event: 'RTO_ALERT_FAILED', shipmentId: String(shipment._id), message: err.message });
+      }
+    }
   }
 
   return { newEvents, statusChanged, unmappedStatuses };

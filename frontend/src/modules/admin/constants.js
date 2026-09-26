@@ -264,6 +264,7 @@ export const NAV_TREE = Object.freeze([
     items: [
       {
         label: 'Orders',
+        description: 'What was bought, by whom, and how it was paid',
         to: ADMIN_ROUTES.ORDERS,
         icon: 'orders',
         permission: ADMIN_PERMISSIONS.ORDERS_LIST,
@@ -271,7 +272,19 @@ export const NAV_TREE = Object.freeze([
         match: '/admin/orders/detail',
       },
       {
-        label: 'Returns & RTO',
+        // Where Shiprocket parcels are managed: assign AWB, schedule pickup,
+        // print label/manifest, cancel, NDR, and RTO (parcels coming back).
+        label: 'Shipments',
+        description: 'Parcels with the courier — AWB, pickup, label, tracking, RTO',
+        to: ADMIN_ROUTES.CARRIER_SHIPMENTS,
+        icon: 'truck',
+        permission: ADMIN_PERMISSIONS.ORDERS_SHIPMENTS,
+      },
+      {
+        // A buyer's return only. A parcel that never reached the buyer is an
+        // RTO and lives under Shipments.
+        label: 'Returns',
+        description: 'Buyer received an item and wants to return or replace it',
         to: ADMIN_ROUTES.RETURNS,
         icon: 'returns',
         permission: ADMIN_PERMISSIONS.RETURNS_MANAGE,
@@ -280,6 +293,7 @@ export const NAV_TREE = Object.freeze([
       },
       {
         label: 'Invoices',
+        description: 'GST tax invoices for every order',
         to: ADMIN_ROUTES.INVOICES,
         icon: 'invoices',
         permission: ADMIN_PERMISSIONS.ORDERS_INVOICES,

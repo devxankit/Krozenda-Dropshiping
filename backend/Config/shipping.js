@@ -78,7 +78,11 @@ const SHIPMENT_GROUPS = Object.freeze({
   DELIVERED: ['DELIVERED'],
   // Needs a human: a failed delivery, a parcel coming back, a create that
   // timed out. This is the tab that should never be quietly empty.
-  ATTENTION: ['NDR', 'RTO_INITIATED', 'RTO_IN_TRANSIT', 'RTO_DELIVERED', 'FAILED', 'RECONCILIATION_REQUIRED'],
+  ATTENTION: ['NDR', 'FAILED', 'RECONCILIATION_REQUIRED'],
+  // Return to origin: the courier could not deliver and is bringing the
+  // parcel back to the warehouse. Its own tab so it is never confused with a
+  // buyer's return (RETURNS below), which is a different thing entirely.
+  RTO: ['RTO_INITIATED', 'RTO_IN_TRANSIT', 'RTO_DELIVERED'],
   RETURNS: ['RETURN_REQUESTED', 'RETURN_PICKUP_SCHEDULED', 'RETURN_IN_TRANSIT', 'RETURN_DELIVERED'],
   CANCELLED: ['CANCEL_REQUESTED', 'CANCELLED'],
 });

@@ -13,8 +13,8 @@ export function ReturnsPage() {
 
   return (
     <ListScreen
-      title="Returns & replacements"
-      description="The platform default is no returns. Only damaged, wrong and missing items qualify."
+      title="Returns"
+      description="A buyer received an item and wants to return or replace it. Approve, collect it, then refund or replace. (An undelivered parcel coming back is an RTO — see Shipments.)"
       actions={<ExportMenu onExport={() => downloadTableCsv('returns.csv', RETURN_COLUMNS, list.items)} />}
       banner={
         waiting > 0 && (

@@ -4,6 +4,8 @@ import { useListController } from '../../admin/controllers/useListController'
 import {
   assignAwb,
   cancelShipment,
+  restockShipment,
+  deleteShipment,
   checkServiceability,
   createReturn,
   connectShiprocket,
@@ -154,7 +156,9 @@ export const SHIPMENT_TABS = [
   { id: 'in_transit', label: 'In transit' },
   { id: 'delivered', label: 'Delivered' },
   { id: 'attention', label: 'Needs attention' },
-  { id: 'returns', label: 'Returns' },
+  // Undelivered parcels the courier is bringing back.
+  { id: 'rto', label: 'RTO (coming back)' },
+  { id: 'returns', label: 'Buyer returns' },
   { id: 'cancelled', label: 'Cancelled' },
 ]
 
@@ -217,6 +221,8 @@ export function useShipmentController(shipmentId, { scope = 'vendor' } = {}) {
   const pickupMutation = useMutation({ mutationFn: () => schedulePickup(shipmentId, scope), onSuccess: invalidate })
   const refreshMutation = useMutation({ mutationFn: () => refreshTracking(shipmentId, scope), onSuccess: invalidate })
   const cancelMutation = useMutation({ mutationFn: (body) => cancelShipment(shipmentId, body, scope), onSuccess: invalidate })
+  const restockMutation = useMutation({ mutationFn: () => restockShipment(shipmentId, scope), onSuccess: invalidate })
+  const deleteMutation = useMutation({ mutationFn: () => deleteShipment(shipmentId), onSuccess: invalidate })
   const returnMutation = useMutation({ mutationFn: (body) => createReturn(shipmentId, body, scope), onSuccess: invalidate })
 
   // Printing is a fetch, not a navigation: the carrier hands back a URL and the
@@ -269,6 +275,17 @@ export function useShipmentController(shipmentId, { scope = 'vendor' } = {}) {
     canReturn: Boolean(shipment && shipment.shipmentType === 'FORWARD' && shipment.status === 'DELIVERED'),
 
     cancelShipment: cancelMutation.mutateAsync,
+    // RTO parcel delivered back, not yet restocked.
+    canRestock: Boolean(shipment?.status === 'RTO_DELIVERED' && !shipment?.rtoRestockedAt),
+    restock: restockMutation.mutateAsync,
+    // Finished at the carrier, or never sent to it. The server checks again.
+    canDelete: Boolean(
+      shipment &&
+        (['CANCELLED', 'CANCEL_REQUESTED', 'FAILED'].includes(shipment.status) || (!shipment.awbCode && !shipment.carrierOrderId))
+    ),
+    deleteShipment: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
+    isRestocking: restockMutation.isPending,
     isCancelling: cancelMutation.isPending,
     cancelError: cancelMutation.error,
 
@@ -300,11 +317,12 @@ export function useShipmentController(shipmentId, { scope = 'vendor' } = {}) {
     documentError: documentMutation.error,
 
     // A parcel can only have an open delivery attempt to answer once it is
-    // with the courier and before it is settled. Mirrors the server's guard.
+    // with the courier and before it is settled — before pickup there is no
+    // delivery attempt to ask about.
     canHandleNdr: Boolean(
       shipment?.awbCode &&
         !shipment?.reconciliationRequired &&
-        !['DELIVERED', 'CANCELLED', 'PENDING', 'FAILED'].includes(shipment.status)
+        ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'NDR'].includes(shipment.status)
     ),
     fetchNdr: ndrMutation.mutateAsync,
     ndr: ndrMutation.data?.ndr ?? null,

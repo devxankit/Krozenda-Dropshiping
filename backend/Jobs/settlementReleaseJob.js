@@ -1,13 +1,15 @@
 const cron = require('node-cron');
 const Payout = require('../Models/Payout');
 const AccountingConfig = require('../Models/AccountingConfig');
-const { releaseSinglePayout } = require('../services/razorpaySettlementIntegration');
+const { releaseSinglePayout, settlementReleaseAt } = require('../services/razorpaySettlementIntegration');
 
 // Releases Razorpay Route transfers that were created on hold
 // (razorpaySettlementIntegration.initiateRazorpayTransferForSettlement) once
-// their settlement's eligibility window has passed. Webhooks (a later
-// sub-task) are what ultimately confirm money actually moved; this job only
-// asks Razorpay to lift the hold.
+// their settlement is due: eligibleAt + sellerSettlementWindowDays (see
+// settlementReleaseAt). The transfers carry no on_hold_until, so this job —
+// with its safety re-check — is the only thing that ever releases them.
+// The transfer.processed webhook is what confirms money actually moved;
+// this job only asks Razorpay to lift the hold.
 //
 // Mirrors Jobs/cjSyncJob.js and Jobs/trackingPoller.js: a `running` flag
 // prevents two ticks (or a slow tick and the next one) from overlapping and
@@ -27,15 +29,15 @@ let running = false;
  * admin "release now" endpoint calls, so there is exactly one implementation
  * of "release one payout" rather than two that can drift.
  */
-async function releaseOne(payout) {
+async function releaseOne(payout, config) {
   const settlement = payout.settlement;
   if (!settlement) {
     console.error(`[settlementReleaseJob] payout ${payout._id} has no linked settlement — skipping`);
     return;
   }
 
-  const eligibleAt = settlement.eligibleAt;
-  if (!eligibleAt || new Date(eligibleAt) > new Date()) {
+  const releaseAt = settlementReleaseAt(settlement, config);
+  if (!releaseAt || releaseAt > new Date()) {
     // Not due yet.
     return;
   }
@@ -89,7 +91,7 @@ async function runOnce() {
 
     for (const payout of candidates) {
       try {
-        await releaseOne(payout);
+        await releaseOne(payout, config);
       } catch (err) {
         console.error(`[settlementReleaseJob] candidate ${payout._id} failed:`, err.message);
       }

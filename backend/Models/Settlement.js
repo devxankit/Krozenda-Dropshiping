@@ -116,6 +116,18 @@ const settlementSchema = new mongoose.Schema(
     adjustmentsPaise: { type: Number, default: 0 },
     netPayablePaise: { type: Number, default: 0 },
 
+    // The one captured Razorpay payment every line in this batch was paid
+    // with, when the batch was split per payment for a Route transfer
+    // (a transfer is always made against exactly one payment). Null for a
+    // COD/wallet batch, a direct-transfer batch, and batches from before
+    // the split.
+    razorpayPaymentId: { type: String, default: null },
+    // Part of the seller's pending recovery (Vendor.razorpay.pendingRecoveryPaise)
+    // this batch netted off — already reflected in adjustmentsPaise as a
+    // negative. Handed back to the seller's pending recovery if the batch is
+    // cancelled, so nothing is recovered twice or lost.
+    recoveryAppliedPaise: { type: Number, default: 0, min: 0 },
+
     eligibleAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
     payout: { type: mongoose.Schema.Types.ObjectId, ref: 'Payout', default: null },

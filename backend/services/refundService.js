@@ -103,9 +103,13 @@ async function applyRouteSettlementImpact({ request, refundPaise, admin }) {
 
   if (payout.status === 'PROCESSING') {
     // Scenario B: transfer created, on_hold=true, not yet released. Reverse
-    // the refunded amount (capped to what the transfer actually holds) —
-    // full refund of the only line naturally reverses the whole transfer.
-    const reverseAmountPaise = Math.min(Math.round(refundPaise), payout.amount);
+    // the WHOLE transfer, not just the refunded part: the batch is now
+    // stale, and the settlement automation cancels it and re-batches its
+    // lines from the ledger (refund included) — which only happens once
+    // Razorpay confirms this transfer fully reversed. A partial reversal
+    // would leave the remainder held next to the new batch's transfer, and
+    // the seller would be paid that part twice.
+    const reverseAmountPaise = payout.amount;
     let reversed = false;
     try {
       await razorpayRouteService.reverseTransfer(payout.razorpayTransferId, reverseAmountPaise);
@@ -210,18 +214,9 @@ async function applyRouteSettlementImpact({ request, refundPaise, admin }) {
     });
   }
 
-  // FOLLOW-UP, not wired here (out of scope for this sub-task):
-  // settlementService.collectEligibleLines aggregates ONLY SALE / COMMISSION
-  // / PAYMENT_GATEWAY_FEE / SHIPPING_CHARGE / REFUND / REFUND_REVERSAL ledger
-  // rows per (order, product, vendor) line — it reads neither ADJUSTMENT rows
-  // nor Vendor.razorpay.pendingRecoveryPaise. So neither the ADJUSTMENT row
-  // just posted nor the pendingRecoveryPaise increment above is currently
-  // subtracted from a future settlement's netPayablePaise by
-  // generateSettlements / initiateRazorpayTransferForSettlement. Wiring that
-  // in requires a change inside settlementService.js's own arithmetic, which
-  // is explicitly that file's job and out of scope here. Until that lands,
-  // pendingRecoveryPaise/the ADJUSTMENT row are a correct RECORD of what is
-  // owed back, not money actually being withheld from anything yet.
+  // settlementService.generateSettlements nets pendingRecoveryPaise off this
+  // seller's next batch(es). The ADJUSTMENT row above already took it off
+  // their ledger balance, so the smaller PAYOUT that follows leaves them square.
   return {
     scenario: 'C_RECOVERY_RECORDED',
     vendorId,

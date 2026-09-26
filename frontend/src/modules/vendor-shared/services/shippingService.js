@@ -162,6 +162,14 @@ export const assignAwb = (id, body = {}, scope = 'vendor') =>
 // The courier's shipment cancel is ASYNCHRONOUS: a success here means the
 // request was accepted, and the parcel sits at CANCEL_REQUESTED until a webhook
 // confirms it. The UI must not claim it is cancelled.
+// Admin (super admin) only: removes a cancelled / failed / never-sent parcel.
+export const deleteShipment = (id) =>
+  mutateResource({ method: 'delete', path: `${base('admin')}/${id}`, schema: null, live: true })
+
+// An RTO parcel is back at the warehouse: put its units back on sale.
+export const restockShipment = (id, scope = 'vendor') =>
+  mutateResource({ path: `${base(scope)}/${id}/restock`, body: {}, schema: shipmentSchema, live: true })
+
 export const cancelShipment = (id, body = {}, scope = 'vendor') =>
   mutateResource({ path: `${base(scope)}/${id}/cancel`, body, schema: shipmentSchema, live: true })
 

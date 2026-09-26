@@ -313,6 +313,19 @@ async function releaseSettlementTransfer(req, res) {
         data: { settlementId: String(settlement._id), outcome: initiated.outcome, reason: initiated.reason || null, detail: initiated.detail || null },
       });
     }
+    if (initiated.payout?.status === 'RELEASED') {
+      // A direct transfer (RAZORPAY_ROUTE_TRANSFER_MODE=direct) has no hold
+      // to lift — it is already on its way.
+      await recordAudit({
+        action: 'SETTLEMENT_TRANSFER_RELEASED',
+        req,
+        entityType: 'Payout',
+        entityId: initiated.payout._id,
+        before: { status: null },
+        after: { status: 'RELEASED' },
+      });
+      return respondWithPayout(initiated.payout, 'Settlement released — Razorpay will settle the transfer to the seller');
+    }
     payoutToRelease = initiated.payout;
   }
 

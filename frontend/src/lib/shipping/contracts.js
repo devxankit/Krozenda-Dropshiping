@@ -226,6 +226,9 @@ export const shipmentSchema = z.object({
   pickupScheduledAt: isoDate,
   pickedUpAt: isoDate,
   deliveredAt: isoDate,
+  // RTO: back at the warehouse, and whether it was put back into stock.
+  rtoDeliveredAt: isoDate.optional(),
+  rtoRestockedAt: isoDate.optional(),
   estimatedDeliveryAt: isoDate,
   createdAt: z.string(),
 
@@ -242,8 +245,10 @@ export const shipmentSchema = z.object({
   carrierShipmentId: z.string().nullable().optional(),
   carrierShippingCost: z.number().nullable().optional(),
   carrierAppliedWeightKg: z.number().nullable().optional(),
-  customerShippingCharge: z.number().optional(),
-  platformShippingMargin: z.number().optional(),
+  // Null until the courier is chosen (AWB): the carrier's cost, and so the
+  // margin on it, is not known before then.
+  customerShippingCharge: z.number().nullable().optional(),
+  platformShippingMargin: z.number().nullable().optional(),
   retryCount: z.number().int().optional(),
   statusHistory: z
     .array(z.object({ status: z.string(), at: z.string(), source: z.string(), note: z.string() }))

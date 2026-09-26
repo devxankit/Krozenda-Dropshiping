@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Badge, Button, Skeleton, Textarea } from '../../../../components/ui'
 import { Drawer } from '../../../admin/components/overlay/Drawer'
 import { FormDrawer } from '../../../admin/components/forms/FormDrawer'
+import { ConfirmDialog } from '../../../admin/components/overlay/ConfirmDialog'
+import { useAuthStore } from '../../../../lib/authStore'
 import { InlineAlert } from '../../../admin/components/feedback'
 import { useShipmentController } from '../../controllers/useShippingController'
 import { toast } from '../../../../lib/toast'
@@ -29,6 +31,9 @@ export function ShipmentDrawer({ shipmentId, isOpen, onClose, isAdmin = false })
   // 'cancel' | 'return' | null. Both are confirmed before they fire: each one
   // spends a real carrier call and changes a real parcel.
   const [confirming, setConfirming] = useState(null)
+  // Deleting a parcel record is a super-admin action, on the admin screen only.
+  const isSuperAdmin = useAuthStore((state) => state.roles.includes('admin'))
+  const canDeleteHere = isAdmin && isSuperAdmin && controller.canDelete
 
   return (
     <>
@@ -38,8 +43,12 @@ export function ShipmentDrawer({ shipmentId, isOpen, onClose, isAdmin = false })
       title={shipment ? `Shipment ${shipment.id.slice(-8).toUpperCase()}` : 'Shipment'}
       description={shipment ? `Order ${shipment.orderId.slice(-8).toUpperCase()}` : undefined}
       width="lg"
-      footer={<ShipmentActions controller={controller} onClose={onClose} onConfirm={setConfirming} />}
+      footer={
+        <ShipmentActions controller={controller} onClose={onClose} onConfirm={setConfirming} canDelete={canDeleteHere} />
+      }
     >
+      {/* The Drawer leaves padding to its content. */}
+      <div className="px-5 py-4">
       {controller.isLoading ? (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-24 w-full rounded-lg" />
@@ -61,7 +70,27 @@ export function ShipmentDrawer({ shipmentId, isOpen, onClose, isAdmin = false })
           {isAdmin && <InternalDetails shipment={shipment} />}
         </div>
       )}
+      </div>
     </Drawer>
+
+    <ConfirmDialog
+      isOpen={confirming === 'delete'}
+      onClose={() => setConfirming(null)}
+      onConfirm={async () => {
+        try {
+          await controller.deleteShipment()
+          toast.success('Shipment deleted')
+          setConfirming(null)
+          onClose()
+        } catch (err) {
+          toast.error('Could not delete shipment', err)
+        }
+      }}
+      isSubmitting={controller.isDeleting}
+      title="Delete this shipment record?"
+      description="Only a cancelled, failed or never-sent parcel can be deleted. The order itself is not touched."
+      confirmLabel="Delete"
+    />
 
     <ConfirmCancel
       isOpen={confirming === 'cancel'}
@@ -441,11 +470,11 @@ function InternalDetails({ shipment }) {
 // of the parcel's forward sequence — a seller reprints a label at any point
 // after an AWB exists, and doing so changes nothing about the shipment.
 //
-// The window is opened from inside the click handler using the URL the mutation
-// resolves to. Opening it before the await would show a blank tab; opening it
-// after, in a .then(), gets killed by popup blockers. So: await, then open with
-// an explicit user-gesture-adjacent call, and fall back to a visible link if the
-// browser still refuses.
+// The tab is opened synchronously inside the click (a popup blocker only
+// allows it there) and pointed at the document once its URL arrives. A URL
+// already on the shipment opens straight away. `noopener` is NOT passed to
+// window.open: with it the call always returns null, which made every open
+// look "blocked" — the opener link is cut by hand instead.
 function ShipmentDocuments({ controller }) {
   const { shipment, canPrintLabel, canPrintInvoice, documents, isFetchingDocument } = controller
   const [pending, setPending] = useState(null)
@@ -461,20 +490,27 @@ function ShipmentDocuments({ controller }) {
 
   if (available.length === 0) return null
 
-  async function open(type) {
-    setPending(type)
+  async function open(type, cachedUrl) {
     setBlocked(null)
+    const tab = window.open(cachedUrl || '', '_blank')
+    if (tab) tab.opener = null
+    if (cachedUrl) {
+      if (!tab) setBlocked({ type, url: cachedUrl })
+      return
+    }
+
+    setPending(type)
     try {
       const result = await controller.fetchDocument({ type })
-      const opened = window.open(result.url, '_blank', 'noopener,noreferrer')
-      // Popup blocked — show the link instead of silently doing nothing.
-      if (!opened) {
+      if (tab && !tab.closed) {
+        tab.location.href = result.url
+      } else {
+        // Popup blocked — show the link instead of silently doing nothing.
         setBlocked({ type, url: result.url })
         toast.info('Popup blocked. Click the link to view the document.')
-      } else {
-        toast.success('Document opened')
       }
     } catch (err) {
+      tab?.close()
       toast.error('Could not get document', err)
     } finally {
       setPending(null)
@@ -490,7 +526,7 @@ function ShipmentDocuments({ controller }) {
             variant="secondary"
             size="sm"
             icon="print"
-            onClick={() => open(doc.type)}
+            onClick={() => open(doc.type, doc.url)}
             isLoading={isFetchingDocument && pending === doc.type}
           >
             {doc.label}
@@ -533,6 +569,12 @@ function NdrSection({ controller }) {
   const [comments, setComments] = useState('')
 
   if (!controller.canHandleNdr) return null
+  // Shiprocket answers a parcel with no failed attempt with just a message
+  // ("Invalid AWB", "No data found") — that is "nothing on record", not data.
+  const ndr = controller.ndr
+  const hasNdrData =
+    ndr && typeof ndr === 'object' && Object.keys(ndr).some((key) => !['message', 'status', 'status_code'].includes(key))
+  const isNdr = controller.shipment?.status === 'NDR' || hasNdrData
 
   async function open() {
     setIsOpen(true)
@@ -581,7 +623,7 @@ function NdrSection({ controller }) {
 
           {!controller.isFetchingNdr && !controller.ndrError && (
             <>
-              {controller.ndr ? (
+              {hasNdrData ? (
                 // The carrier's payload, shown as-is. Its shape is theirs, and
                 // pretending to understand every field would go stale the
                 // first time they add one.
@@ -594,6 +636,8 @@ function NdrSection({ controller }) {
                 </p>
               )}
 
+              {isNdr && (
+              <>
               <Textarea
                 id="ndr-comments"
                 label="Note for the courier (optional)"
@@ -616,6 +660,8 @@ function NdrSection({ controller }) {
                   Try delivery again
                 </Button>
               </div>
+              </>
+              )}
 
               {controller.ndrActionDone && (
                 <InlineAlert tone="success" title="Sent to the courier">
@@ -638,7 +684,7 @@ function NdrSection({ controller }) {
 
 // Exactly one forward action is offered at a time, because exactly one is
 // valid at a time. A parcel needing reconciliation offers none.
-function ShipmentActions({ controller, onClose, onConfirm }) {
+function ShipmentActions({ controller, onClose, onConfirm, canDelete = false }) {
   const { shipment, needsReconciliation, canAssignAwb, canSchedulePickup, canCancel, canReturn } = controller
 
   if (!shipment) return null
@@ -656,6 +702,12 @@ function ShipmentActions({ controller, onClose, onConfirm }) {
           Close
         </Button>
 
+        {canDelete && (
+          <Button variant="dangerOutline" size="control" icon="delete" onClick={() => onConfirm('delete')}>
+            Delete
+          </Button>
+        )}
+
         {/* Cancelling and returning are mutually exclusive by definition: a
             parcel is either still stoppable or already delivered. */}
         {canCancel && !needsReconciliation && (
@@ -671,6 +723,23 @@ function ShipmentActions({ controller, onClose, onConfirm }) {
 
         {needsReconciliation ? (
           <span className="text-2xs text-danger-600">Resolve in Shiprocket first</span>
+        ) : controller.canRestock ? (
+          // RTO: the courier brought it back. Only once it is physically back.
+          <Button
+            size="control"
+            icon="inventory"
+            onClick={async () => {
+              try {
+                await controller.restock()
+                toast.success('Put back into stock')
+              } catch (err) {
+                toast.error('Could not restock', err)
+              }
+            }}
+            isLoading={controller.isRestocking}
+          >
+            Put back in stock
+          </Button>
         ) : canAssignAwb ? (
           <Button
             size="control"

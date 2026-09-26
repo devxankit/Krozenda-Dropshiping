@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HiArrowLeft, HiChevronRight, HiCreditCard, HiShieldCheck, HiTruck, HiWallet } from 'react-icons/hi2'
 import { useNavigate } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
@@ -66,7 +66,13 @@ export function PaymentScreen() {
 
   // Nothing to pay for: send the buyer back to the step that is actually
   // missing rather than showing a dead screen.
+  // Set the moment an order is placed. Placing empties the cart, and without
+  // this the redirect below sent the buyer to the (now empty) cart instead of
+  // their orders.
+  const placedRef = useRef(false)
+
   useEffect(() => {
+    if (placedRef.current) return
     if (cartItems.length === 0) {
       navigate(USER_ROUTES.CART, { replace: true })
     } else if (!selectedAddressId) {
@@ -119,12 +125,13 @@ export function PaymentScreen() {
       // in flight — the first one will navigate.
       if (!order) return
 
+      placedRef.current = true
+      toast.success('Order Placed Successfully!', 'Your order has been confirmed.')
+      navigate(USER_ROUTES.ORDERS, { replace: true })
       // The cart is emptied server-side by the order endpoint; clearing here
       // keeps the local view in step without a second round trip.
       useCartStore.setState({ items: [], summary: null })
       resetCheckout()
-      toast.success('Order Placed Successfully!', 'Your order has been confirmed.')
-      navigate(USER_ROUTES.ORDERS, { replace: true })
     } catch (err) {
       // A stock/availability failure at this point means the cart moved under
       // the buyer; re-read it so the cart screen can explain what changed.

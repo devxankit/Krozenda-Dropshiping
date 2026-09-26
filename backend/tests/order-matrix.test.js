@@ -41,6 +41,8 @@ jest.mock('../services/shipping/shiprocketService', () => {
       awb_assign_status: 1,
       response: { data: { awb_code: `AWB${payload.shipmentId}`, courier_name: 'Delhivery Surface', courier_company_id: 10 } },
     })),
+    // Shiprocket confirms a pre-AWB cancel when asked.
+    getOrder: record('getOrder', { data: { status: 'CANCELED' } }),
     cancelOrder: record('cancelOrder', { status: 200 }),
     cancelShipment: record('cancelShipment', { status: 200 }),
   };
@@ -362,7 +364,7 @@ describe('order matrix', () => {
       .send({ status: 'CANCELLED', reason: 'Out of stock at my warehouse' });
     expect(rejected.status).toBe(200);
 
-    expect((await Shipment.findById(parcelA._id)).internalStatus).toBe('CANCEL_REQUESTED');
+    expect((await Shipment.findById(parcelA._id)).internalStatus).toBe('CANCELLED');
     expect((await Shipment.findById(parcelB._id)).internalStatus).toBe('SHIPMENT_CREATED');
     expect((await Customer.findById(buyer.user._id)).walletBalance).toBeCloseTo(walletBefore + 300, 2);
     const order = await Order.findById(orderId);
@@ -387,7 +389,7 @@ describe('order matrix', () => {
     expect(order.status).toBe('CANCELLED');
     expect(order.items.every((i) => i.status === 'CANCELLED')).toBe(true);
     expect((await Customer.findById(buyer.user._id)).walletBalance).toBeCloseTo(walletBefore + order.total, 2);
-    expect((await Shipment.findById(parcel._id)).internalStatus).toBe('CANCEL_REQUESTED');
+    expect((await Shipment.findById(parcel._id)).internalStatus).toBe('CANCELLED');
   });
 
   test('CJ dropship: online only, ordered at CJ, and CJ tracking moves the buyer’s order to delivered', async () => {

@@ -32,8 +32,8 @@ export function CarrierShipmentsPage() {
   return (
     <>
       <ListScreen
-        title="Carrier shipments"
-        description="Parcels booked with Shiprocket, across every seller. Open one to see its tracking and history."
+        title="Shipments"
+        description="Every parcel with the courier (Shiprocket). Open one to assign the AWB, schedule pickup, print the label and track it. RTO = a parcel the courier could not deliver, coming back."
         banner={
           needsReconciliation > 0 ? (
             <InlineAlert

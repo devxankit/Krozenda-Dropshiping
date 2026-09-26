@@ -113,6 +113,8 @@ function serializeShipment(shipment, { includeInternal = false } = {}) {
     pickupScheduledAt: shipment.pickupScheduledAt,
     pickedUpAt: shipment.pickedUpAt,
     deliveredAt: shipment.deliveredAt,
+    rtoDeliveredAt: shipment.rtoDeliveredAt || null,
+    rtoRestockedAt: shipment.rtoRestockedAt || null,
     estimatedDeliveryAt: shipment.estimatedDeliveryAt,
     createdAt: shipment.createdAt,
 
@@ -385,6 +387,30 @@ async function cancelShipment(req, res) {
   });
 }
 
+// DELETE /admin/shipping/shipments/:id — super admin. Cancelled, failed or
+// never-sent parcels only; the order is untouched.
+async function deleteShipmentRecord(req, res) {
+  const result = await require('../services/orderDeletionService').deleteShipment({ shipmentId: req.params.id });
+  if (!result.ok) return res.status(result.status).json({ success: false, code: result.code, message: result.message });
+  res.json({ success: true, message: 'Shipment deleted', data: result.deleted });
+}
+
+// POST /admin/shipping/shipments/:id/restock (and the seller's equivalent)
+// An RTO parcel is back: its units go back on sale.
+async function restockRtoShipment(req, res) {
+  const result = await shipmentService.restockRto({
+    shipmentId: req.params.id,
+    vendorId: scopeFor(req),
+    actor: req.vendor ? 'SELLER' : 'ADMIN',
+  });
+  if (!result.ok) return respondToFailure(res, result);
+  res.json({
+    success: true,
+    message: 'Returned units put back into stock',
+    data: serializeShipment(result.shipment, { includeInternal: Boolean(req.admin) }),
+  });
+}
+
 // POST /vendor/shipments/:id/return
 //
 // Creates a SEPARATE return shipment pointing back at this one. The original
@@ -494,6 +520,8 @@ function normaliseIdempotencyKey(raw) {
 
 module.exports = {
   cancelShipment,
+  deleteShipmentRecord,
+  restockRtoShipment,
   getShipmentDocument,
   getShipmentNdr,
   actOnShipmentNdr,

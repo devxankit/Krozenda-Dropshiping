@@ -340,4 +340,12 @@ async function updateOrderStatus(req, res) {
   res.json({ success: true, message: 'Order status updated', data: withCustomer(populated) });
 }
 
-module.exports = { listOrders, getOrder, createOrder, updateOrderStatus };
+// DELETE /admin/orders/:id — super admin. Only a cancelled order no money
+// ever moved for; see services/orderDeletionService for the full rule.
+async function deleteOrder(req, res) {
+  const result = await require('../services/orderDeletionService').deleteOrder({ orderId: req.params.id });
+  if (!result.ok) return res.status(result.status).json({ success: false, code: result.code, message: result.message });
+  res.json({ success: true, message: 'Order deleted', data: result.deleted });
+}
+
+module.exports = { listOrders, getOrder, createOrder, updateOrderStatus, deleteOrder };

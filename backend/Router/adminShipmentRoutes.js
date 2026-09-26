@@ -6,6 +6,8 @@ const {
   listShipments,
   getShipment,
   cancelShipment,
+  deleteShipmentRecord,
+  restockRtoShipment,
   createReturn,
   getTracking,
   getShipmentDocument,
@@ -13,7 +15,7 @@ const {
   actOnShipmentNdr,
   refreshTracking,
 } = require('../Controllers/shipmentController');
-const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission, requireRole } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -34,6 +36,9 @@ router.post('/:id/pickup', requirePermission('admin.orders.shipments'), schedule
 // Both are real carrier calls that change state, so they share the order
 // limiter with create/awb/pickup.
 router.post('/:id/cancel', requirePermission('admin.orders.shipments'), cancelShipment);
+router.post('/:id/restock', requirePermission('admin.orders.shipments'), restockRtoShipment);
+// Super admin only: removes a cancelled / failed / never-sent parcel record.
+router.delete('/:id', requireRole('admin'), deleteShipmentRecord);
 router.post('/:id/return', requirePermission('admin.orders.shipments'), createReturn);
 
 // Same document endpoint the seller has, under the admin's own permission —
