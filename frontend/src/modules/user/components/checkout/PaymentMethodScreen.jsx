@@ -309,15 +309,21 @@ export function PaymentMethodScreen() {
             {quote ? (
               <div className="space-y-3">
                 <dl className="space-y-2.5 text-xs">
-                  <Row label="Subtotal" value={money(quote.subtotal)} />
+                  <Row label="Subtotal" value={money(quote.tax?.listSubtotal ?? quote.subtotal)} />
+                  {quote.tax?.gstAdded > 0 && <Row label="GST (added on items)" value={`+ ${money(quote.tax.gstAdded)}`} />}
                   {quote.discountAmount > 0 && (
-                    <Row label="Discount" value={`− ${money(quote.discountAmount)}`} tone="text-emerald-600 font-bold" />
+                    <Row
+                      label={quote.couponCode ? `Coupon (${quote.couponCode})` : 'Discount'}
+                      value={`− ${money(quote.discountAmount)}`}
+                      tone="text-emerald-600 font-bold"
+                    />
                   )}
                   <Row
                     label="Delivery Fee"
                     value={quote.isFree ? 'FREE' : money(quote.shippingFee)}
                     tone={quote.isFree ? 'text-emerald-600 font-bold' : 'text-slate-900 font-bold'}
                   />
+                  {quote.platformFee > 0 && <Row label="Platform Fee" value={money(quote.platformFee)} />}
                   {quote.isFree && quote.carrierCost > 0 && (
                     <p className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg p-2 font-medium">
                       <HiCheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />

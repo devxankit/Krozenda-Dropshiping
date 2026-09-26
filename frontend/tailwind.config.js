@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors.js'
+
 /**
  * Brand tokens below are PLACEHOLDERS — final brand colors/logo are a
  * client-owned deliverable (see project context §10, "Logo, brand assets").
@@ -47,6 +49,7 @@ export default {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
+          950: '#172554',
         },
         surface: {
           DEFAULT: '#ffffff',
@@ -67,33 +70,20 @@ export default {
           subtle: '#64748b',
           faint: '#94a3b8',
         },
-        success: {
-          50: '#f0fdf4',
-          200: '#bbf7d0',
-          500: '#22c55e',
-          700: '#15803d',
-        },
-        warning: {
-          50: '#fffbeb',
-          200: '#fde68a',
-          500: '#f59e0b',
-          700: '#b45309',
-        },
-        danger: {
-          50: '#fef2f2',
-          200: '#fecaca',
-          500: '#ef4444',
-          700: '#b91c1c',
-        },
+        // Full scale, so screens never reach past the token for a raw hue.
+        // The four original steps keep their exact values: they ARE this palette.
+        success: colors.green,
+        // Full scale, so screens never reach past the token for a raw hue.
+        // The four original steps keep their exact values: they ARE this palette.
+        warning: colors.amber,
+        // Full scale, so screens never reach past the token for a raw hue.
+        // The four original steps keep their exact values: they ARE this palette.
+        danger: colors.red,
         // Non-semantic emphasis. Kept separate from success/warning/danger so
         // state colour never has to compete with decorative colour.
-        accent: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-        },
+        // Full scale, so screens never reach past the token for a raw hue.
+        // The four original steps keep their exact values: they ARE this palette.
+        accent: colors.violet,
         // Categorical series colours. Validated for colour-vision deficiency
         // against both surfaces (adjacent-pair ΔE ≥ 8, normal-vision ≥ 15).
         // Assign in fixed order 1→4 and never cycle; a 5th series folds into
@@ -167,6 +157,29 @@ export default {
         glass: '0 8px 32px 0 rgba(15, 23, 42, 0.06)',
         raised: '0 1px 2px 0 rgb(15 23 42 / 0.06), 0 2px 8px -2px rgb(15 23 42 / 0.08)',
         overlay: '0 8px 24px -6px rgb(15 23 42 / 0.18), 0 2px 6px -2px rgb(15 23 42 / 0.08)',
+      },
+      // Panel motion. Short and ease-out on purpose: an overlay should feel
+      // like it arrived, not like it performed. Reduced-motion users get the
+      // global 0.01ms override in index.css, so none of these need a guard.
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'scale-in': {
+          from: { opacity: '0', transform: 'translateY(4px) scale(0.98)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'slide-in-right': { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
+        'slide-in-left': { from: { transform: 'translateX(-100%)' }, to: { transform: 'translateX(0)' } },
+        'rise-in': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 150ms ease-out',
+        'scale-in': 'scale-in 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-in-right': 'slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-in-left': 'slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'rise-in': 'rise-in 200ms ease-out',
       },
       // One ordering for every layer that floats. Anything that sets a raw
       // z-index number instead of one of these is a bug waiting to happen.

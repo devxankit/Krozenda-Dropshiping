@@ -146,8 +146,8 @@ export function RolesPanel() {
             <div
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-bold text-sm ring-1 ${
                 isSuperAdmin
-                  ? 'bg-gradient-to-br from-brand-600 to-indigo-600 text-white ring-brand-500/30 shadow-xs'
-                  : 'bg-indigo-50 text-indigo-700 ring-indigo-500/20'
+                  ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white ring-brand-500/30 shadow-xs'
+                  : 'bg-brand-50 text-brand-700 ring-brand-500/20'
               }`}
             >
               <Icon name="roles" className="h-5 w-5" />
@@ -221,7 +221,7 @@ export function RolesPanel() {
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  pct >= 90 ? 'bg-brand-600' : pct >= 40 ? 'bg-indigo-500' : 'bg-emerald-500'
+                  pct >= 90 ? 'bg-brand-600' : pct >= 40 ? 'bg-brand-500' : 'bg-success-500'
                 }`}
                 style={{ width: `${Math.max(6, pct)}%` }}
               />
@@ -319,7 +319,7 @@ export function RolesPanel() {
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Security Roles</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
               <Icon name="roles" className="h-5 w-5" />
             </span>
           </div>
@@ -328,29 +328,29 @@ export function RolesPanel() {
             <span className="text-xs font-medium text-slate-500">defined profiles</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
             <span>Assigned to staff across departments</span>
           </div>
         </div>
 
         {/* Active Policies */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active Roles</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
               <Icon name="check" className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{activeCount}</span>
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
               {activeRatio}% active
             </span>
           </div>
           <div className="mt-3.5">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                className="h-full rounded-full bg-success-500 transition-all duration-500"
                 style={{ width: `${activeRatio}%` }}
               />
             </div>
@@ -358,10 +358,10 @@ export function RolesPanel() {
         </div>
 
         {/* Avg Permissions */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-violet-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-accent-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Avg Permissions</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50 text-accent-600 ring-1 ring-accent-500/10 transition-transform group-hover:scale-105">
               <Icon name="sliders" className="h-5 w-5" />
             </span>
           </div>
@@ -370,16 +370,16 @@ export function RolesPanel() {
             <span className="text-xs font-medium text-slate-500">modules / role</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-500" />
             <span>Granular least-privilege scoping</span>
           </div>
         </div>
 
         {/* Access Model */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-warning-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Security Engine</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
               <Icon name="lock" className="h-5 w-5" />
             </span>
           </div>
@@ -387,7 +387,7 @@ export function RolesPanel() {
             <span className="text-2xl font-extrabold tracking-tight text-slate-900">Strict RBAC</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
             <span>Audit-ready permission validation</span>
           </div>
         </div>

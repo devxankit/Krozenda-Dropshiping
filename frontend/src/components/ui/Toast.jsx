@@ -11,7 +11,7 @@ export function Toast({ tone = 'info', message, onDismiss }) {
   return (
     <div
       role="status"
-      className={`flex items-center justify-between gap-4 rounded-md border px-4 py-3 text-sm shadow-sm ${TONE_CLASSES[tone]}`}
+      className={`flex items-center justify-between gap-4 animate-rise-in rounded-lg border px-4 py-3 text-sm shadow-raised ${TONE_CLASSES[tone]}`}
     >
       <span>{message}</span>
       {onDismiss && (
@@ -19,7 +19,7 @@ export function Toast({ tone = 'info', message, onDismiss }) {
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="opacity-70 hover:opacity-100"
+          className="rounded-md p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
         >
           <Icon name="close" className="h-4 w-4" />
         </button>

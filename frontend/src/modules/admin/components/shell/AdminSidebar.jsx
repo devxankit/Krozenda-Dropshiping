@@ -3,12 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Icon, Tooltip } from '../../../../components/ui'
 import { ADMIN_ROUTES } from '../../../../config/routes'
 import { isNavItemActive } from '../../lib/nav'
-
-const BADGE_TONE = Object.freeze({
-  warning: 'bg-warning-50 text-warning-700',
-  danger: 'bg-danger-50 text-danger-700',
-  brand: 'bg-brand-100 text-brand-700',
-})
+import { BrandMark, NavCount, NavGroupLabel, navIconClass, navItemClass } from './navStyles'
 
 // `muted`: an own-stock module while the admin has "Own stock" switched off.
 // It stays clickable (existing products can still be viewed and edited), it
@@ -20,32 +15,19 @@ function NavItem({ item, collapsed, count, muted = false }) {
   const link = (
     <NavLink
       to={item.to}
-      className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-        active
-          ? muted
-            ? 'bg-surface-sunken font-semibold text-ink-subtle'
-            : 'bg-brand-50 font-semibold text-brand-700'
-          : muted
-            ? 'font-medium text-ink-faint opacity-70 hover:bg-surface-muted hover:opacity-100'
-            : 'font-medium text-ink-muted hover:bg-surface-muted hover:text-slate-900'
-      } ${collapsed ? 'w-9 justify-center px-0' : ''}`}
+      aria-label={collapsed ? item.label : undefined}
+      className={navItemClass({ active, muted, collapsed })}
     >
-      <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+      <Icon name={item.icon} className={navIconClass(active && !muted)} />
       {!collapsed && <span className="truncate">{item.label}</span>}
       {!collapsed && muted && (
         <span className="ml-auto shrink-0 rounded-sm bg-surface-sunken px-1 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
           Off
         </span>
       )}
-      {!collapsed && count > 0 && (
-        <span
-          className={`ml-auto shrink-0 rounded-full px-1.5 text-2xs font-semibold ${BADGE_TONE[item.badgeTone] || BADGE_TONE.brand}`}
-        >
-          {count}
-        </span>
-      )}
+      {!collapsed && count > 0 && <NavCount count={count} tone={item.badgeTone} />}
       {collapsed && count > 0 && (
-        <span className="absolute right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-warning-500" />
+        <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-surface bg-warning-500" />
       )}
     </NavLink>
   )
@@ -74,12 +56,7 @@ function NavSubmenu({ submenu, items, collapsed, counts }) {
   const open = toggled ?? hasActive
 
   const renderItem = (item) => (
-    <NavItem
-      key={item.to}
-      item={item}
-      collapsed={collapsed}
-      count={item.badge ? counts[item.badge] : 0}
-    />
+    <NavItem key={item.to} item={item} collapsed={collapsed} count={item.badge ? counts[item.badge] : 0} />
   )
 
   if (collapsed) return items.map(renderItem)
@@ -90,11 +67,9 @@ function NavSubmenu({ submenu, items, collapsed, counts }) {
         type="button"
         onClick={() => setToggled(!open)}
         aria-expanded={open}
-        className={`flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-sm transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-          hasActive ? 'font-semibold text-brand-700' : 'font-medium text-ink-muted hover:text-slate-900'
-        }`}
+        className={`${navItemClass()} w-full ${hasActive ? '!font-semibold !text-brand-700' : ''}`}
       >
-        <Icon name={submenu.icon} className="h-4 w-4 shrink-0" />
+        <Icon name={submenu.icon} className={navIconClass(hasActive)} />
         <span className="truncate">{submenu.label}</span>
         <Icon
           name="chevronDown"
@@ -102,7 +77,9 @@ function NavSubmenu({ submenu, items, collapsed, counts }) {
         />
       </button>
       {open && (
-        <div className="ml-4 flex flex-col gap-0.5 border-l border-border pl-2">{items.map(renderItem)}</div>
+        <div className="ml-[1.1rem] flex animate-fade-in flex-col gap-0.5 border-l border-border pl-2">
+          {items.map(renderItem)}
+        </div>
       )}
     </>
   )
@@ -143,9 +120,9 @@ function SignOutButton({ collapsed, onSignOut }) {
       type="button"
       onClick={onSignOut}
       aria-label="Log out"
-      className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium text-danger-700 transition-colors hover:bg-danger-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-9 justify-center px-0' : 'w-full'}`}
+      className={`flex h-9 items-center gap-3 rounded-md text-sm font-medium text-ink-muted transition-colors hover:bg-danger-50 hover:text-danger-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-10 justify-center px-0' : 'w-full px-2.5'}`}
     >
-      <Icon name="logout" className="h-4 w-4 shrink-0" />
+      <Icon name="logout" className="h-[1.125rem] w-[1.125rem] shrink-0" />
       {!collapsed && 'Logout'}
     </button>
   )
@@ -164,10 +141,10 @@ function SignOutButton({ collapsed, onSignOut }) {
 function OwnStockHeader({ label, ownStock }) {
   const off = ownStock.isKnown && !ownStock.enabled
   return (
-    <p className={`px-2 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider ${off ? 'text-ink-faint/70' : 'text-ink-faint'}`}>
+    <NavGroupLabel className={off ? '!text-ink-faint/70' : ''}>
       {label}
       {off && <span className="ml-1.5 normal-case tracking-normal text-warning-700">· off</span>}
-    </p>
+    </NavGroupLabel>
   )
 }
 
@@ -191,23 +168,20 @@ export function AdminSidebar({
         {!collapsed && (
           <NavLink
             to={ADMIN_ROUTES.DASHBOARD}
-            className="flex min-w-0 items-center gap-2.5 cursor-pointer"
+            className="flex min-w-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label="Krozenda admin home"
           >
-            <span className="flex h-[1.625rem] w-[1.625rem] shrink-0 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
-              K
-            </span>
-            <span className="text-sm font-bold tracking-tight text-slate-900">Krozenda</span>
-            <span className="rounded-sm bg-surface-sunken px-1.5 py-0.5 text-2xs font-semibold tracking-wider text-ink-subtle">
-              ADMIN
-            </span>
+            <BrandMark label="ADMIN" />
           </NavLink>
         )}
 
         <CollapseToggle collapsed={collapsed} onToggle={onToggle} />
       </div>
 
-      <nav className="admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto p-2.5">
+      <nav
+        aria-label="Admin navigation"
+        className="admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto p-2.5"
+      >
         {groups.map((group) => (
           <div key={group.id} className="flex flex-col gap-0.5">
             {group.label &&
@@ -216,9 +190,7 @@ export function AdminSidebar({
               ) : group.id === 'catalog' && ownStock ? (
                 <OwnStockHeader label={group.label} ownStock={ownStock} />
               ) : (
-                <p className="px-2 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-ink-faint">
-                  {group.label}
-                </p>
+                <NavGroupLabel>{group.label}</NavGroupLabel>
               ))}
             {group.submenu ? (
               <NavSubmenu submenu={group.submenu} items={group.items} collapsed={collapsed} counts={counts} />

@@ -78,7 +78,7 @@ export function VendorOrderDrawer({ order, isOpen, onClose, onUpdateItemStatus, 
           <div className="text-right">
             <span className="text-2xs font-semibold uppercase text-ink-faint">Your Items Value</span>
             <div className="mt-1">
-              <MoneyCell amount={order.itemsValue} compact className="text-emerald-600 text-lg font-bold" />
+              <MoneyCell amount={order.itemsValue} compact className="text-success-600 text-lg font-bold" />
             </div>
           </div>
         </div>

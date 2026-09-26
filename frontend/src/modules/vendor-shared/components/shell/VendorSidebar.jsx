@@ -3,14 +3,15 @@ import { Icon, Tooltip } from '../../../../components/ui'
 import { getVendorNavTree, isVendorItemActive } from '../../lib/vendorNav'
 import { useVendorOnboardingState } from '../../controllers/useVendorController'
 import { VENDOR_ONBOARDING_ALLOWED } from '../../constants'
+import {
+  BrandMark,
+  NavCount,
+  NavGroupLabel,
+  navIconClass,
+  navItemClass,
+} from '../../../admin/components/shell/navStyles'
 
-const BADGE_TONE = Object.freeze({
-  warning: 'bg-warning-50 text-warning-700',
-  danger: 'bg-danger-50 text-danger-700',
-  brand: 'bg-brand-100 text-brand-700',
-})
-
-function NavItem({ item, collapsed, locked = false }) {
+function NavItem({ item, collapsed, locked = false, size, onNavigate }) {
   const { pathname } = useLocation()
   const active = isVendorItemActive(item, pathname)
   const count = item.badge
@@ -24,11 +25,9 @@ function NavItem({ item, collapsed, locked = false }) {
     const body = (
       <span
         aria-disabled="true"
-        className={`flex h-8 cursor-not-allowed items-center gap-2.5 rounded-md px-2 text-sm font-medium text-ink-faint ${
-          collapsed ? 'w-9 justify-center px-0' : ''
-        }`}
+        className={`${navItemClass({ collapsed, size })} cursor-not-allowed !text-ink-faint hover:!bg-transparent`}
       >
-        <Icon name={item.icon} className="h-4 w-4 shrink-0 opacity-60" />
+        <Icon name={item.icon} className="h-[1.125rem] w-[1.125rem] shrink-0 opacity-60" />
         {!collapsed && <span className="truncate">{item.label}</span>}
         {!collapsed && <Icon name="lock" className="ml-auto h-3 w-3 shrink-0" />}
       </span>
@@ -44,26 +43,16 @@ function NavItem({ item, collapsed, locked = false }) {
   const link = (
     <NavLink
       to={item.to}
-      className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-        active
-          ? 'bg-brand-50 font-semibold text-brand-700'
-          : 'font-medium text-ink-muted hover:bg-surface-muted hover:text-slate-900'
-      } ${collapsed ? 'w-9 justify-center px-0' : ''}`}
+      onClick={onNavigate}
+      aria-label={collapsed ? item.label : undefined}
+      className={navItemClass({ active, collapsed, size })}
     >
-      <Icon name={item.icon} className="h-4 w-4 shrink-0" />
+      <Icon name={item.icon} className={navIconClass(active)} />
       {!collapsed && <span className="truncate">{item.label}</span>}
-      {!collapsed && count && (
-        <span
-          className={`ml-auto shrink-0 rounded-full px-1.5 text-2xs font-semibold ${
-            BADGE_TONE[item.badgeTone] || BADGE_TONE.brand
-          }`}
-        >
-          {count}
-        </span>
-      )}
-      {collapsed && count && (
-        <span className="absolute right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-warning-500" />
-      )}
+      {!collapsed && count ? <NavCount count={count} tone={item.badgeTone} /> : null}
+      {collapsed && count ? (
+        <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-surface bg-warning-500" />
+      ) : null}
     </NavLink>
   )
 
@@ -81,18 +70,18 @@ function NavItem({ item, collapsed, locked = false }) {
 // rail it is the only thing in that row — 64px cannot hold the wordmark and a
 // control without both feeling cramped, and Dashboard is the first nav item
 // directly below, so the way home is never more than one click away.
-function CollapseToggle({ collapsed, onToggle }) {
-  const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+function CollapseToggle({ collapsed, onToggle, isDrawer = false }) {
+  const label = isDrawer ? 'Close navigation' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'
 
   const button = (
     <button
       type="button"
       onClick={onToggle}
       aria-label={label}
-      aria-expanded={!collapsed}
+      aria-expanded={isDrawer ? undefined : !collapsed}
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-subtle transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? '' : 'ml-auto'}`}
     >
-      <Icon name={collapsed ? 'chevronsRight' : 'chevronsLeft'} className="h-4 w-4" />
+      <Icon name={isDrawer ? 'close' : collapsed ? 'chevronsRight' : 'chevronsLeft'} className="h-4 w-4" />
     </button>
   )
 
@@ -111,9 +100,9 @@ function SignOutButton({ collapsed, onSignOut }) {
       type="button"
       onClick={onSignOut}
       aria-label="Log out"
-      className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium text-danger-700 transition-colors hover:bg-danger-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-9 justify-center px-0' : 'w-full'}`}
+      className={`flex h-9 items-center gap-3 rounded-md text-sm font-medium text-ink-muted transition-colors hover:bg-danger-50 hover:text-danger-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${collapsed ? 'w-10 justify-center px-0' : 'w-full px-2.5'}`}
     >
-      <Icon name="logout" className="h-4 w-4 shrink-0" />
+      <Icon name="logout" className="h-[1.125rem] w-[1.125rem] shrink-0" />
       {!collapsed && 'Logout'}
     </button>
   )
@@ -127,7 +116,18 @@ function SignOutButton({ collapsed, onSignOut }) {
   )
 }
 
-export function VendorSidebar({ collapsed = false, onToggle, isPartner = false, onSignOut }) {
+// variant: 'rail' (desktop, collapsible) | 'drawer' (mobile, full-width in
+// its container, 40px touch rows, closes itself on navigation)
+export function VendorSidebar({
+  collapsed = false,
+  onToggle,
+  isPartner = false,
+  onSignOut,
+  onNavigate,
+  variant = 'rail',
+}) {
+  const isDrawer = variant === 'drawer'
+  const size = isDrawer ? 'touch' : 'desktop'
   const { isApproved } = useVendorOnboardingState()
   const groups = getVendorNavTree(isPartner, isApproved)
 
@@ -138,8 +138,8 @@ export function VendorSidebar({ collapsed = false, onToggle, isPartner = false, 
 
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 ${
-        collapsed ? 'w-rail items-center' : 'w-sidebar'
+      className={`flex h-full shrink-0 flex-col bg-surface transition-[width] duration-150 ${
+        isDrawer ? 'w-full' : `border-r border-border ${collapsed ? 'w-rail items-center' : 'w-sidebar'}`
       }`}
     >
       <div
@@ -150,35 +150,38 @@ export function VendorSidebar({ collapsed = false, onToggle, isPartner = false, 
         {!collapsed && (
           <NavLink
             to={isPartner ? '/partner/dashboard' : '/seller/dashboard'}
-            className="flex min-w-0 items-center gap-2.5 cursor-pointer"
+            onClick={onNavigate}
+            className="flex min-w-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label="Krozenda vendor home"
           >
-            <span className="flex h-[1.625rem] w-[1.625rem] shrink-0 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
-              K
-            </span>
-            <span className="text-sm font-bold tracking-tight text-slate-900">Krozenda</span>
-            <span className="rounded-sm bg-surface-sunken px-1.5 py-0.5 text-2xs font-semibold tracking-wider text-ink-subtle">
-              {isPartner ? 'PARTNER' : 'SELLER'}
-            </span>
+            <BrandMark label={isPartner ? 'PARTNER' : 'SELLER'} />
           </NavLink>
         )}
 
-        <CollapseToggle collapsed={collapsed} onToggle={onToggle} />
+        <CollapseToggle collapsed={collapsed} onToggle={onToggle} isDrawer={isDrawer} />
       </div>
 
-      <nav className="admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto p-2.5">
+      <nav
+        aria-label="Seller navigation"
+        className="admin-scroll flex flex-1 flex-col gap-0.5 overflow-y-auto p-2.5"
+      >
         {groups.map((group) => (
           <div key={group.id} className="flex flex-col gap-0.5">
             {group.label &&
               (collapsed ? (
                 <div className="mx-auto my-2 h-px w-6 bg-border" />
               ) : (
-                <p className="px-2 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-ink-faint">
-                  {group.label}
-                </p>
+                <NavGroupLabel>{group.label}</NavGroupLabel>
               ))}
             {group.items.map((item) => (
-              <NavItem key={item.to} item={item} collapsed={collapsed} locked={isLocked(item)} />
+              <NavItem
+                key={item.to}
+                item={item}
+                collapsed={collapsed}
+                locked={isLocked(item)}
+                size={size}
+                onNavigate={onNavigate}
+              />
             ))}
           </div>
         ))}

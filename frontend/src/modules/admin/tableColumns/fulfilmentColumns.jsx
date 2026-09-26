@@ -23,7 +23,7 @@ const REASON_LABELS = Object.freeze({
 
 const RETURN_STATUS_LABELS = Object.freeze({
   awaiting_review: 'Awaiting review',
-  approved: 'Approved',
+  approved: 'Approved — awaiting item',
   rejected: 'Rejected',
   replacement_issued: 'Replacement issued',
   refunded: 'Refunded',
@@ -355,6 +355,7 @@ export const RETURN_FILTERS = Object.freeze([
 export const RETURN_TABS = Object.freeze([
   { id: 'all', label: 'All requests' },
   { id: 'awaiting_review', label: 'Awaiting review' },
+  { id: 'in_progress', label: 'Awaiting item' },
   { id: 'resolved', label: 'Resolved' },
   { id: 'rejected', label: 'Rejected' },
 ])

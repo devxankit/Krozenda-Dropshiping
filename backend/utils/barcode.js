@@ -51,33 +51,43 @@ function isValidEan13(code) {
   return ean13CheckDigit(code.slice(0, 12)) === Number(code[12]);
 }
 
-// Renders the scannable barcode image for one code. PNG, because it prints
-// crisply on a label printer and every browser and image tool opens it with
-// no extra library. `scale`/`height` are tuned for a small on-screen preview
-// and a standard adhesive label alike — good enough for both without a
-// second code path.
-async function renderBarcodePng(code) {
+// Renders the label's barcode: a classic 1D Code 128 of the product's SKU —
+// plain vertical bars, which every scanner (a laser gun included) reads, and
+// which types the SKU into the panel's "Scan barcode" box (the lookup there
+// accepts the SKU as well as the EAN-13 number). The product's full details
+// are carried by the QR code beside it: a 1D barcode of those ~140
+// characters would be ~37 cm wide.
+//
+// Falls back to the product's EAN-13 number when it has no SKU, or one that
+// Code 128 cannot encode (non-ASCII).
+function barcodeText(product) {
+  const sku = String(product.sku || '').trim();
+  return sku && /^[\x20-\x7E]+$/.test(sku) ? sku : product.barcode;
+}
+
+async function renderBarcodePng(product) {
   return bwipjs.toBuffer({
-    bcid: 'ean13',
-    text: code,
-    scale: 3,
-    height: 15,
+    bcid: 'code128',
+    text: barcodeText(product),
+    // 2px modules: shown at its natural size (the label does not shrink it),
+    // this reads on a phone from a screen — checked with a ZXing decoder.
+    scale: 2,
+    height: 16,
     includetext: true,
-    // bwip-js draws on a transparent canvas by default — fine on a white web
-    // page, but a downloaded file opened in a dark-mode image viewer (or sent
-    // to some label printers) shows black bars on black. A white quiet zone
-    // is also what scanners need to find the start of the symbol.
+    textxalign: 'center',
+    textsize: 11,
+    // Keeps the printed SKU clear of the bars.
+    textyoffset: -6,
+    // White background and quiet zone: scanners need the margin, and a
+    // transparent PNG shows black on black in a dark-mode viewer.
     backgroundcolor: 'FFFFFF',
-    paddingwidth: 10,
-    paddingheight: 6,
+    paddingwidth: 12,
+    paddingheight: 10,
   });
 }
 
-// An EAN-13 can only ever hold its 13 digits, so a scanner reading it gets a
-// number and nothing else — the panel's scan box turns that number into the
-// product. The QR code printed next to it is what carries the product's
-// details themselves, so a phone camera (or a 2D scanner) shows them with no
-// login and no app.
+// The product's details as one line of text, for the QR code: a phone camera
+// or a 2D scanner shows them with no login and no app.
 //
 // One line, barcode FIRST: a 2D scanner types it into the panel's scan box
 // like a keyboard and would submit at the first newline, and the scan box
@@ -117,5 +127,6 @@ module.exports = {
   renderBarcodePng,
   renderProductQrPng,
   productQrText,
+  barcodeText,
   ean13CheckDigit,
 };

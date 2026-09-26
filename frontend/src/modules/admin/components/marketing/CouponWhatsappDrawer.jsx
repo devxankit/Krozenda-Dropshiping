@@ -83,9 +83,9 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
       {wa.stats && (wa.stats.sent > 0 || wa.stats.failed > 0 || wa.stats.sending > 0) && (
         <div className="grid grid-cols-3 gap-2">
           {[
-            ['Sent', wa.stats.sent, 'text-emerald-700'],
-            ['Sending', wa.stats.sending, 'text-blue-700'],
-            ['Failed', wa.stats.failed, 'text-rose-700'],
+            ['Sent', wa.stats.sent, 'text-success-700'],
+            ['Sending', wa.stats.sending, 'text-brand-700'],
+            ['Failed', wa.stats.failed, 'text-danger-700'],
           ].map(([label, value, tone]) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-white p-3">
               <p className="text-2xs font-semibold uppercase text-slate-500">{label}</p>
@@ -102,7 +102,7 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
             <label
               key={option.value}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all ${
-                audience === option.value ? 'border-blue-500 bg-blue-50/70 shadow-2xs' : 'border-slate-200 bg-white hover:border-slate-300'
+                audience === option.value ? 'border-brand-500 bg-brand-50/70 shadow-2xs' : 'border-slate-200 bg-white hover:border-slate-300'
               }`}
             >
               <input
@@ -111,7 +111,7 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
                 value={option.value}
                 checked={audience === option.value}
                 onChange={() => setAudience(option.value)}
-                className="mt-0.5 text-blue-600"
+                className="mt-0.5 text-brand-600"
               />
               <span className="flex-1">
                 <span className="block text-xs font-bold text-slate-900">{option.label}</span>
@@ -130,7 +130,7 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
             {picked.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {picked.map((c) => (
-                  <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-2xs font-semibold text-blue-800">
+                  <span key={c.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-2xs font-semibold text-brand-800">
                     {c.name || c.phone}
                     <button type="button" onClick={() => toggle(c)} aria-label={`Remove ${c.name || c.phone}`}>
                       <HiOutlineXMark className="h-3.5 w-3.5" />
@@ -147,7 +147,7 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search customer by name, mobile or email..."
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:bg-white focus:outline-none"
               />
             </div>
 
@@ -166,7 +166,7 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
                       key={c.id}
                       type="button"
                       onClick={() => toggle(c)}
-                      className={`flex w-full items-center justify-between p-2.5 text-left transition-colors ${isPicked ? 'bg-blue-50/60' : 'hover:bg-slate-50'}`}
+                      className={`flex w-full items-center justify-between p-2.5 text-left transition-colors ${isPicked ? 'bg-brand-50/60' : 'hover:bg-slate-50'}`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-xs font-bold text-slate-900">{c.name || 'Unnamed customer'}</span>
@@ -176,9 +176,9 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
                         </span>
                       </span>
                       {isPicked ? (
-                        <HiOutlineCheck className="ml-2 h-4 w-4 shrink-0 text-emerald-600" />
+                        <HiOutlineCheck className="ml-2 h-4 w-4 shrink-0 text-success-600" />
                       ) : (
-                        <span className="ml-2 shrink-0 text-2xs font-semibold text-blue-600">Select</span>
+                        <span className="ml-2 shrink-0 text-2xs font-semibold text-brand-600">Select</span>
                       )}
                     </button>
                   )
@@ -189,8 +189,8 @@ export function CouponWhatsappDrawer({ coupon, onClose }) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-        <p className="mb-2 text-2xs font-bold uppercase text-emerald-800">Message preview</p>
+      <div className="rounded-2xl border border-success-200 bg-success-50/60 p-4">
+        <p className="mb-2 text-2xs font-bold uppercase text-success-800">Message preview</p>
         <p className="whitespace-pre-line text-xs leading-relaxed text-slate-800">
           {`Hi {name}, here is a special offer from Krozenda just for you! 🎁
 

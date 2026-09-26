@@ -50,7 +50,7 @@ export function LedgerPage() {
       key: 'profit',
       header: 'Profit',
       align: 'right',
-      render: (row) => <MoneyCell amount={row.profit} className={row.profit < 0 ? 'text-danger-700' : 'text-emerald-700'} />,
+      render: (row) => <MoneyCell amount={row.profit} className={row.profit < 0 ? 'text-danger-700' : 'text-success-700'} />,
     },
   ]
 

@@ -36,7 +36,7 @@ function Step({ done, current, title, description, action }) {
         aria-hidden="true"
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-bold ${
           done
-            ? 'bg-emerald-100 text-emerald-700'
+            ? 'bg-success-100 text-success-700'
             : current
               ? 'bg-brand-100 text-brand-700'
               : 'bg-surface-muted text-ink-faint'

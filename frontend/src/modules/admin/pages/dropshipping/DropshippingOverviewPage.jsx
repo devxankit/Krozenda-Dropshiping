@@ -63,7 +63,7 @@ export function DropshippingOverviewPage() {
       header: 'Margin revenue',
       width: '8rem',
       align: 'right',
-      render: (row) => <MoneyCell amount={row.commission} compact className="font-semibold text-emerald-600" />,
+      render: (row) => <MoneyCell amount={row.commission} compact className="font-semibold text-success-600" />,
     },
     {
       key: 'status',

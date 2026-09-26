@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { HiPrinter, HiClipboardDocument, HiCheck, HiArrowDownTray } from 'react-icons/hi2'
 import { api } from '../../lib/axios'
 
-// A product's label: the scannable EAN-13 (what a USB/Bluetooth scanner gun
-// reads — it types the 13 digits into the panel's "Scan barcode" box, which
-// opens the product) next to a QR code that carries the product's details
-// themselves, so a phone camera shows name, SKU and price with no login.
+// A product's label: a classic barcode of the SKU (what a scanner gun reads —
+// it types the SKU into the panel's "Scan barcode" box, which opens the
+// product) next to a QR code that carries the product's details themselves,
+// so a phone camera shows name, SKU and price with no login.
 //
 // `qrUrl` and `product` are optional — without them this is just the barcode.
 // Both images come from the API behind auth, so they are fetched as blobs
@@ -145,7 +145,7 @@ async function renderLabelCanvas({ barcodeSrc, qrSrc, product }) {
   }
   if (nameLines.length || meta) y += 20
 
-  // The EAN-13 is never stretched — bar widths are what a scanner reads.
+  // The barcode is never smoothed — bar widths are what a scanner reads.
   ctx.imageSmoothingEnabled = false
   ctx.drawImage(barcodeImg, pad, y + (codesHeight - barcodeH) / 2, barcodeW, barcodeH)
   if (qrImg) ctx.drawImage(qrImg, width - pad - qrSize, y, qrSize, qrSize)
@@ -241,9 +241,14 @@ export function ProductBarcode({ code, imageUrl, qrUrl, product, className = '' 
               <span className="mt-1 text-[11px] text-slate-400">Barcode image unavailable</span>
             </div>
           ) : barcode.url ? (
-            <img src={barcode.url} alt={`Barcode ${code}`} className="h-24 w-auto max-w-full object-contain [image-rendering:pixelated]" />
+            <img
+              src={barcode.url}
+              alt={`Barcode for SKU ${product?.sku || code}`}
+              title="Scan to open this product (SKU)"
+              className="h-auto w-auto max-w-full object-contain [image-rendering:pixelated]"
+            />
           ) : (
-            <div className="h-24 w-56 animate-pulse rounded-lg bg-slate-100" />
+            <div className="h-28 w-72 max-w-full animate-pulse rounded-lg bg-slate-100" />
           )}
 
           {qrUrl &&
@@ -253,10 +258,10 @@ export function ProductBarcode({ code, imageUrl, qrUrl, product, className = '' 
                 src={qr.url}
                 alt="QR code with product details"
                 title="Scan with a phone camera to see the product details"
-                className="h-24 w-24 object-contain [image-rendering:pixelated]"
+                className="h-32 w-32 object-contain [image-rendering:pixelated]"
               />
             ) : (
-              <div className="h-24 w-24 animate-pulse rounded-lg bg-slate-100" />
+              <div className="h-32 w-32 animate-pulse rounded-lg bg-slate-100" />
             ))}
         </div>
       </div>

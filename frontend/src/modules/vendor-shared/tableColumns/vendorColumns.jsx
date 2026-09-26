@@ -21,12 +21,12 @@ export const VENDOR_PRODUCT_COLUMNS = Object.freeze([
           <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
             <span className="text-2xs text-ink-subtle">{row.sku || '—'} · {row.category?.name || 'Uncategorized'}</span>
             {row.isFlashsale && (
-              <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+              <span className="rounded-md bg-warning-50 px-1.5 py-0.5 text-[10px] font-bold text-warning-700 ring-1 ring-inset ring-warning-600/20">
                 🔥 Flash
               </span>
             )}
             {row.isTrending && (
-              <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-700 ring-1 ring-inset ring-brand-600/20">
                 📈 Trending
               </span>
             )}
@@ -43,7 +43,7 @@ export const VENDOR_PRODUCT_COLUMNS = Object.freeze([
     render: (row) => (
       <div className="flex flex-col items-end">
         <span className="tabular font-medium text-slate-900">₹{row.price.toLocaleString('en-IN')}</span>
-        {row.salePrice != null && <span className="text-2xs text-emerald-600">₹{row.salePrice.toLocaleString('en-IN')}</span>}
+        {row.salePrice != null && <span className="text-2xs text-success-600">₹{row.salePrice.toLocaleString('en-IN')}</span>}
       </div>
     ),
   },

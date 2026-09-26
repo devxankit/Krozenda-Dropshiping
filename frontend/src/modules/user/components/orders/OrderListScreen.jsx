@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HiChevronRight, HiMagnifyingGlass, HiShoppingCart } from 'react-icons/hi2'
+import { HiArrowPath, HiChevronRight, HiMagnifyingGlass, HiShoppingCart } from 'react-icons/hi2'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
@@ -129,18 +129,28 @@ export function OrderListScreen() {
               <p className="mt-1 text-xs text-slate-500">Track your shipments and request returns.</p>
             </div>
 
-            <div className="flex w-full items-center rounded-2xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 sm:w-72">
-              <HiMagnifyingGlass className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-              <input
-                type="search"
-                inputMode="search"
-                enterKeyHint="search"
-                value={searchDraft}
-                onChange={(e) => setSearchDraft(e.target.value)}
-                placeholder="Search this page…"
-                aria-label="Search orders on this page"
-                className="w-full bg-transparent px-2 text-xs font-semibold text-slate-900 focus:outline-none"
-              />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Link
+                to={USER_ROUTES.RETURNS}
+                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 transition-colors shadow-xs"
+              >
+                <HiArrowPath className="h-4 w-4 text-slate-500" />
+                <span>Returns & Claims</span>
+              </Link>
+
+              <div className="flex w-full items-center rounded-2xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 sm:w-72">
+                <HiMagnifyingGlass className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                <input
+                  type="search"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={searchDraft}
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                  placeholder="Search this page…"
+                  aria-label="Search orders on this page"
+                  className="w-full bg-transparent px-2 text-xs font-semibold text-slate-900 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
@@ -281,7 +291,7 @@ export function OrderListScreen() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                       <div className="shrink-0">
                         <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           Total amount
@@ -291,7 +301,21 @@ export function OrderListScreen() {
                           {order.total.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {order.canReturn && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              navigate(`${USER_ROUTES.RETURNS}?orderId=${order.id}`)
+                            }}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1"
+                          >
+                            <HiArrowPath className="w-3.5 h-3.5" />
+                            <span>Return / Replace</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={(e) => handleReorderClick(e, order.id)}

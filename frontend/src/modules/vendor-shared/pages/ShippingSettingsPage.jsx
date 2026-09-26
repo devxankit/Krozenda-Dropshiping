@@ -117,7 +117,7 @@ function ShiprocketStatusCard() {
       <CardBody className="p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-500/10 text-success-600 border border-success-500/20">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
@@ -136,7 +136,7 @@ function ShiprocketStatusCard() {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto rounded-lg bg-surface-muted px-3 py-1.5 border border-border text-2xs text-ink-muted">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-block h-2 w-2 rounded-full bg-success-500 animate-pulse" />
             <span className="font-medium text-slate-700">Platform Active</span>
           </div>
         </div>
@@ -214,7 +214,7 @@ function PickupLocationsCard({ pickups, onAdd, onEdit, onDelete }) {
                       {location.contactName} · {location.phone}
                     </p>
                     {location.registrationError && (
-                      <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-2xs text-blue-800">
+                      <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-brand-200 bg-brand-50/70 p-2 text-2xs text-brand-800">
                         <span className="font-semibold shrink-0">Note:</span>
                         <span>{location.registrationError}</span>
                       </div>

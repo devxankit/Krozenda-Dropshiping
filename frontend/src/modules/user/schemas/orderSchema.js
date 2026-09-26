@@ -49,6 +49,8 @@ export const orderSchema = z.object({
   // return them.
   fulfillmentType: z.enum(['STANDARD', 'DROPSHIP']).optional().default('STANDARD'),
   isDropship: z.boolean().optional().default(false),
+  // Delivered, inside the return window, and at least one returnable line.
+  canReturn: z.boolean().optional().default(false),
   checkoutGroupId: z.string().nullable().optional().default(null),
   deliveredAt: z.string().nullable(),
   statusHistory: z.array(orderStatusHistoryEntrySchema),
@@ -95,6 +97,8 @@ export const orderSummarySchema = z.object({
   paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']),
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
   isDropship: z.boolean().optional().default(false),
+  // Delivered, inside the return window, and at least one returnable line.
+  canReturn: z.boolean().optional().default(false),
   deliveredAt: z.string().nullable(),
   createdAt: z.string(),
 })
@@ -174,6 +178,33 @@ export const shippingQuoteSchema = z.object({
   paymentMethod: z.string(),
   subtotal: z.number(),
   discountAmount: z.number(),
+  couponCode: z.string().nullable().optional().default(null),
+  // Buyer-paid platform fee, already inside `total`.
+  platformFee: z.number().optional().default(0),
+  // listSubtotal + gstAdded − discount + shipping + platformFee = total.
+  tax: z
+    .object({
+      listSubtotal: z.number(),
+      gstIncluded: z.number(),
+      gstAdded: z.number(),
+      gstTotal: z.number(),
+      lines: z.array(
+        z.object({
+          productId: z.string(),
+          variantId: z.string().nullable(),
+          name: z.string(),
+          quantity: z.number(),
+          listPrice: z.number(),
+          price: z.number(),
+          gstRate: z.number(),
+          gstInclusive: z.boolean(),
+          gstAmount: z.number(),
+        }),
+      ),
+    })
+    .nullable()
+    .optional()
+    .default(null),
 
   shippingFee: z.number(),
   total: z.number(),
@@ -256,7 +287,14 @@ export const orderInvoiceSchema = z.object({
         }),
       ),
       shipping: z.number().nullable(),
-      totals: z.object({ ...invoiceMoney, gross: z.number(), discount: z.number(), shipping: z.number() }),
+      platformFee: z.number().optional().default(0),
+      totals: z.object({
+        ...invoiceMoney,
+        gross: z.number(),
+        discount: z.number(),
+        shipping: z.number(),
+        platformFee: z.number().optional().default(0),
+      }),
     }),
   ),
   grandTotal: z.number(),

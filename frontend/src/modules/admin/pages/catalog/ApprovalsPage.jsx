@@ -146,7 +146,7 @@ export function ApprovalsPage() {
                   <span
                     className={`text-[11px] font-medium ${
                       count > 0
-                        ? 'text-amber-600 font-semibold'
+                        ? 'text-warning-600 font-semibold'
                         : 'text-slate-400'
                     }`}
                   >
@@ -163,20 +163,20 @@ export function ApprovalsPage() {
         </div>
 
         {/* Sequential Pipeline Explainer Card */}
-        <div className="rounded-2xl border border-blue-100/90 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50/80 p-4 sm:p-5 shadow-2xs">
+        <div className="rounded-2xl border border-brand-100/90 bg-gradient-to-r from-brand-50/70 via-brand-50/40 to-slate-50/80 p-4 sm:p-5 shadow-2xs">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5 min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xs">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white shadow-2xs">
                   <Icon name="info" className="h-3 w-3" />
                 </span>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-950">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-950">
                   Sequential Approval Pipeline
                 </h3>
               </div>
               <p className="text-xs leading-relaxed text-slate-600">
                 A listing cannot go live until all tiers clear. If an item is marked{' '}
-                <strong className="font-bold text-amber-700">Blocked</strong>, approving the
+                <strong className="font-bold text-warning-700">Blocked</strong>, approving the
                 prerequisite category or brand above it will automatically unblock everything
                 downstream.
               </p>
@@ -184,18 +184,18 @@ export function ApprovalsPage() {
 
             {/* Stepper badges */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-purple-700 shadow-2xs">
-                <Icon name="categories" className="h-3.5 w-3.5 text-purple-600" />
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-accent-700 shadow-2xs">
+                <Icon name="categories" className="h-3.5 w-3.5 text-accent-600" />
                 <span>1. Category</span>
               </div>
               <span className="text-slate-400 font-bold text-xs">➔</span>
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs">
-                <Icon name="brands" className="h-3.5 w-3.5 text-blue-600" />
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-brand-700 shadow-2xs">
+                <Icon name="brands" className="h-3.5 w-3.5 text-brand-600" />
                 <span>2. Brand</span>
               </div>
               <span className="text-slate-400 font-bold text-xs">➔</span>
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-2xs">
-                <Icon name="products" className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-success-200/90 bg-white px-2.5 py-1 text-xs font-semibold text-success-700 shadow-2xs">
+                <Icon name="products" className="h-3.5 w-3.5 text-success-600" />
                 <span>3. Product</span>
               </div>
             </div>
@@ -209,7 +209,7 @@ export function ApprovalsPage() {
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-2xs ${
                   isAutoApprovalOn
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                    ? 'border-success-200 bg-success-50 text-success-600'
                     : 'border-slate-200 bg-slate-100 text-slate-500'
                 }`}
               >
@@ -256,7 +256,7 @@ export function ApprovalsPage() {
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-2xs ${
                   isSellerOnlyOn
-                    ? 'border-amber-200 bg-amber-50 text-amber-600'
+                    ? 'border-warning-200 bg-warning-50 text-warning-600'
                     : 'border-slate-200 bg-slate-100 text-slate-500'
                 }`}
               >

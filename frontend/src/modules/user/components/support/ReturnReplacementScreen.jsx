@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { HiArrowLeft, HiShieldCheck, HiArrowPath, HiBanknotes, HiPlus, HiXMark, HiCheckCircle, HiClock, HiXCircle } from 'react-icons/hi2'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Footer } from '../../../../components/layout/Footer'
@@ -20,7 +20,9 @@ const RETURN_REASONS = [
 
 const STATUS_META = {
   PENDING: { label: 'Pending Review', color: 'bg-amber-50 text-amber-700 border-amber-200', Icon: HiClock },
-  APPROVED: { label: 'Approved', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: HiCheckCircle },
+  // Approved; the item is on its way back. Money / replacement follow once it arrives.
+  ACCEPTED: { label: 'Approved — pickup in progress', color: 'bg-blue-50 text-blue-700 border-blue-200', Icon: HiClock },
+  APPROVED: { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: HiCheckCircle },
   REJECTED: { label: 'Rejected', color: 'bg-red-50 text-red-700 border-red-200', Icon: HiXCircle },
 }
 
@@ -31,6 +33,9 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
   // See the note on the other screens: a no-op default made both controls dead
   // once the router stopped passing callbacks.
   const navigateFallback = useNavigate()
+  const [searchParams] = useSearchParams()
+  const targetOrderId = searchParams.get('orderId')
+
   const handleBack = onBack || (() => navigateFallback(-1))
   const handleContinue = onContinue || (() => navigateFallback(USER_ROUTES.ORDERS))
   const { items, isLoading, submitReturnRequest, isSubmitting, error } = useReturnsController()
@@ -43,10 +48,19 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
   const fileInputRef = useRef(null)
 
   useEffect(() => {
-    if (!selectedKey && items.length > 0) {
-      setSelectedKey(lineKey(items[0]))
+    if (items.length > 0) {
+      if (targetOrderId) {
+        const found = items.find((item) => item.orderId === targetOrderId)
+        if (found) {
+          setSelectedKey(lineKey(found))
+          return
+        }
+      }
+      if (!selectedKey) {
+        setSelectedKey(lineKey(items[0]))
+      }
     }
-  }, [items, selectedKey])
+  }, [items, targetOrderId, selectedKey])
 
   useEffect(() => {
     return () => {
@@ -55,9 +69,11 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
   }, [photos])
 
   const selectedItem = items.find((item) => lineKey(item) === selectedKey)
-  const lockedStatus = selectedItem?.existingRequest?.status === 'PENDING' || selectedItem?.existingRequest?.status === 'APPROVED'
-    ? selectedItem.existingRequest.status
-    : null
+  // Any request that is not rejected blocks another on the same line.
+  const lockedStatus =
+    selectedItem?.existingRequest && selectedItem.existingRequest.status !== 'REJECTED'
+      ? selectedItem.existingRequest.status
+      : null
 
   const handlePickPhotos = (event) => {
     const files = Array.from(event.target.files ?? []).slice(0, MAX_PHOTOS - photos.length)
@@ -74,10 +90,11 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
   }
 
   const handleSubmit = async () => {
-    if (!selectedItem || lockedStatus) return
+    if (!selectedItem || lockedStatus || selectedItem.returnEligible === false) return
     setSubmitted(false)
+    let request
     try {
-      const request = await submitReturnRequest({
+      request = await submitReturnRequest({
         orderId: selectedItem.orderId,
         productId: selectedItem.productId,
         variantId: selectedItem.variantId,
@@ -85,13 +102,17 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
         reason: selectedReason,
         photoFiles: photos.map((p) => p.file),
       })
-      setPhotos([])
-      setSubmitted(true)
-      toast.success('Request Submitted', 'Your return or replacement claim has been submitted.')
-      onContinue(request)
     } catch (err) {
       toast.error('Submission Failed', err)
+      return
     }
+    // Outside the try: the request is already saved, so nothing after this
+    // point may report it as a failed submission. `onContinue` is only passed
+    // by the showcase; the real route falls back to the orders page.
+    setPhotos([])
+    setSubmitted(true)
+    toast.success('Request Submitted', 'Your return or replacement claim has been submitted.')
+    handleContinue(request)
   }
 
   return (
@@ -155,6 +176,13 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
                   <div className={`flex items-center space-x-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold ${STATUS_META[lockedStatus].color}`}>
                     {React.createElement(STATUS_META[lockedStatus].Icon, { className: 'w-4 h-4' })}
                     <span>A {selectedItem.existingRequest.requestType.toLowerCase()} request for this item is {STATUS_META[lockedStatus].label.toLowerCase()}.</span>
+                  </div>
+                )}
+
+                {selectedItem && selectedItem.returnEligible === false && !lockedStatus && (
+                  <div className="flex items-center space-x-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold bg-amber-50 text-amber-800 border-amber-200">
+                    <HiClock className="w-4 h-4 shrink-0" />
+                    <span>The 7-day return window for this item has expired.</span>
                   </div>
                 )}
               </div>
@@ -293,10 +321,14 @@ export function ReturnReplacementScreen({ onBack, onContinue }) {
 
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !selectedItem}
+                    disabled={isSubmitting || !selectedItem || Boolean(lockedStatus) || selectedItem.returnEligible === false}
                     className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-60 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all text-xs tracking-wide"
                   >
-                    {isSubmitting ? 'Submitting...' : 'Submit Return Claim →'}
+                    {selectedItem?.returnEligible === false
+                      ? 'Return Window Expired'
+                      : isSubmitting
+                        ? 'Submitting...'
+                        : 'Submit Return Claim →'}
                   </button>
                 </div>
               </div>

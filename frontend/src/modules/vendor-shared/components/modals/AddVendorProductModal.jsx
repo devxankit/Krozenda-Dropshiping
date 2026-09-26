@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { GstTypeField } from '../../../../components/catalog/ProductAdvancedFields'
 import { Badge, Button, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { toast } from '../../../admin/stores/toastStore'
 import { api } from '../../../../lib/axios'
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
   mrp: '',
   costPrice: '',
   gstRate: '',
+  gstInclusive: true,
   stock: '100',
   lowStockThreshold: '',
   weight: '',
@@ -111,6 +113,7 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
     if (formData.mrp) body.append('mrp', formData.mrp)
     if (formData.costPrice) body.append('costPrice', formData.costPrice)
     if (formData.gstRate) body.append('gstRate', formData.gstRate)
+    body.append('gstInclusive', formData.gstInclusive === false ? 'false' : 'true')
     body.append('stock', formData.stock || '0')
     if (formData.lowStockThreshold) body.append('lowStockThreshold', formData.lowStockThreshold)
     body.append('weight', formData.weight)
@@ -317,6 +320,13 @@ export function AddVendorProductModal({ isOpen, onClose, onAddProduct }) {
               options={GST_RATE_OPTIONS}
               value={formData.gstRate}
               onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
+            />
+            <GstTypeField
+              id="vp-gst-type"
+              inclusive={formData.gstInclusive}
+              onChange={(value) => setFormData((prev) => ({ ...prev, gstInclusive: value }))}
+              price={formData.price}
+              gstRate={formData.gstRate}
             />
           </div>
         </div>

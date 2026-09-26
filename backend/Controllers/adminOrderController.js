@@ -36,6 +36,7 @@ function withCustomer(o) {
     subtotal: toPaise(serialized.subtotal),
     discountAmount: toPaise(serialized.discountAmount),
     shippingFee: toPaise(serialized.shippingFee),
+    platformFee: toPaise(serialized.platformFee || 0),
     total: toPaise(serialized.total),
     customer: {
       id: o.user?._id ? o.user._id.toString() : (o.user ? o.user.toString() : null),
@@ -279,6 +280,13 @@ async function updateOrderStatus(req, res) {
       success: false,
       message: exists ? `Order cannot be moved to ${status} from its current state` : 'Order not found',
     });
+  }
+
+  // Delivered COD: the buyer has paid the courier (see Order's
+  // markCodPaidOnDelivery — a findOneAndUpdate skips save hooks).
+  if (status === 'DELIVERED' && order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING') {
+    await Order.updateOne({ _id: order._id, paymentStatus: 'PENDING' }, { $set: { paymentStatus: 'PAID' } });
+    order.paymentStatus = 'PAID';
   }
 
   if (status === 'CANCELLED') {

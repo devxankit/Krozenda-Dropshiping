@@ -279,3 +279,87 @@ describe('Razorpay payment amount verification (regression for pay-1-checkout-50
     expect(second.status).toBe(409);
   });
 });
+
+describe('COD paid on delivery', () => {
+  it('marks a COD order PAID when admin moves it to DELIVERED', async () => {
+    const { token, address } = await buyerWithAddress();
+    const { token: adminToken } = await createAdmin();
+    const product = await createProduct({ stock: 5, price: 300 });
+    await addToCart(token, product._id.toString(), 1);
+
+    const placed = await request(app)
+      .post('/user/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ addressId: address._id.toString(), paymentMethod: 'COD' });
+    expect(placed.status).toBe(201);
+    const orderId = placed.body.data.id;
+    expect(placed.body.data.paymentStatus).toBe('PENDING');
+
+    for (const status of ['PROCESSING', 'SHIPPED', 'DELIVERED']) {
+      const res = await request(app)
+        .patch(`/admin/orders/${orderId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status });
+      expect(res.status).toBe(200);
+    }
+
+    const Order = require('../Models/Order');
+    const order = await Order.findById(orderId).lean();
+    expect(order.status).toBe('DELIVERED');
+    expect(order.paymentStatus).toBe('PAID');
+    // Remittance is still its own step.
+    expect(order.codRemittedAt).toBeNull();
+  });
+
+  it('marks a COD order PAID when its last line is delivered and the order is saved', async () => {
+    const { token, address } = await buyerWithAddress();
+    const product = await createProduct({ stock: 5, price: 300 });
+    await addToCart(token, product._id.toString(), 1);
+    const placed = await request(app)
+      .post('/user/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ addressId: address._id.toString(), paymentMethod: 'COD' });
+
+    const Order = require('../Models/Order');
+    const order = await Order.findById(placed.body.data.id);
+    order.items.forEach((item) => {
+      item.status = 'DELIVERED';
+    });
+    await order.save();
+
+    const fresh = await Order.findById(order._id).lean();
+    expect(fresh.paymentStatus).toBe('PAID');
+  });
+});
+
+describe('buyer order canReturn', () => {
+  async function deliveredOrderFor(productOverrides) {
+    const { token, address } = await buyerWithAddress();
+    const { token: adminToken } = await createAdmin();
+    const product = await createProduct({ stock: 5, price: 300, ...productOverrides });
+    await addToCart(token, product._id.toString(), 1);
+    const placed = await request(app)
+      .post('/user/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ addressId: address._id.toString(), paymentMethod: 'COD' });
+    const orderId = placed.body.data.id;
+    for (const status of ['PROCESSING', 'SHIPPED', 'DELIVERED']) {
+      await request(app)
+        .patch(`/admin/orders/${orderId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status });
+    }
+    const res = await request(app).get(`/user/orders/${orderId}`).set('Authorization', `Bearer ${token}`);
+    return res.body.data;
+  }
+
+  it('is true for a delivered order with a returnable product', async () => {
+    const order = await deliveredOrderFor({ isReturnable: true });
+    expect(order.canReturn).toBe(true);
+  });
+
+  it('is false when the product was not returnable when bought', async () => {
+    const order = await deliveredOrderFor({ isReturnable: false });
+    expect(order.canReturn).toBe(false);
+  });
+});

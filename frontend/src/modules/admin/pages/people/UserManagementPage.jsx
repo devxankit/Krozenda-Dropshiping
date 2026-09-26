@@ -134,7 +134,7 @@ export function UserManagementPage() {
             type="button"
             title="Edit Staff"
             onClick={() => openEdit(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-brand-50 hover:text-brand-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
           >
             <Icon name="edit" className="h-4 w-4" />
           </button>
@@ -142,7 +142,7 @@ export function UserManagementPage() {
             type="button"
             title="Change Password"
             onClick={() => setPasswordTarget(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-amber-50 hover:text-amber-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-warning-50 hover:text-warning-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
           >
             <Icon name="lock" className="h-4 w-4" />
           </button>
@@ -150,7 +150,7 @@ export function UserManagementPage() {
             type="button"
             title="Change Role"
             onClick={() => setRoleTarget(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-purple-50 hover:text-purple-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-accent-50 hover:text-accent-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
           >
             <Icon name="roles" className="h-4 w-4" />
           </button>
@@ -158,7 +158,7 @@ export function UserManagementPage() {
             type="button"
             title="Delete Staff"
             onClick={() => setDeleteTarget(row)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-danger-50 hover:text-danger-600 hover:scale-105 active:scale-95 focus-visible:outline-none"
           >
             <Icon name="delete" className="h-4 w-4" />
           </button>
@@ -187,7 +187,7 @@ export function UserManagementPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Total Staff
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
               <Icon name="users" className="h-4 w-4" />
             </div>
           </div>
@@ -204,14 +204,14 @@ export function UserManagementPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Active Now
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success-50 text-success-600 ring-1 ring-success-100">
               <Icon name="check" className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">{activeCount}</span>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-success-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-success-500 animate-pulse" />
               Live
             </span>
           </div>
@@ -224,7 +224,7 @@ export function UserManagementPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Administrators
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600 ring-1 ring-purple-100">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-50 text-accent-600 ring-1 ring-accent-100">
               <Icon name="roles" className="h-4 w-4" />
             </div>
           </div>
@@ -241,7 +241,7 @@ export function UserManagementPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Suspended / Inactive
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-100">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-50 text-warning-600 ring-1 ring-warning-100">
               <Icon name="warning" className="h-4 w-4" />
             </div>
           </div>

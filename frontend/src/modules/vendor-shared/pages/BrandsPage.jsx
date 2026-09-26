@@ -101,7 +101,7 @@ export function BrandsPage() {
               <img src={item.logo} alt={item.name} className="max-h-full max-w-full object-contain" />
             </div>
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-sm ring-1 ring-amber-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-500/10 to-warning-500/10 text-warning-700 font-bold text-sm ring-1 ring-warning-500/20">
               {item.name ? item.name.slice(0, 2).toUpperCase() : 'BR'}
             </div>
           )}
@@ -161,7 +161,7 @@ export function BrandsPage() {
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Brands</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
               <Icon name="brands" className="h-5 w-5" />
             </span>
           </div>
@@ -171,10 +171,10 @@ export function BrandsPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Approved</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
               <Icon name="check" className="h-5 w-5" />
             </span>
           </div>
@@ -184,10 +184,10 @@ export function BrandsPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-warning-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Your Pending</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
               <Icon name="pending" className="h-5 w-5" />
             </span>
           </div>
@@ -297,7 +297,7 @@ export function BrandsPage() {
                 {item.logo ? (
                   <img src={item.logo} alt={item.name} className="max-h-full max-w-full object-contain filter drop-shadow-xs transition-transform duration-300 group-hover:scale-105" />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-xl ring-1 ring-amber-500/20">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-warning-500/10 to-warning-500/10 text-warning-700 font-bold text-xl ring-1 ring-warning-500/20">
                     {item.name ? item.name.slice(0, 2).toUpperCase() : 'BR'}
                   </div>
                 )}

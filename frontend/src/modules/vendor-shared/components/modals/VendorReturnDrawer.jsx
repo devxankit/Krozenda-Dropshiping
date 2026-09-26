@@ -108,7 +108,16 @@ export function VendorReturnDrawer({ request, isOpen, onClose, controller }) {
         )}
 
         {isDecided ? (
-          <InlineAlert tone={request.status === 'APPROVED' ? 'success' : 'danger'} title={`Admin ${request.status.toLowerCase()} this request`}>
+          <InlineAlert
+            tone={request.status === 'REJECTED' ? 'danger' : request.status === 'ACCEPTED' ? 'info' : 'success'}
+            title={
+              request.status === 'ACCEPTED'
+                ? 'Admin approved this return — the item is on its way back to you'
+                : request.status === 'APPROVED'
+                  ? `Return completed (${request.requestType === 'REFUND' ? 'buyer refunded' : 'replacement order created'})`
+                  : 'Admin rejected this request'
+            }
+          >
             {request.adminNote || 'No note was left.'}
           </InlineAlert>
         ) : (

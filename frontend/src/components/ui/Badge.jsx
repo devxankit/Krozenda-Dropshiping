@@ -1,10 +1,10 @@
 const TONE_CLASSES = Object.freeze({
-  neutral: 'bg-surface-muted text-slate-700',
-  brand: 'bg-brand-50 text-brand-700',
-  accent: 'bg-accent-50 text-accent-700',
-  success: 'bg-success-50 text-success-700',
-  warning: 'bg-warning-50 text-warning-700',
-  danger: 'bg-danger-50 text-danger-700',
+  neutral: 'bg-surface-muted text-slate-700 ring-slate-500/15',
+  brand: 'bg-brand-50 text-brand-700 ring-brand-600/15',
+  accent: 'bg-accent-50 text-accent-700 ring-accent-600/15',
+  success: 'bg-success-50 text-success-700 ring-success-700/15',
+  warning: 'bg-warning-50 text-warning-700 ring-warning-700/20',
+  danger: 'bg-danger-50 text-danger-700 ring-danger-700/15',
 })
 
 // The dot colour is a step darker than the wash so it stays visible against
@@ -26,7 +26,7 @@ const SIZE_CLASSES = Object.freeze({
 export function Badge({ tone = 'neutral', size = 'md', dot = false, children, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium ${SIZE_CLASSES[size]} ${TONE_CLASSES[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium ring-1 ring-inset ${SIZE_CLASSES[size]} ${TONE_CLASSES[tone]} ${className}`}
     >
       {dot && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_CLASSES[tone]}`} />}
       {children}

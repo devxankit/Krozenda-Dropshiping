@@ -130,6 +130,11 @@ const productSchema = new mongoose.Schema(
     // Percent. The GST slabs are 0/5/12/18/28 — enforced rather than free,
     // because an invented rate produces an invoice that is wrong by law.
     gstRate: { type: Number, default: null, min: 0, max: 28 },
+    // Whether the listed price already contains GST. True: ₹118 at 18% is
+    // ₹100 + ₹18 tax. False: the buyer pays the listed price PLUS GST at
+    // checkout. Every product listed before this existed was priced
+    // inclusive, so that is the default.
+    gstInclusive: { type: Boolean, default: true },
 
     // --- B2B ---------------------------------------------------------------
     // Minimum order quantity. 1 means no minimum, which is every existing

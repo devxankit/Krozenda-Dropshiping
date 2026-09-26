@@ -127,6 +127,7 @@ function serializeProduct(p) {
 
     hsnCode: p.hsnCode || '',
     gstRate: p.gstRate ?? null,
+    gstInclusive: p.gstInclusive !== false,
     moq: p.moq ?? 1,
     priceTiers: (p.priceTiers || []).map((t) => ({ minQty: t.minQty, price: t.price })),
     variants: (p.variants || []).map((v) => ({
@@ -242,15 +243,16 @@ async function getProduct(req, res) {
 // type a SKU into search, except the code is unambiguous and requires no
 // typing at all.
 async function getProductByBarcode(req, res) {
-  const { code } = req.params;
+  const code = String(req.params.code || '').trim();
 
-  if (!isValidEan13(code)) {
+  // The label's barcode carries the SKU; the QR code and older labels carry
+  // the 13-digit EAN. Either one opens the product.
+  if (!code || code.length > 64) {
     return res.status(400).json({ success: false, message: 'Not a valid barcode' });
   }
 
-  const product = await Product.findOne({ barcode: code })
-    .populate('category', 'name')
-    .populate('brand', 'name');
+  const query = (filter) => Product.findOne(filter).populate('category', 'name').populate('brand', 'name');
+  const product = (isValidEan13(code) && (await query({ barcode: code }))) || (await query({ sku: code }));
 
   if (!product) {
     return res.status(404).json({ success: false, message: 'No product carries this barcode' });
@@ -272,16 +274,20 @@ async function getProductBarcodeImage(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 
-  const product = await Product.findById(id).select('barcode').lean();
+  const product = await Product.findById(id)
+    .select('name sku barcode price salePrice mrp brand category')
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .lean();
   if (!product || !product.barcode) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  const png = await renderBarcodePng(product.barcode);
-  // The barcode never changes once assigned (see Models/Product.js), so this
-  // response can be cached hard — a browser or CDN never needs to re-fetch it.
+  // Encodes the SKU (see utils/barcode.renderBarcodePng), which can be
+  // edited — so it is never cached.
+  const png = await renderBarcodePng(product);
   res.set('Content-Type', 'image/png');
-  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.set('Cache-Control', 'no-cache');
   res.send(png);
 }
 
@@ -344,6 +350,7 @@ async function createProduct(req, res) {
     isReturnable,
     hsnCode,
     gstRate,
+    gstInclusive,
     moq,
   } = req.body;
 
@@ -451,6 +458,8 @@ async function createProduct(req, res) {
       : null,
     hsnCode: String(hsnCode || '').trim(),
     gstRate: toNumber(gstRate),
+    // Absent means inclusive — how every product was priced before this.
+    gstInclusive: gstInclusive === undefined ? true : gstInclusive === true || gstInclusive === 'true',
     moq: Math.max(1, Math.round(toNumber(moq, 1))),
     priceTiers: (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
     variants,
@@ -503,6 +512,7 @@ async function updateProduct(req, res) {
     removeImages,
     hsnCode,
     gstRate,
+    gstInclusive,
     moq,
   } = req.body;
 
@@ -601,6 +611,7 @@ async function updateProduct(req, res) {
   }
   if (hsnCode !== undefined) product.hsnCode = String(hsnCode || '').trim();
   if (gstRate !== undefined) product.gstRate = toNumber(gstRate);
+  if (gstInclusive !== undefined) product.gstInclusive = gstInclusive === true || gstInclusive === 'true';
   if (moq !== undefined) product.moq = Math.max(1, Math.round(toNumber(moq, product.moq)));
   if (priceTiers !== undefined) {
     product.priceTiers = (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) }));
@@ -1127,6 +1138,7 @@ function serializePublicProduct(p) {
     // GST is inclusive in the listed price here - see utils/pricing.
     hsnCode: p.hsnCode || '',
     gstRate: p.gstRate ?? null,
+    gstInclusive: p.gstInclusive !== false,
 
     // B2B. moq of 1 is "no minimum", which is every product that has not set
     // one, so a client can render this unconditionally.

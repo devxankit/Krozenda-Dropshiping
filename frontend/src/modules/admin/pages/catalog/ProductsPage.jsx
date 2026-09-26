@@ -41,12 +41,12 @@ function formatDate(value) {
 function PreviewBadge({ floating = false }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ${
+      className={`inline-flex items-center gap-1 rounded-full border border-warning-300 bg-warning-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning-800 ${
         floating ? 'shadow-xs backdrop-blur-md' : ''
       }`}
       title="Imported from CSV — Draft, hidden from buyers until approved"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      <span className="h-1.5 w-1.5 rounded-full bg-warning-500" />
       Preview · Draft
     </span>
   )
@@ -58,7 +58,7 @@ function ApproveButton({ onClick, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-lg bg-success-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-success-700 disabled:opacity-50"
       title="Approve — make this imported product live"
     >
       <Icon name="check" className="h-3 w-3" />
@@ -271,7 +271,7 @@ export function ProductsPage() {
             </span>
           )}
           {Boolean(item.discountPercent) && (
-            <span className="text-2xs font-bold text-emerald-600">
+            <span className="text-2xs font-bold text-success-600">
               {item.discountPercent}% OFF
             </span>
           )}
@@ -285,20 +285,20 @@ export function ProductsPage() {
       align: 'right',
       render: (item) =>
         item.stock <= 0 ? (
-          <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-2xs font-bold text-rose-700">
+          <span className="inline-flex items-center rounded-md bg-danger-50 px-2 py-0.5 text-2xs font-bold text-danger-700">
             Out of Stock
           </span>
         ) : (
           <div className="flex flex-col items-end">
             <span
               className={`tabular font-bold text-sm ${
-                item.stock < 10 ? 'text-amber-600' : 'text-slate-900'
+                item.stock < 10 ? 'text-warning-600' : 'text-slate-900'
               }`}
             >
               {item.stock.toLocaleString('en-IN')} units
             </span>
             {item.stock < 10 && (
-              <span className="text-[10px] font-semibold text-amber-600">Low inventory</span>
+              <span className="text-[10px] font-semibold text-warning-600">Low inventory</span>
             )}
           </div>
         ),
@@ -338,7 +338,7 @@ export function ProductsPage() {
           permission={MANAGE}
           fallback={
             item.isFlashsale ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-2xs font-bold text-amber-600 ring-1 ring-amber-500/20">
+              <span className="inline-flex items-center gap-1 rounded-md bg-warning-500/10 px-2 py-0.5 text-2xs font-bold text-warning-600 ring-1 ring-warning-500/20">
                 🔥 Flash Deal
               </span>
             ) : (
@@ -356,7 +356,7 @@ export function ProductsPage() {
               }
             />
             {item.isFlashsale ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-2xs font-bold text-amber-700 ring-1 ring-amber-300">
+              <span className="inline-flex items-center gap-1 rounded-md bg-warning-50 px-1.5 py-0.5 text-2xs font-bold text-warning-700 ring-1 ring-warning-300">
                 🔥 Live
               </span>
             ) : (
@@ -375,7 +375,7 @@ export function ProductsPage() {
           permission={MANAGE}
           fallback={
             item.isTrending ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-2 py-0.5 text-2xs font-bold text-indigo-600 ring-1 ring-indigo-500/20">
+              <span className="inline-flex items-center gap-1 rounded-md bg-brand-500/10 px-2 py-0.5 text-2xs font-bold text-brand-600 ring-1 ring-brand-500/20">
                 📈 Trending
               </span>
             ) : (
@@ -393,7 +393,7 @@ export function ProductsPage() {
               }
             />
             {item.isTrending ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-2xs font-bold text-indigo-700 ring-1 ring-indigo-300">
+              <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-2xs font-bold text-brand-700 ring-1 ring-brand-300">
                 📈 Live
               </span>
             ) : (
@@ -527,23 +527,23 @@ export function ProductsPage() {
           </div>
 
           {/* Active in Store */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-success-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active Live</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
                 <Icon name="check" className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{activeCount}</span>
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
                 {activeRatio}% live
               </span>
             </div>
             <div className="mt-3">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  className="h-full rounded-full bg-success-500 transition-all duration-500"
                   style={{ width: `${activeRatio}%` }}
                 />
               </div>
@@ -551,75 +551,75 @@ export function ProductsPage() {
           </div>
 
           {/* Flash Sale Deals */}
-          <div className="group relative overflow-hidden rounded-2xl border border-amber-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-amber-300">
+          <div className="group relative overflow-hidden rounded-2xl border border-warning-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-warning-300">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold uppercase tracking-wider text-amber-700">Flash Deals</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 transition-transform group-hover:scale-105 text-sm">
+              <span className="text-2xs font-bold uppercase tracking-wider text-warning-700">Flash Deals</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/20 transition-transform group-hover:scale-105 text-sm">
                 🔥
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{flashSaleCount}</span>
-              <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-warning-700 bg-warning-50 px-2 py-0.5 rounded-full">
                 {flashSaleCount > 0 ? 'Active' : '0 Live'}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${flashSaleCount > 0 ? 'bg-amber-500' : 'bg-slate-300'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${flashSaleCount > 0 ? 'bg-warning-500' : 'bg-slate-300'}`} />
               <span>Urgent promotion items</span>
             </div>
           </div>
 
           {/* Trending Picks */}
-          <div className="group relative overflow-hidden rounded-2xl border border-indigo-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-indigo-300">
+          <div className="group relative overflow-hidden rounded-2xl border border-brand-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-brand-300">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold uppercase tracking-wider text-indigo-700">Trending Picks</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform group-hover:scale-105 text-sm">
+              <span className="text-2xs font-bold uppercase tracking-wider text-brand-700">Trending Picks</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/20 transition-transform group-hover:scale-105 text-sm">
                 📈
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{trendingCount}</span>
-              <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full">
                 {trendingCount > 0 ? 'Hot Picks' : '0 Set'}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${trendingCount > 0 ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${trendingCount > 0 ? 'bg-brand-500' : 'bg-slate-300'}`} />
               <span>High reseller demand</span>
             </div>
           </div>
 
           {/* Out of Stock */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-rose-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-danger-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Out of Stock</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger-50 text-danger-600 ring-1 ring-danger-500/10 transition-transform group-hover:scale-105">
                 <Icon name="inventory" className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{outOfStockCount}</span>
-              <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-danger-700 bg-danger-50 px-2 py-0.5 rounded-full">
                 {outOfStockCount > 0 ? 'Restock' : 'All Stocked'}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${outOfStockCount > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${outOfStockCount > 0 ? 'bg-danger-500' : 'bg-success-500'}`} />
               <span>{outOfStockCount > 0 ? 'Zero inventory' : 'Inventory healthy'}</span>
             </div>
           </div>
         </div>
 
         {previewCount > 0 && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-warning-200 bg-warning-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2.5">
-              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-warning-600" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">
+                <p className="text-sm font-semibold text-warning-900">
                   {previewCount} imported product{previewCount === 1 ? '' : 's'} waiting for approval
                 </p>
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-warning-800">
                   They are Drafts and hidden from buyers. View, edit or delete any that are wrong, then approve to make
                   them live.
                 </p>
@@ -630,7 +630,7 @@ export function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => setStatusFilter('preview')}
-                  className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                  className="rounded-xl border border-warning-300 bg-white px-3 py-2 text-xs font-semibold text-warning-800 hover:bg-warning-100"
                 >
                   Review previews
                 </button>
@@ -640,7 +640,7 @@ export function ProductsPage() {
                   type="button"
                   onClick={() => setApproveAllOpen(true)}
                   disabled={approvePreviews.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-success-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-success-700 disabled:opacity-50"
                 >
                   <Icon name="check" className="h-3.5 w-3.5" />
                   Approve all {previewCount}
@@ -823,7 +823,7 @@ export function ProductsPage() {
                         }}
                       />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
                         {item.name ? item.name.slice(0, 2).toUpperCase() : 'PR'}
                       </div>
                     )}
@@ -831,24 +831,24 @@ export function ProductsPage() {
                     {/* Top Floating Badges */}
                     <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1 max-w-[70%] z-10 pointer-events-none">
                       {item.isFlashsale && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           <span>🔥</span>
                           <span>Flash</span>
                         </span>
                       )}
                       {item.isTrending && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           <span>📈</span>
                           <span>Trending</span>
                         </span>
                       )}
                       {discountPct > 0 && (
-                        <span className="inline-flex items-center rounded-full bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center rounded-full bg-success-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           {discountPct}% OFF
                         </span>
                       )}
                       {item.stock <= 0 && (
-                        <span className="inline-flex items-center rounded-full bg-rose-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center rounded-full bg-danger-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           Out of Stock
                         </span>
                       )}
@@ -862,13 +862,13 @@ export function ProductsPage() {
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold backdrop-blur-md shadow-xs border ${
                           item.isActive
-                            ? 'bg-white/95 border-emerald-200 text-emerald-700'
+                            ? 'bg-white/95 border-success-200 text-success-700'
                             : 'bg-white/95 border-slate-200 text-slate-500'
                         }`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
-                            item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                            item.isActive ? 'bg-success-500 animate-pulse' : 'bg-slate-400'
                           }`}
                         />
                         {item.isActive ? 'Active' : 'Hidden'}
@@ -908,7 +908,7 @@ export function ProductsPage() {
                         </span>
                       )}
                       {discountPct > 0 && (
-                        <span className="ml-auto text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md">
+                        <span className="ml-auto text-[10px] font-extrabold text-success-700 bg-success-50 border border-success-200/70 px-1.5 py-0.5 rounded-md">
                           Save {formatRupees(item.price - item.salePrice)}
                         </span>
                       )}
@@ -920,10 +920,10 @@ export function ProductsPage() {
                         <span
                           className={`inline-block h-1.5 w-1.5 rounded-full ${
                             item.stock > 10
-                              ? 'bg-emerald-500'
+                              ? 'bg-success-500'
                               : item.stock > 0
-                                ? 'bg-amber-500'
-                                : 'bg-rose-500'
+                                ? 'bg-warning-500'
+                                : 'bg-danger-500'
                           }`}
                         />
                         <span className="text-slate-500 font-medium">Stock:</span>
@@ -932,8 +932,8 @@ export function ProductsPage() {
                             item.stock > 10
                               ? 'text-slate-800'
                               : item.stock > 0
-                                ? 'text-amber-600'
-                                : 'text-rose-600'
+                                ? 'text-warning-600'
+                                : 'text-danger-600'
                           }`}
                         >
                           {item.stock > 0 ? item.stock : 'Out of Stock'}
@@ -961,8 +961,8 @@ export function ProductsPage() {
                           }}
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
                             item.isFlashsale
-                              ? 'bg-amber-500 text-white shadow-xs shadow-amber-500/20 ring-1 ring-amber-400'
-                              : 'bg-slate-100/90 text-slate-500 hover:text-amber-700 hover:bg-amber-50 border border-slate-200/60'
+                              ? 'bg-warning-500 text-white shadow-xs shadow-warning-500/20 ring-1 ring-warning-400'
+                              : 'bg-slate-100/90 text-slate-500 hover:text-warning-700 hover:bg-warning-50 border border-slate-200/60'
                           }`}
                           title={item.isFlashsale ? 'Turn off Flash Sale' : 'Turn on Flash Sale'}
                         >
@@ -979,8 +979,8 @@ export function ProductsPage() {
                           }}
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
                             item.isTrending
-                              ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-600/20 ring-1 ring-indigo-500'
-                              : 'bg-slate-100/90 text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200/60'
+                              ? 'bg-brand-600 text-white shadow-xs shadow-brand-600/20 ring-1 ring-brand-500'
+                              : 'bg-slate-100/90 text-slate-500 hover:text-brand-700 hover:bg-brand-50 border border-slate-200/60'
                           }`}
                           title={item.isTrending ? 'Turn off Trending' : 'Turn on Trending'}
                         >
@@ -1010,7 +1010,7 @@ export function ProductsPage() {
                       />
                       <span
                         className={`text-xs font-bold tracking-tight ${
-                          item.isActive ? 'text-emerald-700' : 'text-slate-400'
+                          item.isActive ? 'text-success-700' : 'text-slate-400'
                         }`}
                       >
                         {item.isActive ? 'Live' : 'Hidden'}

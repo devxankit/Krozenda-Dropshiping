@@ -91,6 +91,48 @@ export function ShippingFields({ value, onChange }) {
   )
 }
 
+const GST_TYPE_OPTIONS = [
+  { value: 'inclusive', label: 'Inclusive — price already includes GST' },
+  { value: 'exclusive', label: 'Exclusive — GST added on top at checkout' },
+]
+
+// Whether the price entered already contains GST. Shared by the admin product
+// form and both seller product modals, with a one-line preview of what the
+// buyer will actually pay so the choice is never abstract.
+export function GstTypeField({ id = 'product-gst-type', inclusive, onChange, price, gstRate }) {
+  const rate = gstRate === '' || gstRate === null || gstRate === undefined ? null : Number(gstRate)
+  const amount = Number(price) || 0
+  const fmt = (n) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+
+  let preview = null
+  if (amount > 0 && rate === null) {
+    preview = 'No GST rate chosen — the platform default rate set by admin will apply.'
+  } else if (amount > 0 && rate === 0) {
+    preview = `Buyer pays ${fmt(amount)} (no GST).`
+  } else if (amount > 0) {
+    if (inclusive) {
+      const taxable = Math.round((amount / (1 + rate / 100)) * 100) / 100
+      preview = `Buyer pays ${fmt(amount)} — includes ${fmt(Math.round((amount - taxable) * 100) / 100)} GST (${rate}%).`
+    } else {
+      const tax = Math.round(amount * rate) / 100
+      preview = `Buyer pays ${fmt(Math.round((amount + tax) * 100) / 100)} — ${fmt(amount)} + ${fmt(tax)} GST (${rate}%).`
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Select
+        id={id}
+        label="GST Type"
+        options={GST_TYPE_OPTIONS}
+        value={inclusive === false ? 'exclusive' : 'inclusive'}
+        onChange={(e) => onChange(e.target.value !== 'exclusive')}
+      />
+      {preview && <p className="text-2xs font-medium text-ink-muted">{preview}</p>}
+    </div>
+  )
+}
+
 export function TaxFields({ value, onChange }) {
   const set = (key) => (e) => onChange({ ...value, [key]: e.target.value })
 

@@ -1,17 +1,20 @@
 import { Icon } from './Icon'
 
 const VARIANT_CLASSES = Object.freeze({
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500',
+  primary:
+    'bg-brand-600 text-white shadow-xs hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-500',
   secondary:
-    'bg-surface text-slate-900 border border-border hover:bg-surface-muted focus-visible:ring-brand-500',
+    'bg-surface text-slate-900 border border-border shadow-xs hover:border-border-strong hover:bg-surface-muted focus-visible:ring-brand-500',
   ghost: 'bg-transparent text-brand-700 hover:bg-brand-50 focus-visible:ring-brand-500',
-  danger: 'bg-danger-500 text-white hover:bg-danger-700 focus-visible:ring-danger-500',
+  danger: 'bg-danger-500 text-white shadow-xs hover:bg-danger-700 focus-visible:ring-danger-500',
   // Added for the admin panel: a destructive action that is not the primary
   // action on the screen still has to read as destructive without shouting.
   dangerOutline:
-    'bg-surface text-danger-700 border border-danger-200 hover:bg-danger-50 focus-visible:ring-danger-500',
-  subtle: 'bg-surface-muted text-ink-muted hover:bg-surface-sunken focus-visible:ring-brand-500',
-  quiet: 'bg-transparent text-ink-subtle hover:bg-surface-muted focus-visible:ring-brand-500',
+    'bg-surface text-danger-700 border border-danger-200 shadow-xs hover:border-danger-500/40 hover:bg-danger-50 focus-visible:ring-danger-500',
+  subtle:
+    'bg-surface-muted text-ink-muted hover:bg-surface-sunken hover:text-slate-900 focus-visible:ring-brand-500',
+  quiet:
+    'bg-transparent text-ink-subtle hover:bg-surface-muted hover:text-slate-900 focus-visible:ring-brand-500',
 })
 
 // `control` (36px) is the admin density. sm/md/lg keep their existing heights
@@ -46,7 +49,7 @@ export function Button({
 }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${iconOnly ? ICON_ONLY_CLASSES[size] : SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 select-none rounded-md font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${iconOnly ? ICON_ONLY_CLASSES[size] : SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
       disabled={disabled || isLoading}
       aria-busy={isLoading || undefined}
       {...props}

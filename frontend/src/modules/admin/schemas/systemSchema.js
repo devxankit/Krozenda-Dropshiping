@@ -100,6 +100,8 @@ export const generalSettingsSchema = z.object({
     gstRate: z.number().optional().default(18),
     gstType: z.enum(['percentage', 'flat']).optional().default('percentage'),
     gstOnCommissionRate: z.number().optional().default(18),
+    buyerPlatformFeeType: z.enum(['percentage', 'flat']).optional().default('percentage'),
+    buyerPlatformFeeValue: z.number().optional().default(0),
     commissionBase: z.string().optional().default('LINE_NET_OF_SELLER_FUNDED_DISCOUNT'),
   }),
   toggles: z.array(

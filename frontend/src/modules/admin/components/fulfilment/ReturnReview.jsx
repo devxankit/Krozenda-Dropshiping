@@ -8,9 +8,9 @@ export function EvidenceGrid({ evidence = [] }) {
   if (evidence.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-danger-200 bg-danger-50 px-4 py-6 text-center">
-        <p className="text-xs font-semibold text-danger-700">No evidence attached</p>
+        <p className="text-xs font-semibold text-danger-700">No photos attached</p>
         <p className="mt-1 text-2xs text-danger-700">
-          This request cannot be approved until the buyer uploads photographs.
+          The buyer did not upload any photographs. Review the reason carefully before approving.
         </p>
       </div>
     )
@@ -20,9 +20,15 @@ export function EvidenceGrid({ evidence = [] }) {
     <div className="grid gap-3 sm:grid-cols-3">
       {evidence.map((item) => (
         <figure key={item.id} className="overflow-hidden rounded-lg border border-border">
-          <div className="flex h-32 items-center justify-center bg-surface-sunken text-ink-faint">
-            <Icon name="file" className="h-6 w-6" />
-          </div>
+          {item.url ? (
+            <a href={item.url} target="_blank" rel="noreferrer" className="block h-32 bg-surface-sunken">
+              <img src={item.url} alt={item.caption} className="h-full w-full object-cover" loading="lazy" />
+            </a>
+          ) : (
+            <div className="flex h-32 items-center justify-center bg-surface-sunken text-ink-faint">
+              <Icon name="file" className="h-6 w-6" />
+            </div>
+          )}
           <figcaption className="border-t border-border px-3 py-2">
             <p className="truncate text-2xs font-medium text-slate-900">{item.caption}</p>
             <p className="tabular text-2xs text-ink-faint">{item.uploadedAt}</p>

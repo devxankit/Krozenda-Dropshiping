@@ -47,12 +47,18 @@ export function Pagination({
   return (
     <div className={`flex flex-wrap items-center justify-between gap-4 text-sm ${className}`}>
       <p className="text-xs text-ink-subtle">
-        {totalItems !== undefined && from !== null ? (
+        {totalItems === 0 ? (
           <>
-            Showing <span className="tabular font-semibold text-slate-900">{from}–{to}</span> of{' '}
+            <span className="tabular font-semibold text-slate-900">0</span> {itemLabel}
+          </>
+        ) : totalItems !== undefined && from !== null ? (
+          <>
+            Showing{' '}
             <span className="tabular font-semibold text-slate-900">
-              {totalItems.toLocaleString('en-IN')}
+              {from}–{to}
             </span>{' '}
+            of{' '}
+            <span className="tabular font-semibold text-slate-900">{totalItems.toLocaleString('en-IN')}</span>{' '}
             {itemLabel}
           </>
         ) : (
@@ -63,14 +69,14 @@ export function Pagination({
         )}
       </p>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         {onRowsPerPageChange && (
           <label className="flex items-center gap-2 text-xs text-ink-subtle">
-            Rows
+            <span className="hidden sm:inline">Rows</span>
             <select
               value={rowsPerPage}
               onChange={(event) => onRowsPerPageChange(Number(event.target.value))}
-              className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="h-8 cursor-pointer rounded-md border border-border bg-surface px-2 text-xs text-slate-900 shadow-xs hover:border-border-strong focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
             >
               {ROWS_PER_PAGE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -87,39 +93,45 @@ export function Pagination({
             disabled={!canPrev}
             onClick={() => onPageChange(page - 1)}
             aria-label="Previous page"
-            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40`}
+            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border bg-surface text-ink-muted shadow-xs transition-colors hover:border-border-strong hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-40`}
           >
             <Icon name="chevronLeft" className="h-4 w-4" />
           </button>
 
-          {pageItems(page, totalPages).map((item, index) =>
-            item === '…' ? (
-              <span key={`gap-${index}`} className="px-1 text-xs text-border-strong">
-                …
-              </span>
-            ) : (
-              <button
-                key={item}
-                type="button"
-                onClick={() => onPageChange(item)}
-                aria-current={item === page ? 'page' : undefined}
-                className={`tabular flex ${sizing.page} items-center justify-center rounded-md transition-colors ${
-                  item === page
-                    ? 'bg-brand-600 font-semibold text-white'
-                    : 'text-ink-muted hover:bg-surface-muted'
-                }`}
-              >
-                {item}
-              </button>
-            ),
-          )}
+          <span className="tabular px-2 text-xs text-ink-subtle sm:hidden">
+            {page} / {totalPages}
+          </span>
+
+          <span className="hidden sm:contents">
+            {pageItems(page, totalPages).map((item, index) =>
+              item === '…' ? (
+                <span key={`gap-${index}`} className="px-1 text-xs text-border-strong">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onPageChange(item)}
+                  aria-current={item === page ? 'page' : undefined}
+                  className={`tabular flex ${sizing.page} items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    item === page
+                      ? 'bg-brand-600 font-semibold text-white shadow-xs'
+                      : 'text-ink-muted hover:bg-surface-muted hover:text-slate-900'
+                  }`}
+                >
+                  {item}
+                </button>
+              ),
+            )}
+          </span>
 
           <button
             type="button"
             disabled={!canNext}
             onClick={() => onPageChange(page + 1)}
             aria-label="Next page"
-            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border text-ink-muted transition-colors hover:bg-surface-muted disabled:pointer-events-none disabled:opacity-40`}
+            className={`flex ${sizing.button} items-center justify-center rounded-md border border-border bg-surface text-ink-muted shadow-xs transition-colors hover:border-border-strong hover:bg-surface-muted hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-40`}
           >
             <Icon name="chevronRight" className="h-4 w-4" />
           </button>

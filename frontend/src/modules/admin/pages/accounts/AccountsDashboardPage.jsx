@@ -11,11 +11,11 @@ import { formatMoney } from '../../lib/format'
 
 const CARDS = [
   { key: 'totalRevenue', label: 'Total Revenue', icon: 'trendUp', tone: 'text-brand-600 bg-brand-50 ring-brand-500/10' },
-  { key: 'totalVendorCost', label: 'Vendor Cost', icon: 'sellers', tone: 'text-amber-600 bg-amber-50 ring-amber-500/10' },
+  { key: 'totalVendorCost', label: 'Vendor Cost', icon: 'sellers', tone: 'text-warning-600 bg-warning-50 ring-warning-500/10' },
   { key: 'totalGatewayFee', label: 'Gateway Fees', icon: 'settlements', tone: 'text-slate-600 bg-slate-100 ring-slate-500/10' },
-  { key: 'totalRefunds', label: 'Refunds', icon: 'returns', tone: 'text-rose-600 bg-rose-50 ring-rose-500/10' },
-  { key: 'netProfit', label: 'Net Profit', icon: 'money', tone: 'text-emerald-600 bg-emerald-50 ring-emerald-500/10' },
-  { key: 'pendingPayoutTotal', label: 'Pending Payouts', icon: 'ledger', tone: 'text-orange-600 bg-orange-50 ring-orange-500/10' },
+  { key: 'totalRefunds', label: 'Refunds', icon: 'returns', tone: 'text-danger-600 bg-danger-50 ring-danger-500/10' },
+  { key: 'netProfit', label: 'Net Profit', icon: 'money', tone: 'text-success-600 bg-success-50 ring-success-500/10' },
+  { key: 'pendingPayoutTotal', label: 'Pending Payouts', icon: 'ledger', tone: 'text-warning-600 bg-warning-50 ring-warning-500/10' },
 ]
 
 export function AccountsDashboardPage() {
@@ -99,7 +99,7 @@ export function AccountsDashboardPage() {
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Order Count</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10">
               <Icon name="orders" className="h-5 w-5" />
             </span>
           </div>

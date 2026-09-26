@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { GstTypeField } from '../../../../components/catalog/ProductAdvancedFields'
 import { Badge, Button, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { InlineAlert } from '../../../admin/components/feedback'
 import { toast } from '../../../admin/stores/toastStore'
@@ -27,6 +28,7 @@ function formFromProduct(product) {
     mrp: product.mrp != null ? String(product.mrp) : '',
     costPrice: product.costPrice != null ? String(product.costPrice) : '',
     gstRate: product.gstRate != null ? String(product.gstRate) : '',
+    gstInclusive: product.gstInclusive !== false,
     stock: product.stock != null ? String(product.stock) : '0',
     lowStockThreshold: product.lowStockThreshold != null ? String(product.lowStockThreshold) : '',
     weight: product.weight != null ? String(product.weight) : '',
@@ -128,6 +130,7 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
     if (formData.mrp) body.append('mrp', formData.mrp)
     if (formData.costPrice) body.append('costPrice', formData.costPrice)
     if (formData.gstRate) body.append('gstRate', formData.gstRate)
+    body.append('gstInclusive', formData.gstInclusive === false ? 'false' : 'true')
     body.append('stock', formData.stock || '0')
     if (formData.lowStockThreshold) body.append('lowStockThreshold', formData.lowStockThreshold)
     body.append('weight', formData.weight)
@@ -367,6 +370,13 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
               options={GST_RATE_OPTIONS}
               value={formData.gstRate}
               onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
+            />
+            <GstTypeField
+              id="vp-gst-type"
+              inclusive={formData.gstInclusive}
+              onChange={(value) => setFormData((prev) => ({ ...prev, gstInclusive: value }))}
+              price={formData.price}
+              gstRate={formData.gstRate}
             />
           </div>
         </div>

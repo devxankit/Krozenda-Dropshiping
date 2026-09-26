@@ -4,7 +4,10 @@
 
 export function Tabs({ items = [], activeId, onChange, className = '' }) {
   return (
-    <div role="tablist" className={`flex items-center gap-6 border-b border-border ${className}`}>
+    <div
+      role="tablist"
+      className={`no-scrollbar flex items-center gap-6 overflow-x-auto overflow-y-hidden border-b border-border ${className}`}
+    >
       {items.map((item) => {
         const isActive = item.id === activeId
         return (
@@ -14,7 +17,7 @@ export function Tabs({ items = [], activeId, onChange, className = '' }) {
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange?.(item.id)}
-            className={`-mb-px flex h-9 items-center gap-2 whitespace-nowrap border-b-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            className={`-mb-px flex h-10 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 ${
               isActive
                 ? 'border-brand-600 font-semibold text-slate-900'
                 : 'border-transparent font-medium text-ink-subtle hover:text-slate-700'
@@ -41,7 +44,9 @@ export function Tabs({ items = [], activeId, onChange, className = '' }) {
 // a different job, so a different shape.
 export function SegmentedControl({ items = [], activeId, onChange, className = '' }) {
   return (
-    <div className={`inline-flex gap-1 rounded-md bg-surface-sunken p-1 ${className}`}>
+    <div
+      className={`inline-flex max-w-full gap-1 overflow-x-auto rounded-md bg-surface-sunken p-1 no-scrollbar ${className}`}
+    >
       {items.map((item) => {
         const isActive = item.id === activeId
         return (
@@ -52,7 +57,7 @@ export function SegmentedControl({ items = [], activeId, onChange, className = '
             onClick={() => onChange?.(item.id)}
             className={`h-7 whitespace-nowrap rounded px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               isActive
-                ? 'bg-surface font-semibold text-slate-900 shadow-card'
+                ? 'bg-surface font-semibold text-slate-900 shadow-raised'
                 : 'font-medium text-ink-subtle hover:text-slate-700'
             }`}
           >

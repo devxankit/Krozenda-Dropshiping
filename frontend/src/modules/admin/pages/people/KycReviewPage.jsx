@@ -59,13 +59,13 @@ export function KycReviewPage() {
         actions={
           <PermissionGate permission={ADMIN_PERMISSIONS.KYC_REVIEW}>
             {application.status === 'approved' ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-300 px-3.5 py-1.5 text-xs font-bold text-emerald-800 shadow-2xs">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-success-50 border border-success-300 px-3.5 py-1.5 text-xs font-bold text-success-800 shadow-2xs">
+                <span className="inline-block h-2 w-2 rounded-full bg-success-500" />
                 Seller Approved
               </span>
             ) : application.status === 'rejected' ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 border border-rose-300 px-3.5 py-1.5 text-xs font-bold text-rose-800 shadow-2xs">
-                <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-danger-50 border border-danger-300 px-3.5 py-1.5 text-xs font-bold text-danger-800 shadow-2xs">
+                <span className="inline-block h-2 w-2 rounded-full bg-danger-500" />
                 Application Rejected
               </span>
             ) : (

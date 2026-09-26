@@ -114,7 +114,7 @@ export function CategoriesPage() {
               <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
               {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
             </div>
           )}
@@ -174,7 +174,7 @@ export function CategoriesPage() {
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Categories</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
               <Icon name="categories" className="h-5 w-5" />
             </span>
           </div>
@@ -184,10 +184,10 @@ export function CategoriesPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Approved</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
               <Icon name="check" className="h-5 w-5" />
             </span>
           </div>
@@ -197,10 +197,10 @@ export function CategoriesPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-warning-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Your Pending</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
               <Icon name="pending" className="h-5 w-5" />
             </span>
           </div>
@@ -310,7 +310,7 @@ export function CategoriesPage() {
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
                     {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
                   </div>
                 )}
@@ -331,10 +331,10 @@ export function CategoriesPage() {
                     {formatDate(item.createdAt)}
                   </span>
                   {item.mine && <span className="rounded-full bg-brand-50 px-1.5 py-0.5 font-semibold text-brand-700">Added by you</span>}
-                  {item.isFood && <span className="rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">Food · FSSAI</span>}
+                  {item.isFood && <span className="rounded-full bg-warning-50 px-1.5 py-0.5 font-semibold text-warning-700">Food · FSSAI</span>}
                 </div>
                 {item.mine && item.isFood && item.approvalStatus === 'PENDING' && (
-                  <p className="mt-1.5 text-2xs text-amber-700">Approved only after your FSSAI licence is approved (Store Profile).</p>
+                  <p className="mt-1.5 text-2xs text-warning-700">Approved only after your FSSAI licence is approved (Store Profile).</p>
                 )}
                 {item.mine && item.approvalStatus === 'REJECTED' && item.rejectionReason && (
                   <p className="mt-1.5 text-2xs text-danger-600">{item.rejectionReason}</p>

@@ -296,6 +296,16 @@ shipmentSchema.methods.isTerminal = function isTerminal() {
   return TERMINAL_STATUSES.includes(this.internalStatus);
 };
 
+// A reverse parcel scanned as delivered back to the seller: the returned item
+// is in hand, so its return request can be completed. Lazy require — the
+// return service itself loads this model.
+shipmentSchema.post('save', function markReturnReceived(doc) {
+  if (doc.shipmentType !== 'RETURN' || doc.internalStatus !== 'RETURN_DELIVERED') return;
+  require('../services/returnService')
+    .onReturnShipmentDelivered(doc._id)
+    .catch((err) => console.error('[Shipment] could not mark the return received', { shipmentId: String(doc._id), error: err.message }));
+});
+
 const Shipment = mongoose.model('Shipment', shipmentSchema);
 Shipment.SHIPMENT_TYPES = SHIPMENT_TYPES;
 Shipment.SHIPMENT_STATUSES = SHIPMENT_STATUSES;

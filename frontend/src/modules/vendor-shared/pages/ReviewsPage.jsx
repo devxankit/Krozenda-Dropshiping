@@ -6,7 +6,7 @@ import { useVendorReviewsController } from '../controllers/useVendorController'
 
 function Stars({ rating }) {
   return (
-    <span className="text-amber-500 text-xs">
+    <span className="text-warning-500 text-xs">
       {'★'.repeat(Math.round(rating))}
       <span className="text-slate-300">{'★'.repeat(5 - Math.round(rating))}</span>
     </span>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Input, Modal } from '../../../../components/ui'
+import { Button, Icon, Input, Modal } from '../../../../components/ui'
 
 // One dialog for every destructive action. `confirmPhrase` turns it into a
 // typed confirmation — reserved for actions that move money or delete records
@@ -32,7 +32,6 @@ function ConfirmDialogBody({
       isOpen
       onClose={onClose}
       title={title}
-      description={description}
       size="sm"
       footer={
         <>
@@ -51,7 +50,20 @@ function ConfirmDialogBody({
         </>
       }
     >
-      {children}
+      {description && (
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+              tone === 'danger' ? 'bg-danger-50 text-danger-500' : 'bg-brand-50 text-brand-600'
+            }`}
+          >
+            <Icon name={tone === 'danger' ? 'warning' : 'info'} className="h-[1.125rem] w-[1.125rem]" />
+          </span>
+          <div className="min-w-0 flex-1 pt-1.5 text-sm leading-relaxed text-ink-muted">{description}</div>
+        </div>
+      )}
+      {children && <div className={description ? 'mt-4' : undefined}>{children}</div>}
       {confirmPhrase && (
         <div className="mt-4">
           <Input
@@ -59,8 +71,7 @@ function ConfirmDialogBody({
             size="control"
             label={
               <>
-                Type <span className="font-semibold text-slate-900">{confirmPhrase}</span> to
-                confirm
+                Type <span className="font-semibold text-slate-900">{confirmPhrase}</span> to confirm
               </>
             }
             value={typed}

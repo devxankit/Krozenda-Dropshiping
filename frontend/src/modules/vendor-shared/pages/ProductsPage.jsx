@@ -29,12 +29,12 @@ const APPROVE_NOTE =
 function PreviewBadge({ floating = false }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ${
+      className={`inline-flex items-center gap-1 rounded-full border border-warning-300 bg-warning-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning-800 ${
         floating ? 'shadow-xs backdrop-blur-md' : ''
       }`}
       title="Imported from CSV — Draft, not submitted yet. Approve it to send it for review."
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      <span className="h-1.5 w-1.5 rounded-full bg-warning-500" />
       Preview · Draft
     </span>
   )
@@ -49,7 +49,7 @@ function ApproveButton({ onClick, disabled }) {
         onClick()
       }}
       disabled={disabled}
-      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-lg bg-success-600 px-2.5 py-1.5 text-2xs font-bold text-white shadow-xs hover:bg-success-700 disabled:opacity-50"
       title="Approve — submit this imported product"
     >
       <Icon name="check" className="h-3 w-3" />
@@ -66,7 +66,7 @@ function DeletePreviewButton({ onClick }) {
         e.stopPropagation()
         onClick()
       }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/50 hover:border-rose-200 transition-all shadow-2xs"
+      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-danger-600 hover:bg-danger-50 border border-slate-200/50 hover:border-danger-200 transition-all shadow-2xs"
       title="Delete this imported preview"
     >
       <Icon name="delete" className="h-3.5 w-3.5" />
@@ -272,10 +272,10 @@ export function VendorProductsPage() {
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-success-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active Live</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
                 <Icon name="check" className="h-4 w-4" />
               </span>
             </div>
@@ -284,32 +284,32 @@ export function VendorProductsPage() {
               <span className="text-xs font-medium text-slate-500">on storefront</span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
               <span>Approved and visible</span>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-amber-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-amber-300">
+          <div className="group relative overflow-hidden rounded-2xl border border-warning-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-warning-300">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-bold uppercase tracking-wider text-amber-700">Pending Approval</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 transition-transform group-hover:scale-105">
+              <span className="text-2xs font-bold uppercase tracking-wider text-warning-700">Pending Approval</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/20 transition-transform group-hover:scale-105">
                 <Icon name="pending" className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{tabCounts.pending ?? 0}</span>
-              <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Awaiting admin</span>
+              <span className="text-xs font-semibold text-warning-700 bg-warning-50 px-2 py-0.5 rounded-full">Awaiting admin</span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.pending > 0 ? 'bg-amber-500' : 'bg-slate-300'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.pending > 0 ? 'bg-warning-500' : 'bg-slate-300'}`} />
               <span>Not visible to buyers yet</span>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-rose-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-danger-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Rejected</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger-50 text-danger-600 ring-1 ring-danger-500/10 transition-transform group-hover:scale-105">
                 <Icon name="warning" className="h-4 w-4" />
               </span>
             </div>
@@ -318,40 +318,40 @@ export function VendorProductsPage() {
               <span className="text-xs font-medium text-slate-500">need changes</span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.rejected > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.rejected > 0 ? 'bg-danger-500' : 'bg-success-500'}`} />
               <span>{tabCounts.rejected > 0 ? 'Check rejection reasons' : 'Nothing rejected'}</span>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-rose-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:shadow-md hover:border-danger-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Out of Stock</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger-50 text-danger-600 ring-1 ring-danger-500/10 transition-transform group-hover:scale-105">
                 <Icon name="inventory" className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular">{tabCounts.out_of_stock ?? 0}</span>
-              <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-danger-700 bg-danger-50 px-2 py-0.5 rounded-full">
                 {tabCounts.out_of_stock > 0 ? 'Restock' : 'All Stocked'}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.out_of_stock > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${tabCounts.out_of_stock > 0 ? 'bg-danger-500' : 'bg-success-500'}`} />
               <span>{tabCounts.out_of_stock > 0 ? 'Zero inventory' : 'Inventory healthy'}</span>
             </div>
           </div>
         </div>
 
         {previewCount > 0 && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-warning-200 bg-warning-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2.5">
-              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <Icon name="pending" className="mt-0.5 h-4 w-4 shrink-0 text-warning-600" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">
+                <p className="text-sm font-semibold text-warning-900">
                   {previewCount} imported product{previewCount === 1 ? '' : 's'} waiting for your approval
                 </p>
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-warning-800">
                   They are Drafts and hidden from buyers. View, edit or delete any that are wrong, then approve to
                   submit them for platform review.
                 </p>
@@ -362,7 +362,7 @@ export function VendorProductsPage() {
                 <button
                   type="button"
                   onClick={() => list.changeTab('preview')}
-                  className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                  className="rounded-xl border border-warning-300 bg-white px-3 py-2 text-xs font-semibold text-warning-800 hover:bg-warning-100"
                 >
                   Review previews
                 </button>
@@ -371,7 +371,7 @@ export function VendorProductsPage() {
                 type="button"
                 onClick={() => setApproveAllOpen(true)}
                 disabled={approvePreviews.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-success-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-success-700 disabled:opacity-50"
               >
                 <Icon name="check" className="h-3.5 w-3.5" />
                 Approve all {previewCount}
@@ -468,8 +468,8 @@ export function VendorProductsPage() {
             <p className="text-xs text-slate-500">Loading…</p>
           </div>
         ) : list.error ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-rose-200 bg-white py-16 px-4 text-center shadow-xs">
-            <p className="text-sm font-semibold text-rose-700">Could not load products</p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-danger-200 bg-white py-16 px-4 text-center shadow-xs">
+            <p className="text-sm font-semibold text-danger-700">Could not load products</p>
             <button
               type="button"
               onClick={() => list.refetch()}
@@ -546,7 +546,7 @@ export function VendorProductsPage() {
                         }}
                       />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
                         {item.name ? item.name.slice(0, 2).toUpperCase() : 'PR'}
                       </div>
                     )}
@@ -554,24 +554,24 @@ export function VendorProductsPage() {
                     {/* Top Floating Badges */}
                     <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1 max-w-[70%] z-10 pointer-events-none">
                       {item.isFlashsale && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           <span>🔥</span>
                           <span>Flash</span>
                         </span>
                       )}
                       {item.isTrending && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           <span>📈</span>
                           <span>Trending</span>
                         </span>
                       )}
                       {discountPct > 0 && (
-                        <span className="inline-flex items-center rounded-full bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center rounded-full bg-success-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           {discountPct}% OFF
                         </span>
                       )}
                       {item.stock <= 0 && (
-                        <span className="inline-flex items-center rounded-full bg-rose-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                        <span className="inline-flex items-center rounded-full bg-danger-600/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
                           Out of Stock
                         </span>
                       )}
@@ -594,13 +594,13 @@ export function VendorProductsPage() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold backdrop-blur-md shadow-xs border ${
                             item.isActive
-                              ? 'bg-white/95 border-emerald-200 text-emerald-700'
+                              ? 'bg-white/95 border-success-200 text-success-700'
                               : 'bg-white/95 border-slate-200 text-slate-500'
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                              item.isActive ? 'bg-success-500 animate-pulse' : 'bg-slate-400'
                             }`}
                           />
                           {item.isActive ? 'Active' : 'Hidden'}
@@ -640,7 +640,7 @@ export function VendorProductsPage() {
                         </span>
                       )}
                       {discountPct > 0 && (
-                        <span className="ml-auto text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md">
+                        <span className="ml-auto text-[10px] font-extrabold text-success-700 bg-success-50 border border-success-200/70 px-1.5 py-0.5 rounded-md">
                           Save {formatRupees(item.price - item.salePrice)}
                         </span>
                       )}
@@ -652,10 +652,10 @@ export function VendorProductsPage() {
                         <span
                           className={`inline-block h-1.5 w-1.5 rounded-full ${
                             item.stock > 10
-                              ? 'bg-emerald-500'
+                              ? 'bg-success-500'
                               : item.stock > 0
-                                ? 'bg-amber-500'
-                                : 'bg-rose-500'
+                                ? 'bg-warning-500'
+                                : 'bg-danger-500'
                           }`}
                         />
                         <span className="text-slate-500 font-medium">Stock:</span>
@@ -664,8 +664,8 @@ export function VendorProductsPage() {
                             item.stock > 10
                               ? 'text-slate-800'
                               : item.stock > 0
-                                ? 'text-amber-600'
-                                : 'text-rose-600'
+                                ? 'text-warning-600'
+                                : 'text-danger-600'
                           }`}
                         >
                           {item.stock > 0 ? item.stock : 'Out of Stock'}
@@ -682,7 +682,7 @@ export function VendorProductsPage() {
                     </div>
 
                     {item.approvalStatus === 'REJECTED' && item.rejectionReason && (
-                      <p className="mt-2 text-2xs text-rose-600 bg-rose-50/80 border border-rose-200/60 p-1.5 rounded-lg">
+                      <p className="mt-2 text-2xs text-danger-600 bg-danger-50/80 border border-danger-200/60 p-1.5 rounded-lg">
                         {item.rejectionReason}
                       </p>
                     )}
@@ -693,12 +693,12 @@ export function VendorProductsPage() {
                     <div className="flex items-center gap-2" title="Storefront visibility">
                       <span
                         className={`inline-block h-2 w-2 rounded-full ${
-                          item.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
+                          item.isActive ? 'bg-success-500 animate-pulse' : 'bg-slate-300'
                         }`}
                       />
                       <span
                         className={`text-xs font-bold tracking-tight ${
-                          item.isActive ? 'text-emerald-700' : 'text-slate-400'
+                          item.isActive ? 'text-success-700' : 'text-slate-400'
                         }`}
                       >
                         {item.isActive ? 'Live' : 'Hidden'}

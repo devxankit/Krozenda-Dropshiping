@@ -93,17 +93,17 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
           {/* Title Input */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Title <span className="text-rose-500">*</span>
+              Title <span className="text-danger-500">*</span>
             </label>
             <input
               type="text"
               {...register('title', { required: 'Title is required' })}
               placeholder="e.g. About us, Terms of service, Refund policy"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
               autoFocus={!isEdit}
             />
             {errors.title && (
-              <p className="text-2xs text-rose-600 mt-1">{errors.title.message}</p>
+              <p className="text-2xs text-danger-600 mt-1">{errors.title.message}</p>
             )}
           </div>
 
@@ -208,7 +208,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
               rows={14}
               {...register('content')}
               placeholder="Write or paste your page content in Markdown format..."
-              className="w-full rounded-b-xl border border-slate-300 bg-white p-4 font-mono text-xs leading-relaxed text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs resize-y min-h-[260px]"
+              className="w-full rounded-b-xl border border-slate-300 bg-white p-4 font-mono text-xs leading-relaxed text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs resize-y min-h-[260px]"
             />
           </div>
         </div>
@@ -227,7 +227,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                     type="radio"
                     value="published"
                     {...register('status')}
-                    className="accent-blue-600 w-4 h-4 cursor-pointer"
+                    className="accent-brand-600 w-4 h-4 cursor-pointer"
                   />
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">
@@ -244,7 +244,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                     type="radio"
                     value="draft"
                     {...register('status')}
-                    className="accent-blue-600 w-4 h-4 cursor-pointer"
+                    className="accent-brand-600 w-4 h-4 cursor-pointer"
                   />
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">
@@ -267,13 +267,13 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                 <button
                   type="button"
                   onClick={() => setAutoSlug(!autoSlug)}
-                  className="text-[11px] text-blue-600 hover:underline font-semibold"
+                  className="text-[11px] text-brand-600 hover:underline font-semibold"
                 >
                   {autoSlug ? 'Auto-syncing' : 'Edit handle'}
                 </button>
               </div>
 
-              <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono shadow-2xs focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 focus-within:bg-white">
+              <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono shadow-2xs focus-within:ring-2 focus-within:ring-brand-600 focus-within:border-brand-600 focus-within:bg-white">
                 <span className="text-slate-400 select-none mr-1 shrink-0">/p/</span>
                 <input
                   type="text"
@@ -287,7 +287,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                 />
               </div>
               {errors.slug && (
-                <p className="text-2xs text-rose-600 mt-1">{errors.slug.message}</p>
+                <p className="text-2xs text-danger-600 mt-1">{errors.slug.message}</p>
               )}
 
               {isEdit && (
@@ -295,7 +295,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                   <button
                     type="button"
                     onClick={() => window.open(publicPath, '_blank')}
-                    className="inline-flex items-center space-x-1 text-xs font-semibold text-blue-600 hover:underline"
+                    className="inline-flex items-center space-x-1 text-xs font-semibold text-brand-600 hover:underline"
                   >
                     <span>View page on online store</span>
                     <HiArrowTopRightOnSquare className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
             <div className="text-xs text-slate-500 font-mono truncate">
               https://krozenda.com &gt; p &gt; {watchedSlug || 'page-slug'}
             </div>
-            <h4 className="text-sm font-semibold text-blue-700 truncate">
+            <h4 className="text-sm font-semibold text-brand-700 truncate">
               {watchedMetaTitle || watchedTitle || 'Page Title'}
             </h4>
             <p className="text-xs text-slate-600 line-clamp-2 leading-snug">
@@ -341,7 +341,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                 type="text"
                 {...register('metaTitle')}
                 placeholder={watchedTitle || 'Page title'}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs"
               />
             </div>
 
@@ -353,7 +353,7 @@ function CmsFormDrawerBody({ onClose, page, onSubmit, isSubmitting, error }) {
                 rows={2}
                 {...register('metaDescription')}
                 placeholder="Brief summary for search engines..."
-                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none shadow-2xs resize-none"
+                className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs resize-none"
               />
             </div>
           </div>

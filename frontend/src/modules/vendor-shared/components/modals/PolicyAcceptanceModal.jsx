@@ -58,7 +58,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
         onClick={handleAccept}
         disabled={!reachedEnd}
         title={reachedEnd ? undefined : 'Scroll to the end of the policies to accept'}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-4 rounded-xl text-xs disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {docs.length > 1 ? `I Accept All ${docs.length} & Continue` : 'I Accept & Continue'}
       </button>
@@ -79,7 +79,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
 
       {policies.isError && (
         <div className="py-10 text-center space-y-3">
-          <p className="text-xs text-red-600">Could not load the policies. Please check your connection.</p>
+          <p className="text-xs text-danger-600">Could not load the policies. Please check your connection.</p>
           <button
             type="button"
             onClick={() => policies.refetch()}
@@ -96,7 +96,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
           <button
             type="button"
             onClick={() => onAccepted([])}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs"
+            className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-4 rounded-xl text-xs"
           >
             Continue
           </button>
@@ -112,7 +112,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
                 <button
                   type="button"
                   onClick={() => jumpTo(doc.slug)}
-                  className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+                  className="rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100"
                 >
                   {doc.title}
                 </button>
@@ -122,7 +122,7 @@ export function PolicyAcceptanceModal({ onClose, onAccepted }) {
 
           <p
             className={`flex items-center gap-1.5 text-[11px] font-semibold ${
-              reachedEnd ? 'text-emerald-600' : 'text-amber-600'
+              reachedEnd ? 'text-success-600' : 'text-warning-600'
             }`}
           >
             {reachedEnd ? (

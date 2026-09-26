@@ -39,6 +39,8 @@ async function getGeneralSettings(req, res) {
           commissionType: platform.commissionType || 'percentage',
           defaultGstRate: platform.defaultGstRate ?? 18,
           gstRate: platform.gstRate ?? platform.defaultGstRate ?? 18,
+          buyerPlatformFeeType: platform.buyerPlatformFeeType || 'percentage',
+          buyerPlatformFeeValue: platform.buyerPlatformFeeValue ?? 0,
           gstType: platform.gstType || 'percentage',
           gstOnCommissionRate: platform.gstOnCommissionRate,
           commissionBase: accounting?.commissionBase ?? platform.commissionBase,
@@ -107,6 +109,8 @@ async function updateGeneralSettings(req, res) {
       gstType,
       gstOnCommissionRate,
       commissionBase,
+      buyerPlatformFeeType,
+      buyerPlatformFeeValue,
     } = req.body;
 
     if (name !== undefined) platform.name = name;
@@ -198,6 +202,17 @@ async function updateGeneralSettings(req, res) {
       }
     }
 
+    if (buyerPlatformFeeType !== undefined && ['percentage', 'flat'].includes(buyerPlatformFeeType)) {
+      platform.buyerPlatformFeeType = buyerPlatformFeeType;
+    }
+    if (buyerPlatformFeeValue !== undefined) {
+      const num = Number(buyerPlatformFeeValue);
+      if (!Number.isFinite(num) || num < 0 || (platform.buyerPlatformFeeType === 'percentage' && num > 100)) {
+        return res.status(400).json({ success: false, message: 'Platform fee must be 0–100% or a non-negative amount' });
+      }
+      platform.buyerPlatformFeeValue = num;
+    }
+
     if (commissionBase !== undefined && AccountingConfig.COMMISSION_BASES.includes(commissionBase)) {
       platform.commissionBase = commissionBase;
       await AccountingConfig.findOneAndUpdate(
@@ -233,6 +248,8 @@ async function updateGeneralSettings(req, res) {
           defaultGstRate: platform.defaultGstRate,
           gstOnCommissionRate: platform.gstOnCommissionRate,
           commissionBase: platform.commissionBase,
+          buyerPlatformFeeType: platform.buyerPlatformFeeType,
+          buyerPlatformFeeValue: platform.buyerPlatformFeeValue,
         },
       },
     });

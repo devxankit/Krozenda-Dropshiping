@@ -5,7 +5,6 @@ const OtpRequest = require('../Models/OtpRequest');
 const { signToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { getImageUrl } = require('../utils/imageHelper');
 const { sendOtpSms } = require('../utils/smsService');
-const { sendOtpWhatsApp } = require('../services/whatsappService');
 const { updateLanguageFor } = require('./languageController');
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -133,19 +132,11 @@ async function requestOtp(req, res) {
   console.log(`[requestOtp] OTP for ${cleanNumber}: ${otp}`);
 
   if (useLiveSms) {
-    // Same OTP goes out on SMS and WhatsApp at once. The request only fails
-    // when neither channel delivered it — WhatsApp being off (or its template
-    // not set yet) counts as "not delivered" and leaves SMS as before.
-    const [sms, whatsapp] = await Promise.allSettled([
-      sendOtpSms(cleanNumber, otp),
-      sendOtpWhatsApp(cleanNumber, otp),
-    ]);
-    if (sms.status === 'rejected') console.error('[requestOtp] SMS send failed:', sms.reason.message);
-    if (whatsapp.status === 'rejected') {
-      console.error('[requestOtp] WhatsApp send failed:', whatsapp.reason.message);
-    }
-    const delivered = sms.status === 'fulfilled' || (whatsapp.status === 'fulfilled' && whatsapp.value);
-    if (!delivered) {
+    // OTP goes out over SMS only.
+    try {
+      await sendOtpSms(cleanNumber, otp);
+    } catch (err) {
+      console.error('[requestOtp] SMS send failed:', err.message);
       return res.status(502).json({ success: false, message: 'Could not send OTP right now. Please try again.' });
     }
   } else if (isProduction) {

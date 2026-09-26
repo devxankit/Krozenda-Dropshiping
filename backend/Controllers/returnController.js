@@ -7,20 +7,7 @@ const { alertAdmins } = require('../services/adminAlertService');
 const { findDropshipIdsByProductIds } = require('../utils/dropship');
 const { linePaidPaise, findLineIndex } = require('../utils/orderLines');
 
-// Standard e-commerce return window — no such rule existed before, so a
-// return could be filed against a delivery from years ago. 7 days is a
-// reasonable default; tune here if the business wants a different policy.
-const RETURN_WINDOW_DAYS = 7;
-
-function returnDeadline(deliveredAt) {
-  if (!deliveredAt) return null;
-  return new Date(new Date(deliveredAt).getTime() + RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
-function isWithinReturnWindow(deliveredAt) {
-  const deadline = returnDeadline(deliveredAt);
-  return Boolean(deadline) && Date.now() <= deadline.getTime();
-}
+const { RETURN_WINDOW_DAYS, returnDeadline, isWithinReturnWindow } = require('../utils/returnWindow');
 
 function serializeRequest(r) {
   return {
@@ -38,6 +25,13 @@ function serializeRequest(r) {
     refundAmount: r.refundAmount,
     resolvedAt: r.resolvedAt,
     createdAt: r.createdAt,
+    // Progress after approval, for the buyer's tracker.
+    acceptedAt: r.acceptedAt || null,
+    pickupMode: r.pickupMode || null,
+    itemReceivedAt: r.itemReceivedAt || null,
+    completedAt: r.completedAt || null,
+    refundDestination: r.refundDestination || null,
+    replacementOrderId: r.replacementOrder ? r.replacementOrder.toString() : null,
   };
 }
 
@@ -82,9 +76,9 @@ async function getReturnableItems(req, res) {
         image: item.image,
         price: item.price,
         quantity: item.quantity,
-        deliveredAt: order.deliveredAt,
-        returnEligible: isWithinReturnWindow(order.deliveredAt),
-        returnWindowExpiresAt: returnDeadline(order.deliveredAt),
+        deliveredAt: order.deliveredAt || order.updatedAt || order.createdAt,
+        returnEligible: isWithinReturnWindow(order.deliveredAt, order.updatedAt || order.createdAt),
+        returnWindowExpiresAt: returnDeadline(order.deliveredAt, order.updatedAt || order.createdAt),
         existingRequest: existing
           ? { id: existing._id.toString(), status: existing.status, requestType: existing.requestType }
           : null,
@@ -112,7 +106,7 @@ async function createReturnRequest(req, res) {
   if (!order) {
     return res.status(403).json({ success: false, message: 'You can only request returns on delivered orders' });
   }
-  if (!isWithinReturnWindow(order.deliveredAt)) {
+  if (!isWithinReturnWindow(order.deliveredAt, order.updatedAt || order.createdAt)) {
     return res.status(400).json({
       success: false,
       message: `The ${RETURN_WINDOW_DAYS}-day return window for this order has expired`,
@@ -146,6 +140,34 @@ async function createReturnRequest(req, res) {
       success: false,
       code: 'NOT_RETURNABLE',
       message: 'This product is not eligible for return or replacement.',
+    });
+  }
+
+  // A replacement order carried no money, so there is nothing to refund.
+  if (order.replacementFor && requestType === 'REFUND') {
+    return res.status(400).json({
+      success: false,
+      code: 'REPLACEMENT_NOT_REFUNDABLE',
+      message: 'This was a free replacement. Request another replacement instead.',
+    });
+  }
+
+  // One request per line: an open one is being handled, and a completed one
+  // has already been refunded or replaced. The unique index only covers
+  // PENDING, so the later states are checked here.
+  const blocking = await ReturnRequest.findOne({
+    order: order._id,
+    product: orderItem.product,
+    variantId: orderItem.variantId || null,
+    status: { $in: ReturnRequest.BLOCKING_STATUSES },
+  }).select('status');
+  if (blocking) {
+    return res.status(400).json({
+      success: false,
+      message:
+        blocking.status === 'APPROVED'
+          ? 'This item has already been returned.'
+          : 'A request is already pending for this item',
     });
   }
 

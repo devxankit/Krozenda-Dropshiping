@@ -231,7 +231,7 @@ function LegalPagesSection() {
           <button
             type="button"
             onClick={() => handleEdit(row)}
-            className="text-left text-xs font-bold text-slate-900 truncate hover:text-blue-600 transition-colors cursor-pointer"
+            className="text-left text-xs font-bold text-slate-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
           >
             {row.title}
           </button>
@@ -246,10 +246,10 @@ function LegalPagesSection() {
                 handleCopyUrl(row.slug)
               }}
               title="Copy public URL"
-              className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-md hover:bg-blue-50"
+              className="text-slate-400 hover:text-brand-600 transition-colors p-1 rounded-md hover:bg-brand-50"
             >
               {copiedSlug === row.slug ? (
-                <span className="text-2xs text-emerald-600 font-bold flex items-center gap-0.5">
+                <span className="text-2xs text-success-600 font-bold flex items-center gap-0.5">
                   <HiCheckCircle className="w-3.5 h-3.5" /> copied
                 </span>
               ) : (
@@ -260,7 +260,7 @@ function LegalPagesSection() {
               type="button"
               onClick={() => window.open(getPublicPath(row.slug), '_blank')}
               title="Open storefront page"
-              className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-md hover:bg-blue-50"
+              className="text-slate-400 hover:text-brand-600 transition-colors p-1 rounded-md hover:bg-brand-50"
             >
               <HiArrowTopRightOnSquare className="w-3.5 h-3.5" />
             </button>
@@ -284,8 +284,8 @@ function LegalPagesSection() {
       width: '12.5rem',
       render: (row) =>
         row.requiresAcceptance ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-2xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
-            <HiShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-2xs font-bold bg-brand-50 text-brand-700 border border-brand-200/80 shadow-2xs">
+            <HiShieldCheck className="w-3.5 h-3.5 text-brand-600" />
             Re-acceptance required
           </span>
         ) : (
@@ -313,9 +313,9 @@ function LegalPagesSection() {
           onChange={(e) => handleStatusChange(row, e.target.value)}
           className={`text-2xs font-bold rounded-xl px-2.5 py-1.5 border shadow-2xs focus:outline-none cursor-pointer transition-all ${
             row.status === 'published'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-300/80 hover:bg-emerald-100/70'
+              ? 'bg-success-50 text-success-800 border-success-300/80 hover:bg-success-100/70'
               : row.status === 'draft'
-              ? 'bg-amber-50 text-amber-800 border-amber-300/80 hover:bg-amber-100/70'
+              ? 'bg-warning-50 text-warning-800 border-warning-300/80 hover:bg-warning-100/70'
               : 'bg-slate-100 text-slate-700 border-slate-300/80 hover:bg-slate-200/60'
           }`}
         >
@@ -336,7 +336,7 @@ function LegalPagesSection() {
             type="button"
             onClick={() => setPreviewPage(row)}
             title="Preview content"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
           >
             <HiEye className="w-4 h-4" />
           </button>
@@ -344,7 +344,7 @@ function LegalPagesSection() {
             type="button"
             onClick={() => handleEdit(row)}
             title="Edit page"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-warning-600 hover:bg-warning-50 transition-colors"
           >
             <HiPencilSquare className="w-4 h-4" />
           </button>
@@ -352,7 +352,7 @@ function LegalPagesSection() {
             type="button"
             onClick={() => setPageToDelete(row)}
             title="Delete page"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
           >
             <HiTrash className="w-4 h-4" />
           </button>
@@ -383,7 +383,7 @@ function LegalPagesSection() {
               title="Refresh CMS pages"
             >
               <HiArrowPath
-                className={`h-3.5 w-3.5 ${cms.isLoading ? 'animate-spin text-blue-600' : 'text-slate-500'}`}
+                className={`h-3.5 w-3.5 ${cms.isLoading ? 'animate-spin text-brand-600' : 'text-slate-500'}`}
               />
               <span>Refresh</span>
             </button>
@@ -391,7 +391,7 @@ function LegalPagesSection() {
               <button
                 type="button"
                 onClick={handleCreate}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all ring-1 ring-blue-500/20 cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 cursor-pointer"
               >
                 <HiPlus className="h-4 w-4" />
                 <span>New Page</span>
@@ -402,16 +402,16 @@ function LegalPagesSection() {
       />
 
       {/* Modern Notice Banner */}
-      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-orange-50/60 p-4 shadow-xs">
+      <div className="rounded-2xl border border-warning-200/80 bg-gradient-to-r from-warning-50/90 via-warning-50/50 to-warning-50/60 p-4 shadow-xs">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-warning-500/10 text-warning-600 ring-1 ring-warning-500/20">
             <HiShieldCheck className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h4 className="text-xs font-bold text-amber-950">
+            <h4 className="text-xs font-bold text-warning-950">
               Policy Versioning & Mandatory Acceptance
             </h4>
-            <p className="mt-0.5 text-xs text-amber-800/90 leading-relaxed">
+            <p className="mt-0.5 text-xs text-warning-800/90 leading-relaxed">
               When publishing an updated version of a mandatory policy (e.g. Terms or Privacy), active buyers and sellers will be prompted to re-accept on their next sign-in. Previous timestamps and acceptance logs remain permanently audited.
             </p>
           </div>
@@ -424,7 +424,7 @@ function LegalPagesSection() {
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Documents</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
               <HiDocumentText className="h-5 w-5" />
             </span>
           </div>
@@ -435,73 +435,73 @@ function LegalPagesSection() {
             <span className="text-xs font-medium text-slate-500">pages</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
             <span>Compliance & store guides</span>
           </div>
         </div>
 
         {/* Published Live */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Published Live</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
               <HiCheckCircle className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-emerald-600 tabular">
+            <span className="text-3xl font-extrabold tracking-tight text-success-600 tabular">
               {stats.publishedPages ?? 0}
             </span>
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
               Live
             </span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
             <span>Public storefront routes active</span>
           </div>
         </div>
 
         {/* Drafts */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-warning-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Drafts & Revisions</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
               <HiPencilSquare className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-amber-600 tabular">
+            <span className="text-3xl font-extrabold tracking-tight text-warning-600 tabular">
               {stats.draftPages ?? 0}
             </span>
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-warning-700 bg-warning-50 px-2 py-0.5 rounded-full">
               In Review
             </span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning-500" />
             <span>Unpublished revisions</span>
           </div>
         </div>
 
         {/* Enforced Acceptance */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-indigo-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-brand-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Enforced Policies</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50 text-accent-600 ring-1 ring-accent-500/10 transition-transform group-hover:scale-105">
               <HiShieldCheck className="h-5 w-5" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-violet-700 tabular">
+            <span className="text-3xl font-extrabold tracking-tight text-accent-700 tabular">
               {stats.requiresAcceptance ?? 0}
             </span>
-            <span className="text-xs font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full">
               Mandatory
             </span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-500" />
             <span>Consent required on sign-in</span>
           </div>
         </div>
@@ -549,7 +549,7 @@ function LegalPagesSection() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search title, slug, content…"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
             {search && (
               <button
@@ -568,7 +568,7 @@ function LegalPagesSection() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer transition-all"
+              className="appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer transition-all"
             >
               <option value="newest">Recently Modified</option>
               <option value="title-asc">Title (A–Z)</option>
@@ -584,7 +584,7 @@ function LegalPagesSection() {
               onClick={() => setViewMode('grid')}
               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all cursor-pointer ${
                 viewMode === 'grid'
-                  ? 'bg-white text-blue-600 shadow-xs ring-1 ring-slate-200/80'
+                  ? 'bg-white text-brand-600 shadow-xs ring-1 ring-slate-200/80'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Card Grid view"
@@ -596,7 +596,7 @@ function LegalPagesSection() {
               onClick={() => setViewMode('table')}
               className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-white text-blue-600 shadow-xs ring-1 ring-slate-200/80'
+                  ? 'bg-white text-brand-600 shadow-xs ring-1 ring-slate-200/80'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Table view"
@@ -613,7 +613,7 @@ function LegalPagesSection() {
           <>
             {sortedItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-xs">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-3 shadow-inner">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 mb-3 shadow-inner">
                   <HiDocumentText className="h-7 w-7" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900">No CMS pages found</h3>
@@ -635,7 +635,7 @@ function LegalPagesSection() {
                   <button
                     type="button"
                     onClick={handleCreate}
-                    className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
+                    className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-xs cursor-pointer"
                   >
                     + Create New Page
                   </button>
@@ -660,9 +660,9 @@ function LegalPagesSection() {
                             <span
                               className={`flex h-9 w-9 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${
                                 isPublished
-                                  ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20'
+                                  ? 'bg-success-50 text-success-600 ring-1 ring-success-500/20'
                                   : isDraft
-                                  ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-500/20'
+                                  ? 'bg-warning-50 text-warning-600 ring-1 ring-warning-500/20'
                                   : 'bg-slate-100 text-slate-600 ring-1 ring-slate-300/40'
                               }`}
                             >
@@ -677,18 +677,18 @@ function LegalPagesSection() {
                             <span
                               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-bold ${
                                 isPublished
-                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20'
+                                  ? 'bg-success-50 text-success-700 ring-1 ring-success-500/20'
                                   : isDraft
-                                  ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-500/20'
+                                  ? 'bg-warning-50 text-warning-700 ring-1 ring-warning-500/20'
                                   : 'bg-slate-100 text-slate-600 ring-1 ring-slate-400/20'
                               }`}
                             >
                               <span
                                 className={`h-1.5 w-1.5 rounded-full ${
                                   isPublished
-                                    ? 'bg-emerald-500 animate-pulse'
+                                    ? 'bg-success-500 animate-pulse'
                                     : isDraft
-                                    ? 'bg-amber-500'
+                                    ? 'bg-warning-500'
                                     : 'bg-slate-400'
                                 }`}
                               />
@@ -701,14 +701,14 @@ function LegalPagesSection() {
                         <div className="mt-3.5 space-y-1.5">
                           <h3
                             onClick={() => handleEdit(page)}
-                            className="text-sm font-extrabold text-slate-900 line-clamp-1 hover:text-blue-600 transition-colors cursor-pointer"
+                            className="text-sm font-extrabold text-slate-900 line-clamp-1 hover:text-brand-600 transition-colors cursor-pointer"
                           >
                             {page.title}
                           </h3>
 
                           {page.requiresAcceptance ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200">
-                              <HiShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+                            <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700 ring-1 ring-brand-200">
+                              <HiShieldCheck className="h-3.5 w-3.5 text-brand-600" />
                               Mandatory Re-acceptance
                             </span>
                           ) : (
@@ -730,11 +730,11 @@ function LegalPagesSection() {
                                 e.stopPropagation()
                                 handleCopyUrl(page.slug)
                               }}
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold text-slate-600 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200 shadow-2xs cursor-pointer"
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 transition-all border border-transparent hover:border-slate-200 shadow-2xs cursor-pointer"
                               title="Copy public URL"
                             >
                               {copiedSlug === page.slug ? (
-                                <span className="text-emerald-600 flex items-center gap-0.5">
+                                <span className="text-success-600 flex items-center gap-0.5">
                                   <HiCheckCircle className="w-3.5 h-3.5" /> Copied
                                 </span>
                               ) : (
@@ -747,7 +747,7 @@ function LegalPagesSection() {
                             <button
                               type="button"
                               onClick={() => window.open(getPublicPath(page.slug), '_blank')}
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold text-blue-700 hover:bg-blue-100/80 transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold text-brand-700 hover:bg-brand-100/80 transition-all cursor-pointer"
                               title="Open live storefront page"
                             >
                               <HiArrowTopRightOnSquare className="w-3.5 h-3.5" />
@@ -775,7 +775,7 @@ function LegalPagesSection() {
                           <button
                             type="button"
                             onClick={() => setPreviewPage(page)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
                             title="Preview document"
                           >
                             <HiEye className="h-4 w-4" />
@@ -783,7 +783,7 @@ function LegalPagesSection() {
                           <button
                             type="button"
                             onClick={() => handleEdit(page)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-warning-600 hover:bg-warning-50 transition-colors cursor-pointer"
                             title="Edit page"
                           >
                             <HiPencilSquare className="h-4 w-4" />
@@ -791,7 +791,7 @@ function LegalPagesSection() {
                           <button
                             type="button"
                             onClick={() => setPageToDelete(page)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors cursor-pointer"
                             title="Delete page"
                           >
                             <HiTrash className="h-4 w-4" />
@@ -865,7 +865,7 @@ function LegalPagesSection() {
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Public Route:</span>
-                <span className="font-mono text-xs text-blue-700 font-semibold truncate">
+                <span className="font-mono text-xs text-brand-700 font-semibold truncate">
                   {getPublicUrl(previewPage.slug)}
                 </span>
               </div>
@@ -880,7 +880,7 @@ function LegalPagesSection() {
                 <button
                   type="button"
                   onClick={() => window.open(getPublicPath(previewPage.slug), '_blank')}
-                  className="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-1 text-xs font-bold rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <span>Open Storefront</span>
                   <HiArrowTopRightOnSquare className="w-3.5 h-3.5" />
@@ -1008,7 +1008,7 @@ function FaqsSection() {
           <button
             type="button"
             onClick={() => handleEdit(row)}
-            className="text-left text-xs font-bold text-slate-900 truncate hover:text-blue-600 transition-colors cursor-pointer"
+            className="text-left text-xs font-bold text-slate-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
           >
             {row.question}
           </button>
@@ -1047,8 +1047,8 @@ function FaqsSection() {
           onChange={(e) => handleStatusChange(row, e.target.value)}
           className={`text-2xs font-bold rounded-xl px-2.5 py-1.5 border shadow-2xs focus:outline-none cursor-pointer transition-all ${
             row.status === 'published'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-300/80 hover:bg-emerald-100/70'
-              : 'bg-amber-50 text-amber-800 border-amber-300/80 hover:bg-amber-100/70'
+              ? 'bg-success-50 text-success-800 border-success-300/80 hover:bg-success-100/70'
+              : 'bg-warning-50 text-warning-800 border-warning-300/80 hover:bg-warning-100/70'
           }`}
         >
           <option value="published">● Published</option>
@@ -1067,7 +1067,7 @@ function FaqsSection() {
             type="button"
             onClick={() => handleEdit(row)}
             title="Edit FAQ"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-warning-600 hover:bg-warning-50 transition-colors"
           >
             <HiPencilSquare className="w-4 h-4" />
           </button>
@@ -1075,7 +1075,7 @@ function FaqsSection() {
             type="button"
             onClick={() => setFaqToDelete(row)}
             title="Delete FAQ"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
           >
             <HiTrash className="w-4 h-4" />
           </button>
@@ -1105,14 +1105,14 @@ function FaqsSection() {
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50 cursor-pointer"
               title="Refresh FAQs"
             >
-              <HiArrowPath className={`h-3.5 w-3.5 ${faqs.isLoading ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
+              <HiArrowPath className={`h-3.5 w-3.5 ${faqs.isLoading ? 'animate-spin text-brand-600' : 'text-slate-500'}`} />
               <span>Refresh</span>
             </button>
             <PermissionGate permission={ADMIN_PERMISSIONS.MARKETING_MANAGE}>
               <button
                 type="button"
                 onClick={handleCreate}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-all ring-1 ring-blue-500/20 cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 cursor-pointer"
               >
                 <HiPlus className="h-4 w-4" />
                 <span>New FAQ</span>
@@ -1126,7 +1126,7 @@ function FaqsSection() {
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total FAQs</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10">
               <HiQuestionMarkCircle className="h-5 w-5" />
             </span>
           </div>
@@ -1138,11 +1138,11 @@ function FaqsSection() {
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Published Live</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10">
               <HiCheckCircle className="h-5 w-5" />
             </span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold tracking-tight text-emerald-600 tabular">
+          <div className="mt-3 text-3xl font-extrabold tracking-tight text-success-600 tabular">
             {stats.published ?? 0}
           </div>
         </div>
@@ -1150,11 +1150,11 @@ function FaqsSection() {
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Drafts</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10">
               <HiPencilSquare className="h-5 w-5" />
             </span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold tracking-tight text-amber-600 tabular">
+          <div className="mt-3 text-3xl font-extrabold tracking-tight text-warning-600 tabular">
             {stats.draft ?? 0}
           </div>
         </div>
@@ -1195,7 +1195,7 @@ function FaqsSection() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search question, answer, category…"
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
           />
           {search && (
             <button
@@ -1214,7 +1214,7 @@ function FaqsSection() {
         {() =>
           items.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-xs">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-3 shadow-inner">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 mb-3 shadow-inner">
                 <HiQuestionMarkCircle className="h-7 w-7" />
               </div>
               <h3 className="text-sm font-bold text-slate-900">No FAQs found</h3>
@@ -1236,7 +1236,7 @@ function FaqsSection() {
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-xs cursor-pointer"
                 >
                   + Add FAQ
                 </button>

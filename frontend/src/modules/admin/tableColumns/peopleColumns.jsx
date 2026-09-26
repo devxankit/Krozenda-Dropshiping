@@ -384,7 +384,7 @@ export const USER_MANAGEMENT_COLUMNS = Object.freeze([
               {row.name}
             </span>
             {row.role === 'admin' && (
-              <span className="inline-flex items-center rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700 ring-1 ring-purple-200/60">
+              <span className="inline-flex items-center rounded bg-accent-50 px-1.5 py-0.5 text-[10px] font-semibold text-accent-700 ring-1 ring-accent-200/60">
                 Admin
               </span>
             )}
@@ -415,13 +415,13 @@ export const USER_MANAGEMENT_COLUMNS = Object.freeze([
     width: '9.5rem',
     render: (row) =>
       row.role === 'admin' ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 ring-1 ring-purple-200/70">
-          <Icon name="roles" className="h-3 w-3 text-purple-500 shrink-0" />
+        <span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2.5 py-1 text-xs font-semibold text-accent-700 ring-1 ring-accent-200/70">
+          <Icon name="roles" className="h-3 w-3 text-accent-500 shrink-0" />
           Admin
         </span>
       ) : row.roleName ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200/70">
-          <Icon name="user" className="h-3 w-3 text-blue-500 shrink-0" />
+        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200/70">
+          <Icon name="user" className="h-3 w-3 text-brand-500 shrink-0" />
           {row.roleName}
         </span>
       ) : (
@@ -434,10 +434,10 @@ export const USER_MANAGEMENT_COLUMNS = Object.freeze([
     width: '8rem',
     render: (row) =>
       row.isActive ? (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/70">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-700 ring-1 ring-success-200/70">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-success-500" />
           </span>
           Active
         </span>

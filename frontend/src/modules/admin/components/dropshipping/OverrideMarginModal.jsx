@@ -69,9 +69,9 @@ export function OverrideMarginModal({ product, isOpen, onClose, onSaveOverride }
           required
         />
 
-        <div className="flex items-center justify-between rounded-md bg-emerald-50 p-3 border border-emerald-200">
-          <span className="text-xs font-semibold text-emerald-800">Calculated Platform Margin</span>
-          <span className="text-base font-bold text-emerald-700">{calculatedMargin}%</span>
+        <div className="flex items-center justify-between rounded-md bg-success-50 p-3 border border-success-200">
+          <span className="text-xs font-semibold text-success-800">Calculated Platform Margin</span>
+          <span className="text-base font-bold text-success-700">{calculatedMargin}%</span>
         </div>
       </form>
     </Modal>

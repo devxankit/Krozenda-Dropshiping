@@ -162,7 +162,7 @@ function SellerLoginPage() {
         {/* Email Field */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Email Address <span className="text-red-500">*</span>
+            Email Address <span className="text-danger-500">*</span>
           </label>
           <div className="relative flex items-center">
             <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -172,7 +172,7 @@ function SellerLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seller@example.com"
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
             />
           </div>
         </div>
@@ -181,12 +181,12 @@ function SellerLoginPage() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-semibold text-slate-700">
-              Password <span className="text-red-500">*</span>
+              Password <span className="text-danger-500">*</span>
             </label>
             <button
               type="button"
               onClick={() => setView('forgot')}
-              className="text-xs font-semibold text-blue-600 hover:underline"
+              className="text-xs font-semibold text-brand-600 hover:underline"
             >
               Forgot password?
             </button>
@@ -199,7 +199,7 @@ function SellerLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
             />
             <button
               type="button"
@@ -217,33 +217,33 @@ function SellerLoginPage() {
           <div
             className={`p-3.5 rounded-xl border text-xs flex items-start space-x-2.5 ${
               errorCode === 'VERIFICATION_PENDING'
-                ? 'bg-amber-50 border-amber-300 text-amber-900'
+                ? 'bg-warning-50 border-warning-300 text-warning-900'
                 : errorCode === 'VERIFICATION_REJECTED'
-                  ? 'bg-rose-50 border-rose-300 text-rose-900'
+                  ? 'bg-danger-50 border-danger-300 text-danger-900'
                   : errorCode === 'ACCOUNT_INACTIVE'
                     ? 'bg-slate-100 border-slate-300 text-slate-800'
-                    : 'bg-red-50 border-red-200 text-red-700'
+                    : 'bg-danger-50 border-danger-200 text-danger-700'
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
                 errorCode === 'VERIFICATION_PENDING'
-                  ? 'bg-amber-500'
+                  ? 'bg-warning-500'
                   : errorCode === 'VERIFICATION_REJECTED'
-                    ? 'bg-rose-500'
+                    ? 'bg-danger-500'
                     : errorCode === 'ACCOUNT_INACTIVE'
                       ? 'bg-slate-500'
-                      : 'bg-red-600'
+                      : 'bg-danger-600'
               }`}
             />
             <div className="flex-1">
               {errorCode === 'VERIFICATION_PENDING' && (
-                <strong className="font-bold block text-xs mb-0.5 text-amber-900">
+                <strong className="font-bold block text-xs mb-0.5 text-warning-900">
                   Account Under Review
                 </strong>
               )}
               {errorCode === 'VERIFICATION_REJECTED' && (
-                <strong className="font-bold block text-xs mb-0.5 text-rose-900">
+                <strong className="font-bold block text-xs mb-0.5 text-danger-900">
                   Application Needs Attention
                 </strong>
               )}
@@ -261,7 +261,7 @@ function SellerLoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 flex items-center justify-center space-x-1.5 text-xs"
+          className="w-full bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 flex items-center justify-center space-x-1.5 text-xs"
         >
           {isSubmitting ? (
             <span>Signing in…</span>
@@ -277,7 +277,7 @@ function SellerLoginPage() {
       {/* Switch to Register */}
       <div className="pt-2 text-center text-xs text-slate-600">
         New seller on Krozenda?{' '}
-        <Link to="/seller/register" className="font-bold text-blue-600 hover:underline">
+        <Link to="/seller/register" className="font-bold text-brand-600 hover:underline">
           Create an account
         </Link>
       </div>
@@ -328,7 +328,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
         <form onSubmit={handleRequest} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Registered Email Address <span className="text-red-500">*</span>
+              Registered Email Address <span className="text-danger-500">*</span>
             </label>
             <div className="relative flex items-center">
               <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -338,13 +338,13 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seller@example.com"
                 required
-                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
               />
             </div>
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+            <div className="p-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 text-xs">
               {error}
             </div>
           )}
@@ -360,7 +360,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
             <button
               type="submit"
               disabled={isRequesting}
-              className="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
+              className="w-2/3 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
             >
               {isRequesting ? 'Sending Code…' : 'Send Reset Code'}
             </button>
@@ -369,12 +369,12 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
       ) : (
         <form onSubmit={handleReset} className="space-y-4">
           {devHint && (
-            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-center justify-between">
-              <span>Demo OTP: <strong className="font-mono text-blue-900 font-bold">{devHint}</strong></span>
+            <div className="p-2.5 rounded-xl bg-brand-50 border border-brand-200 text-brand-800 text-xs flex items-center justify-between">
+              <span>Demo OTP: <strong className="font-mono text-brand-900 font-bold">{devHint}</strong></span>
               <button
                 type="button"
                 onClick={() => setOtp(devHint)}
-                className="text-xs font-bold text-blue-700 underline"
+                className="text-xs font-bold text-brand-700 underline"
               >
                 Auto-fill
               </button>
@@ -383,7 +383,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              6-Digit Code (OTP) <span className="text-red-500">*</span>
+              6-Digit Code (OTP) <span className="text-danger-500">*</span>
             </label>
             <div className="relative flex items-center">
               <HiOutlineKey className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -393,14 +393,14 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="123456"
                 required
-                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono font-bold outline-none"
+                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono font-bold outline-none"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              New Password <span className="text-red-500">*</span>
+              New Password <span className="text-danger-500">*</span>
             </label>
             <input
               type="password"
@@ -408,13 +408,13 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="At least 6 characters"
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Confirm New Password <span className="text-red-500">*</span>
+              Confirm New Password <span className="text-danger-500">*</span>
             </label>
             <input
               type="password"
@@ -422,12 +422,12 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs outline-none"
             />
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+            <div className="p-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 text-xs">
               {error}
             </div>
           )}
@@ -443,7 +443,7 @@ function ForgotPasswordFlow({ initialEmail, onDone, onCancel }) {
             <button
               type="submit"
               disabled={isResetting}
-              className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
+              className="w-2/3 bg-success-600 hover:bg-success-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs disabled:opacity-60"
             >
               {isResetting ? 'Saving…' : 'Update Password'}
             </button>
@@ -498,7 +498,7 @@ function PartnerDemoLoginPage() {
       >
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Partner Email Address <span className="text-red-500">*</span>
+            Partner Email Address <span className="text-danger-500">*</span>
           </label>
           <div className="relative flex items-center">
             <HiOutlineEnvelope className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -507,14 +507,14 @@ function PartnerDemoLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-3.5 py-2.5 text-xs transition-all outline-none font-medium"
             />
           </div>
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Password <span className="text-red-500">*</span>
+            Password <span className="text-danger-500">*</span>
           </label>
           <div className="relative flex items-center">
             <HiOutlineLockClosed className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -523,7 +523,7 @@ function PartnerDemoLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
+              className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 placeholder:text-slate-400 rounded-xl pl-10 pr-10 py-2.5 text-xs transition-all outline-none font-medium"
             />
             <button
               type="button"
@@ -538,7 +538,7 @@ function PartnerDemoLoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 text-xs"
+          className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all disabled:opacity-60 text-xs"
         >
           {isSubmitting ? 'Signing In…' : 'Sign In to Partner Portal'}
         </button>

@@ -26,6 +26,7 @@ export const productNodeSchema = z.object({
     .optional(),
   hsnCode: z.string().optional(),
   gstRate: z.number().nullable().optional(),
+  gstInclusive: z.boolean().optional(),
   moq: z.number().int().optional(),
   priceTiers: z.array(z.object({ minQty: z.number().int(), price: z.number() })).optional(),
   variants: z

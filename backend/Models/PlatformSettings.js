@@ -96,6 +96,11 @@ const platformSettingsSchema = new mongoose.Schema(
     gstRate: { type: Number, default: 18, min: 0 },
     gstType: { type: String, enum: ['percentage', 'flat'], default: 'percentage' },
     gstOnCommissionRate: { type: Number, default: 18, min: 0, max: 100 },
+    // A fee the BUYER pays on top of the order, shown as its own line at
+    // checkout. Separate from seller commission, which comes out of the
+    // seller's payout. 0 switches it off.
+    buyerPlatformFeeType: { type: String, enum: ['percentage', 'flat'], default: 'percentage' },
+    buyerPlatformFeeValue: { type: Number, default: 0, min: 0 },
     commissionBase: {
       type: String,
       enum: ['LINE_NET_OF_SELLER_FUNDED_DISCOUNT', 'LINE_GROSS', 'LINE_NET'],

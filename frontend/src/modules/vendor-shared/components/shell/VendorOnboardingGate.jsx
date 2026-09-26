@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { Skeleton } from '../../../../components/ui'
+import { PageBody } from '../../../admin/components/shell'
+import { PageSkeleton } from '../../../admin/components/feedback'
 import { useVendorProfileController } from '../../controllers/useVendorController'
 import { VENDOR_ONBOARDING_ALLOWED } from '../../constants'
 
@@ -23,10 +24,9 @@ export function VendorOnboardingGate() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-9 w-64 rounded-lg" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-      </div>
+      <PageBody>
+        <PageSkeleton rows={3} />
+      </PageBody>
     )
   }
 

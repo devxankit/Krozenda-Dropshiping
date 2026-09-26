@@ -95,29 +95,29 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Title <span className="text-rose-500">*</span>
+              Title <span className="text-danger-500">*</span>
             </label>
             <input
               type="text"
               {...register('title', { required: 'Title is required', maxLength: { value: 80, message: 'Keep it under 80 characters' } })}
               placeholder="e.g. Account Update / Important Notice"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
               autoFocus
             />
-            {errors.title && <p className="text-2xs text-rose-600 mt-1">{errors.title.message}</p>}
+            {errors.title && <p className="text-2xs text-danger-600 mt-1">{errors.title.message}</p>}
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Message <span className="text-rose-500">*</span>
+              Message <span className="text-danger-500">*</span>
             </label>
             <textarea
               rows={4}
               {...register('message', { required: 'Message is required', maxLength: { value: 240, message: 'Keep it under 240 characters' } })}
               placeholder="Type your notification message here..."
-              className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs leading-relaxed text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs resize-y min-h-[100px]"
+              className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs leading-relaxed text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs resize-y min-h-[100px]"
             />
-            {errors.message && <p className="text-2xs text-rose-600 mt-1">{errors.message.message}</p>}
+            {errors.message && <p className="text-2xs text-danger-600 mt-1">{errors.message.message}</p>}
           </div>
         </div>
 
@@ -129,7 +129,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                 key={option.value}
                 className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-all ${
                   audience === option.value
-                    ? 'border-blue-500 bg-blue-50/70 shadow-2xs'
+                    ? 'border-brand-500 bg-brand-50/70 shadow-2xs'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
@@ -137,7 +137,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                   type="radio"
                   value={option.value}
                   {...register('audience', { required: true })}
-                  className="mt-0.5 text-blue-600"
+                  className="mt-0.5 text-brand-600"
                 />
                 <span className="flex-1">
                   <span className="block text-xs font-bold text-slate-900">{option.label}</span>
@@ -152,8 +152,8 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
             <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <HiOutlineBuildingStorefront className="w-4 h-4 text-blue-600" />
-                  Select Target Seller <span className="text-rose-500">*</span>
+                  <HiOutlineBuildingStorefront className="w-4 h-4 text-brand-600" />
+                  Select Target Seller <span className="text-danger-500">*</span>
                 </span>
                 {selectedVendor && (
                   <button
@@ -162,7 +162,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                       setSelectedVendor(null)
                       setValue('targetVendorId', '')
                     }}
-                    className="text-2xs text-blue-600 font-semibold hover:underline"
+                    className="text-2xs text-brand-600 font-semibold hover:underline"
                   >
                     Change seller
                   </button>
@@ -170,9 +170,9 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
               </div>
 
               {selectedVendor ? (
-                <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 flex items-center justify-between">
+                <div className="p-3.5 rounded-xl border border-brand-200 bg-brand-50/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs">
                       {(selectedVendor.business?.businessName || selectedVendor.name || 'S')[0].toUpperCase()}
                     </div>
                     <div>
@@ -187,8 +187,8 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-700 text-2xs font-semibold">
-                    <HiOutlineCheck className="w-4 h-4 text-emerald-600" />
+                  <div className="flex items-center gap-1 text-success-700 text-2xs font-semibold">
+                    <HiOutlineCheck className="w-4 h-4 text-success-600" />
                     Selected
                   </div>
                 </div>
@@ -201,7 +201,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                       value={vendorSearch}
                       onChange={(e) => setVendorSearch(e.target.value)}
                       placeholder="Search seller by name, store, or email..."
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-600 focus:outline-none"
                     />
                   </div>
 
@@ -231,7 +231,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                               <p className="text-2xs text-slate-500 truncate">{v.email}</p>
                             </div>
                           </div>
-                          <span className="text-2xs text-blue-600 font-semibold shrink-0 ml-2">Select</span>
+                          <span className="text-2xs text-brand-600 font-semibold shrink-0 ml-2">Select</span>
                         </button>
                       ))}
                     </div>
@@ -239,7 +239,7 @@ function CampaignFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
                 </div>
               )}
 
-              {vendorError && <p className="text-2xs text-rose-600 font-medium">{vendorError}</p>}
+              {vendorError && <p className="text-2xs text-danger-600 font-medium">{vendorError}</p>}
             </div>
           )}
         </div>

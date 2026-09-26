@@ -6,7 +6,7 @@
 const request = require('supertest');
 const app = require('../app');
 const Product = require('../Models/Product');
-const { generateBarcode, isValidEan13, ean13CheckDigit, productQrText } = require('../utils/barcode');
+const { generateBarcode, isValidEan13, ean13CheckDigit, productQrText, barcodeText } = require('../utils/barcode');
 
 const { connectTestDb, disconnectTestDb, createProduct, createCategory, createAdmin, createVendor } = require('./helpers');
 
@@ -118,14 +118,31 @@ describe('GET /admin/catalog/products/barcode/:code', () => {
     expect(res.status).toBe(404);
   });
 
-  it('400s something that is not a real barcode, without touching the database', async () => {
+  it('finds the product by its SKU — what the label barcode carries', async () => {
     const { token } = await createAdmin();
+    const sku = `SCAN-${Date.now()}`;
+    const product = await createProduct({ sku });
 
     const res = await request(app)
-      .get('/admin/catalog/products/barcode/not-a-barcode')
+      .get(`/admin/catalog/products/barcode/${encodeURIComponent(sku)}`)
       .set('Authorization', `Bearer ${token}`);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(product._id.toString());
+  });
+
+  it('404s an unknown SKU, and 400s an input too long to be a code', async () => {
+    const { token } = await createAdmin();
+
+    const unknown = await request(app)
+      .get('/admin/catalog/products/barcode/not-a-real-sku')
+      .set('Authorization', `Bearer ${token}`);
+    expect(unknown.status).toBe(404);
+
+    const tooLong = await request(app)
+      .get(`/admin/catalog/products/barcode/${'X'.repeat(65)}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(tooLong.status).toBe(400);
   });
 
   it('requires admin auth', async () => {
@@ -149,6 +166,28 @@ describe('GET /admin/catalog/products/:id/barcode.png', () => {
     // PNG magic bytes.
     expect(res.body.slice(0, 4)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   });
+
+  it('encodes the SKU, so a SKU edit changes it (and a price edit does not); never cached', async () => {
+    const { token } = await createAdmin();
+    const product = await createProduct({ sku: `LBL-${Date.now()}`, price: 500 });
+    const fetchPng = () =>
+      request(app).get(`/admin/catalog/products/${product._id}/barcode.png`).set('Authorization', `Bearer ${token}`);
+
+    const before = await fetchPng();
+    expect(before.headers['cache-control']).toBe('no-cache');
+
+    await Product.updateOne({ _id: product._id }, { $set: { price: 650 } });
+    expect(Buffer.compare(before.body, (await fetchPng()).body)).toBe(0);
+
+    await Product.updateOne({ _id: product._id }, { $set: { sku: `${product.sku}-B` } });
+    expect(Buffer.compare(before.body, (await fetchPng()).body)).not.toBe(0);
+  });
+
+  it('falls back to the barcode number when the SKU cannot be encoded', () => {
+    expect(barcodeText({ sku: 'AB-12', barcode: '2000000000015' })).toBe('AB-12');
+    expect(barcodeText({ sku: '', barcode: '2000000000015' })).toBe('2000000000015');
+    expect(barcodeText({ sku: 'कुर्ता-1', barcode: '2000000000015' })).toBe('2000000000015');
+  });
 });
 
 describe('vendor barcode lookup is scoped to the seller\'s own catalog', () => {
@@ -163,6 +202,21 @@ describe('vendor barcode lookup is scoped to the seller\'s own catalog', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.id).toBe(product._id.toString());
+  });
+
+  it("finds the seller's own product by SKU, but not another seller's", async () => {
+    const { vendor, token } = await createVendor();
+    const { vendor: other } = await createVendor();
+    const category = await createCategory();
+    const mine = await createProduct({ vendor: vendor._id, category: category._id, sku: `MINE-${Date.now()}` });
+    const theirs = await createProduct({ vendor: other._id, category: category._id, sku: `THEIRS-${Date.now()}` });
+
+    const found = await request(app).get(`/vendor/products/barcode/${mine.sku}`).set('Authorization', `Bearer ${token}`);
+    expect(found.status).toBe(200);
+    expect(found.body.data.id).toBe(mine._id.toString());
+
+    const hidden = await request(app).get(`/vendor/products/barcode/${theirs.sku}`).set('Authorization', `Bearer ${token}`);
+    expect(hidden.status).toBe(404);
   });
 
   it('refuses to reveal a product that belongs to a different seller', async () => {

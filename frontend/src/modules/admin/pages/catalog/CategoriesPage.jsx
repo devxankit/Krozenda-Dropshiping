@@ -126,7 +126,7 @@ export function CategoriesPage() {
               <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
               {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
             </div>
           )}
@@ -134,7 +134,7 @@ export function CategoriesPage() {
             <div className="flex items-center gap-2">
               <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
               {item.isTopCategory && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-400/40">
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning-50 px-2 py-0.5 text-[10px] font-bold text-warning-700 ring-1 ring-warning-400/40">
                   ⭐ Top Category
                 </span>
               )}
@@ -165,7 +165,7 @@ export function CategoriesPage() {
             }
             className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all ${
               item.isTopCategory
-                ? 'bg-amber-100/90 text-amber-800 ring-1 ring-amber-400/60 shadow-xs hover:bg-amber-200'
+                ? 'bg-warning-100/90 text-warning-800 ring-1 ring-warning-400/60 shadow-xs hover:bg-warning-200'
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200/80 hover:text-slate-800'
             }`}
             title={item.isTopCategory ? 'Click to remove from Top Categories' : 'Click to mark as Top Category'}
@@ -278,7 +278,7 @@ export function CategoriesPage() {
           <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Categories</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
                 <Icon name="categories" className="h-5 w-5" />
               </span>
             </div>
@@ -287,29 +287,29 @@ export function CategoriesPage() {
               <span className="text-xs font-medium text-slate-500">collections</span>
             </div>
             <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
               <span>Catalog grouping taxonomy</span>
             </div>
           </div>
 
           {/* Top Featured Categories */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-300">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-warning-300">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Top Categories</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
                 <span className="text-base font-bold">⭐</span>
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{topCount}</span>
-              <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-warning-700 bg-warning-50 px-2 py-0.5 rounded-full">
                 {topRatio}% of catalog
               </span>
             </div>
             <div className="mt-3.5">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                  className="h-full rounded-full bg-warning-500 transition-all duration-500"
                   style={{ width: `${topRatio}%` }}
                 />
               </div>
@@ -317,23 +317,23 @@ export function CategoriesPage() {
           </div>
 
           {/* Active Categories */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active in Store</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
                 <Icon name="check" className="h-5 w-5" />
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{activeCount}</span>
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
                 {activeRatio}% live
               </span>
             </div>
             <div className="mt-3.5">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  className="h-full rounded-full bg-success-500 transition-all duration-500"
                   style={{ width: `${activeRatio}%` }}
                 />
               </div>
@@ -353,7 +353,7 @@ export function CategoriesPage() {
               <span className="text-xs font-medium text-slate-500">drafts</span>
             </div>
             <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${inactiveCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${inactiveCount > 0 ? 'bg-warning-500' : 'bg-success-500'}`} />
               <span>{inactiveCount > 0 ? 'Unpublished from storefront' : 'All categories are active'}</span>
             </div>
           </div>
@@ -520,7 +520,7 @@ export function CategoriesPage() {
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-1.5">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-xl ring-1 ring-brand-500/20">
                         {item.name ? item.name.slice(0, 2).toUpperCase() : 'CT'}
                       </div>
                     </div>
@@ -529,7 +529,7 @@ export function CategoriesPage() {
                   {/* Top Category floating badge at top-left */}
                   {item.isTopCategory && (
                     <div className="absolute top-2.5 left-2.5 z-10">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2.5 py-1 text-2xs font-extrabold text-white shadow-sm backdrop-blur-md">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/95 px-2.5 py-1 text-2xs font-extrabold text-white shadow-sm backdrop-blur-md">
                         ⭐ Top Category
                       </span>
                     </div>
@@ -594,8 +594,8 @@ export function CategoriesPage() {
                         disabled={writer.setTopStatus.isSubmitting}
                         className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-2xs font-bold transition-all ${
                           item.isTopCategory
-                            ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-400/50 hover:bg-amber-200'
-                            : 'bg-slate-100 text-slate-500 hover:text-amber-700 hover:bg-amber-50'
+                            ? 'bg-warning-100 text-warning-800 ring-1 ring-warning-400/50 hover:bg-warning-200'
+                            : 'bg-slate-100 text-slate-500 hover:text-warning-700 hover:bg-warning-50'
                         }`}
                         title={item.isTopCategory ? 'Click to remove from Top Categories' : 'Click to mark as Top Category'}
                       >

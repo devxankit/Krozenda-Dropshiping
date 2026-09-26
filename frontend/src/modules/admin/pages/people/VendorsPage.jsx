@@ -104,7 +104,7 @@ export function VendorsPage() {
             className="flex items-center gap-3.5 py-1 cursor-pointer group"
             onClick={() => setSelectedVendor(row)}
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950 font-black text-white text-xs ring-1 ring-slate-800/20 shadow-xs group-hover:scale-105 transition-transform">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 to-brand-950 font-black text-white text-xs ring-1 ring-slate-800/20 shadow-xs group-hover:scale-105 transition-transform">
               {initials || 'V'}
             </div>
             <div className="min-w-0">
@@ -266,7 +266,7 @@ export function VendorsPage() {
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Partners</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-500/10 transition-transform group-hover:scale-105">
               <Icon name="sellers" className="h-5 w-5" />
             </span>
           </div>
@@ -275,7 +275,7 @@ export function VendorsPage() {
             <span className="text-xs font-medium text-slate-500">registered entities</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
             <span>Multi-vendor supply ecosystem</span>
           </div>
         </div>
@@ -301,10 +301,10 @@ export function VendorsPage() {
         </div>
 
         {/* B2C Partners */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-violet-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-accent-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">B2C Partners</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50 text-accent-600 ring-1 ring-accent-500/10 transition-transform group-hover:scale-105">
               <Icon name="customers" className="h-5 w-5" />
             </span>
           </div>
@@ -313,16 +313,16 @@ export function VendorsPage() {
             <span className="text-xs font-medium text-slate-500">individual sellers</span>
           </div>
           <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-500" />
             <span>Direct-to-shopper sellers</span>
           </div>
         </div>
 
         {/* Active partners */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Live & Selling</span>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
               <Icon name="check" className="h-5 w-5" />
             </span>
           </div>
@@ -330,14 +330,14 @@ export function VendorsPage() {
             <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">
               {activeRatio}%
             </span>
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
               {activeCount} active
             </span>
           </div>
           <div className="mt-3.5">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                className="h-full rounded-full bg-success-500 transition-all duration-500"
                 style={{ width: `${activeRatio}%` }}
               />
             </div>

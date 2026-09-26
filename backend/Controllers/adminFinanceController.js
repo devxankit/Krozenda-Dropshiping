@@ -218,7 +218,8 @@ async function bulkReconcileTransactions(req, res) {
 // cancellation refunds (already resolved at the moment they happened).
 // ---------------------------------------------------------------------------
 
-const REFUND_STATUS_OUT = { PENDING: 'pending', APPROVED: 'completed', REJECTED: 'declined' };
+// ACCEPTED: approved, waiting for the item to come back before the money moves.
+const REFUND_STATUS_OUT = { PENDING: 'pending', ACCEPTED: 'processing', APPROVED: 'completed', REJECTED: 'declined' };
 
 async function listRefunds(req, res) {
   const { tab, search, page, rowsPerPage } = req.query;

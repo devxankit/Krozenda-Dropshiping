@@ -28,11 +28,13 @@ const HEADER_DENSITY = Object.freeze({
   compact: 'h-9 px-3 text-2xs',
 })
 
+// Staggered skeleton widths, so a loading table reads as rows of data rather
+// than a stack of identical bars.
+const SKELETON_WIDTHS = Object.freeze(['max-w-[9rem]', 'max-w-[6rem]', 'max-w-[11rem]', 'max-w-[7rem]'])
+
 function SortIndicator({ state }) {
   if (!state) return <Icon name="chevronsRight" className="h-3 w-3 rotate-90 text-border-strong" />
-  return (
-    <Icon name={state === 'asc' ? 'chevronUp' : 'chevronDown'} className="h-3 w-3 text-brand-600" />
-  )
+  return <Icon name={state === 'asc' ? 'chevronUp' : 'chevronDown'} className="h-3 w-3 text-brand-600" />
 }
 
 export function Table({
@@ -85,7 +87,9 @@ export function Table({
   }
 
   return (
-    <div className={`admin-scroll overflow-x-auto overflow-y-hidden rounded-lg border border-border ${className}`}>
+    <div
+      className={`admin-scroll overflow-x-auto overflow-y-hidden rounded-lg border border-border ${className}`}
+    >
       <table className="min-w-full border-collapse text-sm">
         <thead className={stickyHeader ? 'sticky top-0 z-sticky' : undefined}>
           <tr>
@@ -110,7 +114,7 @@ export function Table({
                       : 'descending'
                     : undefined
                 }
-                className={`whitespace-nowrap border-b border-border bg-surface-muted font-semibold uppercase tracking-wider text-ink-muted ${headerClass} ${ALIGN[column.align] || ALIGN.left} ${column.headerClassName || ''}`}
+                className={`whitespace-nowrap border-b border-border bg-surface-muted font-semibold uppercase tracking-wider text-ink-subtle ${headerClass} ${ALIGN[column.align] || ALIGN.left} ${column.headerClassName || ''}`}
               >
                 {column.sortable ? (
                   <button
@@ -137,9 +141,11 @@ export function Table({
                       <Skeleton className="h-4 w-4" />
                     </td>
                   )}
-                  {columns.map((column) => (
+                  {columns.map((column, columnIndex) => (
                     <td key={column.key} className={cellClass}>
-                      <Skeleton className="h-3 w-full max-w-[10rem]" />
+                      <Skeleton
+                        className={`h-3 w-full ${SKELETON_WIDTHS[(index + columnIndex) % SKELETON_WIDTHS.length]} ${column.align === 'right' ? 'ml-auto' : ''}`}
+                      />
                     </td>
                   ))}
                 </tr>
@@ -151,7 +157,7 @@ export function Table({
                   <tr
                     key={key}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    className={`border-b border-border-subtle transition-colors last:border-b-0 ${isSelected ? 'bg-brand-50/40' : 'hover:bg-surface-muted'} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    className={`border-b border-border-subtle transition-colors duration-100 last:border-b-0 ${isSelected ? 'bg-brand-50/70 hover:bg-brand-50' : 'hover:bg-slate-50/80'} ${onRowClick ? 'cursor-pointer' : ''}`}
                   >
                     {selectable && (
                       <td className={cellClass} onClick={(event) => event.stopPropagation()}>

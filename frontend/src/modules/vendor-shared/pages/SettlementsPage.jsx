@@ -63,7 +63,7 @@ const EARNING_COLUMNS = [
     header: 'Net Earning',
     width: '8.5rem',
     align: 'right',
-    render: (row) => <MoneyCell amount={row.netAmount} compact className="text-emerald-600" />,
+    render: (row) => <MoneyCell amount={row.netAmount} compact className="text-success-600" />,
   },
   { key: 'deliveredAt', header: 'Delivered', width: '8rem', render: (row) => <DateCell value={row.deliveredAt} withTime={false} /> },
 ]
@@ -139,11 +139,11 @@ export function EarningsPage() {
           <Tile
             label="Paid out"
             value={summary.paidAmount}
-            tone="text-emerald-600"
+            tone="text-success-600"
             caption={`${summary.completedPayoutsCount} completed ${summary.completedPayoutsCount === 1 ? 'payout' : 'payouts'}`}
           />
           <Tile label="In settlement" value={summary.inBatchAmount} tone="text-brand-600" caption="Batched, transfer not sent yet" />
-          <Tile label="Awaiting settlement" value={summary.unsettledAmount} tone="text-amber-600" caption="Delivered, not yet batched" />
+          <Tile label="Awaiting settlement" value={summary.unsettledAmount} tone="text-warning-600" caption="Delivered, not yet batched" />
         </div>
       )}
 

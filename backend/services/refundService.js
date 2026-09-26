@@ -8,6 +8,7 @@ const Settlement = require('../Models/Settlement');
 const Payout = require('../Models/Payout');
 const Vendor = require('../Models/Vendor');
 const razorpayRouteService = require('./razorpayRouteService');
+const razorpay = require('../Config/razorpay');
 const { createNotification } = require('../Controllers/notificationController');
 const { notifyRefundProcessed } = require('./buyerAlertService');
 const posting = require('./accountingPosting');
@@ -259,6 +260,126 @@ function notifyVendorMessageForRouteImpact(result, refundPaise) {
 }
 
 /**
+ * Pay out an approved REFUND return. Called by returnService once the item is
+ * back (or when nothing has to come back). Moves the money, then the ledger
+ * and the seller-settlement impact, then tells the buyer.
+ *
+ * Where the money goes: a Razorpay-paid order is refunded to that payment;
+ * COD and wallet orders have no card to refund, so the Krozenda wallet.
+ * A failed Razorpay refund is returned as an error with nothing changed, so
+ * admin can retry — it never silently falls back to the wallet.
+ *
+ * @returns {Promise<{ok: true, destination, razorpayRefundId, posted} | {ok: false, status, message}>}
+ */
+async function issueReturnRefund({ request, admin = null }) {
+  const order = await Order.findById(request.order?._id || request.order)
+    .select('user paymentMethod paymentStatus razorpayPaymentId shippingAddress')
+    .lean();
+  if (!order) return { ok: false, status: 404, message: 'The order for this return no longer exists' };
+
+  const amount = Number(request.refundAmount) || 0;
+  const userId = request.user?._id || request.user;
+  let destination = 'WALLET';
+  let razorpayRefundId = '';
+
+  if (order.paymentMethod === 'RAZORPAY' && order.razorpayPaymentId && amount > 0) {
+    try {
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+        amount: toPaise(amount),
+        speed: 'optimum',
+        notes: { returnRequestId: String(request._id), orderId: String(order._id) },
+      });
+      destination = 'RAZORPAY';
+      razorpayRefundId = refund?.id || '';
+    } catch (err) {
+      return {
+        ok: false,
+        status: 502,
+        message: `Razorpay did not accept the refund: ${err?.error?.description || err.message}. Nothing was refunded — try again.`,
+      };
+    }
+  } else if (amount > 0) {
+    const user = await Customer.findByIdAndUpdate(userId, { $inc: { walletBalance: amount } }, { new: true });
+    await WalletTransaction.create({
+      user: userId,
+      type: 'CREDIT',
+      amount,
+      balanceAfter: user.walletBalance,
+      source: 'ORDER_REFUND',
+      orderId: order._id,
+      status: 'SUCCESS',
+    });
+  }
+
+  // What has gone back to the buyer on this order, for anything that later
+  // refunds "what is left" (cancellation paths read it).
+  await Order.updateOne({ _id: order._id }, { $inc: { refundedAmount: amount } });
+
+  // Accounting impact. Never fatal: the buyer has already been refunded, so
+  // failing here would leave them paid and the admin believing nothing
+  // happened. The read-time reconciler picks up anything missed — including
+  // an unremitted COD order, whose sale is not on the ledger yet.
+  let posted = { posted: 0 };
+  try {
+    posted = await posting.postReturnRefund({
+      returnRequest: typeof request.toObject === 'function' ? request.toObject() : request,
+      createdBy: admin?._id || null,
+    });
+  } catch (err) {
+    console.error('Refund paid but not posted to the ledger', { requestId: String(request._id), error: err.message });
+  }
+
+  // Razorpay Route seller-settlement impact. Also never fatal.
+  try {
+    const routeResult = await applyRouteSettlementImpact({ request, refundPaise: toPaise(amount), admin });
+    if (routeResult.vendorId) {
+      const notice = notifyVendorMessageForRouteImpact(routeResult, toPaise(amount));
+      if (notice) {
+        await createNotification({
+          vendorId: routeResult.vendorId,
+          type: 'WALLET',
+          title: notice.title,
+          message: notice.message,
+          actionType: 'WALLET',
+          actionRefId: routeResult.settlementId || null,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Refund paid, but its Razorpay Route settlement impact failed', {
+      requestId: String(request._id),
+      error: err.message,
+    });
+  }
+
+  const label = destination === 'RAZORPAY' ? 'your original payment method' : 'your Krozenda wallet';
+  await createNotification({
+    userId,
+    type: 'ORDER',
+    title: 'Refund Processed',
+    message: `Your refund of ₹${amount.toLocaleString('en-IN')} for ${request.productName} has been sent to ${label}.`,
+    actionType: destination === 'WALLET' ? 'WALLET' : 'ORDER',
+    actionRefId: destination === 'WALLET' ? null : order._id,
+  });
+  await notifyRefundProcessed({
+    order,
+    amount,
+    destination: destination === 'RAZORPAY' ? 'original payment method' : 'Krozenda wallet',
+    key: `RETURN:${request._id}`,
+  });
+
+  return { ok: true, destination, razorpayRefundId, posted };
+}
+
+/**
+ * The Finance / Accounting "approve" and "reject" buttons on a refund.
+ *
+ * Approving here is a finance decision to PAY NOW: a PENDING request is
+ * accepted and paid in one step without waiting for the item (goodwill, or a
+ * return already checked by hand); an ACCEPTED one is completed. The
+ * operational flow — pickup, item received, then pay — lives on the Returns
+ * screen (services/returnService.js). Both end in the same payout above.
+ *
  * @param {object} options
  * @param {string} options.requestId
  * @param {'APPROVED'|'REJECTED'} options.decision
@@ -266,6 +387,8 @@ function notifyVendorMessageForRouteImpact(result, refundPaise) {
  * @param {object} [options.admin]  req.admin
  */
 async function decideReturnRefund({ requestId, decision, reason = '', admin = null }) {
+  // Lazy: returnService calls back into issueReturnRefund above.
+  const returnService = require('./returnService');
   if (!mongoose.isValidObjectId(requestId)) {
     return { ok: false, status: 400, message: 'Invalid refund id' };
   }
@@ -273,111 +396,24 @@ async function decideReturnRefund({ requestId, decision, reason = '', admin = nu
     return { ok: false, status: 400, message: 'Select a valid decision' };
   }
 
-  // Status-guarded, so a double-clicked Approve can only win once and the
-  // wallet is credited exactly once (task §22 case 8).
-  const request = await ReturnRequest.findOneAndUpdate(
-    { _id: requestId, status: 'PENDING' },
-    { $set: { status: decision, adminNote: String(reason || '').trim(), resolvedAt: new Date() } },
-    { new: true }
-  ).populate('user', 'name');
-
-  if (!request) {
-    const exists = await ReturnRequest.exists({ _id: requestId });
-    return {
-      ok: false,
-      status: exists ? 409 : 404,
-      message: exists ? 'This refund has already been decided' : 'Refund request not found',
-    };
+  if (decision === 'REJECTED') {
+    return returnService.rejectReturn({ requestId, admin, reason: reason || 'Refund declined' });
   }
 
-  let posted = { posted: 0 };
-
-  if (decision === 'APPROVED') {
-    const user = await Customer.findByIdAndUpdate(
-      request.user._id,
-      { $inc: { walletBalance: request.refundAmount } },
-      { new: true }
-    );
-    await WalletTransaction.create({
-      user: request.user._id,
-      type: 'CREDIT',
-      amount: request.refundAmount,
-      balanceAfter: user.walletBalance,
-      source: 'ORDER_REFUND',
-      orderId: request.order,
-      status: 'SUCCESS',
-    });
-
-    // Accounting impact. Never fatal: the buyer has already been refunded, so
-    // failing the request here would leave them paid and the admin believing
-    // nothing happened. The read-time reconciler picks up anything missed.
-    try {
-      posted = await posting.postReturnRefund({
-        returnRequest: request.toObject(),
-        createdBy: admin?._id || null,
-      });
-    } catch (err) {
-      console.error('Refund posted to wallet but not to the ledger', {
-        requestId: String(request._id),
-        error: err.message,
-      });
+  const current = await ReturnRequest.findById(requestId).select('status itemReceivedAt').lean();
+  if (!current) return { ok: false, status: 404, message: 'Refund request not found' };
+  if (current.status === 'ACCEPTED') {
+    // Finance paying out a return whose item is still on its way: its pickup
+    // stays booked, but the money no longer waits for it.
+    if (!current.itemReceivedAt) {
+      await ReturnRequest.updateOne({ _id: requestId, status: 'ACCEPTED' }, { $set: { pickupMode: 'NOT_REQUIRED' } });
     }
-
-    // Razorpay Route seller-settlement impact (sub-task 6/11). Also never
-    // fatal, for the same reason as the ledger post above — the buyer is
-    // already refunded.
-    try {
-      const routeResult = await applyRouteSettlementImpact({
-        request,
-        refundPaise: toPaise(request.refundAmount || 0),
-        admin,
-      });
-      if (routeResult.vendorId) {
-        const notice = notifyVendorMessageForRouteImpact(routeResult, toPaise(request.refundAmount || 0));
-        if (notice) {
-          await createNotification({
-            vendorId: routeResult.vendorId,
-            type: 'WALLET',
-            title: notice.title,
-            message: notice.message,
-            actionType: 'WALLET',
-            actionRefId: routeResult.settlementId || null,
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Refund posted, but its Razorpay Route settlement impact failed', {
-        requestId: String(request._id),
-        error: err.message,
-      });
-    }
+    return returnService.completeReturn({ requestId, admin });
   }
-
-  await createNotification({
-    userId: request.user._id,
-    type: 'ORDER',
-    title: decision === 'APPROVED' ? 'Refund Approved' : 'Refund Declined',
-    message:
-      decision === 'APPROVED'
-        ? `Your refund of ₹${request.refundAmount.toLocaleString('en-IN')} has been credited to your wallet.`
-        : `Your refund request was declined.${reason ? ` Reason: ${reason}` : ''}`,
-    actionType: decision === 'APPROVED' ? 'WALLET' : 'ORDER',
-    actionRefId: decision === 'APPROVED' ? null : request.order,
-  });
-
-  if (decision === 'APPROVED') {
-    const order = await Order.findById(request.order?._id || request.order).select('user shippingAddress').lean();
-    if (order) {
-      await notifyRefundProcessed({
-        order,
-        amount: request.refundAmount,
-        destination: 'Krozenda wallet',
-        key: `RETURN:${request._id}`,
-      });
-    }
+  if (current.status !== 'PENDING') {
+    return { ok: false, status: 409, message: 'This refund has already been decided' };
   }
-
-  return { ok: true, request, posted };
+  return returnService.acceptReturn({ requestId, admin, note: reason, requireItemBack: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +422,8 @@ async function decideReturnRefund({ requestId, decision, reason = '', admin = nu
 
 const REFUND_STATUS = Object.freeze({
   PENDING: 'REQUESTED',
+  // Accepted, waiting for the item to come back — no money moved yet.
+  ACCEPTED: 'APPROVED',
   APPROVED: 'COMPLETED',
   REJECTED: 'CANCELLED',
 });
@@ -507,4 +545,4 @@ async function listAllRefunds({ range = null } = {}) {
   );
 }
 
-module.exports = { decideReturnRefund, listAllRefunds, REFUND_STATUS };
+module.exports = { decideReturnRefund, issueReturnRefund, listAllRefunds, REFUND_STATUS };

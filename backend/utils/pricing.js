@@ -166,7 +166,28 @@ function resolveLineTax(product, lineTotalRupees) {
   return { taxableValuePaise, taxPaise: grossPaise - taxableValuePaise, rate };
 }
 
+/**
+ * The GST rate a product is sold at: its own rate when one is set (0 is a
+ * real rate — exempt goods), otherwise the platform default the admin chose.
+ */
+function effectiveGstRate(product, fallbackRate) {
+  const rate = product?.gstRate;
+  if (rate === null || rate === undefined || rate === '') return Number(fallbackRate) || 0;
+  return Number(rate) || 0;
+}
+
+/**
+ * What the buyer pays per unit, tax included, in paise. An inclusive price
+ * already contains GST; an exclusive one has it added on top.
+ */
+function grossUnitPaise(listUnitPaise, { rate, inclusive }) {
+  if (inclusive || !rate) return listUnitPaise;
+  return Math.round(listUnitPaise * (1 + rate / 100));
+}
+
 module.exports = {
+  effectiveGstRate,
+  grossUnitPaise,
   findVariant,
   resolveTier,
   resolveUnitPrice,

@@ -308,7 +308,7 @@ function BulkPricingModal({
                     </td>
                     <td className="px-3 py-2 text-right">
                       {item.marginPct != null ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-2xs font-semibold text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded bg-success-50 px-1.5 py-0.5 font-mono text-2xs font-semibold text-success-700">
                           +{item.marginPct}%
                         </span>
                       ) : (

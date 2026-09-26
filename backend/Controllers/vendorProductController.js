@@ -128,6 +128,7 @@ function serializeProduct(p) {
     // Tax
     hsnCode: p.hsnCode || '',
     gstRate: p.gstRate ?? null,
+    gstInclusive: p.gstInclusive !== false,
 
     // B2B
     moq: p.moq ?? 1,
@@ -246,15 +247,18 @@ async function listMyProducts(req, res) {
 // globally unique, so nothing stops the query from finding another seller's
 // product; this is what stops the RESPONSE from ever showing it to them.
 async function getMyProductByBarcode(req, res) {
-  const { code } = req.params;
+  const code = String(req.params.code || '').trim();
 
-  if (!isValidEan13(code)) {
+  // The label's barcode carries the SKU; the QR code and older labels carry
+  // the 13-digit EAN. Either one opens the product.
+  if (!code || code.length > 64) {
     return res.status(400).json({ success: false, message: 'Not a valid barcode' });
   }
 
-  const product = await Product.findOne({ barcode: code, vendor: req.vendor._id })
-    .populate('category', 'name')
-    .populate('brand', 'name');
+  const scope = { vendor: req.vendor._id };
+  const query = (filter) =>
+    Product.findOne({ ...filter, ...scope }).populate('category', 'name').populate('brand', 'name');
+  const product = (isValidEan13(code) && (await query({ barcode: code }))) || (await query({ sku: code }));
 
   if (!product) {
     return res.status(404).json({ success: false, message: 'No product in your catalog carries this barcode' });
@@ -271,14 +275,20 @@ async function getMyProductBarcodeImage(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 
-  const product = await Product.findOne({ _id: id, vendor: req.vendor._id }).select('barcode').lean();
+  const product = await Product.findOne({ _id: id, vendor: req.vendor._id })
+    .select('name sku barcode price salePrice mrp brand category')
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .lean();
   if (!product || !product.barcode) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  const png = await renderBarcodePng(product.barcode);
+  // Encodes the SKU (see utils/barcode.renderBarcodePng), which can be
+  // edited — so it is never cached.
+  const png = await renderBarcodePng(product);
   res.set('Content-Type', 'image/png');
-  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.set('Cache-Control', 'no-cache');
   res.send(png);
 }
 
@@ -326,7 +336,7 @@ async function getMyProduct(req, res) {
 async function createMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
-    lowStockThreshold, weight, shortDescription, description, status, hsnCode, gstRate, moq,
+    lowStockThreshold, weight, shortDescription, description, status, hsnCode, gstRate, gstInclusive, moq,
     isFlashsale, isFlashSale, isTrending, isReturnable,
   } = req.body;
 
@@ -446,6 +456,8 @@ async function createMyProduct(req, res) {
       : null,
     hsnCode: String(hsnCode || '').trim(),
     gstRate: toNumber(gstRate),
+    // Absent means inclusive — how every product was priced before this.
+    gstInclusive: gstInclusive === undefined ? true : gstInclusive === true || gstInclusive === 'true',
     moq: Math.max(1, Math.round(toNumber(moq, 1))),
     priceTiers: (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) })),
     variants,
@@ -473,7 +485,7 @@ async function updateMyProduct(req, res) {
   const { id } = req.params;
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
-    lowStockThreshold, weight, shortDescription, description, status, isActive, removeImages, hsnCode, gstRate, moq,
+    lowStockThreshold, weight, shortDescription, description, status, isActive, removeImages, hsnCode, gstRate, gstInclusive, moq,
     isFlashsale, isFlashSale, isTrending, isReturnable,
   } = req.body;
 
@@ -545,6 +557,7 @@ async function updateMyProduct(req, res) {
   }
   if (hsnCode !== undefined) product.hsnCode = String(hsnCode || '').trim();
   if (gstRate !== undefined) product.gstRate = toNumber(gstRate);
+  if (gstInclusive !== undefined) product.gstInclusive = gstInclusive === true || gstInclusive === 'true';
   if (moq !== undefined) product.moq = Math.max(1, Math.round(toNumber(moq, product.moq)));
   if (priceTiers !== undefined) {
     product.priceTiers = (priceTiers || []).map((t) => ({ minQty: Number(t.minQty), price: Number(t.price) }));

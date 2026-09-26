@@ -1,7 +1,18 @@
 const mongoose = require('mongoose');
 
 const REQUEST_TYPES = ['REPLACEMENT', 'REFUND'];
-const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
+// PENDING   buyer raised it, admin has not decided.
+// ACCEPTED  admin approved it; waiting for the item to come back (pickup
+//           booked with the courier, or collected by hand). No money yet.
+// APPROVED  done: the refund was paid or the replacement order was created.
+//           Reports, analytics and the ledger read APPROVED as "money moved",
+//           which is why the in-between state has its own name.
+// REJECTED  refused, before or after the item came back.
+const STATUSES = ['PENDING', 'ACCEPTED', 'APPROVED', 'REJECTED'];
+// A line with one of these cannot get another request.
+const BLOCKING_STATUSES = ['PENDING', 'ACCEPTED', 'APPROVED'];
+const PICKUP_MODES = ['COURIER', 'MANUAL', 'NOT_REQUIRED'];
+const REFUND_DESTINATIONS = ['WALLET', 'RAZORPAY'];
 const SELLER_RECOMMENDATIONS = ['APPROVE', 'REJECT'];
 
 // What the seller thinks should happen, and why. Advisory only — the decision
@@ -47,11 +58,34 @@ const returnRequestSchema = new mongoose.Schema(
     // what was actually paid at checkout for this line item.
     refundAmount: { type: Number, default: null, min: 0 },
     resolvedAt: { type: Date, default: null },
+
+    // --- after approval -----------------------------------------------------
+    acceptedAt: { type: Date, default: null },
+    // How the item comes back. COURIER: a reverse pickup was booked
+    // (`returnShipment`). MANUAL: no courier parcel to reverse, or booking
+    // failed — admin collects it and marks it received. NOT_REQUIRED: nothing
+    // to send back (a missing item), so the request completes at once.
+    pickupMode: { type: String, enum: PICKUP_MODES, default: null },
+    returnShipment: { type: mongoose.Schema.Types.ObjectId, ref: 'Shipment', default: null },
+    pickupError: { type: String, default: '' },
+    itemReceivedAt: { type: Date, default: null },
+    // Set when admin put the returned units back into stock.
+    restocked: { type: Boolean, default: false },
+    completedAt: { type: Date, default: null },
+    // Where a REFUND went: back to the Razorpay payment it came from, or the
+    // Krozenda wallet (COD and wallet orders, which have no card to refund).
+    refundDestination: { type: String, enum: REFUND_DESTINATIONS, default: null },
+    razorpayRefundId: { type: String, default: '' },
+    // The zero-value order that ships the replacement item.
+    replacementOrder: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+    // Guards completion against a double click: set while it runs.
+    completing: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 returnRequestSchema.index({ user: 1, createdAt: -1 });
+returnRequestSchema.index({ returnShipment: 1 }, { sparse: true });
 // One active (non-terminal) request per order line at a time. Replaces the
 // old order+product index (dropped by migrate-split-order-indexes.js), which
 // blocked returning a second variant of the same product.
@@ -64,6 +98,8 @@ const ReturnRequest = mongoose.model('ReturnRequest', returnRequestSchema);
 ReturnRequest.LEGACY_INDEX_NAMES = ['order_1_product_1'];
 ReturnRequest.REQUEST_TYPES = REQUEST_TYPES;
 ReturnRequest.STATUSES = STATUSES;
+ReturnRequest.BLOCKING_STATUSES = BLOCKING_STATUSES;
+ReturnRequest.PICKUP_MODES = PICKUP_MODES;
 ReturnRequest.SELLER_RECOMMENDATIONS = SELLER_RECOMMENDATIONS;
 
 module.exports = ReturnRequest;

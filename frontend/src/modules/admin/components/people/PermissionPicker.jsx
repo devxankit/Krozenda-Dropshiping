@@ -86,7 +86,7 @@ export function PermissionPicker({ value = [], onChange }) {
           <button
             type="button"
             onClick={deselectAll}
-            className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-rose-600 hover:shadow-xs"
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-danger-600 hover:shadow-xs"
           >
             Deselect all
           </button>

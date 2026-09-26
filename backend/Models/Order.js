@@ -43,6 +43,11 @@ const orderItemSchema = new mongoose.Schema(
     gstRate: { type: Number, default: 0 },
     taxableValue: { type: Number, default: 0 },
     taxAmount: { type: Number, default: 0 },
+    // How the product was priced. `price` above is ALWAYS what the buyer paid
+    // per unit, tax included; on an exclusive product that is the listed
+    // price plus GST, and `listPrice` keeps the figure the buyer saw listed.
+    gstInclusive: { type: Boolean, default: true },
+    listPrice: { type: Number, default: null, min: 0 },
     // This line's share of the order's coupon discount, in rupees, fixed at
     // checkout. Only lines the coupon actually applied to carry any. Refunds
     // and the seller ledger read it, so a return pays back what the buyer
@@ -136,6 +141,12 @@ const orderSchema = new mongoose.Schema(
     discountAmount: { type: Number, default: 0, min: 0 },
     couponCode: { type: String, default: null },
     shippingFee: { type: Number, default: 0, min: 0 },
+    // Buyer-paid platform fee (PlatformSettings.buyerPlatformFee*), part of
+    // `total`. Platform revenue, never a seller's.
+    platformFee: { type: Number, default: 0, min: 0 },
+    // Set on the zero-value order that ships a replacement for an approved
+    // return. It carries no money: no sale, commission or invoice total.
+    replacementFor: { type: mongoose.Schema.Types.ObjectId, ref: 'ReturnRequest', default: null },
     total: { type: Number, required: true, min: 0 },
     // How much of `total` has already gone back to the buyer through single
     // lines being cancelled (seller rejection, admin sub-order cancel). A
@@ -285,6 +296,23 @@ orderSchema.pre('save', function markNew() {
   this.$locals.wasNew = this.isNew;
 });
 
+// Delivered = the order is DELIVERED, or every line that was not cancelled is.
+function isFullyDelivered(order) {
+  if (order.status === 'DELIVERED') return true;
+  const live = (order.items || []).filter((item) => item.status !== 'CANCELLED');
+  return live.length > 0 && live.every((item) => item.status === 'DELIVERED');
+}
+
+// A COD order is paid the moment it is delivered: the buyer handed the cash
+// to the courier. Whether the courier has passed that cash on to us is a
+// separate question, tracked by `codRemittedAt` — the ledger waits for that,
+// not for this.
+orderSchema.pre('save', function markCodPaidOnDelivery() {
+  if (this.paymentMethod === 'COD' && this.paymentStatus === 'PENDING' && isFullyDelivered(this)) {
+    this.paymentStatus = 'PAID';
+  }
+});
+
 orderSchema.post('save', function whatsappOnSave() {
   if (!whatsapp().isEnabled()) return;
   if (this.$locals.wasNew) {
@@ -363,6 +391,7 @@ Order.FULFILLMENT_TYPES = FULFILLMENT_TYPES;
 Order.LEGACY_INDEX_NAMES = LEGACY_INDEX_NAMES;
 Order.PAYMENT_METHODS = PAYMENT_METHODS;
 Order.PAYMENT_STATUSES = PAYMENT_STATUSES;
+Order.isFullyDelivered = isFullyDelivered;
 Order.STATUSES = STATUSES;
 
 module.exports = Order;

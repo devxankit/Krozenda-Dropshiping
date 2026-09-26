@@ -161,6 +161,14 @@ export function TaxInvoiceDocument({ data, invoice, index, count }) {
                 <td className="py-2 px-2 text-right font-bold font-mono text-slate-900">{rupees(invoice.shipping)}</td>
               </tr>
             )}
+            {invoice.platformFee > 0 && (
+              <tr>
+                <td className="py-2 px-2 font-bold text-slate-900" colSpan={7}>
+                  Platform fee
+                </td>
+                <td className="py-2 px-2 text-right font-bold font-mono text-slate-900">{rupees(invoice.platformFee)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -219,6 +227,12 @@ export function TaxInvoiceDocument({ data, invoice, index, count }) {
             <div className="flex justify-between text-slate-600">
               <span>Shipping:</span>
               <span className="font-mono">{rupees(totals.shipping)}</span>
+            </div>
+          )}
+          {totals.platformFee > 0 && (
+            <div className="flex justify-between text-slate-600">
+              <span>Platform fee:</span>
+              <span className="font-mono">{rupees(totals.platformFee)}</span>
             </div>
           )}
           <div className="flex justify-between font-black text-sm text-slate-900 border-t border-slate-200 pt-2">

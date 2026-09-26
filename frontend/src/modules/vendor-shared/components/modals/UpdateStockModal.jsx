@@ -61,7 +61,7 @@ export function UpdateStockModal({ product, isOpen, onClose, onUpdateStock }) {
         {product.barcode && (
           <ProductBarcode
             code={product.barcode}
-            imageUrl={`/vendor/products/${product.id}/barcode.png?v=2`}
+            imageUrl={`/vendor/products/${product.id}/barcode.png?v=6`}
             qrUrl={`/vendor/products/${product.id}/qrcode.png`}
             product={product}
           />

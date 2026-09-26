@@ -18,18 +18,27 @@ export function PageHeader({ title, description, actions, trail = [], children }
   return (
     <div className="flex flex-col gap-3">
       {crumbs.length > 0 && (
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-faint">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-faint"
+        >
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1
             return (
               <span key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
                 {index > 0 && <Icon name="chevronRight" className="h-3 w-3" />}
                 {crumb.to && !isLast ? (
-                  <Link to={crumb.to} className="transition-colors hover:text-brand-700">
+                  <Link
+                    to={crumb.to}
+                    className="rounded-sm transition-colors hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  >
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className={isLast ? 'font-medium text-ink-muted' : undefined}>
+                  <span
+                    className={isLast ? 'font-medium text-ink-muted' : undefined}
+                    aria-current={isLast ? 'page' : undefined}
+                  >
                     {crumb.label}
                   </span>
                 )}
@@ -39,13 +48,15 @@ export function PageHeader({ title, description, actions, trail = [], children }
         </nav>
       )}
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
-          {description && <p className="mt-1 text-xs text-ink-subtle">{description}</p>}
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h1>
+          {description && (
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink-subtle">{description}</p>
+          )}
           {children}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>}
       </div>
     </div>
   )

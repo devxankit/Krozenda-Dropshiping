@@ -44,9 +44,11 @@ export function ScanBarcodeModal({ isOpen, onClose, lookupPath, onFound }) {
     e.preventDefault()
     const trimmed = code.trim()
     if (!trimmed) return
-    // A 2D scanner reading the label's QR code types the whole details line
-    // ("2000000000015 | Name | SKU: …"); the barcode is its first field.
-    const barcode = trimmed.match(/\d{13}/)?.[0] || trimmed
+    // The label's barcode types the SKU; a 2D scanner reading its QR code
+    // types the whole details line ("2000000000015 | Name | SKU: …"), whose
+    // first field is the 13-digit barcode. Only a LEADING 13-digit field is
+    // taken, so a SKU that happens to contain 13 digits is left intact.
+    const barcode = trimmed.match(/^(\d{13})\s*\|/)?.[1] || trimmed
 
     setStatus('loading')
     try {

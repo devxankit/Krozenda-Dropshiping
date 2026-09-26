@@ -110,7 +110,7 @@ export function InvoiceDetailPage() {
             <span className="text-border-strong">·</span>
             <span>Issued {invoice.issuedAt}</span>
             <span className="text-border-strong">·</span>
-            <span className="text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-2xs">
+            <span className="text-success-700 font-medium bg-success-50 px-2 py-0.5 rounded border border-success-200 text-2xs">
               Verified & Paid
             </span>
           </div>
@@ -126,15 +126,15 @@ export function InvoiceDetailPage() {
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div id="printable-invoice" className="w-full">
           {viewMode === 'packing_slip' && (
-            <div className="mb-3 flex items-center justify-between rounded-xl bg-blue-50/80 px-4 py-2.5 border border-blue-200 text-xs text-blue-900 print:hidden shadow-2xs">
+            <div className="mb-3 flex items-center justify-between rounded-xl bg-brand-50/80 px-4 py-2.5 border border-brand-200 text-xs text-brand-900 print:hidden shadow-2xs">
               <div className="flex items-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                <span className="inline-block h-2 w-2 rounded-full bg-brand-600 animate-pulse" />
                 <span className="font-semibold">Warehouse Packing Slip View</span>
-                <span className="text-blue-700 text-2xs">(Designed for dispatch check without tax lines)</span>
+                <span className="text-brand-700 text-2xs">(Designed for dispatch check without tax lines)</span>
               </div>
               <button
                 onClick={() => setViewMode('invoice')}
-                className="font-bold underline hover:text-blue-700 text-xs"
+                className="font-bold underline hover:text-brand-700 text-xs"
               >
                 Switch to Tax Invoice
               </button>

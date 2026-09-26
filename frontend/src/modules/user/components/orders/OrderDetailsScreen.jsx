@@ -43,7 +43,7 @@ export function OrderDetailsScreen() {
   const onBack = () => navigate(USER_ROUTES.ORDERS)
   const onDownloadInvoice = (o) => navigate(userPath.orderInvoice(o.id))
   const onTrackShipment = (o) => navigate(userPath.orderTrack(o.id))
-  const onRequestReturn = () => navigate(USER_ROUTES.RETURNS)
+  const onRequestReturn = (o) => navigate(`${USER_ROUTES.RETURNS}?orderId=${(o || order)?.id}`)
 
   const handleReorder = async () => {
     if (!order) return
@@ -164,8 +164,8 @@ export function OrderDetailsScreen() {
               <span className="sm:hidden">Invoice</span>
             </button>
 
-            {/* Dropshipping orders cannot be returned (business rule). */}
-            {order.status === 'DELIVERED' && !order.isDropship && (
+            {/* Server decides: delivered, in the return window, not dropship, and a returnable line. */}
+            {order.canReturn && (
               <button
                 onClick={() => onRequestReturn(order)}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-colors flex items-center space-x-1.5 border border-slate-200"

@@ -122,8 +122,18 @@ export const updateShipment = ({ id, status, lastEvent }) =>
 export const restockRto = ({ id }) =>
   mutateResource({ path: `/admin/fulfilment/rto/${id}/restock`, body: { id }, fixture: () => fixtures.restockRtoFixture(id), schema: rtoSchema, live: true })
 
-export const decideReturn = ({ id, decision, reason }) =>
-  mutateResource({ path: `/admin/returns/${id}/decide`, body: { decision, reason }, fixture: (p) => fixtures.decideReturnFixture(id, p), schema: returnSchema, live: true })
+// APPROVED accepts the return (pickup booked, no money yet); REJECTED needs a
+// reason. `requireItemBack: false` completes at once (nothing to send back).
+export const decideReturn = ({ id, decision, reason, requireItemBack = true, restock = false }) =>
+  mutateResource({ path: `/admin/returns/${id}/decide`, body: { decision, reason, requireItemBack, restock }, fixture: (p) => fixtures.decideReturnFixture(id, p), schema: returnSchema, live: true })
+
+export const markReturnReceived = ({ id }) =>
+  mutateResource({ path: `/admin/returns/${id}/received`, body: {}, fixture: () => fixtures.decideReturnFixture(id, {}), schema: returnSchema, live: true })
+
+// Pays the refund (to the original payment where there is one) or creates the
+// replacement order; `restock` puts the returned units back on sale.
+export const completeReturn = ({ id, restock = false }) =>
+  mutateResource({ path: `/admin/returns/${id}/complete`, body: { restock }, fixture: () => fixtures.decideReturnFixture(id, {}), schema: returnSchema, live: true })
 
 export const resolveCancellationRefund = ({ id }) =>
   mutateResource({ path: `/admin/fulfilment/cancellations/${id}/refund`, body: { id }, fixture: () => fixtures.resolveCancellationRefundFixture(id), schema: cancellationSchema, live: true })

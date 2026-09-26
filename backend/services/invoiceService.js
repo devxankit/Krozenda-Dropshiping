@@ -197,6 +197,15 @@ async function buildInvoices(order) {
     invoice.totals.total += shipping;
   }
 
+  // The buyer's platform fee is the platform's charge, like delivery.
+  const platformFee = toPaise(order.platformFee || 0);
+  if (platformFee > 0) {
+    const invoice = invoiceFor(PLATFORM_KEY);
+    invoice.platformFee = platformFee;
+    invoice.totals.platformFee = (invoice.totals.platformFee || 0) + platformFee;
+    invoice.totals.total += platformFee;
+  }
+
   // Platform first, then sellers in the order their lines appear.
   const ordered = [...bySupplier.entries()]
     .sort(([a], [b]) => (a === PLATFORM_KEY ? -1 : b === PLATFORM_KEY ? 1 : 0))
@@ -218,6 +227,7 @@ async function buildInvoices(order) {
     taxType: invoice.taxType,
     items: invoice.items,
     shipping: invoice.shipping,
+    platformFee: invoice.platformFee || 0,
     totals: invoice.totals,
   }));
 

@@ -106,6 +106,8 @@ export function GeneralSettingsPage({ defaultTab }) {
   const [commissionType, setCommissionType] = useState('percentage')
   const [gstRate, setGstRate] = useState(18)
   const [gstType, setGstType] = useState('percentage')
+  const [platformFeeValue, setPlatformFeeValue] = useState(0)
+  const [platformFeeType, setPlatformFeeType] = useState('percentage')
   const [isSavingFinance, setIsSavingFinance] = useState(false)
   const [financeFeedback, setFinanceFeedback] = useState(null)
 
@@ -159,6 +161,8 @@ export function GeneralSettingsPage({ defaultTab }) {
       if (p.gstType) {
         setGstType(p.gstType)
       }
+      if (p.buyerPlatformFeeType) setPlatformFeeType(p.buyerPlatformFeeType)
+      if (p.buyerPlatformFeeValue !== undefined) setPlatformFeeValue(p.buyerPlatformFeeValue)
     }
   }, [controller.data])
 
@@ -365,6 +369,8 @@ export function GeneralSettingsPage({ defaultTab }) {
         gstType,
         defaultCommissionPercent: commissionType === 'percentage' ? Number(commissionRate) : undefined,
         defaultGstRate: gstType === 'percentage' ? Number(gstRate) : undefined,
+        buyerPlatformFeeType: platformFeeType,
+        buyerPlatformFeeValue: Number(platformFeeValue) || 0,
       })
 
       controller.refetch?.()
@@ -961,6 +967,55 @@ export function GeneralSettingsPage({ defaultTab }) {
                       placeholder={gstType === 'percentage' ? 'e.g. 18' : 'e.g. 40'}
                       required
                     />
+                    <p className="text-xs text-ink-muted">
+                      Default GST for products that don&apos;t set their own rate. Each product also says whether its
+                      price includes GST or has it added at checkout.
+                    </p>
+                  </div>
+
+                  {/* 3. Buyer platform fee, added to the buyer's total at checkout */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="platform-fee" className="text-sm font-semibold text-slate-800">
+                        Platform Fee (charged to buyer)
+                      </label>
+                      <div className="inline-flex rounded-md border border-border bg-surface-muted/60 p-0.5 text-xs">
+                        {[
+                          ['percentage', 'Percentage (%)'],
+                          ['flat', 'Flat (₹)'],
+                        ].map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setPlatformFeeType(value)}
+                            className={`rounded px-3 py-1 font-medium transition-all ${
+                              platformFeeType === value
+                                ? 'bg-surface text-brand-700 font-semibold shadow-sm'
+                                : 'text-ink-muted hover:text-slate-900'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Input
+                      id="platform-fee"
+                      type="number"
+                      min="0"
+                      max={platformFeeType === 'percentage' ? '100' : undefined}
+                      step={platformFeeType === 'percentage' ? '0.1' : '1'}
+                      suffix={platformFeeType === 'percentage' ? '%' : '₹'}
+                      size="control"
+                      value={platformFeeValue}
+                      onChange={(e) => setPlatformFeeValue(e.target.value)}
+                      placeholder={platformFeeType === 'percentage' ? 'e.g. 2' : 'e.g. 10'}
+                    />
+                    <p className="text-xs text-ink-muted">
+                      Shown as its own line at checkout and added to what the buyer pays
+                      {platformFeeType === 'percentage' ? ' (percent of the items after coupon)' : ' (once per order)'}.
+                      Separate from seller commission. Set 0 to turn it off.
+                    </p>
                   </div>
 
                   <div className="pt-2">

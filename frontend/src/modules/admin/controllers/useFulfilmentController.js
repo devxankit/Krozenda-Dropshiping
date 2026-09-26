@@ -96,6 +96,18 @@ export const useReturnWriteController = ({ onDone } = {}) => ({
     success: (row) => `${row.subOrderId} — ${row.status.replace(/_/g, ' ')}`,
     onDone,
   }),
+  received: useAdminMutation({
+    mutationFn: service.markReturnReceived,
+    invalidate: FULFILMENT,
+    success: () => 'Item marked received',
+    onDone,
+  }),
+  complete: useAdminMutation({
+    mutationFn: service.completeReturn,
+    invalidate: FULFILMENT,
+    success: (row) => `${row.subOrderId} — ${row.status.replace(/_/g, ' ')}`,
+    onDone,
+  }),
 })
 
 export const useCancellationWriteController = () => ({

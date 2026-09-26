@@ -408,26 +408,26 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
         }
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+          <div className="flex items-center gap-3 rounded-lg border border-success-200 bg-success-50 p-4 text-success-800">
             <span className="text-2xl">🎉</span>
             <div>
               <p className="font-semibold text-sm">
                 {resultSummary.succeededCount} of {resultSummary.total} Products Onboarded Successfully
               </p>
-              <p className="text-xs text-emerald-700 mt-0.5">
+              <p className="text-xs text-success-700 mt-0.5">
                 Imported items are now in your catalog with {markupType === 'PERCENT' ? `${markupValue}%` : `₹${markupValue}`} automated markup applied.
               </p>
             </div>
           </div>
 
           {resultSummary.failedCount > 0 && (
-            <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              <p className="font-semibold text-amber-950">{resultSummary.failedCount} Skipped or Failed:</p>
-              <div className="max-h-40 overflow-y-auto divide-y divide-amber-200/60">
+            <div className="flex flex-col gap-2 rounded-lg border border-warning-200 bg-warning-50 p-3 text-xs text-warning-900">
+              <p className="font-semibold text-warning-950">{resultSummary.failedCount} Skipped or Failed:</p>
+              <div className="max-h-40 overflow-y-auto divide-y divide-warning-200/60">
                 {resultSummary.failed.map((f, i) => (
                   <div key={i} className="flex items-center justify-between py-1.5 gap-2">
-                    <span className="font-mono text-2xs text-amber-800">{f.cjProductId}</span>
-                    <span className="text-2xs font-medium text-amber-700">{f.reason}</span>
+                    <span className="font-mono text-2xs text-warning-800">{f.cjProductId}</span>
+                    <span className="text-2xs font-medium text-warning-700">{f.reason}</span>
                   </div>
                 ))}
               </div>
@@ -646,11 +646,11 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                           Importing...
                         </span>
                       ) : status === 'success' ? (
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-2xs font-bold text-emerald-700 border border-emerald-200">
+                        <span className="rounded-full bg-success-50 px-2 py-0.5 text-2xs font-bold text-success-700 border border-success-200">
                           ✓ Imported
                         </span>
                       ) : status === 'failed' ? (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-medium text-amber-800 border border-amber-200">
+                        <span className="rounded-full bg-warning-50 px-2 py-0.5 text-2xs font-medium text-warning-800 border border-warning-200">
                           ⚠️ Skipped
                         </span>
                       ) : (
@@ -659,7 +659,7 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                         </span>
                       )
                     ) : (
-                      <p className="text-xs font-bold text-emerald-600">
+                      <p className="text-xs font-bold text-success-600">
                         Est. ₹{previewPrice?.toLocaleString('en-IN')}
                       </p>
                     )}

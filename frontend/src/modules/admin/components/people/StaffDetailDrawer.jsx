@@ -83,21 +83,21 @@ export function StaffDetailDrawer({
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <h3 className="text-lg font-bold text-slate-900">{staff.name}</h3>
               {staff.role === 'admin' ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 ring-1 ring-purple-200/70">
-                  <Icon name="roles" className="h-3 w-3 text-purple-500 shrink-0" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2.5 py-1 text-xs font-semibold text-accent-700 ring-1 ring-accent-200/70">
+                  <Icon name="roles" className="h-3 w-3 text-accent-500 shrink-0" />
                   Admin
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200/70">
-                  <Icon name="user" className="h-3 w-3 text-blue-500 shrink-0" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200/70">
+                  <Icon name="user" className="h-3 w-3 text-brand-500 shrink-0" />
                   Staff
                 </span>
               )}
               {staff.isActive ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/70">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-700 ring-1 ring-success-200/70">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success-500" />
                   </span>
                   Active
                 </span>
@@ -132,7 +132,7 @@ export function StaffDetailDrawer({
                   onClose()
                   onPassword?.(staff)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-amber-600"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-warning-600"
               >
                 <Icon name="lock" className="h-3.5 w-3.5" />
                 Password
@@ -143,7 +143,7 @@ export function StaffDetailDrawer({
                   onClose()
                   onPermissions?.(staff)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-indigo-600"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-brand-600"
               >
                 <Icon name="settings" className="h-3.5 w-3.5" />
                 Permissions

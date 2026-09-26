@@ -66,7 +66,7 @@ function CustomerFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
             type="text"
             {...register('name')}
             placeholder="e.g. Rohan Sharma"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
             autoFocus
           />
         </div>
@@ -79,14 +79,14 @@ function CustomerFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
               pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
             })}
             placeholder="e.g. rohan@example.com"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
           />
-          {errors.email && <p className="text-2xs text-rose-600 mt-1">{errors.email.message}</p>}
+          {errors.email && <p className="text-2xs text-danger-600 mt-1">{errors.email.message}</p>}
         </div>
 
         <div>
           <label className="block text-xs font-bold text-slate-800 mb-1.5">
-            Mobile number <span className="text-rose-500">*</span>
+            Mobile number <span className="text-danger-500">*</span>
           </label>
           <input
             type="tel"
@@ -95,10 +95,10 @@ function CustomerFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
               pattern: { value: /^[0-9]{10}$/, message: 'Enter a valid 10-digit mobile number' },
             })}
             placeholder="e.g. 9876543210"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
           />
           {errors.mobileNumber && (
-            <p className="text-2xs text-rose-600 mt-1">{errors.mobileNumber.message}</p>
+            <p className="text-2xs text-danger-600 mt-1">{errors.mobileNumber.message}</p>
           )}
         </div>
 
@@ -107,18 +107,18 @@ function CustomerFormModalBody({ onClose, onSubmit, isSubmitting, error }) {
           <input
             type="date"
             {...register('dob')}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
           />
         </div>
 
         <div>
           <span className="block text-xs font-bold text-slate-800 mb-1.5">Status</span>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/60">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/60">
               <input type="radio" value="true" {...register('isActive')} defaultChecked />
               <span className="text-xs font-semibold text-slate-900">Active</span>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/60">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/60">
               <input type="radio" value="false" {...register('isActive')} />
               <span className="text-xs font-semibold text-slate-900">Inactive</span>
             </label>

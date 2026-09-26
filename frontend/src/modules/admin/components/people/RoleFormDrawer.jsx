@@ -66,7 +66,7 @@ function RoleFormDrawerBody({ onClose, role, onSubmit, isSubmitting, error }) {
           <span className="text-2xs text-slate-400 font-medium">Security Profile</span>
         </div>
         <div className="flex items-center gap-3.5 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-bold">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-bold">
             <Icon name="roles" className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">

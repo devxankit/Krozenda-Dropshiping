@@ -20,9 +20,12 @@ const { BUYER_FACING_ORDER_STATUS } = require('../Config/shipping');
 const PaymentSettings = require('../Models/PaymentSettings');
 const checkoutQuoteService = require('../services/shipping/checkoutQuoteService');
 const { getImageUrl } = require('../utils/imageHelper');
+const PlatformSettings = require('../Models/PlatformSettings');
 const {
   checkMoq,
+  effectiveGstRate,
   findVariant,
+  grossUnitPaise,
   requiresVariant,
   resolveLineTax,
   resolveStock,
@@ -36,6 +39,7 @@ const { refundCancelledOrderToWallet } = require('../services/orderCancellationS
 const { findDropshipProductIds, isDropshipOrder } = require('../utils/dropship');
 const { isOwnStockProduct, isOwnStockVisibleToCustomers } = require('../utils/ownStock');
 const { toPaise, allocateProportional } = require('../utils/money');
+const { canRequestReturn } = require('../utils/returnWindow');
 
 // Accounting is posted alongside the order, never in front of it. A ledger
 // write must never be able to fail a customer's checkout or a cancellation —
@@ -92,6 +96,7 @@ function serializeOrder(o) {
     discountAmount: o.discountAmount,
     couponCode: o.couponCode,
     shippingFee: o.shippingFee,
+    platformFee: o.platformFee || 0,
     total: o.total,
     paymentMethod: o.paymentMethod,
     paymentStatus: o.paymentStatus,
@@ -99,6 +104,8 @@ function serializeOrder(o) {
     // A dropship order can be neither cancelled nor returned by the buyer.
     fulfillmentType: o.fulfillmentType || 'STANDARD',
     isDropship: o.fulfillmentType === 'DROPSHIP',
+    // Drives the buyer's Return / Replace button.
+    canReturn: canRequestReturn(o),
     checkoutGroupId: o.checkoutGroupId || null,
     deliveredAt: o.deliveredAt,
     statusHistory: (o.statusHistory || []).map((entry) => ({ status: entry.status, at: entry.at })),
@@ -269,11 +276,20 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   // the number the buyer agreed to and the number they are charged cannot
   // diverge. Tax is snapshotted alongside it: a GST rate changing next month
   // must not rewrite the tax on an invoice already issued.
+  //
+  // GST: a product without its own rate is taxed at the admin's default. An
+  // exclusive product has GST added on top of its listed price here, so
+  // `price` on the order line is always the tax-inclusive amount paid — the
+  // invoice, refunds and the ledger all read it that way.
+  const settings = await PlatformSettings.getSettings();
   const items = cartEntries.map((entry) => {
     const variantId = entry.variantId ? entry.variantId.toString() : null;
     const variant = findVariant(entry.product, variantId);
     const { unitPrice, source } = resolveUnitPrice(entry.product, { variantId, quantity: entry.quantity });
-    const tax = resolveLineTax(entry.product, unitPrice * entry.quantity);
+    const gstRate = effectiveGstRate(entry.product, settings.defaultGstRate);
+    const gstInclusive = entry.product.gstInclusive !== false;
+    const unitPaise = grossUnitPaise(toPaise(unitPrice), { rate: gstRate, inclusive: gstInclusive });
+    const tax = resolveLineTax({ gstRate }, (unitPaise * entry.quantity) / 100);
 
     return {
       product: entry.product._id,
@@ -283,7 +299,9 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
         : entry.product.images?.[0]
           ? getImageUrl(entry.product.images[0])
           : null,
-      price: unitPrice,
+      price: unitPaise / 100,
+      listPrice: unitPrice,
+      gstInclusive,
       quantity: entry.quantity,
       variantId: variantId || null,
       variant: variant?.name || entry.variant || '',
@@ -405,6 +423,18 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   // STANDARD order exactly as before; a mixed cart becomes a STANDARD and a
   // DROPSHIP order, each with its own lines, discount and delivery charge.
   const shippingBy = quote.shippingByFulfillment || { STANDARD: shipping, DROPSHIP: 0 };
+
+  // The buyer's platform fee: a percentage of the goods after the coupon, or
+  // a flat amount per checkout. Charged once, on the checkout's first order.
+  const feeValue = Math.max(0, Number(settings.buyerPlatformFeeValue) || 0);
+  const goodsPaise = Math.max(0, toPaise(subtotal) - toPaise(discountAmount));
+  const platformFeePaise =
+    feeValue <= 0
+      ? 0
+      : settings.buyerPlatformFeeType === 'flat'
+        ? toPaise(feeValue)
+        : Math.round((goodsPaise * feeValue) / 100);
+
   const orderGroups = ['STANDARD', 'DROPSHIP']
     .map((fulfillmentType) => {
       const indexes = items.map((item, idx) => idx).filter((idx) => fulfillmentOf(items[idx]) === fulfillmentType);
@@ -422,7 +452,38 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
         total: Math.max(0, subtotalPaise - discountPaise + shippingPaise) / 100,
       };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((group, index) => {
+      const feePaise = index === 0 ? platformFeePaise : 0;
+      return {
+        ...group,
+        platformFee: feePaise / 100,
+        total: (toPaise(group.total) + feePaise) / 100,
+      };
+    });
+
+  // What the buyer is shown: the goods at their listed prices, the GST in
+  // them (included in the price, or added on top), and the platform fee.
+  const listSubtotalPaise = items.reduce((sum, item) => sum + toPaise(item.listPrice) * item.quantity, 0);
+  const gstIncludedPaise = items.reduce((sum, item) => sum + (item.gstInclusive ? item.taxAmount : 0), 0);
+  const gstAddedPaise = toPaise(subtotal) - listSubtotalPaise;
+  const taxBreakdown = {
+    listSubtotal: listSubtotalPaise / 100,
+    gstIncluded: gstIncludedPaise / 100,
+    gstAdded: gstAddedPaise / 100,
+    gstTotal: items.reduce((sum, item) => sum + item.taxAmount, 0) / 100,
+    lines: items.map((item) => ({
+      productId: String(item.product),
+      variantId: item.variantId,
+      name: item.name,
+      quantity: item.quantity,
+      listPrice: item.listPrice,
+      price: item.price,
+      gstRate: item.gstRate,
+      gstInclusive: item.gstInclusive,
+      gstAmount: item.taxAmount / 100,
+    })),
+  };
 
   // The amount charged is exactly the sum of the orders it pays for.
   const total = orderGroups.reduce((sum, group) => sum + toPaise(group.total), 0) / 100;
@@ -437,6 +498,8 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
     quote,
     discountAmount,
     normalizedCouponCode,
+    platformFee: platformFeePaise / 100,
+    taxBreakdown,
     total,
     orderGroups,
     hasDropship,
@@ -725,6 +788,7 @@ async function createOrder(req, res) {
         discountAmount: group.discountAmount,
         couponCode: normalizedCouponCode,
         shippingFee: group.shippingFee,
+        platformFee: group.platformFee,
         total: group.total,
         paymentMethod,
         paymentStatus,
@@ -917,6 +981,8 @@ function serializeOrderSummary(o) {
     paymentStatus: o.paymentStatus,
     status: o.status,
     isDropship: o.fulfillmentType === 'DROPSHIP',
+    // Drives the buyer's Return / Replace button.
+    canReturn: canRequestReturn(o),
     deliveredAt: o.deliveredAt,
     createdAt: o.createdAt,
   };
@@ -1175,6 +1241,11 @@ async function getShippingQuote(req, res) {
       paymentMethod: selected,
       subtotal: prepaid.subtotal,
       discountAmount: prepaid.discountAmount,
+      couponCode: prepaid.normalizedCouponCode,
+      // Priced on the goods, so the same whichever way the buyer pays.
+      platformFee: prepaid.platformFee,
+      // Listed prices, GST included in them / added on top, and per line.
+      tax: prepaid.taxBreakdown,
 
       // The selected method's numbers, kept at the top level so a screen that
       // only cares about the current choice does not have to look them up.

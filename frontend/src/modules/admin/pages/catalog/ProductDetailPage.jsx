@@ -406,7 +406,7 @@ export function ProductDetailPage() {
           {product.barcode && (
             <ProductBarcode
               code={product.barcode}
-              imageUrl={`/admin/catalog/products/${product.id}/barcode.png?v=2`}
+              imageUrl={`/admin/catalog/products/${product.id}/barcode.png?v=6`}
               qrUrl={`/admin/catalog/products/${product.id}/qrcode.png`}
               product={product}
               className="max-w-xl"

@@ -28,6 +28,8 @@ const TYPES = [
   'COMMISSION',
   'PAYMENT_GATEWAY_FEE',
   'SHIPPING_CHARGE',
+  // Buyer-paid platform fee (Order.platformFee). Platform revenue only.
+  'PLATFORM_FEE',
   'REFUND',
   'REFUND_REVERSAL',
   'PAYOUT',

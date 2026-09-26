@@ -339,6 +339,8 @@ async function postOrderSale(orderInput, { session, createdBy = null } = {}) {
       : await Order.findById(orderInput).lean();
 
   if (!order) return { posted: 0, reason: 'order-not-found' };
+  // A return's replacement is shipped free: no sale, no commission.
+  if (order.replacementFor) return { posted: 0, reason: 'replacement-order' };
   if (!isMoneyReceived(order)) return { posted: 0, reason: 'payment-not-received' };
 
   const { config, sellerLines } = await priceOrderCommissions(order);
@@ -519,6 +521,27 @@ async function postOrderSale(orderInput, { session, createdBy = null } = {}) {
         description: `Shipping collected — order ${orderLabel}`,
         metadata: { orderNumber: orderLabel, bearer: 'PLATFORM' },
         eventKey: `SHIPPING:${orderRef}`,
+        createdBy,
+      })
+    );
+  }
+
+  // The buyer's platform fee is the platform's own revenue; no seller's
+  // payable moves because of it.
+  if (toPaise(order.platformFee) > 0) {
+    rows.push(
+      row({
+        type: 'PLATFORM_FEE',
+        direction: 'CREDIT',
+        amountPaise: toPaise(order.platformFee),
+        order: orderRef,
+        vendor: null,
+        customer: order.user,
+        referenceType: 'ORDER',
+        referenceId: orderRef,
+        description: `Platform fee collected — order ${orderLabel}`,
+        metadata: { orderNumber: orderLabel },
+        eventKey: `PLATFORM_FEE:${orderRef}`,
         createdBy,
       })
     );
@@ -885,6 +908,7 @@ async function reconcileLedger({ limit = 200 } = {}) {
   const postedOrderIds = await AccountingTransaction.distinct('order', { type: 'SALE' });
   const unposted = await Order.find({
     _id: { $nin: postedOrderIds },
+    replacementFor: null,
     $or: [
       { paymentMethod: { $ne: 'COD' }, paymentStatus: { $in: ['PAID', 'REFUNDED'] } },
       { paymentMethod: 'COD', codRemittedAt: { $ne: null } },

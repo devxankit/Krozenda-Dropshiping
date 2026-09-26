@@ -62,7 +62,7 @@ export function TaxInvoice({ invoice }) {
           </div>
 
           <div className="flex flex-col sm:items-end">
-            <span className="inline-block rounded bg-emerald-50 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider">
+            <span className="inline-block rounded bg-success-50 text-success-800 border border-success-300 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider">
               ORIGINAL FOR RECIPIENT
             </span>
             <p className="mt-1 font-mono text-lg font-bold tracking-tight text-slate-900">
@@ -88,8 +88,8 @@ export function TaxInvoice({ invoice }) {
         </div>
         <div>
           <span className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Payment Status</span>
-          <p className="mt-0.5 font-medium text-emerald-600 flex items-center gap-1">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <p className="mt-0.5 font-medium text-success-600 flex items-center gap-1">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
             Paid (Online Verified)
           </p>
         </div>
@@ -127,7 +127,7 @@ export function TaxInvoice({ invoice }) {
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-500">
               Billing & Delivery Details
             </span>
-            <span className="rounded bg-blue-100 text-blue-800 px-1.5 py-0.5 text-2xs font-medium">
+            <span className="rounded bg-brand-100 text-brand-800 px-1.5 py-0.5 text-2xs font-medium">
               Consumer / Retail
             </span>
           </div>
@@ -228,7 +228,7 @@ export function TaxInvoice({ invoice }) {
               <p className="text-2xs text-slate-500 mt-0.5">Authorized Signatory (Digital Signature)</p>
             </div>
             <div className="text-right">
-              <span className="inline-block rounded border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-2xs font-bold text-emerald-800">
+              <span className="inline-block rounded border border-success-500 bg-success-50 px-2 py-0.5 text-2xs font-bold text-success-800">
                 VERIFIED DOCUMENT
               </span>
             </div>
@@ -263,7 +263,7 @@ export function TaxInvoice({ invoice }) {
 
             <div className="flex items-center justify-between text-xs text-slate-600 border-t border-dashed border-slate-200 pt-2">
               <span>Shipping & Delivery Fee</span>
-              <span className="font-semibold text-emerald-600 uppercase text-2xs">Free / Included</span>
+              <span className="font-semibold text-success-600 uppercase text-2xs">Free / Included</span>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-600">

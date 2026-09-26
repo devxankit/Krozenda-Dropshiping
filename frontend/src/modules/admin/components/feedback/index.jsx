@@ -21,7 +21,8 @@ const ALERT_ICON = Object.freeze({
 export function InlineAlert({ tone = 'info', title, children, action, className = '' }) {
   return (
     <div
-      className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 ${ALERT_TONE[tone]} ${className}`}
+      role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
+      className={`flex flex-wrap items-start gap-2.5 rounded-lg border px-3.5 py-3 sm:flex-nowrap ${ALERT_TONE[tone]} ${className}`}
     >
       <Icon name={ALERT_ICON[tone]} className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0 flex-1 text-xs leading-relaxed">
@@ -35,11 +36,16 @@ export function InlineAlert({ tone = 'info', title, children, action, className 
 
 export function ErrorState({ error, onRetry, title = 'This did not load' }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-danger-200 bg-danger-50/40 p-12 text-center">
-      <Icon name="danger" className="h-7 w-7 text-danger-500" />
+    <div
+      role="alert"
+      className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-danger-200 bg-danger-50/40 px-6 py-12 text-center"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-danger-50 text-danger-500 ring-1 ring-inset ring-danger-200">
+        <Icon name="danger" className="h-6 w-6" />
+      </span>
       <div>
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
-        <p className="mx-auto mt-1 max-w-md text-xs text-ink-subtle">
+        <p className="text-base font-semibold text-slate-900">{title}</p>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-ink-subtle">
           {error?.message || 'Something went wrong on our side. Try again in a moment.'}
         </p>
       </div>
@@ -52,21 +58,44 @@ export function ErrorState({ error, onRetry, title = 'This did not load' }) {
   )
 }
 
+// Mirrors the real page — header, KPI row, a wide panel beside a narrow one —
+// so the layout does not jump when the data lands.
 export function PageSkeleton({ rows = 4 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Loading…</span>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-40" />
-        <Skeleton className="h-6 w-64" />
+        <Skeleton className="h-7 w-64" />
+        <Skeleton className="h-3 w-80 max-w-full" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={`tile-${index}`} className="h-24 w-full rounded-lg" />
+          <div
+            key={`tile-${index}`}
+            className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-card"
+          >
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+            </div>
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
         ))}
       </div>
-      {Array.from({ length: rows }, (_, index) => (
-        <Skeleton key={`row-${index}`} className="h-16 w-full rounded-lg" />
-      ))}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-card">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-56 w-full" />
+        </div>
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-card">
+          <Skeleton className="h-4 w-32" />
+          {Array.from({ length: rows }, (_, index) => (
+            <Skeleton key={`row-${index}`} className="h-10 w-full" />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

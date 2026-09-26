@@ -98,7 +98,7 @@ export function BannersPage() {
       header: 'Linked product',
       render: (banner) =>
         banner.productName ? (
-          <span className="inline-flex max-w-xs items-center gap-1.5 truncate rounded-md bg-indigo-50 px-2 py-1 text-2xs font-medium text-indigo-700 ring-1 ring-indigo-100">
+          <span className="inline-flex max-w-xs items-center gap-1.5 truncate rounded-md bg-brand-50 px-2 py-1 text-2xs font-medium text-brand-700 ring-1 ring-brand-100">
             <Icon name="products" className="h-3 w-3 shrink-0" />
             <span className="truncate">{banner.productName}</span>
           </span>
@@ -186,7 +186,7 @@ export function BannersPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Total banners
               </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
                 <Icon name="banners" className="h-4 w-4" />
               </span>
             </div>
@@ -203,7 +203,7 @@ export function BannersPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Active
               </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success-50 text-success-600">
                 <Icon name="check" className="h-4 w-4" />
               </span>
             </div>
@@ -211,7 +211,7 @@ export function BannersPage() {
               <span className="text-2xl font-bold tracking-tight text-slate-900 tabular">
                 {stats.activeBanners ?? 0}
               </span>
-              <span className="text-xs text-emerald-600 font-medium">visible now</span>
+              <span className="text-xs text-success-600 font-medium">visible now</span>
             </div>
           </div>
 
@@ -237,7 +237,7 @@ export function BannersPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Product-linked
               </span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning-50 text-warning-600">
                 <Icon name="products" className="h-4 w-4" />
               </span>
             </div>

@@ -32,7 +32,9 @@ export function VendorInventoryPage() {
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
-          <span className={`tabular font-semibold text-xs ${row.isOutOfStock ? 'text-danger-600' : row.isLowStock ? 'text-warning-700' : 'text-slate-900'}`}>
+          <span
+            className={`tabular font-semibold text-xs ${row.isOutOfStock ? 'text-danger-600' : row.isLowStock ? 'text-warning-700' : 'text-slate-900'}`}
+          >
             {row.isOutOfStock ? 'Out of stock' : `${row.stock.toLocaleString('en-IN')} units`}
           </span>
           <Button size="xs" variant="secondary" onClick={() => setSelectedProduct(row)}>
@@ -44,16 +46,17 @@ export function VendorInventoryPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      {outOfStock > 0 && (
-        <InlineAlert tone="warning" title={`${outOfStock} products are out of stock`}>
-          Out-of-stock products stay listed but can&apos;t be ordered until you restock them.
-        </InlineAlert>
-      )}
-
+    <>
       <ListScreen
         title="Inventory"
         description="Track and adjust stock for your products."
+        banner={
+          outOfStock > 0 && (
+            <InlineAlert tone="warning" title={`${outOfStock} products are out of stock`}>
+              Out-of-stock products stay listed but can&apos;t be ordered until you restock them.
+            </InlineAlert>
+          )
+        }
         controller={controller}
         columns={columns}
         tabs={[
@@ -71,6 +74,6 @@ export function VendorInventoryPage() {
         onClose={() => setSelectedProduct(null)}
         onUpdateStock={controller.updateStock}
       />
-    </div>
+    </>
   )
 }

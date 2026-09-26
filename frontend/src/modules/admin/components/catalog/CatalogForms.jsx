@@ -4,6 +4,7 @@ import { FormDrawer } from '../forms'
 import { InlineAlert } from '../feedback'
 import { ConfirmDialog } from '../overlay/ConfirmDialog'
 import { ProductBarcode } from '../../../../components/common/ProductBarcode'
+import { GstTypeField } from '../../../../components/catalog/ProductAdvancedFields'
 import { ProductVariantsSection } from '../../../../components/catalog/ProductVariantsSection'
 import { buildVariantsPayload, variantFromProduct } from '../../../../components/catalog/productVariants'
 import {
@@ -534,6 +535,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     mrp: product?.mrp != null ? String(product.mrp) : '',
     costPrice: product?.costPrice != null ? String(product.costPrice) : '',
     gstRate: product?.gstRate != null ? String(product.gstRate) : '',
+    gstInclusive: product?.gstInclusive !== false,
     stock: product?.stock != null ? String(product.stock) : '0',
     lowStockThreshold: product?.lowStockThreshold != null ? String(product.lowStockThreshold) : '',
     weight: product?.weight != null ? String(product.weight) : '',
@@ -652,6 +654,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
       ...payload,
       images: newFiles,
       gstRate: form.gstRate,
+      gstInclusive: form.gstInclusive,
       // Always sent, empty included: an empty list is the admin removing
       // every variant, which the server only does when the field is present.
       variants: variantResult.variants,
@@ -920,6 +923,12 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
             value={form.gstRate}
             onChange={(event) => updateField('gstRate', event.target.value)}
           />
+          <GstTypeField
+            inclusive={form.gstInclusive}
+            onChange={(value) => updateField('gstInclusive', value)}
+            price={form.price}
+            gstRate={form.gstRate}
+          />
         </div>
       </div>
 
@@ -1083,7 +1092,7 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
       {editing && product.barcode && (
         <ProductBarcode
           code={product.barcode}
-          imageUrl={`/admin/catalog/products/${product.id}/barcode.png?v=2`}
+          imageUrl={`/admin/catalog/products/${product.id}/barcode.png?v=6`}
           qrUrl={`/admin/catalog/products/${product.id}/qrcode.png`}
           product={product}
         />

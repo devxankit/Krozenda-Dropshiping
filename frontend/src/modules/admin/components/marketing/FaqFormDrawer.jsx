@@ -48,32 +48,32 @@ function FaqFormDrawerBody({ onClose, faq, onSubmit, isSubmitting, error }) {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Question <span className="text-rose-500">*</span>
+              Question <span className="text-danger-500">*</span>
             </label>
             <input
               type="text"
               {...register('question', { required: 'Question is required' })}
               placeholder="e.g. How do I track my order?"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs"
               autoFocus={!isEdit}
             />
             {errors.question && (
-              <p className="text-2xs text-rose-600 mt-1">{errors.question.message}</p>
+              <p className="text-2xs text-danger-600 mt-1">{errors.question.message}</p>
             )}
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              Answer <span className="text-rose-500">*</span>
+              Answer <span className="text-danger-500">*</span>
             </label>
             <textarea
               rows={6}
               {...register('answer', { required: 'Answer is required' })}
               placeholder="Write the answer buyers will see..."
-              className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs leading-relaxed text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs resize-y min-h-[140px]"
+              className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-xs leading-relaxed text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100 shadow-2xs resize-y min-h-[140px]"
             />
             {errors.answer && (
-              <p className="text-2xs text-rose-600 mt-1">{errors.answer.message}</p>
+              <p className="text-2xs text-danger-600 mt-1">{errors.answer.message}</p>
             )}
           </div>
         </div>
@@ -86,7 +86,7 @@ function FaqFormDrawerBody({ onClose, faq, onSubmit, isSubmitting, error }) {
                 type="text"
                 {...register('category')}
                 placeholder="General"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs"
               />
             </div>
 
@@ -96,7 +96,7 @@ function FaqFormDrawerBody({ onClose, faq, onSubmit, isSubmitting, error }) {
                 type="number"
                 {...register('order')}
                 placeholder="0"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs"
               />
             </div>
 
@@ -104,7 +104,7 @@ function FaqFormDrawerBody({ onClose, faq, onSubmit, isSubmitting, error }) {
               <label className="block text-xs font-bold text-slate-800 mb-1.5">Visibility</label>
               <select
                 {...register('status')}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-blue-600 focus:outline-none shadow-2xs"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs"
               >
                 <option value="published">Published (visible)</option>
                 <option value="draft">Draft (hidden)</option>

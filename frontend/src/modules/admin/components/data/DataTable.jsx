@@ -48,7 +48,7 @@ export function DataTable({
   const showEmpty = !isLoading && data.length === 0
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       {selectable && selectedKeys.length > 0 && (
         <BulkActionBar
           count={selectedKeys.length}
@@ -59,14 +59,19 @@ export function DataTable({
       )}
 
       {showEmpty ? (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <EmptyState
             icon={emptyIcon}
             title={emptyTitle}
             description={emptyDescription}
             action={
               emptyAction && (
-                <Button variant="secondary" size="control" icon={emptyAction.icon} onClick={emptyAction.onClick}>
+                <Button
+                  variant="secondary"
+                  size="control"
+                  icon={emptyAction.icon}
+                  onClick={emptyAction.onClick}
+                >
                   {emptyAction.label}
                 </Button>
               )
@@ -92,7 +97,7 @@ export function DataTable({
       )}
 
       {!showEmpty && (
-        <div className="border-t border-border px-4 py-3">
+        <div className="border-t border-border bg-surface px-4 py-3">
           <Pagination
             page={page}
             totalPages={totalPages}

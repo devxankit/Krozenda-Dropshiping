@@ -200,7 +200,8 @@ async function getOverview(req, res) {
   const platformFundedDiscountPaise = platformFundedDiscountRows[0]?.total || 0;
   const netPlatformRevenuePaise =
     commissionPaise +
-    sumOf(platform, 'SHIPPING_CHARGE', 'credit') -
+    sumOf(platform, 'SHIPPING_CHARGE', 'credit') +
+    sumOf(platform, 'PLATFORM_FEE', 'credit') -
     sumOf(platform, 'PAYMENT_GATEWAY_FEE', 'debit') -
     platformFundedDiscountPaise;
 
@@ -347,7 +348,7 @@ async function listTransactions(req, res) {
     commission: ['COMMISSION'],
     refunds: ['REFUND', 'REFUND_REVERSAL'],
     payouts: ['PAYOUT'],
-    fees: ['PAYMENT_GATEWAY_FEE', 'SHIPPING_CHARGE'],
+    fees: ['PAYMENT_GATEWAY_FEE', 'SHIPPING_CHARGE', 'PLATFORM_FEE'],
     adjustments: ['ADJUSTMENT'],
   };
   if (tab && TAB_TYPES[tab] && !filter.type) filter.type = { $in: TAB_TYPES[tab] };
@@ -385,7 +386,7 @@ async function listTransactions(req, res) {
     commission: counts.COMMISSION || 0,
     refunds: (counts.REFUND || 0) + (counts.REFUND_REVERSAL || 0),
     payouts: counts.PAYOUT || 0,
-    fees: (counts.PAYMENT_GATEWAY_FEE || 0) + (counts.SHIPPING_CHARGE || 0),
+    fees: (counts.PAYMENT_GATEWAY_FEE || 0) + (counts.SHIPPING_CHARGE || 0) + (counts.PLATFORM_FEE || 0),
     adjustments: counts.ADJUSTMENT || 0,
   };
 

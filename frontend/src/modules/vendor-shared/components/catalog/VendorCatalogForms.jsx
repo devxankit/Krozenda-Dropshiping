@@ -57,7 +57,7 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
               <img src={previewSrc} alt="Preview" className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-indigo-50 text-brand-600 ring-1 ring-brand-100">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-50 text-brand-600 ring-1 ring-brand-100">
               <Icon name="categories" className="h-7 w-7" />
             </div>
           )}
@@ -69,7 +69,7 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
                 <input type="file" accept="image/*" className="hidden" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />
               </label>
               {imageFile && (
-                <button type="button" onClick={() => setImageFile(null)} className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+                <button type="button" onClick={() => setImageFile(null)} className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-danger-600 hover:bg-danger-50 transition-colors">
                   Clear Selection
                 </button>
               )}
@@ -116,7 +116,7 @@ export function VendorCategoryFormDrawer({ isOpen, onClose, onSubmit, isSubmitti
               <img src={previewSrc} alt="Preview" className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-indigo-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 text-brand-600 font-bold text-sm ring-1 ring-brand-500/20">
               {name ? name.slice(0, 2).toUpperCase() : 'CT'}
             </div>
           )}
@@ -171,7 +171,7 @@ export function VendorBrandFormDrawer({ isOpen, onClose, onSubmit, isSubmitting 
               <img src={previewSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
             </div>
           ) : (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 text-amber-700 ring-1 ring-amber-100">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-50 to-warning-50 text-warning-700 ring-1 ring-warning-100">
               <Icon name="brands" className="h-7 w-7" />
             </div>
           )}
@@ -183,7 +183,7 @@ export function VendorBrandFormDrawer({ isOpen, onClose, onSubmit, isSubmitting 
                 <input type="file" accept="image/*" className="hidden" onChange={(event) => setLogoFile(event.target.files?.[0] || null)} />
               </label>
               {logoFile && (
-                <button type="button" onClick={() => setLogoFile(null)} className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+                <button type="button" onClick={() => setLogoFile(null)} className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-danger-600 hover:bg-danger-50 transition-colors">
                   Clear Selection
                 </button>
               )}
@@ -203,7 +203,7 @@ export function VendorBrandFormDrawer({ isOpen, onClose, onSubmit, isSubmitting 
               <img src={previewSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
             </div>
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-sm ring-1 ring-amber-500/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-500/10 to-warning-500/10 text-warning-700 font-bold text-sm ring-1 ring-warning-500/20">
               {name ? name.slice(0, 2).toUpperCase() : 'BR'}
             </div>
           )}

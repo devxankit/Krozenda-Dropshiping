@@ -45,14 +45,19 @@ export function PaymentScreen() {
   // forward. It is now derived from the cart and the persisted checkout
   // selections, so it survives a reload, a background/foreground cycle and a
   // deep link (§111, §112).
-  const subtotal = cartSummary?.subtotal ?? cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
-  const discount = appliedCoupon?.discountAmount || 0
+  const cartSubtotal = cartSummary?.subtotal ?? cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
+  const cartDiscount = appliedCoupon?.discountAmount || 0
   const { quote, isLoading: isQuoteLoading } = useShippingQuoteController({
     addressId: selectedAddressId,
     paymentMethod: selectedMethod,
     couponCode: appliedCoupon?.code,
   })
   const shippingFee = quote?.shippingFee ?? 0
+  // Breakdown from the same quote as the amount, so the lines add up to it.
+  const subtotal = quote?.tax?.listSubtotal ?? quote?.subtotal ?? cartSubtotal
+  const gstAdded = quote?.tax?.gstAdded ?? 0
+  const platformFee = quote?.platformFee ?? 0
+  const discount = quote?.discountAmount ?? cartDiscount
   const amount = quote?.total ?? Math.max(0, subtotal - discount + shippingFee)
 
   useEffect(() => {
@@ -119,7 +124,7 @@ export function PaymentScreen() {
       useCartStore.setState({ items: [], summary: null })
       resetCheckout()
       toast.success('Order Placed Successfully!', 'Your order has been confirmed.')
-      navigate(USER_ROUTES.CHECKOUT_SUCCESS, { state: { order }, replace: true })
+      navigate(USER_ROUTES.ORDERS, { replace: true })
     } catch (err) {
       // A stock/availability failure at this point means the cart moved under
       // the buyer; re-read it so the cart screen can explain what changed.
@@ -275,9 +280,18 @@ export function PaymentScreen() {
                     {subtotal.toLocaleString('en-IN')}
                   </dd>
                 </div>
+                {gstAdded > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <dt>GST (added on items)</dt>
+                    <dd className="font-semibold text-slate-900">
+                      + {'₹'}
+                      {gstAdded.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </dd>
+                  </div>
+                )}
                 {discount > 0 && (
                   <div className="flex justify-between font-semibold text-emerald-600">
-                    <dt>Coupon ({appliedCoupon.code})</dt>
+                    <dt>Coupon ({quote?.couponCode || appliedCoupon?.code})</dt>
                     <dd>
                       - {'₹'}
                       {discount.toLocaleString('en-IN')}
@@ -290,6 +304,15 @@ export function PaymentScreen() {
                     {shippingFee === 0 ? 'FREE' : `₹${Number(shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                   </dd>
                 </div>
+                {platformFee > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <dt>Platform Fee</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {'₹'}
+                      {platformFee.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-slate-200 pt-2 text-xs font-bold text-slate-700">
                   <dt>Grand Total</dt>
                   <dd className="text-sm font-black text-blue-700">

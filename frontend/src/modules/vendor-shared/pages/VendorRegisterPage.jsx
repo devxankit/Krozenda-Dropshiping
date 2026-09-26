@@ -300,7 +300,7 @@ export function VendorRegisterPage() {
         width="sm"
       >
         <div className="text-center py-3 space-y-4">
-          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full flex items-center justify-center mx-auto shadow-xs">
+          <div className="w-14 h-14 bg-success-50 text-success-600 border border-success-200 rounded-full flex items-center justify-center mx-auto shadow-xs">
             <HiOutlineShieldCheck className="w-8 h-8" />
           </div>
 
@@ -326,7 +326,7 @@ export function VendorRegisterPage() {
             </div>
             <div className="flex justify-between text-slate-600 items-center pt-1 border-t border-slate-200/60">
               <span>Account Status:</span>
-              <span className="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md text-[11px]">
+              <span className="font-bold text-warning-700 bg-warning-50 border border-warning-200 px-2 py-0.5 rounded-md text-[11px]">
                 Pending Admin Approval
               </span>
             </div>
@@ -338,7 +338,7 @@ export function VendorRegisterPage() {
 
           <button
             onClick={() => navigate('/seller/login')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs"
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors text-xs"
           >
             Go to Seller Login
           </button>
@@ -365,9 +365,9 @@ export function VendorRegisterPage() {
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                       isDone
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-success-600 text-white'
                         : isCurrent
-                        ? 'bg-blue-600 text-white shadow-xs'
+                        ? 'bg-brand-600 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-500 border border-slate-200'
                     }`}
                   >
@@ -384,7 +384,7 @@ export function VendorRegisterPage() {
                 {idx < STEPS.length - 1 && (
                   <div
                     className={`flex-1 h-0.5 mx-2 sm:mx-4 ${
-                      step > s.num ? 'bg-emerald-500' : 'bg-slate-200'
+                      step > s.num ? 'bg-success-500' : 'bg-slate-200'
                     }`}
                   />
                 )}
@@ -400,7 +400,7 @@ export function VendorRegisterPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                I am selling as <span className="text-red-500">*</span>
+                I am selling as <span className="text-danger-500">*</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
@@ -425,7 +425,7 @@ export function VendorRegisterPage() {
                       onClick={() => setForm((prev) => ({ ...prev, vendorType: opt.value }))}
                       className={`p-3.5 rounded-xl border text-left transition-all ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600 text-slate-900 shadow-xs'
+                          ? 'border-brand-600 bg-brand-50/50 ring-1 ring-brand-600 text-slate-900 shadow-xs'
                           : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
                       }`}
                     >
@@ -433,7 +433,7 @@ export function VendorRegisterPage() {
                         <span className="text-xs font-bold">{opt.title}</span>
                         <span
                           className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+                            isSelected ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'
                           }`}
                         >
                           {opt.tag}
@@ -449,7 +449,7 @@ export function VendorRegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Full Name <span className="text-red-500">*</span>
+                  Full Name <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -458,15 +458,15 @@ export function VendorRegisterPage() {
                   placeholder="e.g. Rahul Sharma"
                   required
                   className={`w-full bg-white border ${
-                    errors.name ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                  } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
+                    errors.name ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                  } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
                 />
-                {errors.name && <p className="mt-1 text-[11px] text-red-500">{errors.name}</p>}
+                {errors.name && <p className="mt-1 text-[11px] text-danger-500">{errors.name}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Mobile Number <span className="text-red-500">*</span>
+                  Mobile Number <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -476,15 +476,15 @@ export function VendorRegisterPage() {
                   placeholder="10-digit mobile number"
                   required
                   className={`w-full bg-white border ${
-                    errors.mobile ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                  } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
+                    errors.mobile ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                  } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
                 />
-                {errors.mobile && <p className="mt-1 text-[11px] text-red-500">{errors.mobile}</p>}
+                {errors.mobile && <p className="mt-1 text-[11px] text-danger-500">{errors.mobile}</p>}
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email Address <span className="text-red-500">*</span>
+                  Email Address <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -493,15 +493,15 @@ export function VendorRegisterPage() {
                   placeholder="seller@example.com"
                   required
                   className={`w-full bg-white border ${
-                    errors.email ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                  } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
+                    errors.email ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                  } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
                 />
-                {errors.email && <p className="mt-1 text-[11px] text-red-500">{errors.email}</p>}
+                {errors.email && <p className="mt-1 text-[11px] text-danger-500">{errors.email}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Password <span className="text-red-500">*</span>
+                  Password <span className="text-danger-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -511,8 +511,8 @@ export function VendorRegisterPage() {
                     placeholder="Min 6 characters"
                     required
                     className={`w-full bg-white border ${
-                      errors.password ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                    } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl pl-3.5 pr-10 py-2 text-xs outline-none font-medium`}
+                      errors.password ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                    } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl pl-3.5 pr-10 py-2 text-xs outline-none font-medium`}
                   />
                   <button
                     type="button"
@@ -522,12 +522,12 @@ export function VendorRegisterPage() {
                     {showPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="mt-1 text-[11px] text-red-500">{errors.password}</p>}
+                {errors.password && <p className="mt-1 text-[11px] text-danger-500">{errors.password}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Confirm Password <span className="text-red-500">*</span>
+                  Confirm Password <span className="text-danger-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -537,8 +537,8 @@ export function VendorRegisterPage() {
                     placeholder="Re-enter password"
                     required
                     className={`w-full bg-white border ${
-                      errors.confirmPassword ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                    } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl pl-3.5 pr-10 py-2 text-xs outline-none font-medium`}
+                      errors.confirmPassword ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                    } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl pl-3.5 pr-10 py-2 text-xs outline-none font-medium`}
                   />
                   <button
                     type="button"
@@ -548,7 +548,7 @@ export function VendorRegisterPage() {
                     {showConfirmPassword ? <HiEyeSlash className="w-4 h-4" /> : <HiEye className="w-4 h-4" />}
                   </button>
                 </div>
-                {errors.confirmPassword && <p className="mt-1 text-[11px] text-red-500">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && <p className="mt-1 text-[11px] text-danger-500">{errors.confirmPassword}</p>}
               </div>
             </div>
           </div>
@@ -560,7 +560,7 @@ export function VendorRegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Store / Business Name <span className="text-red-500">*</span>
+                  Store / Business Name <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -569,23 +569,23 @@ export function VendorRegisterPage() {
                   placeholder="e.g. Apex Wholesale Supplies"
                   required={isB2B}
                   className={`w-full bg-white border ${
-                    errors.businessName ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                  } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
+                    errors.businessName ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                  } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
                 />
-                {errors.businessName && <p className="mt-1 text-[11px] text-red-500">{errors.businessName}</p>}
+                {errors.businessName && <p className="mt-1 text-[11px] text-danger-500">{errors.businessName}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Business Structure {isB2B && <span className="text-red-500">*</span>}
+                  Business Structure {isB2B && <span className="text-danger-500">*</span>}
                 </label>
                 <select
                   value={form.businessType}
                   onChange={set('businessType')}
                   required={isB2B}
                   className={`w-full bg-white border ${
-                    errors.businessType ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                  } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
+                    errors.businessType ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                  } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium`}
                 >
                   <option value="">Select constitution type…</option>
                   {BUSINESS_TYPES.map((bt) => (
@@ -594,12 +594,12 @@ export function VendorRegisterPage() {
                     </option>
                   ))}
                 </select>
-                {errors.businessType && <p className="mt-1 text-[11px] text-red-500">{errors.businessType}</p>}
+                {errors.businessType && <p className="mt-1 text-[11px] text-danger-500">{errors.businessType}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  PAN (Permanent Account Number) <span className="text-red-500">*</span>
+                  PAN (Permanent Account Number) <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -607,18 +607,18 @@ export function VendorRegisterPage() {
                   value={form.pan}
                   onChange={(e) => setForm((p) => ({ ...p, pan: e.target.value.toUpperCase() }))}
                   placeholder="ABCDE1234F"
-                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono uppercase font-semibold"
+                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono uppercase font-semibold"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  GST Registered? <span className="text-red-500">*</span>
+                  GST Registered? <span className="text-danger-500">*</span>
                 </label>
                 <select
                   value={form.gstRegistered}
                   onChange={set('gstRegistered')}
-                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium"
+                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium"
                 >
                   <option value="false">No (Unregistered / Below 40L)</option>
                   <option value="true">Yes (Registered)</option>
@@ -628,7 +628,7 @@ export function VendorRegisterPage() {
               {form.gstRegistered === 'true' && (
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    15-Digit GSTIN <span className="text-red-500">*</span>
+                    15-Digit GSTIN <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -638,21 +638,21 @@ export function VendorRegisterPage() {
                     placeholder="27AAPFU0939F1ZV"
                     required
                     className={`w-full bg-white border ${
-                      errors.gstin ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                    } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono font-bold uppercase`}
+                      errors.gstin ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                    } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono font-bold uppercase`}
                   />
-                  {errors.gstin && <p className="mt-1 text-[11px] text-red-500">{errors.gstin}</p>}
+                  {errors.gstin && <p className="mt-1 text-[11px] text-danger-500">{errors.gstin}</p>}
                 </div>
               )}
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Will you sell food products? <span className="text-red-500">*</span>
+                  Will you sell food products? <span className="text-danger-500">*</span>
                 </label>
                 <select
                   value={form.sellsFood}
                   onChange={set('sellsFood')}
-                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium"
+                  className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-medium"
                 >
                   <option value="false">No, I will not sell food items</option>
                   <option value="true">Yes, I will sell food / grocery / beverages</option>
@@ -667,7 +667,7 @@ export function VendorRegisterPage() {
               {form.sellsFood === 'true' && (
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    FSSAI Licence Number <span className="text-red-500">*</span>
+                    FSSAI Licence Number <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -681,10 +681,10 @@ export function VendorRegisterPage() {
                     }}
                     placeholder="14-digit licence number"
                     className={`w-full bg-white border ${
-                      errors.fssaiNumber ? 'border-red-500' : 'border-slate-300 hover:border-slate-400'
-                    } focus:border-blue-600 focus:ring-4 focus:ring-blue-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono font-semibold`}
+                      errors.fssaiNumber ? 'border-danger-500' : 'border-slate-300 hover:border-slate-400'
+                    } focus:border-brand-600 focus:ring-4 focus:ring-brand-50 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono font-semibold`}
                   />
-                  {errors.fssaiNumber && <p className="mt-1 text-[11px] text-red-500">{errors.fssaiNumber}</p>}
+                  {errors.fssaiNumber && <p className="mt-1 text-[11px] text-danger-500">{errors.fssaiNumber}</p>}
                 </div>
               )}
             </div>
@@ -693,7 +693,7 @@ export function VendorRegisterPage() {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5 mt-2">
               <div>
                 <span className="text-xs font-bold text-slate-900 block flex items-center space-x-1.5">
-                  <HiOutlineDocumentCheck className="w-4 h-4 text-blue-600" />
+                  <HiOutlineDocumentCheck className="w-4 h-4 text-brand-600" />
                   <span>Upload KYC Documents</span>
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">
@@ -704,28 +704,28 @@ export function VendorRegisterPage() {
               {/* Upload 1: PAN Card Document */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  1. PAN Card Document <span className="text-red-500">*</span>
+                  1. PAN Card Document <span className="text-danger-500">*</span>
                 </label>
                 {docs.panDoc?.url ? (
-                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
-                    <div className="flex items-center space-x-2 text-emerald-800">
-                      <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="flex items-center justify-between p-2.5 bg-success-50 border border-success-200 rounded-xl text-xs">
+                    <div className="flex items-center space-x-2 text-success-800">
+                      <HiOutlineCheck className="w-4 h-4 text-success-600 shrink-0" />
                       <span className="font-semibold truncate max-w-xs">{docs.panDoc.originalname}</span>
-                      <span className="text-[10px] text-emerald-600 font-bold uppercase">(Uploaded ✓)</span>
+                      <span className="text-[10px] text-success-600 font-bold uppercase">(Uploaded ✓)</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setDocs((p) => ({ ...p, panDoc: null }))}
-                      className="text-slate-400 hover:text-red-600 p-1"
+                      className="text-slate-400 hover:text-danger-600 p-1"
                       title="Remove file"
                     >
                       <HiOutlineTrash className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
-                    <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
-                    <span className="text-xs font-semibold text-slate-600 group-hover:text-blue-600">
+                  <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-brand-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
+                    <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-brand-600" />
+                    <span className="text-xs font-semibold text-slate-600 group-hover:text-brand-600">
                       {docs.panDoc?.uploading ? 'Uploading PAN document…' : 'Choose PAN Card (Image or PDF)'}
                     </span>
                     <input
@@ -737,35 +737,35 @@ export function VendorRegisterPage() {
                     />
                   </label>
                 )}
-                {errors.panDoc && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.panDoc}</p>}
+                {errors.panDoc && <p className="mt-1 text-[11px] text-danger-500 font-medium">{errors.panDoc}</p>}
               </div>
 
               {/* Upload 2: GST Certificate Document */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  2. GST Certificate {form.gstRegistered === 'true' && <span className="text-red-500">*</span>}
+                  2. GST Certificate {form.gstRegistered === 'true' && <span className="text-danger-500">*</span>}
                   {form.gstRegistered !== 'true' && <span className="text-slate-400 font-normal"> (Optional for unregistered)</span>}
                 </label>
                 {docs.gstDoc?.url ? (
-                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
-                    <div className="flex items-center space-x-2 text-emerald-800">
-                      <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="flex items-center justify-between p-2.5 bg-success-50 border border-success-200 rounded-xl text-xs">
+                    <div className="flex items-center space-x-2 text-success-800">
+                      <HiOutlineCheck className="w-4 h-4 text-success-600 shrink-0" />
                       <span className="font-semibold truncate max-w-xs">{docs.gstDoc.originalname}</span>
-                      <span className="text-[10px] text-emerald-600 font-bold uppercase">(Uploaded ✓)</span>
+                      <span className="text-[10px] text-success-600 font-bold uppercase">(Uploaded ✓)</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setDocs((p) => ({ ...p, gstDoc: null }))}
-                      className="text-slate-400 hover:text-red-600 p-1"
+                      className="text-slate-400 hover:text-danger-600 p-1"
                       title="Remove file"
                     >
                       <HiOutlineTrash className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
-                    <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
-                    <span className="text-xs font-semibold text-slate-600 group-hover:text-blue-600">
+                  <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-brand-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
+                    <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-brand-600" />
+                    <span className="text-xs font-semibold text-slate-600 group-hover:text-brand-600">
                       {docs.gstDoc?.uploading ? 'Uploading GST certificate…' : 'Choose GST Certificate (Image or PDF)'}
                     </span>
                     <input
@@ -777,35 +777,35 @@ export function VendorRegisterPage() {
                     />
                   </label>
                 )}
-                {errors.gstDoc && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.gstDoc}</p>}
+                {errors.gstDoc && <p className="mt-1 text-[11px] text-danger-500 font-medium">{errors.gstDoc}</p>}
               </div>
 
               {/* Upload 3: FSSAI Licence — only for food sellers */}
               {form.sellsFood === 'true' && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    3. FSSAI Licence <span className="text-red-500">*</span>
+                    3. FSSAI Licence <span className="text-danger-500">*</span>
                   </label>
                   {docs.fssaiDoc?.url ? (
-                    <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
-                      <div className="flex items-center space-x-2 text-emerald-800">
-                        <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="flex items-center justify-between p-2.5 bg-success-50 border border-success-200 rounded-xl text-xs">
+                      <div className="flex items-center space-x-2 text-success-800">
+                        <HiOutlineCheck className="w-4 h-4 text-success-600 shrink-0" />
                         <span className="font-semibold truncate max-w-xs">{docs.fssaiDoc.originalname}</span>
-                        <span className="text-[10px] text-emerald-600 font-bold uppercase">(Uploaded ✓)</span>
+                        <span className="text-[10px] text-success-600 font-bold uppercase">(Uploaded ✓)</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setDocs((p) => ({ ...p, fssaiDoc: null }))}
-                        className="text-slate-400 hover:text-red-600 p-1"
+                        className="text-slate-400 hover:text-danger-600 p-1"
                         title="Remove file"
                       >
                         <HiOutlineTrash className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
-                      <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
-                      <span className="text-xs font-semibold text-slate-600 group-hover:text-blue-600">
+                    <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-brand-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
+                      <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-brand-600" />
+                      <span className="text-xs font-semibold text-slate-600 group-hover:text-brand-600">
                         {docs.fssaiDoc?.uploading ? 'Uploading FSSAI licence…' : 'Choose FSSAI Licence (Image or PDF)'}
                       </span>
                       <input
@@ -817,7 +817,7 @@ export function VendorRegisterPage() {
                       />
                     </label>
                   )}
-                  {errors.fssaiDoc && <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.fssaiDoc}</p>}
+                  {errors.fssaiDoc && <p className="mt-1 text-[11px] text-danger-500 font-medium">{errors.fssaiDoc}</p>}
                 </div>
               )}
             </div>
@@ -829,7 +829,7 @@ export function VendorRegisterPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Contact Name <span className="text-red-500">*</span>
+                      Contact Name <span className="text-danger-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -837,14 +837,14 @@ export function VendorRegisterPage() {
                       onChange={set('contactName')}
                       placeholder="Signatory name"
                       required
-                      className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-lg px-3 py-1.5 text-xs outline-none"
                     />
-                    {errors.contactName && <p className="mt-0.5 text-[10px] text-red-500">{errors.contactName}</p>}
+                    {errors.contactName && <p className="mt-0.5 text-[10px] text-danger-500">{errors.contactName}</p>}
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Mobile <span className="text-red-500">*</span>
+                      Mobile <span className="text-danger-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -853,9 +853,9 @@ export function VendorRegisterPage() {
                       onChange={set('contactMobile')}
                       placeholder="10-digit mobile"
                       required
-                      className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-lg px-3 py-1.5 text-xs outline-none"
+                      className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-lg px-3 py-1.5 text-xs outline-none"
                     />
-                    {errors.contactMobile && <p className="mt-0.5 text-[10px] text-red-500">{errors.contactMobile}</p>}
+                    {errors.contactMobile && <p className="mt-0.5 text-[10px] text-danger-500">{errors.contactMobile}</p>}
                   </div>
                 </div>
               </div>
@@ -873,7 +873,7 @@ export function VendorRegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Address Line <span className="text-red-500">*</span>
+                    Address Line <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -881,14 +881,14 @@ export function VendorRegisterPage() {
                     onChange={set('addressLine')}
                     placeholder="Plot / Unit, Street, Area"
                     required
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
                   />
-                  {errors.addressLine && <p className="mt-1 text-[10px] text-red-500">{errors.addressLine}</p>}
+                  {errors.addressLine && <p className="mt-1 text-[10px] text-danger-500">{errors.addressLine}</p>}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    City <span className="text-red-500">*</span>
+                    City <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -896,14 +896,14 @@ export function VendorRegisterPage() {
                     onChange={set('city')}
                     placeholder="City"
                     required
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
                   />
-                  {errors.city && <p className="mt-1 text-[10px] text-red-500">{errors.city}</p>}
+                  {errors.city && <p className="mt-1 text-[10px] text-danger-500">{errors.city}</p>}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    State <span className="text-red-500">*</span>
+                    State <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -911,14 +911,14 @@ export function VendorRegisterPage() {
                     onChange={set('state')}
                     placeholder="State"
                     required
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
                   />
-                  {errors.state && <p className="mt-1 text-[10px] text-red-500">{errors.state}</p>}
+                  {errors.state && <p className="mt-1 text-[10px] text-danger-500">{errors.state}</p>}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Pincode <span className="text-red-500">*</span>
+                    Pincode <span className="text-danger-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -927,9 +927,9 @@ export function VendorRegisterPage() {
                     onChange={set('pincode')}
                     placeholder="6-digit pincode"
                     required
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono"
                   />
-                  {errors.pincode && <p className="mt-1 text-[10px] text-red-500">{errors.pincode}</p>}
+                  {errors.pincode && <p className="mt-1 text-[10px] text-danger-500">{errors.pincode}</p>}
                 </div>
               </div>
             </div>
@@ -946,7 +946,7 @@ export function VendorRegisterPage() {
                     value={form.accountHolderName}
                     onChange={set('accountHolderName')}
                     placeholder="Bank registered name"
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
                   />
                 </div>
 
@@ -957,7 +957,7 @@ export function VendorRegisterPage() {
                     value={form.bankName}
                     onChange={set('bankName')}
                     placeholder="e.g. HDFC, ICICI, SBI"
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none"
                   />
                 </div>
 
@@ -968,7 +968,7 @@ export function VendorRegisterPage() {
                     value={form.accountNumber}
                     onChange={set('accountNumber')}
                     placeholder="Bank account number"
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono"
                   />
                 </div>
 
@@ -980,9 +980,9 @@ export function VendorRegisterPage() {
                     value={form.ifsc}
                     onChange={(e) => setForm((p) => ({ ...p, ifsc: e.target.value.toUpperCase() }))}
                     placeholder="e.g. HDFC0001234"
-                    className="w-full bg-white border border-slate-300 focus:border-blue-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono uppercase"
+                    className="w-full bg-white border border-slate-300 focus:border-brand-600 text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none font-mono uppercase"
                   />
-                  {errors.ifsc && <p className="mt-1 text-[10px] text-red-500">{errors.ifsc}</p>}
+                  {errors.ifsc && <p className="mt-1 text-[10px] text-danger-500">{errors.ifsc}</p>}
                 </div>
               </div>
             </div>
@@ -1002,7 +1002,7 @@ export function VendorRegisterPage() {
                   if (policyAcceptances) setPolicyAcceptances(null)
                   else setPolicyModalOpen(true)
                 }}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 shrink-0"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 accent-brand-600 shrink-0"
               />
               <span className="text-xs text-slate-600 leading-relaxed">
                 I have read and agree to the Krozenda{' '}
@@ -1011,19 +1011,19 @@ export function VendorRegisterPage() {
                 </span>
                 .
                 {policyAcceptances && (
-                  <span className="mt-1 flex items-center gap-1 font-semibold text-emerald-600">
+                  <span className="mt-1 flex items-center gap-1 font-semibold text-success-600">
                     <HiOutlineDocumentCheck className="w-3.5 h-3.5" />
                     Accepted: {policyAcceptances.map((p) => `${p.title} (${p.version})`).join(', ') || 'no policies required'}
                   </span>
                 )}
               </span>
             </label>
-            {errors.policies && <p className="mt-1 text-[10px] text-red-500">{errors.policies}</p>}
+            {errors.policies && <p className="mt-1 text-[10px] text-danger-500">{errors.policies}</p>}
           </div>
         )}
 
         {serverError && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+          <div className="p-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 text-xs">
             {serverError}
           </div>
         )}
@@ -1050,7 +1050,7 @@ export function VendorRegisterPage() {
             <button
               type="button"
               onClick={goNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-xs transition-colors text-xs flex items-center space-x-1.5"
+              className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-xs transition-colors text-xs flex items-center space-x-1.5"
             >
               <span>Continue</span>
               <HiOutlineArrowRight className="w-3.5 h-3.5" />
@@ -1059,7 +1059,7 @@ export function VendorRegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-xs transition-colors text-xs flex items-center space-x-1.5 disabled:opacity-60"
+              className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-xs transition-colors text-xs flex items-center space-x-1.5 disabled:opacity-60"
             >
               {isSubmitting ? <span>Submitting Application…</span> : <span>Submit for Approval</span>}
             </button>
@@ -1080,7 +1080,7 @@ export function VendorRegisterPage() {
 
       <div className="pt-3 text-center text-xs text-slate-500">
         Already selling on Krozenda?{' '}
-        <Link to="/seller/login" className="font-bold text-blue-600 hover:underline">
+        <Link to="/seller/login" className="font-bold text-brand-600 hover:underline">
           Sign In
         </Link>
       </div>

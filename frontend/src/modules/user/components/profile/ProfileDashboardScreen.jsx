@@ -214,6 +214,7 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
     { label: 'Wishlist', Icon: HiHeart, route: USER_ROUTES.WISHLIST },
     { label: 'Coupons & Offers', Icon: HiTag, route: USER_ROUTES.COUPONS },
     { label: 'My Reviews', Icon: HiStar, route: '/app/reviews' },
+    { label: 'Returns & Replacements', Icon: HiArrowPath, route: USER_ROUTES.RETURNS },
     { label: 'Support Center', Icon: HiQuestionMarkCircle, route: USER_ROUTES.SUPPORT },
     { label: 'Settings', Icon: HiCog6Tooth, route: USER_ROUTES.SETTINGS },
     { label: 'Logout', Icon: HiArrowRightOnRectangle, route: AUTH_ROUTES.LOGIN, isLogout: true },

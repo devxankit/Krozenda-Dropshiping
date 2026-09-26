@@ -151,7 +151,7 @@ export const DROPSHIP_PRODUCT_COLUMNS = Object.freeze([
     align: 'right',
     sortable: true,
     render: (row) => (
-      <span className="tabular font-semibold text-emerald-600">
+      <span className="tabular font-semibold text-success-600">
         {row.marginPct.toFixed(1)}%
       </span>
     ),
@@ -235,7 +235,7 @@ export const FORWARDED_ORDER_COLUMNS = Object.freeze([
     header: 'Platform margin',
     width: '8rem',
     align: 'right',
-    render: (row) => <MoneyCell amount={row.commissionAmount} compact className="text-emerald-600 font-medium" />,
+    render: (row) => <MoneyCell amount={row.commissionAmount} compact className="text-success-600 font-medium" />,
   },
   {
     key: 'forwardingStatus',

@@ -46,9 +46,9 @@ export function ProfileMenu({ user, onSignOut, children }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-dropdown mt-1.5 w-60 overflow-hidden rounded-lg border border-border bg-surface shadow-overlay"
+          className="absolute right-0 top-full z-dropdown mt-2 w-64 origin-top-right animate-scale-in overflow-hidden rounded-lg border border-border bg-surface shadow-overlay"
         >
-          <div className="border-b border-border px-3 py-2.5">
+          <div className="border-b border-border bg-surface-muted px-3.5 py-3">
             <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>
             <p className="truncate text-xs text-ink-subtle">{user?.email}</p>
           </div>
@@ -60,7 +60,7 @@ export function ProfileMenu({ user, onSignOut, children }) {
                 to={item.to}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-slate-900"
+                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-slate-900 focus-visible:bg-surface-muted focus-visible:outline-none"
               >
                 <Icon name={item.icon} className="h-4 w-4 text-ink-faint" />
                 {item.label}
@@ -76,7 +76,7 @@ export function ProfileMenu({ user, onSignOut, children }) {
                 setOpen(false)
                 onSignOut?.()
               }}
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-danger-700 transition-colors hover:bg-danger-50"
+              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-danger-700 transition-colors hover:bg-danger-50 focus-visible:bg-danger-50 focus-visible:outline-none"
             >
               <Icon name="logout" className="h-4 w-4" />
               Sign out

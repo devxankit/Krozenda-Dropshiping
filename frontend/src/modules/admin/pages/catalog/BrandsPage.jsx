@@ -122,7 +122,7 @@ export function BrandsPage() {
               <img src={item.logo} alt={item.name} className="max-h-full max-w-full object-contain" />
             </div>
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-sm ring-1 ring-amber-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-500/10 to-warning-500/10 text-warning-700 font-bold text-sm ring-1 ring-warning-500/20">
               {item.name ? item.name.slice(0, 2).toUpperCase() : 'BR'}
             </div>
           )}
@@ -236,7 +236,7 @@ export function BrandsPage() {
           <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300/80">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Total Brands</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-50 text-warning-600 ring-1 ring-warning-500/10 transition-transform group-hover:scale-105">
                 <Icon name="brands" className="h-5 w-5" />
               </span>
             </div>
@@ -245,22 +245,22 @@ export function BrandsPage() {
               <span className="text-xs font-medium text-slate-500">partners</span>
             </div>
             <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning-500" />
               <span>Full catalog brand directory</span>
             </div>
           </div>
 
           {/* Active Brands */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-success-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Active in Catalog</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-success-500/10 transition-transform group-hover:scale-105">
                 <Icon name="check" className="h-5 w-5" />
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular">{activeCount}</span>
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
                 {activeRatio}% live
               </span>
             </div>
@@ -268,7 +268,7 @@ export function BrandsPage() {
             <div className="mt-3.5">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  className="h-full rounded-full bg-success-500 transition-all duration-500"
                   style={{ width: `${activeRatio}%` }}
                 />
               </div>
@@ -276,10 +276,10 @@ export function BrandsPage() {
           </div>
 
           {/* Inactive Brands */}
-          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-rose-200">
+          <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md hover:border-danger-200">
             <div className="flex items-center justify-between">
               <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Inactive / Hidden</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 ring-1 ring-rose-500/10 transition-transform group-hover:scale-105">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger-50 text-danger-600 ring-1 ring-danger-500/10 transition-transform group-hover:scale-105">
                 <Icon name="warning" className="h-5 w-5" />
               </span>
             </div>
@@ -288,7 +288,7 @@ export function BrandsPage() {
               <span className="text-xs font-medium text-slate-500">hidden</span>
             </div>
             <div className="mt-3.5 flex items-center gap-1.5 text-2xs text-slate-500">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${inactiveCount > 0 ? 'bg-rose-500' : 'bg-slate-300'}`} />
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${inactiveCount > 0 ? 'bg-danger-500' : 'bg-slate-300'}`} />
               <span>{inactiveCount > 0 ? 'Not discoverable in filters' : 'All brands are visible'}</span>
             </div>
           </div>
@@ -454,7 +454,7 @@ export function BrandsPage() {
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-1.5">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-700 font-bold text-xl ring-1 ring-amber-500/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-warning-500/10 to-warning-500/10 text-warning-700 font-bold text-xl ring-1 ring-warning-500/20">
                         {item.name ? item.name.slice(0, 2).toUpperCase() : 'BR'}
                       </div>
                     </div>

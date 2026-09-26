@@ -11,13 +11,11 @@ import { USER_ROUTES } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
 import { useAddressesController } from '../../controllers/useAddressesController'
 import { useApplyCouponController } from '../../controllers/useCouponsController'
-import { useProfileController } from '../../controllers/useProfileController'
 import { CheckoutStepper } from './CheckoutStepper'
 import { toast } from '../../../../lib/toast'
 
 export function OrderSummaryScreen() {
   const navigate = useNavigate()
-  const { profile } = useProfileController()
   const cartItems = useCartStore((s) => s.items)
   const summary = useCartStore((s) => s.summary)
   const hydrateCart = useCartStore((s) => s.hydrate)
@@ -27,12 +25,9 @@ export function OrderSummaryScreen() {
   const appliedCoupon = useCheckoutStore((s) => s.appliedCoupon)
   const setAppliedCoupon = useCheckoutStore((s) => s.setAppliedCoupon)
   const clearCoupon = useCheckoutStore((s) => s.clearCoupon)
-  const b2b = useCheckoutStore((s) => s.b2b)
-  const setB2B = useCheckoutStore((s) => s.setB2B)
 
   const { applyCoupon, isApplying, error: couponError, reset: resetCouponError } = useApplyCouponController()
   const [couponInput, setCouponInput] = useState('')
-  const [b2bError, setB2bError] = useState('')
 
   usePageMeta({ title: 'Order Summary - Checkout', noindex: true })
 
@@ -60,8 +55,22 @@ export function OrderSummaryScreen() {
   // Server-computed when signed in. The figures below are a PREVIEW — the
   // order endpoint recomputes every one of them from the buyer's own cart,
   // address and coupon before anything is charged, and refuses a mismatch.
-  const subtotal = summary?.subtotal ?? cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-  const discount = appliedCoupon?.discountAmount || 0
+  // Subtotal and discount come from the same quote as the total when it is
+  // in, so the breakdown always adds up to the figure beneath it.
+  const subtotal =
+    quote?.subtotal ?? summary?.subtotal ?? cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const discount = quote?.discountAmount ?? (appliedCoupon?.discountAmount || 0)
+  const couponLabel = quote?.couponCode || appliedCoupon?.code || ''
+  const platformFee = quote?.platformFee ?? 0
+  // GST as the server priced it: included in the listed price, or added on
+  // top of it (exclusive products). Listed subtotal + GST added − coupon +
+  // shipping + platform fee is exactly the total.
+  const tax = quote?.tax ?? null
+  const listSubtotal = tax?.listSubtotal ?? subtotal
+  const gstAdded = tax?.gstAdded ?? 0
+  const gstIncluded = tax?.gstIncluded ?? 0
+  const taxByLine = new Map((tax?.lines || []).map((line) => [`${line.productId}::${line.variantId ?? ''}`, line]))
+  const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
   const finalTotal = quote?.total ?? Math.max(0, subtotal - discount + shippingFee)
 
   // Anything that will make the order endpoint refuse, surfaced here rather
@@ -190,9 +199,23 @@ export function OrderSummaryScreen() {
                           <span className="text-xs text-slate-400 font-semibold">Qty: {item.quantity}</span>
                         </div>
                       </div>
-                      <span className="text-xs sm:text-sm font-black text-slate-900 shrink-0">
-                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                      </span>
+                      {(() => {
+                        const line = taxByLine.get(`${item.id}::${item.variantId ?? ''}`)
+                        return (
+                          <div className="text-right shrink-0">
+                            <span className="block text-xs sm:text-sm font-black text-slate-900">
+                              ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                            </span>
+                            {line && line.gstRate > 0 && (
+                              <span className="block text-[10px] font-semibold text-slate-500">
+                                {line.gstInclusive
+                                  ? `Incl. ${line.gstRate}% GST (${money(line.gstAmount)})`
+                                  : `+ ${line.gstRate}% GST (${money(line.gstAmount)})`}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -253,12 +276,18 @@ export function OrderSummaryScreen() {
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Items Subtotal</span>
-                  <span className="font-semibold text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
+                  <span className="font-semibold text-slate-900">{money(listSubtotal)}</span>
                 </div>
+                {gstAdded > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>GST (added on items)</span>
+                    <span className="font-semibold text-slate-900">+ {money(gstAdded)}</span>
+                  </div>
+                )}
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold">
-                    <span>Coupon Discount ({appliedCoupon.code})</span>
-                    <span>- ₹{discount.toLocaleString('en-IN')}</span>
+                    <span>Coupon Discount{couponLabel ? ` (${couponLabel})` : ''}</span>
+                    <span>- {money(discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-600">
@@ -267,89 +296,22 @@ export function OrderSummaryScreen() {
                     {shippingFee === 0 ? 'FREE' : `₹${Number(shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
+                {platformFee > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Platform Fee</span>
+                    <span className="font-semibold text-slate-900">{money(platformFee)}</span>
+                  </div>
+                )}
                 <div className="pt-3 border-t border-slate-100 flex justify-between text-sm font-black text-slate-900">
                   <span>Total Amount Payable</span>
                   <span className="text-base text-blue-700">₹{Number(finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                 </div>
-              </div>
-
-              {/* B2B Tax Invoice & GSTIN Section */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
-                <label className="flex items-start space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(b2b.isB2B)}
-                    onChange={(e) => {
-                      const checked = e.target.checked
-                      setB2B({
-                        isB2B: checked,
-                        companyName: checked ? (b2b.companyName || profile?.business?.companyName || '') : '',
-                        gstin: checked ? (b2b.gstin || profile?.business?.gstin || '') : '',
-                      })
-                      if (!checked) setB2bError('')
-                    }}
-                    className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900">Buying for business? (B2B)</span>
-                    <span className="text-[11px] text-slate-500">Get GST tax invoice for 100% input tax credit (ITC)</span>
-                  </div>
-                </label>
-
-                {b2b.isB2B && (
-                  <div className="pt-2 border-t border-slate-100 space-y-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        Company / Business Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Apex Traders Pvt Ltd"
-                        value={b2b.companyName}
-                        onChange={(e) => {
-                          setB2B({ companyName: e.target.value })
-                          if (b2bError) setB2bError('')
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        GSTIN (15-digit) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={15}
-                        placeholder="e.g. 27AAAAA0000A1Z5"
-                        value={b2b.gstin}
-                        onChange={(e) => {
-                          setB2B({ gstin: e.target.value.toUpperCase() })
-                          if (b2bError) setB2bError('')
-                        }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold uppercase text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </div>
-
-                    {profile?.business?.gstin && b2b.gstin !== profile.business.gstin && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setB2B({
-                            companyName: profile.business.companyName || '',
-                            gstin: profile.business.gstin || '',
-                          })
-                        }
-                        className="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline block text-left"
-                      >
-                        Auto-fill from saved profile ({profile.business.gstin})
-                      </button>
-                    )}
-
-                    {b2bError && (
-                      <p className="text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">{b2bError}</p>
-                    )}
-                  </div>
+                {tax?.gstTotal > 0 && (
+                  <p className="text-[11px] text-slate-500 text-right">
+                    Total GST in this order: {money(tax.gstTotal)}
+                    {gstIncluded > 0 && gstAdded > 0 && ` (${money(gstIncluded)} included in prices)`}
+                    {gstIncluded > 0 && gstAdded === 0 && ' (included in item prices)'}
+                  </p>
                 )}
               </div>
 
@@ -379,20 +341,7 @@ export function OrderSummaryScreen() {
               )}
 
               <button
-                onClick={() => {
-                  if (b2b.isB2B) {
-                    if (!b2b.companyName?.trim()) {
-                      setB2bError('Please enter your Company / Business name for B2B invoice')
-                      return
-                    }
-                    const gstinClean = (b2b.gstin || '').trim().toUpperCase()
-                    if (!gstinClean || !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstinClean)) {
-                      setB2bError('Please enter a valid 15-character GSTIN (e.g. 27AAAAA0000A1Z5)')
-                      return
-                    }
-                  }
-                  navigate(USER_ROUTES.CHECKOUT_PAYMENT)
-                }}
+                onClick={() => navigate(USER_ROUTES.CHECKOUT_PAYMENT)}
                 disabled={cartItems.length === 0 || !selectedAddress || blockedItems.length > 0}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98] text-white font-bold py-4 px-4 rounded-2xl shadow-md transition-all text-xs tracking-wide flex items-center justify-center space-x-2"
               >

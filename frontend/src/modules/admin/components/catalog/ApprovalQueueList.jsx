@@ -4,20 +4,20 @@ const KIND_CONFIG = {
   category: {
     icon: 'categories',
     label: 'Category',
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200/80',
-    iconBg: 'bg-purple-100/70 text-purple-700 border-purple-200',
+    badgeClass: 'bg-accent-50 text-accent-700 border-accent-200/80',
+    iconBg: 'bg-accent-100/70 text-accent-700 border-accent-200',
   },
   brand: {
     icon: 'brands',
     label: 'Brand',
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200/80',
-    iconBg: 'bg-blue-100/70 text-blue-700 border-blue-200',
+    badgeClass: 'bg-brand-50 text-brand-700 border-brand-200/80',
+    iconBg: 'bg-brand-100/70 text-brand-700 border-brand-200',
   },
   product: {
     icon: 'products',
     label: 'Product',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-    iconBg: 'bg-emerald-100/70 text-emerald-700 border-emerald-200',
+    badgeClass: 'bg-success-50 text-success-700 border-success-200/80',
+    iconBg: 'bg-success-100/70 text-success-700 border-success-200',
   },
 }
 
@@ -35,9 +35,9 @@ export function ApprovalQueueList({
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-        <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-200/80 shadow-xs">
-          <Icon name="check" className="h-8 w-8 text-emerald-600" />
-          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xs">
+        <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-success-500/10 via-teal-500/10 to-brand-500/10 border border-success-200/80 shadow-xs">
+          <Icon name="check" className="h-8 w-8 text-success-600" />
+          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-success-500 text-white shadow-xs">
             <Icon name="check" className="h-3 w-3" />
           </span>
         </div>
@@ -65,7 +65,7 @@ export function ApprovalQueueList({
           )}
           {!searchQuery && tab === 'all' && (
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-3.5 py-1 text-xs font-medium text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-success-500 animate-pulse" />
               <span>Moderation system ready</span>
             </div>
           )}

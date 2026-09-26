@@ -22,6 +22,43 @@ const COLUMN_CLASSES = Object.freeze({
   5: 'sm:grid-cols-2 xl:grid-cols-5',
 })
 
+// Presentation only: KPI payloads carry a key and a format, not an icon, so
+// the card picks one. An explicit `kpi.icon` always wins.
+const KPI_ICON = Object.freeze({
+  revenue: 'money',
+  gmv: 'money',
+  netSales: 'money',
+  commission: 'percent',
+  collected: 'money',
+  payout: 'settlements',
+  held: 'pause',
+  orders: 'orders',
+  pending: 'pending',
+  aov: 'cart',
+  basket: 'cart',
+  units: 'inventory',
+  sellers: 'sellers',
+  products: 'products',
+  live: 'live',
+  refunds: 'returns',
+  refundRate: 'returns',
+  returnRate: 'returns',
+  rto: 'truck',
+  dispatch: 'truck',
+  reviews: 'star',
+  newBuyers: 'users',
+  returningBuyers: 'users',
+  repeat: 'users',
+  sellThrough: 'trendUp',
+  acceptance: 'successCircle',
+})
+
+const FORMAT_ICON = Object.freeze({ money: 'money', percent: 'percent' })
+
+function kpiIcon(kpi) {
+  return kpi.icon || KPI_ICON[kpi.key] || FORMAT_ICON[kpi.format] || 'activity'
+}
+
 function deltaTone(delta) {
   if (delta.sentiment) return DELTA_TONE[delta.sentiment]
   if (delta.direction === 'flat') return DELTA_TONE.neutral
@@ -41,20 +78,30 @@ export function KpiCard({ kpi }) {
 
   return (
     <article
-      className={`relative flex flex-col justify-between overflow-hidden rounded-lg border shadow-card transition-shadow duration-150 hover:shadow-raised ${
-        emphasised ? 'border-brand-200 bg-brand-50/40' : 'border-border bg-surface'
+      className={`relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border shadow-card transition-[box-shadow,border-color] duration-150 hover:shadow-raised ${
+        emphasised ? 'border-brand-200 bg-brand-50/40' : 'border-border bg-surface hover:border-border-strong'
       }`}
     >
       {emphasised && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-brand-600" />}
 
       <div className="px-4 pb-3 pt-4">
-        <p
-          className={`text-2xs font-semibold uppercase tracking-wider ${
-            emphasised ? 'text-brand-600' : 'text-ink-faint'
-          }`}
-        >
-          {kpi.label}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p
+            className={`min-w-0 pt-1 text-2xs font-semibold uppercase leading-snug tracking-wider ${
+              emphasised ? 'text-brand-600' : 'text-ink-subtle'
+            }`}
+          >
+            {kpi.label}
+          </p>
+          <span
+            aria-hidden="true"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+              emphasised ? 'bg-brand-600 text-white shadow-xs' : 'bg-surface-sunken text-ink-muted'
+            }`}
+          >
+            <Icon name={kpiIcon(kpi)} className="h-4 w-4" />
+          </span>
+        </div>
 
         <p
           className={`tabular mt-1.5 text-2xl font-bold leading-tight tracking-tight ${
@@ -64,16 +111,13 @@ export function KpiCard({ kpi }) {
           {formatKpiValue(kpi)}
         </p>
 
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex min-w-0 items-center gap-2">
           {kpi.delta && (
             <span
               className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-semibold ${deltaTone(kpi.delta)}`}
             >
               {kpi.delta.direction !== 'flat' && (
-                <Icon
-                  name={kpi.delta.direction === 'up' ? 'arrowUp' : 'arrowDown'}
-                  className="h-2.5 w-2.5"
-                />
+                <Icon name={kpi.delta.direction === 'up' ? 'arrowUp' : 'arrowDown'} className="h-2.5 w-2.5" />
               )}
               {kpi.delta.label}
             </span>
@@ -93,7 +137,7 @@ export function KpiCard({ kpi }) {
 
 export function KpiGrid({ kpis = [], columns = 4 }) {
   return (
-    <div className={`grid grid-cols-1 gap-3 ${COLUMN_CLASSES[columns] || COLUMN_CLASSES[4]}`}>
+    <div className={`grid grid-cols-1 gap-4 ${COLUMN_CLASSES[columns] || COLUMN_CLASSES[4]}`}>
       {kpis.map((kpi) => (
         <KpiCard key={kpi.key} kpi={kpi} />
       ))}

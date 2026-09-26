@@ -74,6 +74,8 @@ export const returnListItemSchema = z.object({
   buyer: z.string(),
   seller: z.string(),
   reason: z.enum(['damaged', 'wrong_product', 'missing_product']),
+  // What the buyer asked for — the only thing admin can approve.
+  requestType: z.enum(['REFUND', 'REPLACEMENT']).optional(),
   raisedAt: z.string(),
   evidenceCount: z.number().int(),
   status: z.enum(['awaiting_review', 'approved', 'rejected', 'replacement_issued', 'refunded']),
@@ -84,7 +86,9 @@ export const returnListSchema = paged(returnListItemSchema)
 
 export const returnDetailSchema = returnListItemSchema.extend({
   buyerNote: z.string(),
-  evidence: z.array(z.object({ id: z.string(), caption: z.string(), uploadedAt: z.string() })),
+  evidence: z.array(
+    z.object({ id: z.string(), caption: z.string(), uploadedAt: z.string(), url: z.string().nullable().optional() }),
+  ),
   item: z.object({ name: z.string(), sku: z.string(), quantity: z.number().int(), unitPrice: z.number().int() }),
   policy: z.object({
     windowDays: z.number().int(),
@@ -92,6 +96,24 @@ export const returnDetailSchema = returnListItemSchema.extend({
     allowedReason: z.boolean(),
     returnShippingBearer: z.enum(['platform', 'vendor', 'buyer']),
   }),
+  // Where the request is after approval; drives the page's actions.
+  progress: z
+    .object({
+      stage: z.string(),
+      pickupMode: z.enum(['COURIER', 'MANUAL', 'NOT_REQUIRED']).nullable(),
+      pickupStatus: z.string().nullable(),
+      pickupAwb: z.string().nullable(),
+      pickupCourier: z.string().nullable(),
+      pickupError: z.string().nullable(),
+      itemReceivedAt: z.string().nullable(),
+      restocked: z.boolean(),
+      completedAt: z.string().nullable(),
+      refundDestination: z.enum(['WALLET', 'RAZORPAY']).nullable(),
+      razorpayRefundId: z.string().nullable(),
+      replacementOrderId: z.string().nullable(),
+      orderId: z.string(),
+    })
+    .optional(),
   timeline: z.array(
     z.object({
       label: z.string(),

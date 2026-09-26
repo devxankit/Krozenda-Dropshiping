@@ -179,7 +179,8 @@
    normal DOM tree. An opaque background here would sit behind their
    translucent/blurred backdrop and paint over it solid, hiding the blur —
    give the page shell its own `bg-*` utility instead of leaning on this. */
-.admin-root {
+.admin-root,
+.vendor-root {
   font-family: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   color: #0f172a;
@@ -210,9 +211,22 @@
 
 /* Money and quantity columns must align. Applied by the money/number cells
    rather than left to each screen to remember. */
-.admin-root .tabular {
+.admin-root .tabular,
+.vendor-root .tabular {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+/* Panel text selection and the scrollbar gutter: small, but they are what
+   makes a dense back-office screen feel finished rather than default. */
+.admin-root ::selection,
+.vendor-root ::selection {
+  background-color: #dbeafe;
+  color: #1e3a8a;
+}
+.admin-root main,
+.vendor-root main {
+  scrollbar-gutter: stable;
 }
 
 /* Reduced motion, honoured app-wide rather than only in the admin panel.
