@@ -171,7 +171,6 @@ async function refreshOrderStatus(cjOrderId) {
   if (data?.trackNumber) {
     try {
       const CjShipment = require('../../Models/CjShipment');
-      const Order = require('../../Models/Order');
       let shipment = await CjShipment.findOne({ cjOrder: cjOrder._id });
       if (!shipment) {
         shipment = new CjShipment({ cjOrder: cjOrder._id, cjOrderId: cjOrder.cjOrderId });
@@ -182,19 +181,9 @@ async function refreshOrderStatus(cjOrderId) {
       shipment.lastSyncedAt = new Date();
       await shipment.save();
 
-      if (cjOrder.krozendaOrderId) {
-        await Order.updateOne(
-          { _id: cjOrder.krozendaOrderId },
-          {
-            $set: {
-              'items.$[elem].courierName': data.logisticName || 'CJ Dropshipping',
-              'items.$[elem].trackingNumber': data.trackNumber,
-              'items.$[elem].status': cjOrder.status === 'DELIVERED' ? 'DELIVERED' : 'SHIPPED',
-            },
-          },
-          { arrayFilters: [{ 'elem.status': { $nin: ['DELIVERED', 'CANCELLED'] } }] }
-        );
-      }
+      // Same path as the tracking sync: the order's lines move forward and
+      // the order itself rolls up, through a document save.
+      await require('./cjLogisticsService').applyToOrder(shipment);
     } catch (shipErr) {
       console.error('[refreshOrderStatus] tracking sync error:', shipErr.message);
     }

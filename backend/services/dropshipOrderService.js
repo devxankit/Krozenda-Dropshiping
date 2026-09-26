@@ -225,6 +225,14 @@ async function fulfil(order, { logisticName = null } = {}) {
         logisticName: logisticName || order.cjLogisticName || 'CJPacket Eub',
       },
     });
+    // A tracking row from the start, so the CJ tracking poller follows this
+    // parcel even if CJ's webhook never arrives. It only polls rows that exist.
+    try {
+      const created = await CjOrder.findOne({ krozendaOrderId: order._id });
+      if (created?.cjOrderId) await require('./cj/cjLogisticsService').getOrCreateShipment(created);
+    } catch (err) {
+      log({ event: 'DROPSHIP_TRACKING_ROW_FAILED', orderId: String(order._id), error: err.message });
+    }
     return { outcome: 'created' };
   } catch (err) {
     if (err.code === 'CJ_ORDER_CREATE_FAILED') {

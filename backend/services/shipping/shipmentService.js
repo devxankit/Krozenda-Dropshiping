@@ -10,6 +10,46 @@ const serviceabilityService = require('./serviceabilityService');
 const { suggestPackage, buildPackageSnapshot, validatePackage } = require('../../utils/packaging');
 const { BUYER_FACING_ORDER_STATUS } = require('../../Config/shipping');
 const { createNotification } = require('../../Controllers/notificationController');
+const { toPaise, allocateProportional } = require('../../utils/money');
+const { lineDiscountsPaise, lineGrossPaise } = require('../../utils/orderLines');
+
+// What this parcel is worth to the buyer, so a COD courier collects the right
+// amount: its lines, less their coupon share, plus their share of the order's
+// delivery charge and platform fee. Shares are split by line value across the
+// order's live lines with an exact largest-remainder split, so the parcels of
+// a multi-seller order add up to the order total to the paise. Collecting only
+// the item value (as this used to) left the delivery charge unpaid on every
+// COD order.
+function parcelMoney(order, myItems) {
+  const indexes = myItems.map((item) => order.items.indexOf(item));
+  const discounts = lineDiscountsPaise(order);
+  const live = order.items.map((item, index) => index).filter((index) => order.items[index].status !== 'CANCELLED');
+  const weights = live.map((index) => lineGrossPaise(order.items[index]));
+  const shipping = allocateProportional(toPaise(order.shippingFee || 0), weights);
+  const fee = allocateProportional(toPaise(order.platformFee || 0), weights);
+  const position = new Map(live.map((index, k) => [index, k]));
+
+  let subTotal = 0;
+  let discount = 0;
+  let shippingShare = 0;
+  let feeShare = 0;
+  for (const index of indexes) {
+    subTotal += lineGrossPaise(order.items[index]);
+    discount += discounts[index] || 0;
+    const k = position.get(index);
+    if (k !== undefined) {
+      shippingShare += shipping[k];
+      feeShare += fee[k];
+    }
+  }
+  return {
+    subTotal: subTotal / 100,
+    discount: discount / 100,
+    shipping: shippingShare / 100,
+    platformFee: feeShare / 100,
+    total: Math.max(0, subTotal - discount + shippingShare + feeShare) / 100,
+  };
+}
 
 // The shipment lifecycle: create -> AWB -> pickup.
 //
@@ -263,6 +303,7 @@ async function createShipment({
 
   const isCod = order.paymentMethod === 'COD' && order.paymentStatus !== 'PAID';
   const linesValue = myItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const money = parcelMoney(order, myItems);
 
   // --- write the local row FIRST -------------------------------------------
   // This is what makes a timeout survivable: if the process dies between here
@@ -309,7 +350,8 @@ async function createShipment({
       account: toAccountSnapshot(resolution),
       package: pkg,
       paymentMethod: isCod ? 'COD' : 'PREPAID',
-      collectableAmount: isCod ? Math.round(linesValue * 100) / 100 : 0,
+      // Everything the buyer owes for this parcel, delivery included.
+      collectableAmount: isCod ? money.total : 0,
       declaredValue: Math.round(linesValue * 100) / 100,
       // Apportioned later once the carrier's real cost is known; the buyer's
       // charge stays an order-level figure until rate-based checkout lands.
@@ -336,7 +378,7 @@ async function createShipment({
   await shipment.save();
 
   // --- call the carrier ------------------------------------------------------
-  const payload = buildCreateOrderPayload({ order, shipment, myItems, pickup, address, isCod, linesValue });
+  const payload = buildCreateOrderPayload({ order, shipment, myItems, pickup, address, isCod, money });
 
   try {
     const { body } = await shiprocketService.createOrder(resolution.integration, payload, { onLog: log });
@@ -429,7 +471,7 @@ function buildCarrierReference(shipment) {
 // documented create/adhoc contract; confirm them against the official Postman
 // collection before going live, and note that Shiprocket validates strictly —
 // a missing billing field is rejected outright rather than defaulted.
-function buildCreateOrderPayload({ order, shipment, myItems, pickup, address, isCod, linesValue }) {
+function buildCreateOrderPayload({ order, shipment, myItems, pickup, address, isCod, money }) {
   const [firstName, ...rest] = String(address.fullName || '').trim().split(/\s+/);
 
   return {
@@ -457,7 +499,12 @@ function buildCreateOrderPayload({ order, shipment, myItems, pickup, address, is
     })),
 
     payment_method: isCod ? 'COD' : 'Prepaid',
-    sub_total: Math.round(linesValue * 100) / 100,
+    // Shiprocket's order total — and the amount a COD courier collects — is
+    // sub_total + shipping_charges + transaction_charges - total_discount.
+    sub_total: money.subTotal,
+    shipping_charges: money.shipping,
+    transaction_charges: money.platformFee,
+    total_discount: money.discount,
 
     // Dimensions in cm, weight in kg — the units Shiprocket expects.
     length: shipment.package.lengthCm,
@@ -1252,6 +1299,7 @@ async function notifyBuyer(shipment, message) {
 }
 
 module.exports = {
+  parcelMoney,
   createShipment,
   generateDocument,
   getNdr,

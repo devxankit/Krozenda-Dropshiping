@@ -93,6 +93,10 @@ async function syncShipment(cjShipment) {
   // Out for delivery / failed attempt: tell the buyer, same as a Shiprocket
   // parcel. Only on the change, so the hourly poll never repeats it. Never
   // throws.
+  // The buyer's order follows the parcel. Without this a dropship order sat
+  // at PENDING for ever — only an admin clicking "refresh" ever moved it.
+  await applyToOrder(cjShipment);
+
   if (cjShipment.status !== statusBefore && ['OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(cjShipment.status)) {
     const cjOrder = await CjOrder.findById(cjShipment.cjOrder).select('krozendaOrderId').lean();
     // Lazy: the alert service reaches the notification controller and the
@@ -101,6 +105,51 @@ async function syncShipment(cjShipment) {
   }
 
   return cjShipment;
+}
+
+// CJ tracking status → the buyer-facing status of the order lines.
+const ORDER_STATUS_FOR = Object.freeze({
+  SHIPPED: 'SHIPPED',
+  IN_TRANSIT: 'SHIPPED',
+  OUT_FOR_DELIVERY: 'SHIPPED',
+  DELIVERY_FAILED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+});
+const LINE_RANK = { PENDING: 0, PROCESSING: 1, SHIPPED: 2, DELIVERED: 3 };
+
+// Moves the Krozenda order's lines forward to match the CJ parcel, and puts
+// its tracking number on them. Saved through the document, so the order's
+// own status rolls up and the buyer's WhatsApp/push fire from the Order
+// hooks. Forward only; a cancelled order is left alone.
+async function applyToOrder(cjShipment) {
+  const target = ORDER_STATUS_FOR[cjShipment.status] || null;
+  const cjOrder = await CjOrder.findById(cjShipment.cjOrder).select('krozendaOrderId').lean();
+  if (!cjOrder?.krozendaOrderId) return null;
+  // Lazy: the Order model's hooks reach services that load this module.
+  const Order = require('../../Models/Order');
+  const order = await Order.findById(cjOrder.krozendaOrderId);
+  if (!order || order.status === 'CANCELLED') return order;
+
+  let changed = false;
+  for (const item of order.items) {
+    if (item.status === 'CANCELLED') continue;
+    if (target && (LINE_RANK[target] ?? 0) > (LINE_RANK[item.status] ?? 0)) {
+      item.status = target;
+      item.statusHistory.push({ status: target, at: new Date() });
+      changed = true;
+    }
+    if (cjShipment.trackingNumber && item.trackingNumber !== cjShipment.trackingNumber) {
+      item.trackingNumber = cjShipment.trackingNumber;
+      changed = true;
+    }
+    const carrier = cjShipment.carrier || 'CJ Dropshipping';
+    if (cjShipment.trackingNumber && item.courierName !== carrier) {
+      item.courierName = carrier;
+      changed = true;
+    }
+  }
+  if (changed) await order.save();
+  return order;
 }
 
 // Ensures a shipment row exists for a CJ order once it's confirmed (creation
@@ -122,4 +171,4 @@ async function syncByCjOrderId(cjOrderId) {
   return syncShipment(shipment);
 }
 
-module.exports = { calculateFreight, syncShipment, syncByCjOrderId, getOrCreateShipment, mapTrackingStatus };
+module.exports = { calculateFreight, syncShipment, syncByCjOrderId, getOrCreateShipment, mapTrackingStatus, applyToOrder };
