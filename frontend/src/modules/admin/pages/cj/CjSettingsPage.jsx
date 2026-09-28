@@ -251,7 +251,7 @@ export function CjSettingsPage() {
                     }}
                     className={`px-2.5 py-0.5 text-2xs font-semibold rounded-md transition ${
                       markupType === 'PERCENT'
-                        ? 'bg-primary-600 text-white shadow-xs'
+                        ? 'bg-brand-600 text-white shadow-xs'
                         : 'text-ink-subtle hover:text-slate-900'
                     }`}
                   >
@@ -267,7 +267,7 @@ export function CjSettingsPage() {
                     }}
                     className={`px-2.5 py-0.5 text-2xs font-semibold rounded-md transition ${
                       markupType === 'FLAT'
-                        ? 'bg-primary-600 text-white shadow-xs'
+                        ? 'bg-brand-600 text-white shadow-xs'
                         : 'text-ink-subtle hover:text-slate-900'
                     }`}
                   >

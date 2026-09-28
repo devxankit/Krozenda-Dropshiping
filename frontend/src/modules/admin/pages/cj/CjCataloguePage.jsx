@@ -472,12 +472,12 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
 
         {/* Live Progress Bar during execution */}
         {isProcessing && (
-          <div className="rounded-xl border border-primary-200 bg-primary-50/70 p-4 shadow-sm transition-all animate-in fade-in">
-            <div className="flex items-center justify-between text-xs font-bold text-primary-900 mb-2">
+          <div className="rounded-xl border border-brand-200 bg-brand-50/70 p-4 shadow-sm transition-all animate-in fade-in">
+            <div className="flex items-center justify-between text-xs font-bold text-brand-900 mb-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-600" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-600" />
                 </span>
                 <span>Importing Products into Krozenda...</span>
               </div>
@@ -485,9 +485,9 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                 {progress.done} of {progress.total} ({Math.round((progress.done / progress.total) * 100)}%)
               </span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary-100">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-brand-100">
               <div
-                className="h-full bg-primary-600 transition-all duration-300 rounded-full"
+                className="h-full bg-brand-600 transition-all duration-300 rounded-full"
                 style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
               />
             </div>
@@ -524,7 +524,7 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                   }}
                   className={`px-2.5 py-0.5 text-2xs font-semibold rounded-md transition ${
                     markupType === 'PERCENT'
-                      ? 'bg-primary-600 text-white shadow-xs'
+                      ? 'bg-brand-600 text-white shadow-xs'
                       : 'text-ink-subtle hover:text-slate-900'
                   }`}
                 >
@@ -541,7 +541,7 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                   }}
                   className={`px-2.5 py-0.5 text-2xs font-semibold rounded-md transition ${
                     markupType === 'FLAT'
-                      ? 'bg-primary-600 text-white shadow-xs'
+                      ? 'bg-brand-600 text-white shadow-xs'
                       : 'text-ink-subtle hover:text-slate-900'
                   }`}
                 >
@@ -571,7 +571,7 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                       onClick={() => setMarkupValue(String(preset))}
                       className={`rounded border px-2 py-0.5 text-2xs font-medium transition ${
                         Number(markupValue) === preset
-                          ? 'border-primary-500 bg-primary-50 text-primary-700 font-semibold'
+                          ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold'
                           : 'border-border bg-surface text-ink-subtle hover:bg-surface-muted'
                       }`}
                     >
@@ -586,7 +586,7 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                       onClick={() => setMarkupValue(String(preset))}
                       className={`rounded border px-2 py-0.5 text-2xs font-medium transition ${
                         Number(markupValue) === preset
-                          ? 'border-primary-500 bg-primary-50 text-primary-700 font-semibold'
+                          ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold'
                           : 'border-border bg-surface text-ink-subtle hover:bg-surface-muted'
                       }`}
                     >
@@ -641,8 +641,8 @@ function BulkOnboardModal({ selectedProducts, onClose }) {
                     <p className="text-2xs text-ink-subtle">CJ Cost: {catalogPriceInr(p.sourcePrice)}</p>
                     {isProcessing || status ? (
                       status === 'importing' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-2xs font-bold text-primary-700 border border-primary-200 animate-pulse">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary-600 animate-ping" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-2xs font-bold text-brand-700 border border-brand-200 animate-pulse">
+                          <span className="h-1.5 w-1.5 rounded-full bg-brand-600 animate-ping" />
                           Importing...
                         </span>
                       ) : status === 'success' ? (
@@ -682,7 +682,7 @@ function ProductCard({ product, isSelected, onToggleSelect, onView }) {
       onClick={onView}
       className={`group relative flex flex-col overflow-hidden rounded-lg border text-left transition-all cursor-pointer ${
         isSelected
-          ? 'border-primary-500 ring-2 ring-primary-500 bg-primary-50/10 shadow-md'
+          ? 'border-brand-500 ring-2 ring-brand-500 bg-brand-50/10 shadow-md'
           : 'border-border bg-surface hover:shadow-md hover:border-slate-300'
       } ${isOnboarded ? 'opacity-75' : ''}`}
     >
@@ -705,7 +705,7 @@ function ProductCard({ product, isSelected, onToggleSelect, onView }) {
           checked={isSelected}
           disabled={isOnboarded}
           onChange={() => {}}
-          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 
@@ -728,7 +728,7 @@ function ProductCard({ product, isSelected, onToggleSelect, onView }) {
         )}
       </div>
       <div className="flex flex-col gap-1 p-3">
-        <p className="line-clamp-2 text-xs font-medium text-slate-900 group-hover:text-primary-600 transition-colors">
+        <p className="line-clamp-2 text-xs font-medium text-slate-900 group-hover:text-brand-600 transition-colors">
           {product.title}
         </p>
         <p className="text-2xs text-ink-subtle">{product.sourceCategory?.name || '—'}</p>
@@ -904,13 +904,13 @@ export function CjCataloguePage() {
                   if (el) el.indeterminate = someCurrentPageSelected && !allCurrentPageSelected
                 }}
                 onChange={toggleSelectAllCurrentPage}
-                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
               />
               <span>Select all on this page ({selectableItems.length})</span>
             </label>
 
             {selectedProductIds.size > 0 && (
-              <span className="text-xs font-semibold text-primary-700 bg-primary-50 px-2.5 py-0.5 rounded-full border border-primary-200">
+              <span className="text-xs font-semibold text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
                 {selectedProductIds.size} selected
               </span>
             )}
@@ -957,7 +957,7 @@ export function CjCataloguePage() {
       {selectedProductIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 rounded-2xl border border-slate-700 bg-slate-900/95 px-5 py-3 text-white shadow-2xl backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500 text-xs font-bold text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
               {selectedProductIds.size}
             </span>
             <span className="text-sm font-medium">Products Selected</span>
@@ -973,7 +973,7 @@ export function CjCataloguePage() {
           </Button>
           <Button
             size="sm"
-            className="!bg-primary-600 !text-white hover:!bg-primary-500 font-semibold shadow-sm"
+            className="!bg-brand-600 !text-white hover:!bg-brand-500 font-semibold shadow-sm"
             onClick={() => setBulkOnboardOpen(true)}
           >
             🚀 Bulk Onboard ({selectedProductIds.size})

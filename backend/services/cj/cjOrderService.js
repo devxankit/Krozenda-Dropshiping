@@ -156,7 +156,10 @@ async function refreshOrderStatus(cjOrderId) {
   });
 
   const data = body?.data;
-  if (data?.orderStatus) {
+  // CANCELLED is final. CJ reports a deleted order with a status the mapper
+  // does not know, and its PROCESSING fallback used to bring the order back
+  // to life, along with its Cancel button.
+  if (data?.orderStatus && cjOrder.status !== 'CANCELLED') {
     cjOrder.status = mapCjStatus(data.orderStatus);
   }
   if (data?.paymentStatus) {

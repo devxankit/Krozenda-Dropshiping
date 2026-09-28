@@ -19,6 +19,10 @@ const STATUS_OPTIONS = [
   { value: 'FULFILLMENT_FAILED', label: 'Fulfillment failed' },
 ]
 
+// CJ refuses a cancel once the order has shipped, so the button only shows
+// while it can still work.
+const CANCELLABLE_STATUSES = ['PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING']
+
 export function CjOrdersPage() {
   const [status, setStatus] = useState('')
   const [pageNum, setPageNum] = useState(1)
@@ -50,14 +54,11 @@ export function CjOrdersPage() {
           >
             Refresh
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={!row.cjOrderId || row.status === 'CANCELLED' || isCancelling}
-            onClick={() => cancelOrder(row._id)}
-          >
-            Cancel
-          </Button>
+          {row.cjOrderId && CANCELLABLE_STATUSES.includes(row.status) && (
+            <Button variant="danger" size="sm" disabled={isCancelling} onClick={() => cancelOrder(row._id)}>
+              Cancel
+            </Button>
+          )}
         </div>
       ),
     },
