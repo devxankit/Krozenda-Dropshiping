@@ -134,7 +134,10 @@ async function syncPendingVendors() {
     isActive: true,
     'bank.accountNumber': { $nin: [null, ''] },
     'bank.ifsc': { $nin: [null, ''] },
-    'razorpay.onboardingStatus': { $in: IN_PROGRESS_STATUSES },
+    // null also matches sellers approved before the razorpay sub-document
+    // existed — the field is missing in the database for them, and only
+    // mongoose's in-memory default calls it NOT_STARTED.
+    'razorpay.onboardingStatus': { $in: [...IN_PROGRESS_STATUSES, null] },
   });
 
   const summary = { checked: vendors.length, active: 0, failed: 0 };

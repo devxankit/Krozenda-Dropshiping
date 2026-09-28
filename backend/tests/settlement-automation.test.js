@@ -452,6 +452,19 @@ describe('vendorRouteOnboarding', () => {
     expect((await Vendor.findById(vendor._id)).razorpay.onboardingError).toBe('');
   });
 
+  it('picks up sellers approved before the razorpay sub-document existed', async () => {
+    const vendor = await createVendor();
+    await Vendor.collection.updateOne({ _id: vendor._id }, { $unset: { razorpay: '' } });
+    razorpay.accounts.create.mockResolvedValue({ id: 'acc_legacy', status: 'created' });
+    razorpay.stakeholders.create.mockResolvedValue({ id: 'sth_legacy' });
+    razorpay.products.requestProductConfiguration.mockResolvedValue({ id: 'acc_prd_legacy' });
+    razorpay.products.edit.mockResolvedValue({ id: 'acc_prd_legacy', activation_status: 'under_review' });
+
+    const summary = await vendorRouteOnboarding.syncPendingVendors();
+    expect(summary.checked).toBe(1);
+    expect((await Vendor.findById(vendor._id)).razorpay.accountId).toBe('acc_legacy');
+  });
+
   it('never overrides an eligibility an admin set by hand', async () => {
     const vendor = await createVendor({
       onboardingStatus: 'KYC_PENDING',
