@@ -139,9 +139,18 @@ describe('checkout payment verification', () => {
 });
 
 describe('wallet top-up', () => {
+  // A top-up is only creditable once the buyer has opened it (POST
+  // /topup/order records it as PENDING); verify claims that row.
+  async function openTopup(token, ids, amount) {
+    razorpay.orders.create.mockResolvedValueOnce({ id: ids.razorpay_order_id, currency: 'INR' });
+    const res = await as(token).post('/user/wallet/topup/order', { amount });
+    expect(res.status).toBe(200);
+  }
+
   test('a forged top-up signature credits nothing', async () => {
     const b = await buyerWithAddress();
     const ids = paymentIds();
+    await openTopup(b.token, ids, 500);
     const res = await as(b.token).post('/user/wallet/topup/verify', { ...ids, razorpay_signature: '0'.repeat(64) });
     expect(res.status).toBe(400);
     expect((await Customer.findById(b.user._id)).walletBalance || 0).toBe(0);
@@ -150,40 +159,70 @@ describe('wallet top-up', () => {
   test('the credited amount comes from Razorpay, never the client', async () => {
     const b = await buyerWithAddress();
     const ids = paymentIds();
-    razorpay.payments.fetch.mockResolvedValue(captured(ids, 50000, { notes: { purpose: 'WALLET_TOPUP' } }));
+    await openTopup(b.token, ids, 500);
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, 50000));
     const res = await as(b.token).post('/user/wallet/topup/verify', { ...ids, amount: 999999 });
     expect(res.status).toBe(200);
     expect((await Customer.findById(b.user._id)).walletBalance).toBe(500);
   });
 
-  knownBug('QA-007', 'replaying the SAME top-up verification must not credit the wallet again', async () => {
-    // Wait for the unique index, so this proves the handler's ordering bug
-    // ($inc before the guarded insert) rather than index-build timing.
+  test('an opened-but-unpaid top-up is not shown in wallet history', async () => {
+    const b = await buyerWithAddress();
+    await openTopup(b.token, paymentIds(), 500);
+    const res = await as(b.token).get('/user/wallet');
+    expect(res.body.data.transactions).toHaveLength(0);
+  });
+
+  // Regression for QA-007 (was: every replay credited again).
+  test('QA-007: replaying the SAME top-up verification credits the wallet once', async () => {
     await require('../../Models/WalletTransaction').init();
     const b = await buyerWithAddress();
     const ids = paymentIds();
-    razorpay.payments.fetch.mockResolvedValue(captured(ids, 50000, { notes: { purpose: 'WALLET_TOPUP' } }));
-    for (let i = 0; i < 4; i += 1) {
-      const res = await as(b.token).post('/user/wallet/topup/verify', ids);
-      expect(res.status).toBe(200);
-    }
+    await openTopup(b.token, ids, 500);
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, 50000));
+    const results = [];
+    for (let i = 0; i < 4; i += 1) results.push(await as(b.token).post('/user/wallet/topup/verify', ids));
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200, 200]);
+    expect(results.slice(1).every((r) => r.body.message === 'Wallet already topped up')).toBe(true);
     expect((await Customer.findById(b.user._id)).walletBalance).toBe(500);
   });
 
-  knownBug('QA-008', 'a payment captured for an ORDER must not also be creditable to the wallet', async () => {
+  test('QA-007: parallel replays of one top-up credit it once', async () => {
+    const b = await buyerWithAddress();
+    const ids = paymentIds();
+    await openTopup(b.token, ids, 300);
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, 30000));
+    await Promise.all(Array.from({ length: 6 }, () => as(b.token).post('/user/wallet/topup/verify', ids)));
+    expect((await Customer.findById(b.user._id)).walletBalance).toBe(300);
+  });
+
+  // Regression for QA-008 (was: an order payment could also be credited).
+  test('QA-008: a payment captured for an ORDER cannot also be credited to the wallet', async () => {
     const product = await createProduct({ stock: 5, price: 1000, gstRate: 0 });
     const b = await buyerWithAddress();
     await addToCart(b.token, product._id, 1);
     const ids = paymentIds();
     const total = await quoteTotal(b.token, b.address._id);
-    razorpay.payments.fetch.mockResolvedValue(
-      captured(ids, Math.round(total * 100), { notes: { purpose: 'ORDER_PAYMENT', userId: String(b.user._id) } })
-    );
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, Math.round(total * 100)));
     expect((await as(b.token).post('/user/orders', { addressId: String(b.address._id), paymentMethod: 'RAZORPAY', ...ids })).status).toBe(201);
 
     const res = await as(b.token).post('/user/wallet/topup/verify', ids);
     expect(res.status).toBe(400);
     expect((await Customer.findById(b.user._id)).walletBalance || 0).toBe(0);
+  });
+
+  test('QA-008: buyer B cannot redeem a top-up buyer A opened and paid', async () => {
+    const a = await buyerWithAddress();
+    const bb = await buyerWithAddress();
+    const ids = paymentIds();
+    await openTopup(a.token, ids, 500);
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, 50000));
+    const res = await as(bb.token).post('/user/wallet/topup/verify', ids);
+    expect(res.status).toBe(400);
+    expect((await Customer.findById(bb.user._id)).walletBalance || 0).toBe(0);
+    // A can still claim their own
+    expect((await as(a.token).post('/user/wallet/topup/verify', ids)).status).toBe(200);
+    expect((await Customer.findById(a.user._id)).walletBalance).toBe(500);
   });
 });
 

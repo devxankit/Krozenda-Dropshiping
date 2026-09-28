@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 const TYPES = ['CREDIT', 'DEBIT'];
 const SOURCES = ['TOPUP', 'ORDER_PAYMENT', 'ORDER_REFUND'];
-const STATUSES = ['SUCCESS', 'FAILED'];
+// PENDING is a top-up the buyer has started but not paid for: the Razorpay
+// order exists, the wallet is untouched. It is what verifyTopup claims, so a
+// payment can only ever be credited against a top-up this user opened.
+const STATUSES = ['PENDING', 'SUCCESS', 'FAILED'];
 
 const walletTransactionSchema = new mongoose.Schema(
   {
@@ -20,6 +23,8 @@ const walletTransactionSchema = new mongoose.Schema(
 );
 
 walletTransactionSchema.index({ user: 1, createdAt: -1 });
+// verifyTopup finds the buyer's own PENDING top-up by its Razorpay order.
+walletTransactionSchema.index({ user: 1, razorpayOrderId: 1 });
 // Guards a repeated top-up verify call (e.g. the client retrying after a
 // dropped response) from crediting the wallet twice for the same payment.
 walletTransactionSchema.index(

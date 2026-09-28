@@ -11,6 +11,7 @@ const CjOrder = require('../../Models/CjOrder');
 
 const FREIGHT_PATH = '/v1/logistic/freightCalculate';
 const TRACKING_PATH = '/v1/logistic/trackInfo';
+const ORDER_DETAIL_PATH = '/v1/shopping/order/getOrderDetail';
 
 function authenticatedCall(request) {
   return cjAuthService.withAuth((accessToken) =>
@@ -66,27 +67,60 @@ function mapTrackingStatus(cjStatus) {
 // both the webhook path (fast) and the polling job (fallback) — identical
 // idempotent write either way, since it's a straight overwrite of the
 // tracking events list, not an append that could duplicate.
+//
+// CJ's trackInfo is looked up by tracking number (?trackNumber=), which CJ
+// only assigns once the parcel ships — so until then the number is read
+// from the order detail, and a parcel without one yet is left as it is.
+// trackInfo answers with an array of { trackingNumber, logisticName,
+// trackingStatus, deliveryTime, … }; it carries no event history.
 async function syncShipment(cjShipment) {
+  if (!cjShipment.trackingNumber) {
+    const { body: detailBody } = await authenticatedCall({
+      method: 'GET',
+      path: ORDER_DETAIL_PATH,
+      query: { orderId: cjShipment.cjOrderId },
+      idempotent: true,
+    });
+    const detail = detailBody?.data;
+    if (detail?.trackNumber) {
+      cjShipment.trackingNumber = detail.trackNumber;
+      cjShipment.carrier = detail.logisticName || cjShipment.carrier;
+    }
+    if (!cjShipment.trackingNumber) {
+      cjShipment.lastSyncedAt = new Date();
+      await cjShipment.save();
+      return cjShipment;
+    }
+  }
+
   const { body } = await authenticatedCall({
     method: 'GET',
     path: TRACKING_PATH,
-    query: { orderId: cjShipment.cjOrderId },
+    query: { trackNumber: cjShipment.trackingNumber },
     idempotent: true,
   });
 
-  const data = body?.data;
-  if (!data) return cjShipment;
+  const records = Array.isArray(body?.data) ? body.data : body?.data ? [body.data] : [];
+  const data = records.find((r) => r.trackingNumber === cjShipment.trackingNumber) || records[0];
+  if (!data) {
+    cjShipment.lastSyncedAt = new Date();
+    await cjShipment.save();
+    return cjShipment;
+  }
 
   const statusBefore = cjShipment.status;
-  cjShipment.trackingNumber = data.trackingNumber || cjShipment.trackingNumber;
   cjShipment.carrier = data.logisticName || cjShipment.carrier;
-  cjShipment.status = mapTrackingStatus(data.trackStatus);
-  cjShipment.trackingEvents = (data.trackInfoList || []).map((e) => ({
-    status: e.trackStatus || '',
-    description: e.trackDescription || '',
-    location: e.trackLocation || '',
-    occurredAt: e.trackTime ? new Date(e.trackTime) : null,
-  }));
+  // A number assigned but not yet scanned reads as SHIPPED, not PROCESSING.
+  const mapped = mapTrackingStatus(data.trackingStatus || data.trackStatus);
+  cjShipment.status = mapped === 'PROCESSING' ? 'SHIPPED' : mapped;
+  if (Array.isArray(data.trackInfoList)) {
+    cjShipment.trackingEvents = data.trackInfoList.map((e) => ({
+      status: e.trackStatus || '',
+      description: e.trackDescription || '',
+      location: e.trackLocation || '',
+      occurredAt: e.trackTime ? new Date(e.trackTime) : null,
+    }));
+  }
   cjShipment.lastSyncedAt = new Date();
   await cjShipment.save();
 

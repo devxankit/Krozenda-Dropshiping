@@ -234,6 +234,11 @@ describe('cjOrderService — idempotent order creation', () => {
     const createOrderCalls = call.mock.calls.filter(([req]) => req.path.includes('createOrder')).length;
     expect(createOrderCalls).toBe(1);
     expect(first.cjOrderId).toBe('CJ-ORDER-1');
+    // V2 path, paid from the CJ balance (numeric payType 2) — the old
+    // string 'PAY_BALANCE' left orders UNPAID at CJ.
+    const createReq = call.mock.calls.find(([req]) => req.path.includes('createOrder'))[0];
+    expect(createReq.path).toBe('/v1/shopping/order/createOrderV2');
+    expect(createReq.body.payType).toBe(2);
 
     // Retry with the SAME sub-order id — must short-circuit, no new network call.
     const second = await cjOrderService.createOrder(payload);

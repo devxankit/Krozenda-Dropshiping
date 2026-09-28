@@ -13,6 +13,14 @@ beforeAll(connectTestDb);
 afterAll(disconnectTestDb);
 afterEach(() => jest.clearAllMocks());
 
+// verifyTopup only credits against a top-up the buyer opened, so every test
+// opens one first, exactly as the checkout widget's caller does.
+async function openTopup(token, orderId, amount) {
+  razorpay.orders.create.mockResolvedValueOnce({ id: orderId, currency: 'INR' });
+  const res = await request(app).post('/user/wallet/topup/order').set('Authorization', `Bearer ${token}`).send({ amount });
+  expect(res.status).toBe(200);
+}
+
 describe('wallet top-up amount verification (regression: pay-1-get-credited-99999)', () => {
   it('credits only what Razorpay actually captured, ignoring a client-supplied amount', async () => {
     const { token } = await createCustomer();
@@ -24,6 +32,7 @@ describe('wallet top-up amount verification (regression: pay-1-get-credited-9999
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
 
+    await openTopup(token, orderId, 10);
     razorpay.payments.fetch.mockResolvedValue({ order_id: orderId, status: 'captured', amount: 100 }); // ₹1
 
     const res = await request(app)
@@ -49,6 +58,7 @@ describe('wallet top-up amount verification (regression: pay-1-get-credited-9999
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
 
+    await openTopup(token, orderId, 100);
     razorpay.payments.fetch.mockResolvedValue({ order_id: orderId, status: 'failed', amount: 10000 });
 
     const res = await request(app)

@@ -65,10 +65,11 @@ jest.mock('../services/cj/cjClient', () => ({
       return { body: { data: { orderId: `CJORD-${cj.calls.length}` } } };
     }
     if (/getOrderDetail/i.test(request.path)) {
-      return { body: { data: { orderStatus: cj.orderStatus } } };
+      return { body: { data: { orderStatus: cj.orderStatus, trackNumber: cj.track?.trackingNumber || null, logisticName: cj.track?.logisticName } } };
     }
     if (/track/i.test(request.path)) {
-      return { body: { data: cj.track } };
+      // CJ's trackInfo: looked up by trackNumber, answers with an array.
+      return { body: { data: cj.track && request.query?.trackNumber === cj.track.trackingNumber ? [cj.track] : [] } };
     }
     return { body: { data: null } };
   }),
@@ -421,13 +422,13 @@ describe('order matrix', () => {
     expect(cancel.status).toBe(403);
 
     // CJ tracking, as the poller or webhook fetches it.
-    cj.track = { trackingNumber: 'CJTRK123', logisticName: 'CJPacket Ordinary', trackStatus: 'IN_TRANSIT', trackInfoList: [] };
+    cj.track = { trackingNumber: 'CJTRK123', logisticName: 'CJPacket Ordinary', trackingStatus: 'In transit' };
     await cjLogisticsService.syncShipment(await CjShipment.findById(tracking._id));
     let now = await Order.findById(order._id);
     expect(now.items[0]).toMatchObject({ status: 'SHIPPED', trackingNumber: 'CJTRK123' });
     expect(now.status).toBe('SHIPPED');
 
-    cj.track = { ...cj.track, trackStatus: 'DELIVERED' };
+    cj.track = { ...cj.track, trackingStatus: 'Delivered' };
     await cjLogisticsService.syncShipment(await CjShipment.findById(tracking._id));
     now = await Order.findById(order._id);
     expect(now.status).toBe('DELIVERED');

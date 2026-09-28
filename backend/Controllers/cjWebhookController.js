@@ -60,8 +60,13 @@ function variantIds(params) {
   return Object.keys(params).filter((key) => Array.isArray(params[key]));
 }
 
+// A sync that died mid-way (process restart) leaves SYNCING behind for good;
+// past this age the flag is treated as stale rather than as a sync in flight.
+const STALE_SYNCING_MS = 15 * 60 * 1000;
+
 async function syncMapping(mapping) {
-  if (mapping.syncStatus === 'SYNCING') return 'ALREADY_SYNCING';
+  const syncingSince = mapping.updatedAt ? mapping.updatedAt.getTime() : 0;
+  if (mapping.syncStatus === 'SYNCING' && Date.now() - syncingSince < STALE_SYNCING_MS) return 'ALREADY_SYNCING';
   if (mapping.lastSyncedAt && Date.now() - mapping.lastSyncedAt.getTime() < MIN_RESYNC_MS) {
     return 'RECENTLY_SYNCED';
   }

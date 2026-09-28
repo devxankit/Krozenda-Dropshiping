@@ -14,7 +14,8 @@ const { mapCjStatus } = require('./cjStatusMapper');
 // (which is the part that actually protects money) does not depend on
 // getting every field name right on the first try.
 
-const CREATE_ORDER_PATH = '/v1/shopping/order/createOrder';
+// createOrderV2 — the V1 path is no longer in CJ's shopping reference.
+const CREATE_ORDER_PATH = '/v1/shopping/order/createOrderV2';
 const ORDER_DETAIL_PATH = '/v1/shopping/order/getOrderDetail';
 const CANCEL_ORDER_PATH = '/v1/shopping/order/deleteOrder';
 
@@ -96,12 +97,12 @@ async function createOrder({ krozendaOrderId, krozendaSubOrderId, items, shippin
         shippingPhone: shippingAddress?.phone,
         fromCountryCode: shippingAddress?.fromCountryCode || 'CN',
         logisticName: shippingAddress?.logisticName || 'CJPacket Eub',
-        // CJ's payType conventions include a create-only/balance-payment mode
-        // (master plan §15) — PAY_BALANCE means "create and pay from CJ
-        // account balance immediately"; a create-only flow would use a
-        // different value and a separate CJPaymentService call, deferred
-        // until Phase 5's payment step is wired to a real CJ balance.
-        payType: 'PAY_BALANCE',
+        // CJ payType (numeric): 1 = page payment (deprecated, the default
+        // when the value is missing or unrecognised — which is what the old
+        // string 'PAY_BALANCE' fell back to, leaving orders UNPAID at CJ),
+        // 2 = pay from the CJ account balance straight away, 3 = create only.
+        // The buyer has already paid Krozenda, so CJ is paid immediately.
+        payType: 2,
         products: items.map((i) => ({ vid: i.cjVariantId, quantity: i.quantity })),
       },
     });

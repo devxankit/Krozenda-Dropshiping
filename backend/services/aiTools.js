@@ -187,7 +187,7 @@ async function getMyWallet(userId, { limit } = {}) {
 
   const [user, transactions] = await Promise.all([
     Customer.findById(userId).select('walletBalance').lean(),
-    WalletTransaction.find({ user: userId })
+    WalletTransaction.find({ user: userId, status: { $ne: 'PENDING' } })
       .sort({ createdAt: -1 })
       .limit(capped)
       .select('type amount balanceAfter source status orderId createdAt')

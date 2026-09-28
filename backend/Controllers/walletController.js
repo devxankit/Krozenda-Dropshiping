@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const razorpay = require('../Config/razorpay');
 const Customer = require('../Models/Customer');
 const WalletTransaction = require('../Models/WalletTransaction');
@@ -17,7 +18,8 @@ function serializeTransaction(t) {
 }
 
 async function getWallet(req, res) {
-  const transactions = await WalletTransaction.find({ user: req.user._id })
+  // PENDING rows are top-ups that were opened and never paid — not history.
+  const transactions = await WalletTransaction.find({ user: req.user._id, status: { $ne: 'PENDING' } })
     .sort({ createdAt: -1 })
     .limit(50);
 
@@ -45,6 +47,19 @@ async function createTopupOrder(req, res) {
     currency: 'INR',
     receipt: `wallet_${req.user._id}_${Date.now()}`,
     notes: { purpose: 'WALLET_TOPUP', userId: req.user._id.toString() },
+  });
+
+  // The claim ticket verifyTopup redeems. Without it, any signed Razorpay
+  // payment — including one that paid for an ORDER — could be presented here
+  // and credited to the wallet as well.
+  await WalletTransaction.create({
+    user: req.user._id,
+    type: 'CREDIT',
+    amount: Math.round(amount * 100) / 100,
+    balanceAfter: req.user.walletBalance || 0,
+    source: 'TOPUP',
+    razorpayOrderId: order.id,
+    status: 'PENDING',
   });
 
   res.json({
@@ -95,45 +110,68 @@ async function verifyTopup(req, res) {
 
   const creditAmount = payment.amount / 100;
 
+  // Claiming the PENDING top-up and crediting the wallet happen in one
+  // transaction, so they cannot come apart: the claim is the idempotency
+  // guard (a replay finds nothing PENDING and credits nothing), and the
+  // credit can never happen without it. The claim is also what binds the
+  // payment to a top-up THIS buyer opened — a payment made for an order has
+  // no such row and is refused.
+  let transaction = null;
+  let balance = null;
+  const session = await mongoose.startSession();
   try {
-    const user = await Customer.findByIdAndUpdate(
-      req.user._id,
-      { $inc: { walletBalance: creditAmount } },
-      { new: true }
-    );
+    await session.withTransaction(async () => {
+      transaction = await WalletTransaction.findOneAndUpdate(
+        { user: req.user._id, razorpayOrderId: orderId, source: 'TOPUP', status: 'PENDING' },
+        { $set: { status: 'SUCCESS', amount: creditAmount, razorpayPaymentId: paymentId } },
+        { new: true, session }
+      );
+      if (!transaction) return;
 
-    const transaction = await WalletTransaction.create({
-      user: req.user._id,
-      type: 'CREDIT',
-      amount: creditAmount,
-      balanceAfter: user.walletBalance,
-      source: 'TOPUP',
-      razorpayOrderId: orderId,
-      razorpayPaymentId: paymentId,
-      status: 'SUCCESS',
-    });
-
-    await createNotification({
-      userId: req.user._id,
-      type: 'WALLET',
-      title: 'Wallet Topped Up',
-      message: `₹${creditAmount.toLocaleString('en-IN')} has been added to your Krozenda Wallet.`,
-      actionType: 'WALLET',
-    });
-
-    res.json({
-      success: true,
-      message: 'Wallet topped up successfully',
-      data: { balance: user.walletBalance, transaction: serializeTransaction(transaction) },
+      const user = await Customer.findByIdAndUpdate(
+        req.user._id,
+        { $inc: { walletBalance: creditAmount } },
+        { new: true, session }
+      );
+      balance = user.walletBalance;
+      transaction.balanceAfter = balance;
+      await transaction.save({ session });
     });
   } catch (err) {
-    if (err.code === 11000) {
-      // Already credited by an earlier call for this exact payment.
-      const user = await Customer.findById(req.user._id);
+    // The payment id is already on another wallet row: credited before.
+    if (err.code !== 11000) throw err;
+    transaction = null;
+  } finally {
+    await session.endSession();
+  }
+
+  if (!transaction) {
+    const alreadyCredited = await WalletTransaction.exists({
+      user: req.user._id,
+      source: 'TOPUP',
+      status: 'SUCCESS',
+      $or: [{ razorpayOrderId: orderId }, { razorpayPaymentId: paymentId }],
+    });
+    if (alreadyCredited) {
+      const user = await Customer.findById(req.user._id).select('walletBalance');
       return res.json({ success: true, message: 'Wallet already topped up', data: { balance: user.walletBalance } });
     }
-    throw err;
+    return res.status(400).json({ success: false, message: 'This payment is not a wallet top-up' });
   }
+
+  await createNotification({
+    userId: req.user._id,
+    type: 'WALLET',
+    title: 'Wallet Topped Up',
+    message: `₹${creditAmount.toLocaleString('en-IN')} has been added to your Krozenda Wallet.`,
+    actionType: 'WALLET',
+  });
+
+  res.json({
+    success: true,
+    message: 'Wallet topped up successfully',
+    data: { balance, transaction: serializeTransaction(transaction) },
+  });
 }
 
 module.exports = { getWallet, createTopupOrder, verifyTopup };
