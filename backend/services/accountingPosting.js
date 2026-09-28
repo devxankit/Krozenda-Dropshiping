@@ -9,7 +9,7 @@ const ReturnRequest = require('../Models/ReturnRequest');
 const { nextIds } = require('./accountingSequence');
 const { loadRules, resolveForLine, chargeFor, SOURCES } = require('./commissionResolver');
 const { toPaise, percentOfPaise, allocateProportional } = require('../utils/money');
-const { lineDiscountsPaise, findLineIndex } = require('../utils/orderLines');
+const { lineDiscountsPaise, linePaidPaise, findLineIndex } = require('../utils/orderLines');
 
 // THE POSTING ENGINE. Every row on the ledger is written by one of the
 // functions here, and every one of them is safe to call again: rows carry a
@@ -631,6 +631,11 @@ function refundRowsForLine({ saleRow, commissionRow, refundPaise, order, returnR
         reversedTransactionId: saleRow.transactionId,
         originalSalePaise: saleRow.credit,
         isPartial: capped < saleRow.credit,
+        // The part of a platform-funded coupon this reversal hands back to the
+        // platform: the seller returns it, the buyer was never refunded it.
+        platformFundedDiscountRecoveredPaise: Math.round(
+          ((saleRow.metadata?.platformFundedDiscountPaise || 0) * capped) / saleRow.credit
+        ),
       },
       eventKey: `REFUND:${keySuffix}`,
       createdBy,
@@ -734,10 +739,21 @@ async function postReturnRefund({ returnRequest, createdBy = null }) {
   // There is no sale to claw back, so there is nothing to reverse either.
   if (!saleRow) return { posted: 0, reason: 'no-sale-posted' };
 
+  // The seller gives back their SALE credit in the proportion of the line the
+  // buyer was refunded. The buyer is refunded what they paid (after the
+  // coupon), but a platform-funded coupon left the seller credited the full
+  // line, so clawing back only the buyer's amount left the seller keeping the
+  // coupon share of an item that came back.
+  const refundPaise = toPaise(request.refundAmount || 0);
+  const lineIndex = index >= 0 ? index : fallbackIndex;
+  const paidPaise = lineIndex >= 0 ? linePaidPaise(order, lineIndex) : 0;
+  const clawbackPaise =
+    paidPaise > 0 ? Math.min(saleRow.credit, Math.round((saleRow.credit * refundPaise) / paidPaise)) : refundPaise;
+
   const rows = refundRowsForLine({
     saleRow,
     commissionRow: commissions.get(lineKey) || commissions.get(`product:${request.product}`),
-    refundPaise: toPaise(request.refundAmount || 0),
+    refundPaise: clawbackPaise,
     order,
     returnRequestId: request._id,
     reasonLabel: request.reason || 'return approved',
@@ -759,7 +775,44 @@ async function postOrderCancellationRefund({ order: orderInput, createdBy = null
   if (!order) return { posted: 0, reason: 'order-not-found' };
 
   const { sales, commissions } = await postedRowsByLine(order._id);
-  if (sales.size === 0) return { posted: 0, reason: 'no-sale-posted' };
+  const rows = [];
+
+  // A whole-order cancellation pays the buyer back the platform fee and the
+  // shipping they were charged, so the platform's own credits for them are
+  // reversed too. Before this they stayed on the books as revenue. Posted even
+  // for an order with no seller lines (Krozenda's own stock).
+  const orderLabel = String(order._id).slice(-8).toUpperCase();
+  const platformCredits = await AccountingTransaction.find({
+    order: order._id,
+    vendor: null,
+    type: { $in: ['PLATFORM_FEE', 'SHIPPING_CHARGE'] },
+  }).lean();
+  for (const credited of platformCredits) {
+    if (!(credited.credit > 0)) continue;
+    rows.push(
+      row({
+        type: 'REFUND',
+        direction: 'DEBIT',
+        amountPaise: credited.credit,
+        order: order._id,
+        vendor: null,
+        customer: order.user,
+        reversalOf: credited._id,
+        referenceType: 'ORDER',
+        referenceId: order._id,
+        description: `Refund — ${credited.type === 'PLATFORM_FEE' ? 'platform fee' : 'shipping'}, order cancelled (order ${orderLabel})`,
+        metadata: { orderNumber: orderLabel, reversedType: credited.type, reversedTransactionId: credited.transactionId },
+        eventKey: `REFUND:ORDER_CANCEL:${order._id}:${credited.type}`,
+        createdBy,
+      })
+    );
+  }
+
+  if (sales.size === 0) {
+    if (rows.length === 0) return { posted: 0, reason: 'no-sale-posted' };
+    const result = await insertRows(rows);
+    return { posted: result.inserted.length, skipped: result.skipped };
+  }
 
   // Anything already refunded through a return request is netted off, so a
   // cancellation after a partial refund cannot pay the same money back twice.
@@ -771,7 +824,6 @@ async function postOrderCancellationRefund({ order: orderInput, createdBy = null
     salesPerProduct.set(product, (salesPerProduct.get(product) || 0) + 1);
   }
 
-  const rows = [];
   for (const [lineKey, saleRow] of sales) {
     const outstanding = saleRow.credit - (refunded.get(String(saleRow._id)) || 0);
     if (outstanding <= 0) continue;

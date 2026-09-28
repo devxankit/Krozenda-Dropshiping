@@ -193,15 +193,27 @@ async function getOverview(req, res) {
 
   // What the marketplace itself earned: commission and any shipping it kept,
   // less the gateway fees and the discounts it funded.
+  // A coupon share clawed back from the seller on a return or cancellation is
+  // no longer a platform cost.
   const platformFundedDiscountRows = await AccountingTransaction.aggregate([
-    { $match: { type: 'SALE', ...ledgerMatch } },
-    { $group: { _id: null, total: { $sum: '$metadata.platformFundedDiscountPaise' } } },
+    { $match: { type: { $in: ['SALE', 'REFUND'] }, vendor: { $ne: null }, ...ledgerMatch } },
+    {
+      $group: {
+        _id: null,
+        funded: { $sum: { $cond: [{ $eq: ['$type', 'SALE'] }, { $ifNull: ['$metadata.platformFundedDiscountPaise', 0] }, 0] } },
+        recovered: { $sum: { $cond: [{ $eq: ['$type', 'REFUND'] }, { $ifNull: ['$metadata.platformFundedDiscountRecoveredPaise', 0] }, 0] } },
+      },
+    },
   ]);
-  const platformFundedDiscountPaise = platformFundedDiscountRows[0]?.total || 0;
+  const platformFundedDiscountPaise =
+    (platformFundedDiscountRows[0]?.funded || 0) - (platformFundedDiscountRows[0]?.recovered || 0);
+  // Platform fee and shipping paid back to the buyer on a cancellation.
+  const platformRefundPaise = sumOf(platform, 'REFUND', 'debit');
   const netPlatformRevenuePaise =
     commissionPaise +
     sumOf(platform, 'SHIPPING_CHARGE', 'credit') +
     sumOf(platform, 'PLATFORM_FEE', 'credit') -
+    platformRefundPaise -
     sumOf(platform, 'PAYMENT_GATEWAY_FEE', 'debit') -
     platformFundedDiscountPaise;
 

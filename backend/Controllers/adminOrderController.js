@@ -27,6 +27,8 @@ const VALID_FROM_STATUSES = {
   DELIVERED: ['SHIPPED'],
   CANCELLED: ['PENDING', 'PROCESSING', 'SHIPPED'],
 };
+// Forward order of a line; CANCELLED is not on it.
+const LINE_STAGES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
 
 function withCustomer(o) {
   const serialized = serializeOrder(o);
@@ -270,14 +272,23 @@ async function updateOrderStatus(req, res) {
     // The lines go with the order (see the buyer cancel in orderController).
     setFields['items.$[live].status'] = 'CANCELLED';
   }
+  // Moving the order forward moves its lines that are behind with it. Before,
+  // the lines stayed where they were: an order marked DELIVERED kept PENDING
+  // lines, which the seller panel showed as open and settlement never paid.
+  const behind = LINE_STAGES.includes(status) ? LINE_STAGES.slice(0, LINE_STAGES.indexOf(status)) : [];
+  if (behind.length > 0) setFields['items.$[behind].status'] = status;
   update.$set = setFields;
 
+  const arrayFilters =
+    status === 'CANCELLED'
+      ? [{ 'live.status': { $nin: ['CANCELLED', 'DELIVERED'] } }]
+      : behind.length > 0
+        ? [{ 'behind.status': { $in: behind } }]
+        : null;
   const order = await Order.findOneAndUpdate(
     { _id: id, status: { $in: fromStatuses } },
     update,
-    status === 'CANCELLED'
-      ? { new: true, arrayFilters: [{ 'live.status': { $nin: ['CANCELLED', 'DELIVERED'] } }] }
-      : { new: true }
+    arrayFilters ? { new: true, arrayFilters } : { new: true }
   );
 
   if (!order) {

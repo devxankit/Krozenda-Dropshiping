@@ -144,6 +144,12 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
       if (rest > 0) {
         await creditWallet({ userId: before.user, amount: rest, orderId: before._id });
         refunded += rest;
+        // The remainder is the platform fee and shipping: reverse them too.
+        try {
+          await accounting.postOrderCancellationRefund({ order: { ...before.toObject(), paymentStatus: 'REFUNDED' } });
+        } catch (err) {
+          console.error('Accounting posting failed (order cancellation), will be reconciled on next read:', err.message);
+        }
       }
       const { releaseCouponIfWholeCheckoutCancelled } = require('./dropshipOrderService');
       await releaseCouponIfWholeCheckoutCancelled({ ...before.toObject(), status: 'CANCELLED' });
