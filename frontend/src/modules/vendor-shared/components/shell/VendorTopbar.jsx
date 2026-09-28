@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Icon } from '../../../../components/ui'
 import { useAuthStore } from '../../../../lib/authStore'
+import { unregisterPushToken } from '../../../../lib/pushRegistration'
 import { LanguageSwitcher } from '../../../../components/common/LanguageSwitcher'
 import { toast } from '../../../admin/stores/toastStore'
 
@@ -33,7 +34,8 @@ export function VendorTopbar({ onOpenMobileNav, isPartner = false }) {
     }
   }, [menuOpen])
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await unregisterPushToken()
     clearSession()
     toast.info('Signed Out', 'You have been signed out of your vendor portal.')
     navigate(isPartner ? '/partner/login' : '/seller/login')

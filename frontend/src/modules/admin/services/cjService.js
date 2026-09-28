@@ -29,6 +29,16 @@ export async function refreshCjToken() {
   return data
 }
 
+export async function registerCjWebhook(body) {
+  const { data } = await api.post('/admin/cj/settings/webhook', body)
+  return data.data
+}
+
+export async function unregisterCjWebhook() {
+  const { data } = await api.delete('/admin/cj/settings/webhook')
+  return data.data
+}
+
 export async function fetchCjDashboard() {
   const { data } = await api.get('/admin/cj/dashboard')
   return data.data

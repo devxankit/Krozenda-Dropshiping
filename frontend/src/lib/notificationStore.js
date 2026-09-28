@@ -17,18 +17,22 @@ let listeningForPush = false
 function watchForegroundPush() {
   if (listeningForPush) return
   listeningForPush = true
-  onForegroundMessage((payload) => {
+  onForegroundMessage(async (payload) => {
     const { title, body, link } = describePush(payload)
-    if (title && Notification.permission === 'granted') {
-      const shown = new Notification(title, { body, icon: '/images/logo.png' })
-      if (link) {
-        shown.onclick = () => {
-          window.focus()
-          window.location.assign(link)
-          shown.close()
-        }
+    if (!title || Notification.permission !== 'granted') return
+    // Drawn through the service worker: `new Notification()` throws on
+    // Android Chrome, so buyers on mobile saw nothing. A tap is routed to
+    // data.link by the worker's notificationclick handler.
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+      if (registration) {
+        await registration.showNotification(title, { body, icon: '/images/logo.png', data: { link: link || '/' } })
       }
+    } catch {
+      // Push is best-effort; the in-app feed still has it.
     }
+    // The new notification belongs in the feed and the unread badge too.
+    useNotificationStore.getState().hydrate()
   })
 }
 
@@ -39,12 +43,28 @@ async function registerPushToken() {
   try {
     const token = await requestPushToken()
     if (token) {
-      await api.post('/fcm-token', { token, deviceType: 'app' })
+      await api.post('/fcm-token', { token, deviceType: 'web' })
       watchForegroundPush()
     }
   } catch {
     // Ignored — see comment above.
   }
+}
+
+// Asks for permission. Call it ONLY from a click: a prompt with no user
+// gesture is refused by Safari and hidden by Chrome.
+export function enablePush() {
+  if (typeof Notification === 'undefined' || Notification.permission === 'denied') return Promise.resolve()
+  return registerPushToken()
+}
+
+// Without prompting: keeps the token fresh once permission was given, since
+// FCM rotates tokens and a stale one silently stops delivering.
+let pushRefreshed = false
+function refreshPushToken() {
+  if (pushRefreshed || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  pushRefreshed = true
+  registerPushToken()
 }
 
 export const useNotificationStore = create((set, get) => ({
@@ -75,7 +95,7 @@ export const useNotificationStore = create((set, get) => ({
     } finally {
       set({ isLoading: false })
     }
-    registerPushToken()
+    refreshPushToken()
   },
 
   markAsRead: (id) => {
@@ -122,5 +142,6 @@ useAuthStore.subscribe((state, prevState) => {
     // Sign-out must not leave the previous buyer's notifications (or their
     // unread badge) on the device.
     useNotificationStore.setState({ notifications: [], unreadCount: 0, pagination: null })
+    pushRefreshed = false
   }
 })

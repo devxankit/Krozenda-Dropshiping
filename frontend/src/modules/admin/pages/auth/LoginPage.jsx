@@ -30,7 +30,18 @@ export function LoginPage() {
       title="Sign in to the admin panel"
       description="Use your Krozenda staff account. What you can see and do is scoped by the role assigned to you."
     >
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit(submit)} noValidate>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          // Asked on the sign-in click: browsers refuse a prompt with no user
+          // gesture. The panel registers the device once this is allowed.
+          if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {})
+          }
+          return handleSubmit(submit)(event)
+        }}
+        noValidate
+      >
         {error && (
           <InlineAlert tone="danger" title="That did not work">
             {error.message}

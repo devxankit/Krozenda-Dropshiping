@@ -12,9 +12,11 @@ function chunk(array, size) {
   return chunks;
 }
 
+// Only errors that are about the TOKEN. 'messaging/invalid-argument' is left
+// out on purpose: FCM also returns it for a bad payload (data too large, a bad
+// link), and treating it as a dead token would wipe every token in one send.
 const STALE_TOKEN_ERRORS = new Set([
   'messaging/registration-token-not-registered',
-  'messaging/invalid-argument',
   'messaging/invalid-registration-token',
   // Issued by a different Firebase project (an old app build or config) —
   // this project can never deliver to it.

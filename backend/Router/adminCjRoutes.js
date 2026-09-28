@@ -7,6 +7,8 @@ const {
   refreshToken,
   updateMarkupSettings,
   updateVisibilitySettings,
+  registerWebhook,
+  unregisterWebhook,
 } = require('../Controllers/adminCjController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 
@@ -21,5 +23,7 @@ router.post('/settings/test-connection', requirePermission('admin.cj.settings'),
 router.post('/settings/refresh-token', requirePermission('admin.cj.settings'), refreshToken);
 router.post('/settings/markup', requirePermission('admin.cj.settings'), updateMarkupSettings);
 router.post('/settings/visibility', requirePermission('admin.cj.settings'), updateVisibilitySettings);
+router.post('/settings/webhook', requirePermission('admin.cj.settings'), registerWebhook);
+router.delete('/settings/webhook', requirePermission('admin.cj.settings'), unregisterWebhook);
 
 module.exports = router;

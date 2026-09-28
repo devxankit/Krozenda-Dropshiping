@@ -8,7 +8,13 @@
 
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { currentPushToken, describePush, onForegroundMessage, requestPushToken } from '../../../lib/firebase'
+import {
+  currentPushToken,
+  describePush,
+  onForegroundMessage,
+  onPushPermissionGranted,
+  requestPushToken,
+} from '../../../lib/firebase'
 import { onRealtime } from '../../../lib/realtime'
 import { toast } from '../../../lib/toast'
 import { registerAdminPushToken, removeAdminPushToken } from '../services/shellService'
@@ -43,16 +49,19 @@ export function useAdminAlertsController() {
 
     // Best-effort: a declined prompt or unsupported browser just means no
     // push on this device — the socket still works while the panel is open.
-    if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+    // Never prompts here (a prompt with no click is refused or hidden); the
+    // sign-in button asks, and this registers once the answer is yes.
+    const offPermission = onPushPermissionGranted(() => {
       requestPushToken()
         .then((token) => (token ? registerAdminPushToken(token) : null))
         .catch(() => {})
-    }
+    })
 
     return () => {
       cancelled = true
       offSocket()
       offPush()
+      offPermission()
     }
   }, [queryClient])
 }

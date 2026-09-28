@@ -1,6 +1,7 @@
 const CjSettings = require('../Models/CjSettings');
 const cjAuthService = require('../services/cj/cjAuthService');
 const cjPointsGuard = require('../services/cj/cjPointsGuard');
+const cjWebhookService = require('../services/cj/cjWebhookService');
 
 // Never echo the encrypted blobs or plaintext credentials to the frontend —
 // only enough for the settings screen to show connection health (master plan
@@ -14,7 +15,9 @@ function serializeSettings(settings) {
     lastSuccessAt: settings.lastSuccessAt,
     lastFailureAt: settings.lastFailureAt,
     failureReason: settings.failureReason,
-    webhookConfigured: !!settings.webhookSecret,
+    webhookConfigured: !!settings.webhookRegisteredAt,
+    webhookCallbackUrl: settings.webhookCallbackUrl || '',
+    webhookRegisteredAt: settings.webhookRegisteredAt || null,
     defaultMarkupPercent: settings.defaultMarkupPercent ?? 30,
     defaultMarkupType: settings.defaultMarkupType || 'PERCENT',
     defaultMarkupValue: settings.defaultMarkupValue ?? settings.defaultMarkupPercent ?? 30,
@@ -165,8 +168,43 @@ async function updateVisibilitySettings(req, res) {
   });
 }
 
+// POST /admin/cj/settings/webhook
+// body: { callbackUrl }
+async function registerWebhook(req, res) {
+  const { callbackUrl } = req.body || {};
+  if (!callbackUrl || typeof callbackUrl !== 'string') {
+    return res.status(400).json({ success: false, message: 'callbackUrl is required' });
+  }
+
+  try {
+    const settings = await cjWebhookService.register({ callbackUrl: callbackUrl.trim() });
+    res.json({ success: true, message: 'CJ webhook registered', data: serializeSettings(settings) });
+  } catch (err) {
+    const known = ['CJ_WEBHOOK_BAD_URL', 'CJ_WEBHOOK_REJECTED', 'CJ_WEBHOOK_NO_SECRET'].includes(err.code);
+    res.status(400).json({
+      success: false,
+      message: known ? err.message : cjAuthService.safeFailureMessage(err.code),
+    });
+  }
+}
+
+// DELETE /admin/cj/settings/webhook
+async function unregisterWebhook(req, res) {
+  try {
+    const settings = await cjWebhookService.unregister();
+    res.json({ success: true, message: 'CJ webhook removed', data: serializeSettings(settings) });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.code === 'CJ_WEBHOOK_REJECTED' ? err.message : cjAuthService.safeFailureMessage(err.code),
+    });
+  }
+}
+
 module.exports = {
   getSettings,
+  registerWebhook,
+  unregisterWebhook,
   connect,
   disconnect,
   testConnection,

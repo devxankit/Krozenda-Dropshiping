@@ -6,6 +6,7 @@ import { VendorBottomNav } from './VendorBottomNav'
 
 import { useAuthStore } from '../../../../lib/authStore'
 import { disconnectRealtime } from '../../../../lib/realtime'
+import { unregisterPushToken } from '../../../../lib/pushRegistration'
 import { useVendorPushRefresh, useVendorRealtime } from '../../controllers/useVendorController'
 import { toast } from '../../../admin/stores/toastStore'
 
@@ -39,12 +40,13 @@ export function VendorLayout() {
     }
   }, [mobileOpen])
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     // Before clearing the session: the socket is authenticated with the token
     // that is about to be thrown away, and a live connection outliving the
     // session is exactly the kind of thing that leaks one seller's events
-    // into the next sign-in on a shared machine.
+    // into the next sign-in on a shared machine. The push token likewise.
     disconnectRealtime()
+    await unregisterPushToken()
     clearSession()
     toast.info('Signed Out', 'You have been signed out of your vendor portal.')
     navigate(isPartner ? '/partner/login' : '/seller/login')

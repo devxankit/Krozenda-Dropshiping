@@ -42,7 +42,7 @@ export function CjSettingsPage() {
     environment: 'LIVE',
   })
   const [showDisconnectModal, setShowDisconnectModal] = useState(false)
-  const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const [webhookUrlDraft, setWebhookUrlDraft] = useState('')
 
   const [markupType, setMarkupType] = useState(() => controller.data?.defaultMarkupType || 'PERCENT')
   const [markupValue, setMarkupValue] = useState(() => controller.data?.defaultMarkupValue ?? controller.data?.defaultMarkupPercent ?? 30)
@@ -114,15 +114,19 @@ export function CjSettingsPage() {
 
   const settings = controller.data
   const isConnected = settings?.status === 'CONNECTED'
-  const webhookUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/webhooks/cj`
-    : '/api/webhooks/cj'
+  // Behind the production proxy the API (and its /webhook router) is served
+  // under /api on the site's own origin.
+  const suggestedWebhookUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/webhook/cj`
+    : ''
+  const webhookUrl = webhookUrlDraft || settings?.webhookCallbackUrl || suggestedWebhookUrl
 
-  const handleCopyWebhook = () => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(webhookUrl)
-      setCopiedWebhook(true)
-      setTimeout(() => setCopiedWebhook(false), 2500)
+  const handleRegisterWebhook = async () => {
+    try {
+      await controller.registerWebhook({ callbackUrl: webhookUrl })
+      setWebhookUrlDraft('')
+    } catch {
+      // Toast shown by the controller
     }
   }
 
@@ -347,19 +351,43 @@ export function CjSettingsPage() {
                 </Button>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-700">Webhook URL</label>
-                <p className="mt-1 text-2xs text-ink-subtle">Add this in the CJ developer portal for tracking updates.</p>
-                <div className="mt-2 flex items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2 max-w-md">
-                  <code className="text-2xs font-mono text-slate-900 truncate flex-1">{webhookUrl}</code>
-                  <button
-                    type="button"
-                    onClick={handleCopyWebhook}
-                    className="shrink-0 p-1 text-ink-subtle hover:text-brand-600 transition-colors"
-                    title="Copy Webhook URL"
+              <div className="space-y-2 max-w-lg">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="cjWebhookUrl" className="text-xs font-semibold text-slate-700">Webhook</label>
+                  <Badge tone={settings?.webhookConfigured ? 'success' : 'neutral'}>
+                    {settings?.webhookConfigured ? 'Registered' : 'Not registered'}
+                  </Badge>
+                </div>
+                <p className="text-2xs text-ink-subtle">
+                  CJ pushes stock, product and tracking changes here as they happen. Must be a public
+                  HTTPS URL. Without it, hourly sync still keeps products up to date.
+                </p>
+                <Input
+                  id="cjWebhookUrl"
+                  size="control"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrlDraft(e.target.value)}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="control"
+                    icon="save"
+                    isLoading={controller.isRegisteringWebhook}
+                    disabled={!webhookUrl}
+                    onClick={handleRegisterWebhook}
                   >
-                    <Icon name={copiedWebhook ? 'check' : 'copy'} className="h-4 w-4" />
-                  </button>
+                    {settings?.webhookConfigured ? 'Update Webhook' : 'Register Webhook'}
+                  </Button>
+                  {settings?.webhookConfigured && (
+                    <Button
+                      variant="dangerOutline"
+                      size="control"
+                      isLoading={controller.isUnregisteringWebhook}
+                      onClick={() => controller.unregisterWebhook()}
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

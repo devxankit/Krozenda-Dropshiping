@@ -9,6 +9,8 @@ import {
   disconnectCj,
   testCjConnection,
   refreshCjToken,
+  registerCjWebhook,
+  unregisterCjWebhook,
   fetchCjDashboard,
   fetchCjOrders,
   fetchCjShipments,
@@ -77,6 +79,22 @@ export function useCjSettingsController() {
     },
     onError: (err) => toast.error('Token refresh failed', err),
   })
+  const registerWebhookMutation = useMutation({
+    mutationFn: registerCjWebhook,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Webhook Registered', 'CJ will now push stock, product and tracking updates.')
+    },
+    onError: (err) => toast.error('Webhook registration failed', err),
+  })
+  const unregisterWebhookMutation = useMutation({
+    mutationFn: unregisterCjWebhook,
+    onSuccess: () => {
+      invalidate()
+      toast.info('Webhook Removed', 'CJ updates will come from scheduled sync only.')
+    },
+    onError: (err) => toast.error('Could not remove webhook', err),
+  })
   const markupMutation = useMutation({
     mutationFn: updateCjMarkupSettings,
     onSuccess: () => {
@@ -113,6 +131,11 @@ export function useCjSettingsController() {
 
     refreshToken: refreshMutation.mutateAsync,
     isRefreshing: refreshMutation.isPending,
+
+    registerWebhook: registerWebhookMutation.mutateAsync,
+    isRegisteringWebhook: registerWebhookMutation.isPending,
+    unregisterWebhook: unregisterWebhookMutation.mutateAsync,
+    isUnregisteringWebhook: unregisterWebhookMutation.isPending,
 
     updateMarkupSettings: markupMutation.mutateAsync,
     isUpdatingMarkup: markupMutation.isPending,

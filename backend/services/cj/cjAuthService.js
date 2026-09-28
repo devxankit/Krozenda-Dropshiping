@@ -50,9 +50,15 @@ async function loadCachedFromDb() {
   }
 }
 
-async function persistTokens({ accessToken, accessTokenExpiryDate, refreshToken, refreshTokenExpiryDate }) {
+async function persistTokens({ accessToken, accessTokenExpiryDate, refreshToken, refreshTokenExpiryDate, openId }) {
   const settings = await CjSettings.getSettings();
   settings.encryptedAccessToken = encrypt(accessToken);
+  // CJ signs every webhook push with HMAC-SHA256 keyed on this account's
+  // openId (returned by getAccessToken, not by refresh) — see
+  // cjWebhookController. Stored encrypted in the webhookSecret slot.
+  if (openId != null && openId !== '') {
+    settings.webhookSecret = encrypt(String(openId));
+  }
   settings.accessTokenExpiresAt = new Date(accessTokenExpiryDate);
   if (refreshToken) {
     settings.encryptedRefreshToken = encrypt(refreshToken);
@@ -266,6 +272,7 @@ async function connect({ email, apiKey, environment, updatedBy }) {
   settings.encryptedRefreshToken = '';
   settings.accessTokenExpiresAt = null;
   settings.refreshTokenExpiresAt = null;
+  settings.webhookSecret = '';
   await settings.save();
 
   invalidate();
@@ -281,6 +288,7 @@ async function disconnect({ updatedBy }) {
   settings.encryptedRefreshToken = '';
   settings.accessTokenExpiresAt = null;
   settings.refreshTokenExpiresAt = null;
+  settings.webhookSecret = '';
   settings.status = 'DISCONNECTED';
   settings.failureReason = '';
   settings.updatedBy = updatedBy || null;
@@ -293,6 +301,28 @@ function invalidate() {
   inFlight = null;
 }
 
+// The webhook signing secret (the account's openId), or null when no login
+// since this was introduced has returned one. `ensure` forces a fresh login
+// to obtain it — a refresh response does not carry openId.
+async function getWebhookSecret({ ensure = false, onLog = null } = {}) {
+  const settings = await CjSettings.getSettingsWithSecrets();
+  if (settings?.webhookSecret) {
+    try {
+      return decrypt(settings.webhookSecret);
+    } catch {
+      // Undecryptable — fall through and re-obtain it.
+    }
+  }
+  if (!ensure) return null;
+
+  const data = await login({ onLog });
+  cached = {
+    accessToken: data.accessToken,
+    expiresAt: new Date(data.accessTokenExpiryDate).getTime(),
+  };
+  return data.openId != null && data.openId !== '' ? String(data.openId) : null;
+}
+
 module.exports = {
   getAccessToken,
   withAuth,
@@ -300,6 +330,7 @@ module.exports = {
   connect,
   disconnect,
   invalidate,
+  getWebhookSecret,
   safeFailureMessage,
   LOGIN_PATH,
   REFRESH_PATH,

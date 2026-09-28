@@ -76,7 +76,12 @@ async function listCampaigns(req, res) {
 // (see sendCampaign), which also writes their in-app row and applies their
 // notification preferences.
 async function customerTokens() {
-  const customers = await Customer.find({ isDeleted: false, fcmTokens: { $exists: true, $ne: [] } }).select('fcmTokens');
+  // A blocked buyer is not marketed to.
+  const customers = await Customer.find({
+    isDeleted: false,
+    isActive: { $ne: false },
+    fcmTokens: { $exists: true, $ne: [] },
+  }).select('fcmTokens');
   const tokens = new Set();
   customers.forEach((doc) => doc.fcmTokens.forEach((t) => tokens.add(t.token)));
   return { tokens: Array.from(tokens), recipients: customers.length };

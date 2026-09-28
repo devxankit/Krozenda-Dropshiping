@@ -35,6 +35,34 @@ export async function requestPushToken() {
   return getToken(instance, { vapidKey: env.firebase.vapidKey, serviceWorkerRegistration: registration })
 }
 
+// Runs `callback` once notifications are allowed: now if they already are,
+// or later if the user answers a prompt that is still open. Never prompts
+// itself. Returns an unsubscribe.
+export function onPushPermissionGranted(callback) {
+  if (typeof Notification === 'undefined') return () => {}
+  if (Notification.permission === 'granted') {
+    callback()
+    return () => {}
+  }
+  if (Notification.permission === 'denied' || !navigator.permissions?.query) return () => {}
+  let active = true
+  let status = null
+  navigator.permissions
+    .query({ name: 'notifications' })
+    .then((result) => {
+      if (!active) return
+      status = result
+      result.onchange = () => {
+        if (result.state === 'granted') callback()
+      }
+    })
+    .catch(() => {})
+  return () => {
+    active = false
+    if (status) status.onchange = null
+  }
+}
+
 // Foreground messages (tab open and focused) don't trigger the service
 // worker's background handler — this is how those get shown instead.
 export async function onForegroundMessage(callback) {

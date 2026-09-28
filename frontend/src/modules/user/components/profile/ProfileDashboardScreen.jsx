@@ -26,6 +26,7 @@ import { BottomNavbar } from '../../../../components/layout/BottomNavbar'
 import { WebHeader } from '../../../../components/layout/WebHeader'
 import { AUTH_ROUTES, USER_ROUTES } from '../../../../config/routes'
 import { useAuthStore } from '../../../../lib/authStore'
+import { unregisterPushToken } from '../../../../lib/pushRegistration'
 import { useProfileController } from '../../controllers/useProfileController'
 import { useWalletController } from '../../controllers/useWalletController'
 import { toast } from '../../../../lib/toast'
@@ -343,13 +344,14 @@ export function ProfileDashboardScreen({ onNavigateMenu = () => {} }) {
               return (
                 <div
                   key={idx}
-                  onClick={() => {
+                  onClick={async () => {
                     if (item.isDelete) {
                       setShowDeleteModal(true)
                       return
                     }
                     onNavigateMenu(item.label)
                     if (item.isLogout) {
+                      await unregisterPushToken()
                       useAuthStore.getState().clearSession()
                       toast.info('Signed Out', 'You have been signed out safely.')
                     }

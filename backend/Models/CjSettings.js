@@ -22,7 +22,12 @@ const cjSettingsSchema = new mongoose.Schema(
     accessTokenExpiresAt: { type: Date, default: null },
     refreshTokenExpiresAt: { type: Date, default: null },
 
+    // Encrypted openId — the key CJ signs webhook pushes with (see
+    // cjAuthService.persistTokens / cjWebhookController).
     webhookSecret: { type: String, default: '', select: false },
+    // Set by POST /admin/cj/settings/webhook (cjWebhookService.register).
+    webhookCallbackUrl: { type: String, default: '' },
+    webhookRegisteredAt: { type: Date, default: null },
 
     status: {
       type: String,

@@ -424,6 +424,8 @@ async function deleteAccount(req, res) {
 
   user.isDeleted = true;
   user.isActive = false;
+  // A deleted account gets no more pushes on any of its devices.
+  user.fcmTokens = [];
   await user.save();
 
   res.json({ success: true, message: 'Account deleted successfully' });

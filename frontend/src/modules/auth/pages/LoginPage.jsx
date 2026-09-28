@@ -11,6 +11,7 @@ import { useAuthStore } from '../../../lib/authStore'
 import { sanitizeIndianPhoneNumber } from '../../../lib/phoneUtils'
 import { sendCustomerOtp, verifyCustomerOtp } from '../services/customerAuthService'
 import { toast } from '../../../lib/toast'
+import { enablePush } from '../../../lib/notificationStore'
 
 export function LoginPage() {
   const navigate  = useNavigate()
@@ -555,7 +556,11 @@ export function LoginPage() {
 
                   <button
                     className="lp-success-cta-btn lp-btn-shine lp-stagger-5"
-                    onClick={() => navigate(returnUrl, { replace: true })}
+                    onClick={() => {
+                      // A real click, so the browser allows the notification prompt.
+                      enablePush()
+                      navigate(returnUrl, { replace: true })
+                    }}
                   >
                     <HiShoppingBag className="lp-shopping-icon" />
                     <span>Continue to Marketplace</span>
