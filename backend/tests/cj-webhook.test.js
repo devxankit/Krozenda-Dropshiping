@@ -11,6 +11,9 @@ jest.mock('../services/cj/cjClient', () => ({
     }
   },
 }));
+jest.mock('../services/cj/cjOrderService', () => ({
+  refreshOrderStatus: jest.fn().mockResolvedValue({ status: 'SHIPPED' }),
+}));
 jest.mock('../services/cj/cjInventoryService', () => ({
   syncMapping: jest.fn().mockResolvedValue({ ok: true }),
   syncOneByCjProductId: jest.fn(),
@@ -21,6 +24,7 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { call } = require('../services/cj/cjClient');
 const cjInventoryService = require('../services/cj/cjInventoryService');
+const cjOrderService = require('../services/cj/cjOrderService');
 const CjSettings = require('../Models/CjSettings');
 const CjWebhookEvent = require('../Models/CjWebhookEvent');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
@@ -134,11 +138,33 @@ describe('handleCjWebhook', () => {
     expect(cjInventoryService.syncMapping).toHaveBeenCalledTimes(1);
   });
 
-  it('finds the product by variant id when a stock push carries only vid', async () => {
+  it('finds products from a STOCK push, whose params are keyed by variant id', async () => {
     await seedSettings();
     await seedMapping();
-    await handleCjWebhook(fakeReq({ messageId: 'm2', type: 'STOCK', params: { vid: 'VID-1', quantity: 3 } }), fakeRes());
+    const params = {
+      'VID-1': [{ vid: 'VID-1', areaId: '2', areaEn: 'US Warehouse', countryCode: 'US', storageNum: 12 }],
+      'VID-OTHER': [{ vid: 'VID-OTHER', areaId: '2', storageNum: 1 }],
+    };
+    await handleCjWebhook(fakeReq({ messageId: 'm2', type: 'STOCK', messageType: 'UPDATE', params }), fakeRes());
     expect(cjInventoryService.syncMapping).toHaveBeenCalledTimes(1);
+  });
+
+  it('finds the product from a VARIANT push’s params.vid', async () => {
+    await seedSettings();
+    await seedMapping();
+    await handleCjWebhook(fakeReq({ messageId: 'm5', type: 'VARIANT', params: { vid: 'VID-1', fields: ['variantLength'] } }), fakeRes());
+    expect(cjInventoryService.syncMapping).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes the CJ order named by an ORDER push’s cjOrderId', async () => {
+    await seedSettings();
+    await handleCjWebhook(fakeReq({
+      messageId: 'm6',
+      type: 'ORDER',
+      messageType: 'UPDATE',
+      params: { orderNumber: 'api_x', cjOrderId: '210823100016290555', orderStatus: 'SHIPPED' },
+    }), fakeRes());
+    expect(cjOrderService.refreshOrderStatus).toHaveBeenCalledWith('210823100016290555');
   });
 
   it('skips products synced moments ago and products never onboarded', async () => {
@@ -196,5 +222,19 @@ describe('openId capture and webhook registration', () => {
     call.mockResolvedValueOnce({ body: { code: 1600100, result: false, message: 'callback url unreachable' } });
     await expect(cjWebhookService.register({ callbackUrl: 'https://shop.example.com/api/webhook/cj' }))
       .rejects.toMatchObject({ code: 'CJ_WEBHOOK_REJECTED', message: 'callback url unreachable' });
+  });
+});
+
+describe('GET /admin/cj/settings serializer', () => {
+  it('reports hasCredentials from the unselected encryptedApiKey', async () => {
+    const { getSettings } = require('../Controllers/adminCjController');
+    const res = fakeRes();
+    await getSettings({}, res);
+    expect(res.body.data.hasCredentials).toBe(false);
+
+    await seedSettings();
+    const res2 = fakeRes();
+    await getSettings({}, res2);
+    expect(res2.body.data.hasCredentials).toBe(true);
   });
 });

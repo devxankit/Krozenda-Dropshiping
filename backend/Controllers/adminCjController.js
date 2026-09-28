@@ -6,11 +6,14 @@ const cjWebhookService = require('../services/cj/cjWebhookService');
 // Never echo the encrypted blobs or plaintext credentials to the frontend —
 // only enough for the settings screen to show connection health (master plan
 // §4/§25: CJ credentials never reach the browser).
-function serializeSettings(settings) {
+async function serializeSettings(settings) {
+  // encryptedApiKey is select:false, so it is never on `settings` itself —
+  // ask Mongo whether it is set instead of loading the blob.
+  const hasCredentials = !!(await CjSettings.exists({ _id: settings._id, encryptedApiKey: { $nin: ['', null] } }));
   return {
     environment: settings.environment,
     status: settings.status,
-    hasCredentials: !!settings.encryptedApiKey,
+    hasCredentials,
     lastConnectionCheckAt: settings.lastConnectionCheckAt,
     lastSuccessAt: settings.lastSuccessAt,
     lastFailureAt: settings.lastFailureAt,
@@ -33,7 +36,7 @@ function serializeSettings(settings) {
 // GET /admin/cj/settings
 async function getSettings(req, res) {
   const settings = await CjSettings.getSettings();
-  res.json({ success: true, data: serializeSettings(settings) });
+  res.json({ success: true, data: await serializeSettings(settings) });
 }
 
 // POST /admin/cj/settings/connect
@@ -58,7 +61,7 @@ async function connect(req, res) {
       environment,
       updatedBy: req.admin?._id || null,
     });
-    res.json({ success: true, message: 'CJ account connected', data: serializeSettings(settings) });
+    res.json({ success: true, message: 'CJ account connected', data: await serializeSettings(settings) });
   } catch (err) {
     res.status(400).json({
       success: false,
@@ -71,7 +74,7 @@ async function connect(req, res) {
 async function disconnect(req, res) {
   await cjAuthService.disconnect({ updatedBy: req.admin?._id || null });
   const settings = await CjSettings.getSettings();
-  res.json({ success: true, message: 'CJ account disconnected', data: serializeSettings(settings) });
+  res.json({ success: true, message: 'CJ account disconnected', data: await serializeSettings(settings) });
 }
 
 // POST /admin/cj/settings/test-connection
@@ -81,7 +84,7 @@ async function testConnection(req, res) {
   res.json({
     success: result.connected,
     message: result.connected ? 'CJ connection is healthy' : result.reason,
-    data: serializeSettings(settings),
+    data: await serializeSettings(settings),
   });
 }
 
@@ -90,7 +93,7 @@ async function refreshToken(req, res) {
   try {
     await cjAuthService.getAccessToken({ forceRefresh: true });
     const settings = await CjSettings.getSettings();
-    res.json({ success: true, message: 'CJ token refreshed', data: serializeSettings(settings) });
+    res.json({ success: true, message: 'CJ token refreshed', data: await serializeSettings(settings) });
   } catch (err) {
     res.status(400).json({ success: false, message: cjAuthService.safeFailureMessage(err.code) });
   }
@@ -134,7 +137,7 @@ async function updateMarkupSettings(req, res) {
   res.json({
     success: true,
     message: 'CJ markup and pricing rules updated',
-    data: serializeSettings(settings),
+    data: await serializeSettings(settings),
   });
 }
 
@@ -164,7 +167,7 @@ async function updateVisibilitySettings(req, res) {
     message: dropshippingEnabled
       ? 'Dropshipping products are now visible to customers'
       : 'Dropshipping products are now hidden from customers',
-    data: serializeSettings(settings),
+    data: await serializeSettings(settings),
   });
 }
 
@@ -178,7 +181,7 @@ async function registerWebhook(req, res) {
 
   try {
     const settings = await cjWebhookService.register({ callbackUrl: callbackUrl.trim() });
-    res.json({ success: true, message: 'CJ webhook registered', data: serializeSettings(settings) });
+    res.json({ success: true, message: 'CJ webhook registered', data: await serializeSettings(settings) });
   } catch (err) {
     const known = ['CJ_WEBHOOK_BAD_URL', 'CJ_WEBHOOK_REJECTED', 'CJ_WEBHOOK_NO_SECRET'].includes(err.code);
     res.status(400).json({
@@ -192,7 +195,7 @@ async function registerWebhook(req, res) {
 async function unregisterWebhook(req, res) {
   try {
     const settings = await cjWebhookService.unregister();
-    res.json({ success: true, message: 'CJ webhook removed', data: serializeSettings(settings) });
+    res.json({ success: true, message: 'CJ webhook removed', data: await serializeSettings(settings) });
   } catch (err) {
     res.status(400).json({
       success: false,

@@ -6,3 +6,6 @@ backups/
 .env.bak-sms
 .env.*
 !.env.example
+
+# QA load-test artefacts (fixtures hold signed test tokens)
+tests/performance/fixtures.json

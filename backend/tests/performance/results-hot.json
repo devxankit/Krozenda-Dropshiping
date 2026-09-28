@@ -1,0 +1,25 @@
+{
+ "profile": "hot",
+ "startedAt": "2026-09-28T12:36:17.362Z",
+ "stages": [],
+ "hot": {
+  "buyers": 100,
+  "statuses": {
+   "201": 10,
+   "409": 90
+  },
+  "stockLeft": 0,
+  "requests": 100,
+  "rps": 100,
+  "avgMs": 658.3,
+  "p50": 637.4,
+  "p90": 733.2,
+  "p95": 777.3,
+  "p99": 781.7,
+  "maxMs": 782.5,
+  "errorRatePct": 0,
+  "http4xx": 90,
+  "timeouts": 0,
+  "avgKb": 0.3
+ }
+}
