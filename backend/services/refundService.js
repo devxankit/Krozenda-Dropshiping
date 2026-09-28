@@ -78,6 +78,18 @@ async function applyRouteSettlementImpact({ request, refundPaise, admin }) {
     return { scenario: 'A_NOT_BATCHED', vendorId };
   }
 
+  // A bank payout — RazorpayX, or one an admin made by hand — cannot be
+  // held or reversed from here. Once one is under way or done, the refund is
+  // recovered from the seller's next settlement instead (Scenario C).
+  const latestPayout = await Payout.findOne({ settlement: settlement._id }).sort({ createdAt: -1 });
+  if (
+    latestPayout &&
+    latestPayout.method !== 'RAZORPAY_ROUTE' &&
+    ['PENDING', 'PROCESSING', 'COMPLETED'].includes(latestPayout.status)
+  ) {
+    return recordRecovery({ vendorId, refundPaise, payout: latestPayout, settlement, request, admin });
+  }
+
   const payout = await Payout.findOne({ settlement: settlement._id, method: 'RAZORPAY_ROUTE' }).sort({ attempt: -1 });
 
   if (!payout || !['PROCESSING', 'RELEASED', 'COMPLETED'].includes(payout.status)) {
@@ -194,29 +206,56 @@ async function applyRouteSettlementImpact({ request, refundPaise, admin }) {
   // that would be guessing at unconfirmed Route behaviour on money that may
   // already be gone. Instead: record a recovery debit to claw back out of a
   // FUTURE settlement.
-  const recoveryPaise = Math.round(refundPaise);
+  return recordRecovery({ vendorId, refundPaise, payout, settlement, request, admin });
+}
+
+/**
+ * Money for this line has already gone (or is going) to the seller's bank
+ * and cannot be pulled back automatically: record what they owe back, to be
+ * netted off their next settlement(s).
+ */
+async function recordRecovery({ vendorId, refundPaise, payout, settlement, request, admin }) {
+  const via = payout.method === 'RAZORPAY_ROUTE' ? 'Razorpay Route payout' : payout.method === 'RAZORPAYX_PAYOUT' ? 'RazorpayX payout' : 'payout';
+
+  // What the seller was over-paid is exactly what this refund took off their
+  // ledger balance: the REFUND debit less the commission handed back
+  // (REFUND_REVERSAL). Those rows already put the seller's balance negative,
+  // so nothing more is posted — another debit here would count the refund
+  // twice. Only if the refund rows were never posted is the recovery
+  // recorded as an ADJUSTMENT, so the ledger still shows it.
+  const refundRows = await AccountingTransaction.find({ returnRequest: request._id, vendor: vendorId })
+    .select('credit debit')
+    .lean();
+  const ledgerImpactPaise = refundRows.reduce((total, entry) => total + entry.debit - entry.credit, 0);
+  const recoveryPaise = refundRows.length ? ledgerImpactPaise : Math.round(refundPaise);
+
+  if (recoveryPaise <= 0) {
+    return { scenario: 'C_NOTHING_TO_RECOVER', vendorId, settlementId: settlement._id, payoutId: payout._id };
+  }
 
   await Vendor.updateOne({ _id: vendorId }, { $inc: { 'razorpay.pendingRecoveryPaise': recoveryPaise } });
 
-  try {
-    await posting.postAdjustment({
-      vendorId,
-      amountPaise: recoveryPaise,
-      direction: 'DEBIT',
-      reason: `Recovery — refund approved after Razorpay Route payout ${payout.payoutId} already ${payout.status.toLowerCase()}`,
-      orderId: request.order,
-      createdBy: admin?._id || null,
-    });
-  } catch (err) {
-    console.error('[refundService] Failed to post recovery ADJUSTMENT for a released/completed Route payout', {
-      payoutId: String(payout._id),
-      error: err.message,
-    });
+  if (!refundRows.length) {
+    try {
+      await posting.postAdjustment({
+        vendorId,
+        amountPaise: recoveryPaise,
+        direction: 'DEBIT',
+        reason: `Recovery — refund approved after ${via} ${payout.payoutId} already ${payout.status.toLowerCase()}`,
+        orderId: request.order,
+        createdBy: admin?._id || null,
+      });
+    } catch (err) {
+      console.error('[refundService] Failed to post recovery ADJUSTMENT for a paid-out line', {
+        payoutId: String(payout._id),
+        error: err.message,
+      });
+    }
   }
 
   // settlementService.generateSettlements nets pendingRecoveryPaise off this
-  // seller's next batch(es). The ADJUSTMENT row above already took it off
-  // their ledger balance, so the smaller PAYOUT that follows leaves them square.
+  // seller's next batch(es): the smaller PAYOUT that follows brings their
+  // negative ledger balance back to square.
   return {
     scenario: 'C_RECOVERY_RECORDED',
     vendorId,

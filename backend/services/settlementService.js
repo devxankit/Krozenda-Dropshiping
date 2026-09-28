@@ -4,6 +4,7 @@ const Settlement = require('../Models/Settlement');
 const Order = require('../Models/Order');
 const Vendor = require('../Models/Vendor');
 const { transferMode } = require('./razorpayRouteService');
+const { payoutProvider } = require('./razorpayxService');
 const { nextIds } = require('./accountingSequence');
 const { fromPaise } = require('../utils/money');
 
@@ -145,8 +146,9 @@ async function collectEligibleLines({ now = new Date(), vendorId = null } = {}) 
  * In Route `payment` transfer mode a transfer is made against exactly one
  * captured payment, so every Razorpay-paid line is batched with the other
  * lines of the SAME payment. COD/wallet lines have no payment to transfer
- * from and share one batch per seller. In `direct` mode (transfers from the
- * platform balance) one batch per seller is all that is needed.
+ * from and share one batch per seller. Any other mode (RazorpayX payouts,
+ * Route direct transfers) pays from the platform balance: one batch per
+ * seller.
  */
 function splitIntoBatches(lines, mode) {
   if (mode !== 'payment') return [{ razorpayPaymentId: null, lines }];
@@ -212,7 +214,10 @@ async function draftSettlements({ vendorId, generatedBy, now }) {
   const byVendor = await collectEligibleLines({ now, vendorId });
   if (byVendor.size === 0) return { created: [], count: 0 };
 
-  const mode = transferMode();
+  // Only a Route transfer against a payment needs one batch per payment; a
+  // RazorpayX bank payout (or a Route direct transfer) pays a whole seller
+  // batch, COD lines included.
+  const mode = payoutProvider() === 'route' ? transferMode() : 'single';
   const groups = [];
   for (const [vendor, lines] of byVendor) {
     for (const group of splitIntoBatches(lines, mode)) groups.push({ vendor, ...group });
@@ -389,7 +394,10 @@ async function sellerBalances({ vendorId = null } = {}) {
           feesPaise: { $sum: { $cond: [{ $eq: ['$type', 'PAYMENT_GATEWAY_FEE'] }, '$debit', 0] } },
           refundsPaise: { $sum: { $cond: [{ $eq: ['$type', 'REFUND'] }, '$debit', 0] } },
           commissionBackPaise: { $sum: { $cond: [{ $eq: ['$type', 'REFUND_REVERSAL'] }, '$credit', 0] } },
-          payoutsPaise: { $sum: { $cond: [{ $eq: ['$type', 'PAYOUT'] }, '$debit', 0] } },
+          // Net of any payout the bank reversed (a PAYOUT credit row).
+          payoutsPaise: {
+            $sum: { $cond: [{ $eq: ['$type', 'PAYOUT'] }, { $subtract: ['$debit', '$credit'] }, 0] },
+          },
           adjustmentCreditPaise: { $sum: { $cond: [{ $eq: ['$type', 'ADJUSTMENT'] }, '$credit', 0] } },
           adjustmentDebitPaise: { $sum: { $cond: [{ $eq: ['$type', 'ADJUSTMENT'] }, '$debit', 0] } },
           totalCredit: { $sum: '$credit' },

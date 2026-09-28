@@ -7,6 +7,10 @@ jest.mock('../Config/razorpay', () => ({
   orders: { create: jest.fn() },
 }));
 
+// This suite covers the Razorpay Route rail; RazorpayX (the default) has its
+// own suite in razorpayx-payouts.test.js.
+process.env.SELLER_PAYOUT_PROVIDER = 'route';
+
 const mongoose = require('mongoose');
 const razorpay = require('../Config/razorpay');
 
@@ -234,7 +238,7 @@ describe('settlementAutomationJob.runOnce', () => {
 
     const summary = await automation.runOnce();
     expect(summary.generated).toBe(2);
-    expect(summary.transfers.TRANSFER_CREATED).toBe(2);
+    expect(summary.payouts.TRANSFER_CREATED).toBe(2);
 
     const paymentIds = razorpay.payments.transfer.mock.calls.map(([paymentId]) => paymentId).sort();
     expect(paymentIds).toEqual([orderA.razorpayPaymentId, orderB.razorpayPaymentId].sort());

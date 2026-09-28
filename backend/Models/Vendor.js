@@ -124,6 +124,25 @@ const razorpaySchema = new mongoose.Schema(
   { _id: false }
 );
 
+// The seller as a RazorpayX payee (services/vendorPayoutAccount.js): a
+// contact, plus a bank fund account made from vendor.bank. `fundAccountKey`
+// is the bank account + IFSC the fund account was made for, so an edited bank
+// account is noticed and gets a new fund account.
+const razorpayxSchema = new mongoose.Schema(
+  {
+    contactId: { type: String },
+    fundAccountId: { type: String },
+    fundAccountKey: { type: String },
+    // When the seller last changed their payout bank account. Payouts wait a
+    // cool-off after it (PAYOUT_BANK_CHANGE_COOLDOWN_HOURS) so a hijacked
+    // seller login cannot quietly redirect the next payout.
+    bankChangedAt: { type: Date, default: null },
+    lastError: { type: String, default: '' },
+    lastSyncedAt: { type: Date },
+  },
+  { _id: false }
+);
+
 const vendorSchema = new mongoose.Schema(
   {
     // Seller type on this marketplace — not a government registration
@@ -150,6 +169,7 @@ const vendorSchema = new mongoose.Schema(
     address: { type: addressSchema, default: () => ({}) },
     bank: { type: bankSchema, default: () => ({}) },
     razorpay: { type: razorpaySchema, default: () => ({}) },
+    razorpayx: { type: razorpayxSchema, default: () => ({}) },
 
     verificationStatus: {
       type: String,

@@ -398,6 +398,10 @@ export const payoutSchema = z.object({
   // model (see backend/Models/Payout.js) — see accountingService.js note.
   razorpayTransferId: z.string().nullable().optional(),
   razorpayAccountId: z.string().nullable().optional(),
+  // RazorpayX bank payout (method RAZORPAYX_PAYOUT) and its provider status.
+  razorpayxPayoutId: z.string().nullable().optional(),
+  razorpayxFundAccountId: z.string().nullable().optional(),
+  providerStatus: z.string().nullable().optional(),
 })
 
 export const payoutListSchema = paged(payoutSchema)

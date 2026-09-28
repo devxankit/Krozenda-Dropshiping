@@ -21,8 +21,13 @@ const mongoose = require('mongoose');
 // between PROCESSING (transfer created, held) and COMPLETED (money
 // confirmed moved) so a payout is never marked COMPLETED before Razorpay has
 // actually said so.
-const STATUSES = ['PENDING', 'PROCESSING', 'RELEASED', 'COMPLETED', 'FAILED', 'CANCELLED'];
-const METHODS = ['BANK_TRANSFER', 'UPI', 'MANUAL', 'RAZORPAY_ROUTE'];
+// REVERSED: a RazorpayX payout the bank processed and then returned (a
+// closed or wrong account, typically). Money came back to the platform, so
+// the PAYOUT debit is reversed on the ledger — see payoutService.
+const STATUSES = ['PENDING', 'PROCESSING', 'RELEASED', 'COMPLETED', 'FAILED', 'CANCELLED', 'REVERSED'];
+// RAZORPAYX_PAYOUT: a bank payout from the platform's RazorpayX account to
+// the seller's bank (services/razorpayxSettlementIntegration.js).
+const METHODS = ['BANK_TRANSFER', 'UPI', 'MANUAL', 'RAZORPAY_ROUTE', 'RAZORPAYX_PAYOUT'];
 
 // Only these moves are legal. A COMPLETED payout is terminal — money has
 // left, so it can never be walked back to PENDING; it is corrected with a
@@ -44,9 +49,11 @@ const ALLOWED_TRANSITIONS = Object.freeze({
   // transfer.processed webhook confirms the released transfer actually
   // settled to the seller.
   RELEASED: ['FAILED', 'COMPLETED'],
-  COMPLETED: [],
+  // The one way back from COMPLETED: the bank itself returned the money.
+  COMPLETED: ['REVERSED'],
   FAILED: [],
   CANCELLED: [],
+  REVERSED: [],
 });
 
 const auditEntrySchema = new mongoose.Schema(
@@ -92,6 +99,16 @@ const payoutSchema = new mongoose.Schema(
     razorpayTransferId: { type: String },
     razorpayAccountId: { type: String },
 
+    // RazorpayX payout id (pout_xxx), the seller fund account it was sent
+    // to, and the UUID sent as X-Payout-Idempotency. The key is fixed per
+    // attempt, so re-submitting an attempt whose response was lost can only
+    // ever return the payout RazorpayX already made, never a second one.
+    razorpayxPayoutId: { type: String },
+    razorpayxFundAccountId: { type: String },
+    providerIdempotencyKey: { type: String },
+    // RazorpayX's own status (queued, processing, processed, reversed, ...).
+    providerStatus: { type: String, default: null },
+
     status: { type: String, enum: STATUSES, default: 'PENDING', index: true },
     failureReason: { type: String, default: '' },
     notes: { type: String, default: '', trim: true },
@@ -117,6 +134,7 @@ payoutSchema.index({ vendor: 1, createdAt: -1 });
 // Unique per transfer, but only enforced when present — hard-prevents duplicate
 // Razorpay Route transfers per payout without rejecting docs that have none yet.
 payoutSchema.index({ razorpayTransferId: 1 }, { unique: true, sparse: true });
+payoutSchema.index({ razorpayxPayoutId: 1 }, { unique: true, sparse: true });
 
 payoutSchema.statics.canTransition = function canTransition(from, to) {
   return (ALLOWED_TRANSITIONS[from] || []).includes(to);

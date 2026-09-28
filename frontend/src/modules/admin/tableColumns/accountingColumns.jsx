@@ -547,9 +547,9 @@ export const PAYOUT_COLUMNS = Object.freeze([
     header: 'Method',
     width: '9rem',
     render: (row) =>
-      row.method === 'RAZORPAY_ROUTE' ? (
-        <Badge tone={PAYOUT_METHOD_TONE.RAZORPAY_ROUTE} size="sm">
-          {PAYOUT_METHOD_LABELS.RAZORPAY_ROUTE}
+      PAYOUT_METHOD_TONE[row.method] ? (
+        <Badge tone={PAYOUT_METHOD_TONE[row.method]} size="sm">
+          {PAYOUT_METHOD_LABELS[row.method]}
         </Badge>
       ) : (
         <span className="text-xs text-ink-muted">{PAYOUT_METHOD_LABELS[row.method] || row.method}</span>

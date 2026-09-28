@@ -340,11 +340,165 @@ Live GPS tracking is accessible on the orders portal immediately following picku
     status: 'published',
     requiresAcceptance: false,
     updatedBy: 'Priya Sharma',
-    content: `# About KroZenda
+    content: `# About KROZENDA
 
-KroZenda is India's leading unified B2B & B2C drop-shipping and wholesale marketplace. 
+**KROZENDA PRIVATE LIMITED** is building a technology-driven, multi-vendor online marketplace — made in Bharat, for Bharat, and ready for the world.
 
-Our mission is to empower 100,000+ retailers, entrepreneurs, and independent brands by providing zero-upfront inventory costs, direct factory wholesale pricing, and automated pan-India logistics fulfillment.`,
+Our story is not just the story of a company. It is the story of an idea, a dream, and an effort to help India move forward — together.
+
+# Who We Are
+
+KROZENDA is an automated, multi-vendor marketplace that brings buyers, sellers, vendors, B2B businesses, B2C customers, and affiliates and creators together on a single platform.
+
+We are not limited to traditional e-commerce. KROZENDA is designed to support several business models side by side:
+
+- **B2C** — online shopping for individual customers
+- **B2B** — bulk and wholesale purchasing for businesses
+- **Sellers and vendors** — a digital storefront for businesses of every size
+- **No-stock and dropshipping** — selling without holding inventory, where applicable
+- **Own stock** — for sellers who manage their own inventory
+- **Affiliates and creators** — earning by promoting products they believe in
+
+Our goal is to grow into an ecosystem where a very large number of products and sellers, across categories, can come together in one place.
+
+# How It All Began
+
+My name is **Kishor Jain**, and I am the founder of KROZENDA.
+
+I did not start KROZENDA just to earn money or to launch one more business. It began with a bigger thought.
+
+One day, I was sitting and thinking about what I truly wanted to build. I wanted to create something different — a platform that the people of India would feel is their own. A place where anyone in India could become a buyer, a seller, or an affiliate, and join the digital economy in their own way, according to their own strength.
+
+I studied many online platforms and tried to understand how they work. That is when the question came to me: why not build our own marketplace, where different products, sellers and buyers can all connect on one digital platform?
+
+That thought slowly became KROZENDA.
+
+# Built on Real Business Experience
+
+My own journey has taken me through different industries, including the automobile business and the dry fruits trade.
+
+Through these businesses, I saw the market up close. I met small and large traders, sellers, customers and businesses, and I understood their everyday problems.
+
+I saw that many small businesses have good products and are willing to work hard — but technology, digital marketing, customer reach, online selling and logistics keep them from reaching a bigger market.
+
+That experience made my belief in an online marketplace even stronger.
+
+# The Problem We Want to Solve
+
+Online shopping in India is growing fast. Yet many small sellers and businesses still struggle with:
+
+- Reaching customers online
+- Digital marketing
+- Technology
+- Product listing
+- Finding and keeping customers
+- Selling online
+- Logistics
+- Getting access to marketplaces
+
+Buyers, on the other hand, often have to search across many different platforms to find the products and sellers they want.
+
+So we asked ourselves: why not build one connected, technology-driven marketplace that brings buyers and sellers together?
+
+# Our Biggest Purpose: Made in Bharat
+
+At the heart of KROZENDA is the idea of **Made in Bharat**.
+
+I want India to have its own technology-driven marketplace — one that its people adopt as their own. I want the name KROZENDA to reach every home, every village, every taluka, every district, and every corner of India.
+
+Wherever it makes sense for them, every Indian should be able to join the KROZENDA ecosystem in some way — as a buyer, a seller, a vendor, an affiliate, or through our no-stock and dropshipping model.
+
+# Helping the Smallest Businesses Grow
+
+India runs on small businesses. Many people run businesses from their homes. There are small traders, small manufacturers and small sellers everywhere — and many of them want the chance to sell online.
+
+We believe technology and a strong marketplace should give even the smallest business access to a large digital market. Our aim is for every seller, however small, to become part of the digital economy and take real steps towards building a bigger business.
+
+# What KROZENDA Offers
+
+### For Buyers
+A convenient, technology-driven shopping experience, with multiple sellers, multiple categories and a wide range of products in one place — for everyday B2C shopping as well as B2B purchasing. We want discovering and buying products to be simple.
+
+### For Sellers and Vendors
+Sellers and vendors are at the heart of our ecosystem. We help them bring their products online through product listing, online selling, wider customer reach and a strong marketplace presence — so that they are no longer limited to their local market.
+
+### No-Stock and Dropshipping
+Where applicable, people for whom a traditional inventory model is not possible or practical can still take part in digital commerce. Sellers can make products available in the marketplace, and orders are fulfilled according to the applicable model. Our aim is to make digital business accessible to many more people.
+
+### Own Stock
+KROZENDA is not limited to the no-stock model. Sellers and businesses with their own stock and inventory are just as welcome — our platform is built to support no-stock, dropshipping and own-stock models together.
+
+### B2B and B2C
+Individual customers get online shopping and product discovery. Businesses and wholesale or bulk buyers get business purchasing opportunities. We are building the platform around the different needs of both.
+
+### Affiliates and Creators
+Creators and affiliates can join the digital commerce ecosystem by promoting products. This opens up new opportunities for product discovery and digital marketing.
+
+# We Grow Together
+
+For me, KROZENDA's growth is not only my personal growth. My belief is simple: **when I move forward, the people who walk with me should move forward too.**
+
+As KROZENDA grows into a larger organisation, I want it to create growth and earning opportunities for everyone connected to it — our employees, staff and workers, our sellers and vendors, our affiliates and our business partners.
+
+I want our team to grow, to do great work, and to build a better future for their families through their hard work. A business should not exist only for its founder — as it grows, the people connected to it should grow with it.
+
+# Opportunities for Indian Families and Businesses
+
+Many families in India depend on small businesses, trading, selling and other kinds of work. When technology gives them a new market, new customers and new business opportunities, it can help them build their business and their future.
+
+I want KROZENDA's journey to be more than one company's success story. I want it to be the growth story of everyone who joins us.
+
+# More Than a Shopping Website
+
+KROZENDA is not just a website that sells products. Our vision is to connect **buyers, sellers, businesses, affiliates and technology** in one connected digital marketplace:
+
+- Buyers get better product discovery and a better way to shop
+- Sellers get a digital marketplace and wider customer reach
+- B2B businesses get new purchasing opportunities
+- Affiliates and creators get opportunities to promote products
+- Technology brings all of them together in one ecosystem
+
+# From Bharat to the World
+
+KROZENDA begins in India. Our first and most important goal is to bring India's people and businesses into a digital marketplace ecosystem.
+
+But our vision does not stop at India's borders. In the long term, we want to build a scalable marketplace that can reach international and global markets.
+
+**Made in Bharat → Built for India → Ready for the World**
+
+# Our Vision
+
+To build a technology-driven marketplace where buyers, sellers, businesses and affiliates of every kind can join one connected digital ecosystem — a name that reaches every home, village, taluka and district in India, and one day earns its place on the global stage.
+
+# What We Stand For
+
+- **Connect** — connecting people, businesses, sellers and buyers through technology
+- **Opportunity** — opening the door to digital commerce for everyone
+- **Growth** — growing not just the company, but everyone in our ecosystem
+- **Technology** — making commerce simple, scalable and accessible
+- **Bharat** — starting in India, and building for India's people and businesses
+
+# The Story Behind the Name
+
+KROZENDA is not an ordinary name. When I decided to build this platform, I wanted a name that was unique, easy to remember, and able to grow into a major technology brand. I searched through and considered many names before choosing KROZENDA — and every part of the name carries a meaning of its own.
+
+# Our Promise
+
+My vision is simple: **I want to move forward, and I want the people of India to move forward with me.**
+
+I want every seller who joins KROZENDA to grow. Every buyer to get a better experience. Every affiliate, every small business and every large business to grow. And our team and employees to grow along with us.
+
+KROZENDA started as a business idea, but it stands for something bigger: an India where the benefits of technology and digital commerce are not limited to big businesses. A marketplace where buyers can buy, sellers can sell, businesses can grow, and creators can take part in digital commerce. An ecosystem that starts in India and one day reaches the world.
+
+And most importantly — a journey in which everyone who joins KROZENDA grows along with it.
+
+**KROZENDA**
+
+**Made in Bharat. Built with a Vision for India.**
+
+**Connecting Buyers, Sellers, Businesses & Opportunities.**
+
+**Grow Together.**`,
   },
   {
     title: 'Seller FAQ',

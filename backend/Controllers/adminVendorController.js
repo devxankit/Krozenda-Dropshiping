@@ -6,6 +6,8 @@ const { serializeVendor, createVendorAccount } = require('./vendorAuthController
 const { serializeDocument } = require('./vendorDocumentController');
 const razorpayRouteService = require('../services/razorpayRouteService');
 const vendorRouteOnboarding = require('../services/vendorRouteOnboarding');
+const { ensurePayoutAccount } = require('../services/vendorPayoutAccount');
+const { payoutProvider } = require('../services/razorpayxService');
 const emailService = require('../services/emailService');
 const { createNotification } = require('./notificationController');
 const { notifyVendorAccountDecision } = require('../services/vendorAlertService');
@@ -187,13 +189,18 @@ async function updateVendorStatus(req, res) {
   // approved vendor doesn't resend it. Fire and forget: never throws.
   if (verificationStatus === 'APPROVED' && previousStatus !== 'APPROVED') {
     emailService.sendVendorAccountApproved(vendor);
-    // Start Razorpay Route onboarding so the seller can be paid without an
-    // admin click. Detached — approval never waits on Razorpay, and a
-    // failure is recorded on the vendor and retried by
-    // Jobs/settlementAutomationJob. Not in tests: it calls Razorpay for real.
+    // Set the seller up as a payee (RazorpayX fund account, or Route linked
+    // account) so they can be paid without an admin click. Detached —
+    // approval never waits on Razorpay, and a failure is recorded on the
+    // vendor and retried by Jobs/settlementAutomationJob. Not in tests: it
+    // calls Razorpay for real.
     if (process.env.ENV !== 'test') {
-      vendorRouteOnboarding.onboardVendor(vendor._id).catch((err) => {
-        console.error(`[adminVendorController] Route onboarding for vendor ${vendor._id} failed:`, err.message);
+      const setup =
+        payoutProvider() === 'route'
+          ? vendorRouteOnboarding.onboardVendor(vendor._id)
+          : ensurePayoutAccount(vendor._id);
+      setup.catch((err) => {
+        console.error(`[adminVendorController] payout setup for vendor ${vendor._id} failed:`, err.message);
       });
     }
   } else if (verificationStatus === 'REJECTED') {

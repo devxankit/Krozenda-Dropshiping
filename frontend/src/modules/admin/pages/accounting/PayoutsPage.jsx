@@ -268,6 +268,13 @@ export function PayoutDetailPage() {
                   <DetailField label="Razorpay account ID" value={data.razorpayAccountId} mono />
                 </>
               )}
+              {data.method === 'RAZORPAYX_PAYOUT' && (
+                <>
+                  <DetailField label="RazorpayX payout ID" value={data.razorpayxPayoutId} mono />
+                  <DetailField label="RazorpayX status" value={data.providerStatus} />
+                  <DetailField label="Fund account ID" value={data.razorpayxFundAccountId} mono />
+                </>
+              )}
               <DetailField label="Initiated by" value={data.initiatedBy || 'System'} />
               <DetailField label="Created" value={new Date(data.createdAt).toLocaleString('en-IN')} />
               <DetailField

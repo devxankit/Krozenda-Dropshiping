@@ -10,6 +10,7 @@ const { getRequiredAcceptancePages } = require('./cmsController');
 const emailService = require('../services/emailService');
 const { alertAdmins } = require('../services/adminAlertService');
 const { markBankChanged } = require('../services/vendorRouteOnboarding');
+const { alertBankChanged } = require('../services/vendorPayoutAccount');
 const { FSSAI_DOC_TYPE } = require('../utils/fssai');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
@@ -414,13 +415,15 @@ async function updateProfile(req, res) {
   if (business) vendor.business = { ...vendor.business.toObject(), ...business };
   if (contactPerson) vendor.contactPerson = { ...vendor.contactPerson.toObject(), ...contactPerson };
   if (address) vendor.address = { ...vendor.address.toObject(), ...address };
+  let bankChanged = false;
   if (bank) {
     const previousBank = vendor.bank.toObject();
     vendor.bank = { ...previousBank, ...bank };
-    markBankChanged(vendor, previousBank);
+    bankChanged = markBankChanged(vendor, previousBank) && Boolean(previousBank.accountNumber);
   }
 
   await vendor.save();
+  if (bankChanged) alertBankChanged(vendor);
 
   res.json({ success: true, message: 'Profile updated successfully', data: { vendor: serializeVendor(vendor) } });
 }

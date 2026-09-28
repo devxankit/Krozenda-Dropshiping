@@ -194,7 +194,11 @@ async function notifyVendorOfSettlement(payout) {
     await notifyVendorSettlementPaid({
       vendorId: payout.vendor,
       amount: Number(amountRupees),
-      reference: payout.razorpayTransferId ? `Ref ${payout.razorpayTransferId}` : '',
+      reference: payout.razorpayTransferId
+        ? `Ref ${payout.razorpayTransferId}`
+        : payout.utr
+          ? `UTR ${payout.utr}`
+          : '',
       key: payout.settlement ? `SETTLEMENT:${payout.settlement}` : `PAYOUT:${payout._id}`,
     });
   } catch (err) {
@@ -219,7 +223,7 @@ async function notifyVendorOfFailure(payout, failureReason) {
     await alertAdmins({
       event: 'SETTLEMENT_FAILED',
       title: 'Seller settlement failed',
-      message: `A ₹${amountRupees} Razorpay Route transfer to a seller failed${failureReason ? `: ${failureReason}` : ''}. Check the seller's bank details and retry.`,
+      message: `A ₹${amountRupees} ${payout.method === 'RAZORPAYX_PAYOUT' ? 'RazorpayX payout' : 'Razorpay Route transfer'} to a seller failed${failureReason ? `: ${failureReason}` : ''}. Check the seller's bank details and retry.`,
       link: '/admin/finance/settlements',
       key: `SETTLEMENT_FAILED:${payout._id}:${payout.razorpayTransferId || ''}`,
       urgent: true,
@@ -229,4 +233,4 @@ async function notifyVendorOfFailure(payout, failureReason) {
   }
 }
 
-module.exports = { handleRouteWebhook };
+module.exports = { handleRouteWebhook, notifyVendorOfSettlement, notifyVendorOfFailure };

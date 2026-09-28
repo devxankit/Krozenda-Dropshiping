@@ -516,6 +516,8 @@ async function releaseSinglePayout(payout) {
 }
 
 module.exports = {
+  findBlockingLineIssue,
+  amountIsConsistent,
   initiateRazorpayTransferForSettlement,
   checkSettlementSafeForTransfer,
   releaseSinglePayout,

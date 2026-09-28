@@ -859,6 +859,8 @@ export const PAYOUT_STATUS_LABELS = Object.freeze({
   COMPLETED: 'Completed',
   FAILED: 'Failed',
   CANCELLED: 'Cancelled',
+  // The bank returned a RazorpayX payout after paying it (closed account…).
+  REVERSED: 'Reversed by bank',
 })
 
 export const PAYOUT_STATUS_TONE = Object.freeze({
@@ -868,12 +870,15 @@ export const PAYOUT_STATUS_TONE = Object.freeze({
   COMPLETED: 'success',
   FAILED: 'danger',
   CANCELLED: 'neutral',
+  REVERSED: 'danger',
 })
 
-// Payout.method — see backend/Models/Payout.js. RAZORPAY_ROUTE is the
-// automated seller-settlement path; the others are manual/legacy entries an
-// operator typed in themselves.
+// Payout.method — see backend/Models/Payout.js. RAZORPAYX_PAYOUT and
+// RAZORPAY_ROUTE are the automated seller-settlement paths (which one runs is
+// the server's SELLER_PAYOUT_PROVIDER); the others are manual/legacy entries
+// an operator typed in themselves.
 export const PAYOUT_METHOD_LABELS = Object.freeze({
+  RAZORPAYX_PAYOUT: 'RazorpayX',
   RAZORPAY_ROUTE: 'Razorpay Route',
   BANK_TRANSFER: 'Bank transfer',
   UPI: 'UPI',
@@ -882,6 +887,7 @@ export const PAYOUT_METHOD_LABELS = Object.freeze({
 })
 
 export const PAYOUT_METHOD_TONE = Object.freeze({
+  RAZORPAYX_PAYOUT: 'accent',
   RAZORPAY_ROUTE: 'accent',
 })
 
@@ -897,6 +903,11 @@ export const SETTLEMENT_HOLD_REASON_LABELS = Object.freeze({
   REFUND_AFTER_SETTLEMENT_GENERATED_NEEDS_REGEN: 'A refund landed after this settlement was generated — needs regeneration',
   REFUND_BEFORE_RELEASE_REVERSAL_FAILED_MANUAL_RECONCILIATION:
     'A pre-release refund reversal failed — needs manual reconciliation',
+  REFUND_BEFORE_RELEASE: 'A refund came in before release — the transfer was reversed; re-batched automatically',
+  VENDOR_PAYOUT_ACCOUNT_NOT_READY:
+    "Seller's payout bank account is not set up on RazorpayX yet, or was changed recently (cool-off)",
+  PAYOUT_REVERSED_BY_BANK: "The bank returned the payout — waiting for the seller to update their bank account",
+  AMOUNT_BELOW_PAYOUT_MINIMUM: 'Amount is below the ₹1 payout minimum',
 })
 
 // backend/Models/Vendor.js razorpay.onboardingStatus

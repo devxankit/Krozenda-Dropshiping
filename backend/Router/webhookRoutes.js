@@ -3,6 +3,7 @@ const { handleShiprocketWebhook } = require('../Controllers/shipmentWebhookContr
 const { handleRazorpayWebhook } = require('../Controllers/paymentWebhookController');
 const { handleCjWebhook } = require('../Controllers/cjWebhookController');
 const { handleRouteWebhook } = require('../Controllers/routeWebhookController');
+const { handleRazorpayxWebhook } = require('../Controllers/razorpayxWebhookController');
 
 const router = express.Router();
 
@@ -32,6 +33,10 @@ router.post('/payments', handleRazorpayWebhook);
 // that a shared endpoint would have to guess the event family from the
 // payload alone.
 router.post('/route-transfers', handleRouteWebhook);
+
+// RazorpayX seller payouts — a separate webhook config in the RazorpayX
+// dashboard, see razorpayxWebhookController.
+router.post('/razorpayx-payouts', handleRazorpayxWebhook);
 
 // CJ Dropshipping's own sub-path — genuinely signs its payloads (HMAC-SHA256
 // over the raw body), so no path-name restriction like Shiprocket's applies.

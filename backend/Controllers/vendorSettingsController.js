@@ -3,6 +3,7 @@
 // — kept separate since that endpoint already owns `vendor.business/address`.
 const { sellerRatesFor } = require('../services/commissionResolver');
 const { markBankChanged } = require('../services/vendorRouteOnboarding');
+const { alertBankChanged } = require('../services/vendorPayoutAccount');
 
 // The seller's headline rate comes from their CommissionRule (else the
 // platform default) — the rule the ledger charges — not the legacy
@@ -27,10 +28,11 @@ async function updateMySettings(req, res) {
   const { bank, notificationPrefs } = req.body;
   const vendor = req.vendor;
 
+  let bankChanged = false;
   if (bank) {
     const previousBank = vendor.bank.toObject();
     vendor.bank = { ...previousBank, ...bank };
-    markBankChanged(vendor, previousBank);
+    bankChanged = markBankChanged(vendor, previousBank) && Boolean(previousBank.accountNumber);
   }
   if (notificationPrefs) {
     vendor.notificationPrefs = {
@@ -40,6 +42,7 @@ async function updateMySettings(req, res) {
   }
 
   await vendor.save();
+  if (bankChanged) alertBankChanged(vendor);
   res.json({ success: true, message: 'Settings updated', data: await serializeSettings(vendor) });
 }
 

@@ -105,17 +105,26 @@ async function syncVendorOnboarding(vendorOrId) {
 
 /**
  * Call before saving a seller whose bank details may have been edited. If
- * the payout account really changed on an onboarded seller, payouts pause
- * until the new account is on Razorpay and re-activated — a hijacked seller
- * login must not be able to redirect the next automatic payout. Mutates the
- * document; the caller saves it.
+ * the payout account really changed, payouts pause — a hijacked seller login
+ * must not be able to redirect the next automatic payout:
+ *   - RazorpayX: a cool-off from now (vendorPayoutAccount.payoutAccountReady),
+ *     unless this is the seller's first bank account ever.
+ *   - Route: until the new account is on Razorpay and re-activated.
+ * Mutates the document; the caller saves it. Returns whether it changed.
  */
 function markBankChanged(vendor, previousBank = {}) {
   const normalize = (value) => String(value || '').replace(/\s+/g, '').toUpperCase();
   const changed =
     normalize(previousBank.accountNumber) !== normalize(vendor.bank?.accountNumber) ||
     normalize(previousBank.ifsc) !== normalize(vendor.bank?.ifsc);
-  if (!changed || !vendor.razorpay?.accountId) return false;
+  if (!changed) return false;
+
+  if (normalize(previousBank.accountNumber)) {
+    vendor.razorpayx = vendor.razorpayx || {};
+    vendor.razorpayx.bankChangedAt = new Date();
+  }
+
+  if (!vendor.razorpay?.accountId) return true;
 
   vendor.razorpay.bankSyncPending = true;
   vendor.razorpay.isSettlementEligible = false;

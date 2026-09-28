@@ -86,7 +86,7 @@ export function AccountingSettlementsPage() {
           onSelect: () => writer.release.run({ id: row.id }),
         },
         {
-          label: 'Release transfer',
+          label: 'Release payout',
           icon: 'send',
           permission: MANAGE,
           disabled: !RELEASE_TRANSFER_STATUSES.includes(row.status),
@@ -253,7 +253,7 @@ export function AccountingSettlementDetailPage() {
                   isLoading={settlementWriter.releaseTransfer.isSubmitting}
                   onClick={() => settlementWriter.releaseTransfer.run({ id: data.id })}
                 >
-                  Release transfer
+                  Release payout
                 </Button>
               </PermissionGate>
             )}

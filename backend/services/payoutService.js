@@ -173,7 +173,7 @@ async function settlePayoutStatus({ payoutId, status, utr = '', providerReferenc
   if (status === 'COMPLETED' && !String(utr).trim()) {
     return { ok: false, status: 400, message: 'A completed payout needs its bank reference (UTR)' };
   }
-  if (status === 'FAILED' && !String(failureReason).trim()) {
+  if (['FAILED', 'REVERSED'].includes(status) && !String(failureReason).trim()) {
     return { ok: false, status: 400, message: 'Record why the payout failed' };
   }
 
@@ -186,8 +186,8 @@ async function settlePayoutStatus({ payoutId, status, utr = '', providerReferenc
         status,
         utr: status === 'COMPLETED' ? String(utr).trim() : current.utr,
         providerReference: String(providerReference || '').trim() || current.providerReference,
-        failureReason: status === 'FAILED' ? String(failureReason).trim() : '',
-        processedAt: ['COMPLETED', 'FAILED', 'CANCELLED'].includes(status) ? new Date() : current.processedAt,
+        failureReason: ['FAILED', 'REVERSED'].includes(status) ? String(failureReason).trim() : '',
+        processedAt: ['COMPLETED', 'FAILED', 'CANCELLED', 'REVERSED'].includes(status) ? new Date() : current.processedAt,
       },
       $push: {
         auditHistory: auditEntry({
@@ -256,6 +256,34 @@ async function settlePayoutStatus({ payoutId, status, utr = '', providerReferenc
     await Settlement.updateOne({ _id: updated.settlement }, { $set: { status: 'ELIGIBLE', payout: null } });
   }
 
+  if (status === 'REVERSED') {
+    // The bank sent the money back after paying it. Undo the PAYOUT debit —
+    // idempotent on the payout id like the debit itself — and hold the batch:
+    // paying the same account again would bounce again, so it waits for the
+    // seller's bank details to change (settlementAutomationJob re-checks).
+    await insertRows([
+      row({
+        type: 'PAYOUT',
+        direction: 'CREDIT',
+        amountPaise: updated.amount,
+        vendor: updated.vendor,
+        settlement: updated.settlement,
+        payout: updated._id,
+        referenceType: 'PAYOUT',
+        referenceId: updated._id,
+        description: `Payout ${updated.payoutId} reversed by the bank`,
+        metadata: { payoutNumber: updated.payoutId, method: updated.method, attempt: updated.attempt, reason: failureReason || '' },
+        eventKey: `PAYOUT_REVERSAL:${updated._id}`,
+        createdBy: admin?._id || null,
+      }),
+    ]);
+
+    await Settlement.updateOne(
+      { _id: updated.settlement },
+      { $set: { status: 'ON_HOLD', holdReason: 'PAYOUT_REVERSED_BY_BANK', paidAt: null } }
+    );
+  }
+
   return { ok: true, payout: updated, before: current };
 }
 
@@ -282,6 +310,9 @@ function serializePayout(payout, { vendor = null, settlement = null } = {}) {
     providerReference: payout.providerReference || null,
     razorpayTransferId: payout.razorpayTransferId || null,
     razorpayAccountId: payout.razorpayAccountId || null,
+    razorpayxPayoutId: payout.razorpayxPayoutId || null,
+    razorpayxFundAccountId: payout.razorpayxFundAccountId || null,
+    providerStatus: payout.providerStatus || null,
     status: payout.status,
     failureReason: payout.failureReason || '',
     notes: payout.notes || '',

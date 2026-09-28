@@ -2,34 +2,44 @@ const cron = require('node-cron');
 const Settlement = require('../Models/Settlement');
 const Payout = require('../Models/Payout');
 const Vendor = require('../Models/Vendor');
+const Order = require('../Models/Order');
 const AccountingConfig = require('../Models/AccountingConfig');
 const settlementService = require('../services/settlementService');
 const razorpayRouteService = require('../services/razorpayRouteService');
+const razorpayx = require('../services/razorpayxService');
 const {
   initiateRazorpayTransferForSettlement,
-  checkSettlementSafeForTransfer,
+  findBlockingLineIssue,
   isTransferDead,
   LIVE_PAYOUT_STATUSES,
 } = require('../services/razorpaySettlementIntegration');
+const razorpayxSettlement = require('../services/razorpayxSettlementIntegration');
 const { syncPendingVendors } = require('../services/vendorRouteOnboarding');
+const { syncPendingPayoutAccounts, payoutAccountReady } = require('../services/vendorPayoutAccount');
 const { alertAdmins } = require('../services/adminAlertService');
 
-// The seller-payout pipeline, end to end, with no admin click in AUTO mode:
+// The seller-payout pipeline, end to end, with no admin click in AUTO mode.
+// Which rail the money takes is SELLER_PAYOUT_PROVIDER
+// (razorpayxService.payoutProvider):
 //
-//   1. onboarding  — approved sellers get a Razorpay Route linked account,
-//                    and their activation is polled until Razorpay says ACTIVE
-//   2. holds       — batches the pipeline itself held are re-checked: a seller
-//                    who is now active is released, a batch made stale by a
+//   razorpayx (default) — a bank payout from the platform's RazorpayX account
+//   route               — a Razorpay Route transfer (needs Route enabled)
+//
+// Each tick:
+//   1. payees      — approved sellers are set up with the provider (RazorpayX
+//                    contact + fund account, or Route linked account)
+//   2. holds       — batches this pipeline held itself are re-checked: a
+//                    seller now ready is released, a batch made stale by a
 //                    refund is cancelled so its lines are re-batched
 //   3. generate    — every delivered line past the hold window is batched
-//   4. transfer    — every ELIGIBLE batch gets its Route transfer
-//   5. retry       — a failed transfer is retried, a few times, once
-//                    Razorpay confirms the old one is dead
+//   4. pay         — every ELIGIBLE batch gets its payout / transfer
+//   5. retry       — a failed attempt is retried, a few times
+//   6. reconcile   — RazorpayX only: payouts whose webhook never came, or
+//                    whose create response was lost, are re-read / re-sent
 //
-// Releasing a held transfer once its window passes stays with
-// Jobs/settlementReleaseJob.js, and the transfer.processed webhook marks it
-// paid. MANUAL mode turns this whole job off: batches and transfers then only
-// happen from the admin panel.
+// Route's held transfers are released by Jobs/settlementReleaseJob.js; a
+// RazorpayX payout is only made once due, so it needs no release step.
+// MANUAL mode turns this whole job off.
 //
 // Same shape as the other jobs: a `running` flag so ticks never overlap, and
 // candidates one at a time to stay polite to the Razorpay API.
@@ -40,14 +50,24 @@ const RETRY_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 // Hold reasons this pipeline sets itself and so may also clear. A hold with
 // any other reason (typed by an admin, or AMOUNT_MISMATCH, which needs a
 // human to look) is never touched here.
-const UNHOLD_WHEN_VENDOR_ACTIVE = 'VENDOR_RAZORPAY_NOT_ACTIVE';
-const UNHOLD_IN_DIRECT_MODE = 'NO_RAZORPAY_PAYMENT_TO_TRANSFER_AGAINST';
+const ROUTE_VENDOR_NOT_ACTIVE = 'VENDOR_RAZORPAY_NOT_ACTIVE';
+const PAYOUT_ACCOUNT_NOT_READY = 'VENDOR_PAYOUT_ACCOUNT_NOT_READY';
+const PAYOUT_REVERSED = 'PAYOUT_REVERSED_BY_BANK';
+const NO_PAYMENT = 'NO_RAZORPAY_PAYMENT_TO_TRANSFER_AGAINST';
+const MULTI_PAYMENT = 'MULTI_ORDER_SETTLEMENT_UNSUPPORTED';
 const REGENERATE_REASONS = [
   'ACTIVE_RETURN_OR_REFUND',
-  'MULTI_ORDER_SETTLEMENT_UNSUPPORTED',
   'REFUND_AFTER_SETTLEMENT_GENERATED_NEEDS_REGEN',
   'REFUND_BEFORE_RELEASE',
   'REFUND_BEFORE_RELEASE_REVERSAL_FAILED_MANUAL_RECONCILIATION',
+];
+const AUTO_HOLD_REASONS = [
+  ROUTE_VENDOR_NOT_ACTIVE,
+  PAYOUT_ACCOUNT_NOT_READY,
+  PAYOUT_REVERSED,
+  NO_PAYMENT,
+  MULTI_PAYMENT,
+  ...REGENERATE_REASONS,
 ];
 
 let task = null;
@@ -64,64 +84,94 @@ function vendorIsRouteReady(vendor) {
 
 /**
  * A held batch may only be cancelled and re-batched once nothing it ever
- * sent can still reach the seller: no live payout, and Razorpay confirming
- * its last transfer failed or was fully reversed.
+ * sent can still reach the seller: no live payout, and — for a Route
+ * transfer — Razorpay confirming it failed or was fully reversed.
  */
-async function lastTransferIsDead(settlement) {
-  const last = await Payout.findOne({ settlement: settlement._id, method: 'RAZORPAY_ROUTE' })
-    .sort({ attempt: -1 })
-    .lean();
+async function lastPayoutIsDead(settlement) {
+  const last = await Payout.findOne({ settlement: settlement._id }).sort({ createdAt: -1 }).lean();
   if (!last) return true;
   if (LIVE_PAYOUT_STATUSES.includes(last.status)) return false;
-  return isTransferDead(last);
+  if (last.method === 'RAZORPAY_ROUTE') return isTransferDead(last);
+  return true;
 }
 
-async function resolveAutoHolds() {
-  const mode = razorpayRouteService.transferMode();
+async function lineStillBlocked(settlement) {
+  const orderIds = [...new Set(settlement.items.map((item) => String(item.order)))];
+  const orders = await Order.find({ _id: { $in: orderIds } }).select('paymentStatus').lean();
+  return Boolean(await findBlockingLineIssue(settlement, new Map(orders.map((order) => [String(order._id), order]))));
+}
+
+async function unhold(settlement) {
+  const result = await settlementService.setSettlementHold({ settlementId: settlement._id, hold: false });
+  return result.ok;
+}
+
+/**
+ * Is the reason this batch was held gone, for the active provider? Returns
+ * 'release', 'regenerate' or null (leave it held).
+ */
+async function decideHold(settlement, provider) {
+  const reason = settlement.holdReason;
+
+  if (reason === PAYOUT_ACCOUNT_NOT_READY || (reason === ROUTE_VENDOR_NOT_ACTIVE && provider === 'razorpayx')) {
+    if (provider === 'route') return null;
+    const vendor = await Vendor.findById(settlement.vendor).lean();
+    return payoutAccountReady(vendor).ready ? 'release' : null;
+  }
+
+  if (reason === ROUTE_VENDOR_NOT_ACTIVE) {
+    const vendor = await Vendor.findById(settlement.vendor).select('razorpay').lean();
+    return vendorIsRouteReady(vendor) ? 'release' : null;
+  }
+
+  if (reason === PAYOUT_REVERSED) {
+    // Paying the account that bounced would bounce again: wait for the
+    // seller's bank account (and so their fund account) to change.
+    const vendor = await Vendor.findById(settlement.vendor).lean();
+    const reversed = await Payout.findOne({ settlement: settlement._id, status: 'REVERSED' }).sort({ createdAt: -1 }).lean();
+    const moved = vendor?.razorpayx?.fundAccountId && vendor.razorpayx.fundAccountId !== reversed?.razorpayxFundAccountId;
+    return moved && payoutAccountReady(vendor).ready ? 'release' : null;
+  }
+
+  if (reason === NO_PAYMENT) {
+    // A RazorpayX payout or a Route direct transfer pays COD lines too.
+    return provider === 'razorpayx' || razorpayRouteService.transferMode() === 'direct' ? 'release' : null;
+  }
+
+  if (reason === MULTI_PAYMENT) {
+    if (provider === 'razorpayx' || razorpayRouteService.transferMode() === 'direct') return 'release';
+    return (await lastPayoutIsDead(settlement)) ? 'regenerate' : null;
+  }
+
+  if (REGENERATE_REASONS.includes(reason)) {
+    // Still under a live return — wait for it to be decided.
+    if (reason === 'ACTIVE_RETURN_OR_REFUND' && (await lineStillBlocked(settlement))) return null;
+    return (await lastPayoutIsDead(settlement)) ? 'regenerate' : null;
+  }
+
+  return null;
+}
+
+async function resolveAutoHolds(provider = razorpayx.payoutProvider()) {
   const held = await Settlement.find({
     status: settlementService.HOLD_STATUS,
-    holdReason: { $in: [UNHOLD_WHEN_VENDOR_ACTIVE, UNHOLD_IN_DIRECT_MODE, ...REGENERATE_REASONS] },
+    holdReason: { $in: AUTO_HOLD_REASONS },
   }).lean();
 
   const summary = { released: 0, regenerated: 0 };
 
   for (const settlement of held) {
     try {
-      if (settlement.holdReason === UNHOLD_WHEN_VENDOR_ACTIVE) {
-        const vendor = await Vendor.findById(settlement.vendor).select('razorpay').lean();
-        if (!vendorIsRouteReady(vendor)) continue;
-        const result = await settlementService.setSettlementHold({ settlementId: settlement._id, hold: false });
-        if (result.ok) summary.released += 1;
-        continue;
+      const decision = await decideHold(settlement, provider);
+      if (decision === 'release') {
+        if (await unhold(settlement)) summary.released += 1;
+      } else if (decision === 'regenerate') {
+        const cancelled = await settlementService.cancelSettlementForRegeneration({
+          settlementId: settlement._id,
+          reason: `Re-batched automatically (${settlement.holdReason})`,
+        });
+        if (cancelled.ok) summary.regenerated += 1;
       }
-
-      if (settlement.holdReason === UNHOLD_IN_DIRECT_MODE) {
-        if (mode !== 'direct') continue;
-        const result = await settlementService.setSettlementHold({ settlementId: settlement._id, hold: false });
-        if (result.ok) summary.released += 1;
-        continue;
-      }
-
-      if (settlement.holdReason === 'MULTI_ORDER_SETTLEMENT_UNSUPPORTED' && mode !== 'payment') {
-        // Direct mode pays a multi-payment batch as it stands.
-        const result = await settlementService.setSettlementHold({ settlementId: settlement._id, hold: false });
-        if (result.ok) summary.released += 1;
-        continue;
-      }
-
-      if (settlement.holdReason === 'ACTIVE_RETURN_OR_REFUND') {
-        // Still under a live return — wait for it to be decided.
-        const safety = await checkSettlementSafeForTransfer(settlement._id);
-        if (!safety.ok && safety.reason === 'ACTIVE_RETURN_OR_REFUND') continue;
-      }
-
-      if (!(await lastTransferIsDead(settlement))) continue;
-
-      const cancelled = await settlementService.cancelSettlementForRegeneration({
-        settlementId: settlement._id,
-        reason: `Re-batched automatically (${settlement.holdReason})`,
-      });
-      if (cancelled.ok) summary.regenerated += 1;
     } catch (err) {
       console.error(`[settlementAutomationJob] hold ${settlement._id} failed:`, err.message);
     }
@@ -130,39 +180,60 @@ async function resolveAutoHolds() {
   return summary;
 }
 
-async function transferEligible() {
+function initiatorFor(provider) {
+  return provider === 'route'
+    ? (id, options) => initiateRazorpayTransferForSettlement(id, options)
+    : (id, options) => razorpayxSettlement.initiatePayoutForSettlement(id, options);
+}
+
+async function payEligible(provider, now) {
+  const initiate = initiatorFor(provider);
   const eligible = await Settlement.find({ status: 'ELIGIBLE' }).select('_id').sort({ createdAt: 1 }).lean();
   const outcomes = {};
   for (const { _id } of eligible) {
     try {
-      const result = await initiateRazorpayTransferForSettlement(String(_id));
+      const result = await initiate(String(_id), { now });
       outcomes[result.outcome] = (outcomes[result.outcome] || 0) + 1;
+      if (result.outcome === 'NOT_CONFIGURED') {
+        // Every other batch would say the same.
+        await alertAdmins({
+          event: 'SETTLEMENT_FAILED',
+          title: 'Seller payouts are not configured',
+          message: `${result.message}. Seller settlements are ready but cannot be paid until this is set.`,
+          link: '/admin/accounting/settlements',
+          key: `PAYOUTS_NOT_CONFIGURED:${now.toISOString().slice(0, 10)}`,
+          urgent: true,
+        });
+        break;
+      }
     } catch (err) {
       outcomes.ERROR = (outcomes.ERROR || 0) + 1;
-      console.error(`[settlementAutomationJob] transfer for settlement ${_id} failed:`, err.message);
+      console.error(`[settlementAutomationJob] payout for settlement ${_id} failed:`, err.message);
     }
   }
   return outcomes;
 }
 
-async function retryFailed(now) {
+async function retryFailed(provider, now) {
+  const method = provider === 'route' ? 'RAZORPAY_ROUTE' : razorpayxSettlement.METHOD;
+  const initiate = initiatorFor(provider);
   const failed = await Settlement.find({ status: 'FAILED' }).select('_id settlementId netPayablePaise').lean();
   const summary = { retried: 0, exhausted: 0 };
 
   for (const settlement of failed) {
     try {
       const last = await Payout.findOne({ settlement: settlement._id }).sort({ attempt: -1 }).lean();
-      // Only Route attempts are retried here; a failed hand-made bank
-      // transfer stays with the admin who made it.
-      if (!last || last.method !== 'RAZORPAY_ROUTE') continue;
+      // Only this provider's attempts are retried here; a failed hand-made
+      // bank transfer stays with the admin who made it.
+      if (!last || last.method !== method) continue;
 
       if (last.attempt >= MAX_AUTO_ATTEMPTS) {
         summary.exhausted += 1;
         await alertAdmins({
           event: 'SETTLEMENT_FAILED',
           title: 'Seller settlement needs attention',
-          message: `Settlement ${settlement.settlementId || settlement._id} failed ${last.attempt} Razorpay Route attempts (last: ${last.failureReason || 'unknown'}). Automatic retries have stopped.`,
-          link: '/admin/finance/settlements',
+          message: `Settlement ${settlement.settlementId || settlement._id} failed ${last.attempt} automatic payout attempts (last: ${last.failureReason || 'unknown'}). Automatic retries have stopped.`,
+          link: '/admin/accounting/settlements',
           key: `SETTLEMENT_RETRIES_EXHAUSTED:${settlement._id}:${last.attempt}`,
           urgent: true,
         });
@@ -172,8 +243,8 @@ async function retryFailed(now) {
       const failedAt = new Date(last.processedAt || last.updatedAt || 0).getTime();
       if (now.getTime() - failedAt < RETRY_COOLDOWN_MS) continue;
 
-      const result = await initiateRazorpayTransferForSettlement(String(settlement._id));
-      if (result.outcome === 'TRANSFER_CREATED') summary.retried += 1;
+      const result = await initiate(String(settlement._id), { now });
+      if (['TRANSFER_CREATED', 'PAYOUT_CREATED'].includes(result.outcome)) summary.retried += 1;
     } catch (err) {
       console.error(`[settlementAutomationJob] retry for settlement ${settlement._id} failed:`, err.message);
     }
@@ -196,17 +267,18 @@ async function runOnce({ now = new Date() } = {}) {
       return null;
     }
 
-    const summary = {};
+    const provider = razorpayx.payoutProvider();
+    const summary = { provider };
 
-    // Each step is independent: a Razorpay outage during onboarding must not
-    // stop sellers who are already active from being paid.
+    // Each step is independent: a Razorpay outage while setting up one
+    // seller must not stop sellers who are already set up from being paid.
     try {
-      summary.onboarding = await syncPendingVendors();
+      summary.payees = provider === 'route' ? await syncPendingVendors() : await syncPendingPayoutAccounts();
     } catch (err) {
-      console.error('[settlementAutomationJob] onboarding step failed:', err.message);
+      console.error('[settlementAutomationJob] payee step failed:', err.message);
     }
     try {
-      summary.holds = await resolveAutoHolds();
+      summary.holds = await resolveAutoHolds(provider);
     } catch (err) {
       console.error('[settlementAutomationJob] holds step failed:', err.message);
     }
@@ -216,8 +288,15 @@ async function runOnce({ now = new Date() } = {}) {
     } catch (err) {
       console.error('[settlementAutomationJob] generate step failed:', err.message);
     }
-    summary.transfers = await transferEligible();
-    summary.retries = await retryFailed(now);
+    summary.payouts = await payEligible(provider, now);
+    summary.retries = await retryFailed(provider, now);
+    if (provider === 'razorpayx') {
+      try {
+        summary.reconcile = await razorpayxSettlement.reconcilePayouts(now);
+      } catch (err) {
+        console.error('[settlementAutomationJob] reconcile step failed:', err.message);
+      }
+    }
 
     log({ event: 'RUN_COMPLETE', ...summary });
     return summary;
@@ -238,7 +317,7 @@ function scheduleSettlementAutomation() {
   }
 
   task = cron.schedule(schedule, () => runOnce());
-  console.log(`[settlementAutomationJob] scheduled with cron "${schedule}"`);
+  console.log(`[settlementAutomationJob] scheduled with cron "${schedule}" (provider: ${razorpayx.payoutProvider()})`);
   return task;
 }
 

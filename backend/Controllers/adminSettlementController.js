@@ -11,6 +11,8 @@ const posting = require('../services/accountingPosting');
 const { recordAudit } = require('../services/accountingAudit');
 const { paged, resolveRange, vendorLabel, orderNumber } = require('./adminAccountingController');
 const razorpaySettlementIntegration = require('../services/razorpaySettlementIntegration');
+const razorpayxSettlementIntegration = require('../services/razorpayxSettlementIntegration');
+const { payoutProvider } = require('../services/razorpayxService');
 
 // Admin > Accounting > Settlements, Payouts and Refunds — the screens where
 // money actually moves, and therefore the ones with the most guardrails.
@@ -282,6 +284,34 @@ async function releaseSettlementTransfer(req, res) {
     });
   };
 
+  if (payoutProvider() === 'razorpayx') {
+    // "Release now" on RazorpayX means "pay now": skip the settlement window
+    // and the AUTO/MANUAL gate, keep every safety check.
+    const initiated = await razorpayxSettlementIntegration.initiatePayoutForSettlement(id, { force: true });
+    if (!initiated.ok) {
+      return res.status(400).json({ success: false, message: initiated.message || 'Could not create the RazorpayX payout' });
+    }
+    if (!initiated.payout) {
+      return res.status(200).json({
+        success: true,
+        message: initiated.message || `Settlement payout not actionable right now (${initiated.outcome})`,
+        data: { settlementId: String(settlement._id), outcome: initiated.outcome, reason: initiated.reason || null, detail: initiated.detail || null },
+      });
+    }
+    await recordAudit({
+      action: 'SETTLEMENT_TRANSFER_RELEASED',
+      req,
+      entityType: 'Payout',
+      entityId: initiated.payout._id,
+      before: { status: null },
+      after: { status: initiated.payout.status, method: razorpayxSettlementIntegration.METHOD, outcome: initiated.outcome },
+    });
+    return respondWithPayout(
+      initiated.payout,
+      initiated.outcome === 'ALREADY_EXISTS' ? initiated.message : 'Payout sent to RazorpayX — the seller is paid as soon as the bank processes it'
+    );
+  }
+
   // Latest Razorpay Route attempt on this settlement, if any.
   const existing = await Payout.findOne({ settlement: settlement._id, method: 'RAZORPAY_ROUTE' })
     .sort({ attempt: -1 })
@@ -477,6 +507,44 @@ async function getPayout(req, res) {
 // automation uses — which itself calls payoutService.createPayout internally.
 async function createPayout(req, res) {
   const { settlementId, method, notes } = req.body;
+
+  if ((method || '').toUpperCase() === razorpayxSettlementIntegration.METHOD) {
+    if (!mongoose.isValidObjectId(settlementId)) {
+      return res.status(400).json({ success: false, message: 'Invalid settlement id' });
+    }
+    // Also how a FAILED RazorpayX payout is retried by hand: the same creator
+    // the automation uses, forced past the window and the AUTO/MANUAL gate.
+    const initiated = await razorpayxSettlementIntegration.initiatePayoutForSettlement(settlementId, { force: true });
+    if (!initiated.ok) {
+      return res.status(400).json({ success: false, message: initiated.message || 'Could not create the RazorpayX payout' });
+    }
+    if (!initiated.payout) {
+      return res.status(200).json({
+        success: true,
+        message: initiated.message || `Not actionable right now (${initiated.outcome})`,
+        data: { settlementId, outcome: initiated.outcome, reason: initiated.reason || null, detail: initiated.detail || null },
+      });
+    }
+    await recordAudit({
+      action: 'PAYOUT_INITIATED',
+      req,
+      entityType: 'Payout',
+      entityId: initiated.payout._id,
+      after: {
+        payoutId: initiated.payout.payoutId,
+        settlement: String(settlementId),
+        method: razorpayxSettlementIntegration.METHOD,
+        outcome: initiated.outcome,
+      },
+      reason: String(notes || '').trim(),
+    });
+    const created = initiated.outcome !== 'ALREADY_EXISTS';
+    return res.status(created ? 201 : 200).json({
+      success: true,
+      message: created ? 'Payout sent to RazorpayX' : initiated.message,
+      data: payoutService.serializePayout(initiated.payout),
+    });
+  }
 
   if ((method || '').toUpperCase() === 'RAZORPAY_ROUTE') {
     if (!mongoose.isValidObjectId(settlementId)) {
