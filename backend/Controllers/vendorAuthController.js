@@ -12,6 +12,7 @@ const { alertAdmins } = require('../services/adminAlertService');
 const { markBankChanged } = require('../services/vendorRouteOnboarding');
 const { alertBankChanged } = require('../services/vendorPayoutAccount');
 const { FSSAI_DOC_TYPE } = require('../utils/fssai');
+const { reserveAttempt, clearAttempts, tooManyAttempts } = require('../utils/loginThrottle');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
@@ -268,15 +269,19 @@ async function register(req, res) {
 async function login(req, res) {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required' });
   }
+
+  const attempt = await reserveAttempt('vendor', email);
+  if (!attempt.allowed) return tooManyAttempts(res, attempt.retryAfterSeconds);
 
   const vendor = await Vendor.findOne({ email: email.toLowerCase().trim() }).select('+password');
 
   if (!vendor || !(await vendor.comparePassword(password))) {
     return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
+  await clearAttempts('vendor', email);
 
   // Verification Gate: Admin must approve vendor before they can log in
   if (vendor.verificationStatus === 'PENDING' || vendor.verificationStatus === 'UNDER_REVIEW') {
@@ -395,6 +400,8 @@ async function resetPassword(req, res) {
 
   vendor.password = newPassword;
   await vendor.save();
+  // A new password is a fresh start: the sign-in lock goes with the old one.
+  await clearAttempts('vendor', normalizedEmail);
   await VendorPasswordReset.deleteOne({ _id: resetRequest._id });
 
   res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });

@@ -171,7 +171,7 @@ describe('sub-admin (staff) permissions', () => {
     expect(r2.status).toBe(403);
   });
 
-  knownBug('QA-001a', 'support-only staff must not be able to create a 100%-off coupon', async () => {
+  test('QA-001a (regression): support-only staff must not be able to create a 100%-off coupon', async () => {
     const code = `QA100${Date.now()}`;
     const res = await as(supportStaff.token).post('/admin/marketing/coupons', {
       code,
@@ -187,7 +187,7 @@ describe('sub-admin (staff) permissions', () => {
     expect(created).toBeNull();
   });
 
-  knownBug('QA-001b', 'support-only staff must not be able to change commission, GST and buyer platform fee', async () => {
+  test('QA-001b (regression): support-only staff must not be able to change commission, GST and buyer platform fee', async () => {
     const before = await PlatformSettings.getSettings();
     const res = await as(supportStaff.token).put('/admin/settings/general', {
       buyerPlatformFeeType: 'flat',
@@ -199,7 +199,7 @@ describe('sub-admin (staff) permissions', () => {
     expect(after.defaultCommissionPercent).toBe(before.defaultCommissionPercent);
   });
 
-  knownBug('QA-001c', 'support-only staff must not be able to record a vendor payout (reduces what the seller is owed)', async () => {
+  test('QA-001c (regression): support-only staff must not be able to record a vendor payout (reduces what the seller is owed)', async () => {
     const { vendor } = await createVendor({ verificationStatus: 'APPROVED' });
     const res = await as(supportStaff.token).post('/admin/accounts/payouts', {
       vendor: String(vendor._id),
@@ -211,13 +211,13 @@ describe('sub-admin (staff) permissions', () => {
     expect(await VendorPayout.countDocuments({ vendor: vendor._id })).toBe(0);
   });
 
-  knownBug('QA-001d', 'support-only staff must not search customer PII via the coupon WhatsApp picker', async () => {
+  test('QA-001d (regression): support-only staff must not search customer PII via the coupon WhatsApp picker', async () => {
     await createCustomer({ name: 'Pii Target' });
     const res = await as(supportStaff.token).get('/admin/marketing/coupons/whatsapp/customers?search=Pii');
     expect(res.status).toBe(403);
   });
 
-  knownBug('QA-001e', 'support-only staff must not publish CMS pages (terms/privacy the buyer accepts)', async () => {
+  test('QA-001e (regression): support-only staff must not publish CMS pages (terms/privacy the buyer accepts)', async () => {
     const res = await as(supportStaff.token).post('/admin/marketing/cms', {
       title: `QA Terms ${Date.now()}`,
       content: '<p>changed</p>',
@@ -225,19 +225,76 @@ describe('sub-admin (staff) permissions', () => {
     expect(res.status).toBe(403);
   });
 
-  knownBug('QA-001f', 'support-only staff must not create FAQs', async () => {
+  test('QA-001f (regression): support-only staff must not create FAQs', async () => {
     const res = await as(supportStaff.token).post('/admin/marketing/faqs', { question: 'q?', answer: 'a' });
     expect(res.status).toBe(403);
   });
 
-  knownBug('QA-001g', 'support-only staff must not read the accounts ledger', async () => {
+  test('QA-001g (regression): support-only staff must not read the accounts ledger', async () => {
     const res = await as(supportStaff.token).get('/admin/accounts/ledger');
     expect(res.status).toBe(403);
   });
 
-  knownBug('QA-020', 'a DEACTIVATED role must stop granting its permissions', async () => {
+  test('QA-020 (regression): a DEACTIVATED role must stop granting its permissions', async () => {
     const { token } = await createStaff(['admin.people.support'], { roleActive: false });
     const res = await as(token).get('/admin/support/tickets');
     expect(res.status).toBe(403);
+  });
+});
+
+describe('sub-admin positive controls (the fix must not lock out the right people)', () => {
+  test('staff with admin.marketing.coupons can create a coupon', async () => {
+    const { token } = await createStaff(['admin.marketing.coupons']);
+    const res = await as(token).post('/admin/marketing/coupons', {
+      code: `QAOK${Date.now()}`,
+      discountType: 'PERCENTAGE',
+      discountValue: 10,
+      applicableTo: 'ALL',
+      startDate: new Date(Date.now() - 1000).toISOString(),
+      endDate: new Date(Date.now() + 86400000).toISOString(),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  test('settings: view key reads, only manage key writes', async () => {
+    const viewer = await createStaff(['admin.settings.view']);
+    const manager = await createStaff(['admin.settings.view', 'admin.settings.manage']);
+    expect((await as(viewer.token).get('/admin/settings/general')).status).toBe(200);
+    expect((await as(viewer.token).put('/admin/settings/general', { supportPhone: '9000000000' })).status).toBe(403);
+    expect((await as(manager.token).put('/admin/settings/general', { supportPhone: '9000000000' })).status).toBe(200);
+  });
+
+  test('accounts: accounting.view reads the ledger; recording a payout needs payout.manage', async () => {
+    const { vendor } = await createVendor({ verificationStatus: 'APPROVED' });
+    const viewer = await createStaff(['admin.accounting.view']);
+    const payer = await createStaff(['admin.accounting.view', 'admin.accounting.payout.manage']);
+    expect((await as(viewer.token).get('/admin/accounts/ledger')).status).toBe(200);
+    expect((await as(viewer.token).post('/admin/accounts/payouts', { vendor: String(vendor._id), amount: 10 })).status).toBe(403);
+    expect((await as(payer.token).post('/admin/accounts/payouts', { vendor: String(vendor._id), amount: 10 })).status).toBe(201);
+  });
+
+  test('CMS/FAQ: banners key can view, only marketing.manage can publish', async () => {
+    const viewer = await createStaff(['admin.marketing.banners']);
+    const editor = await createStaff(['admin.marketing.manage']);
+    expect((await as(viewer.token).get('/admin/marketing/cms')).status).toBe(200);
+    expect((await as(viewer.token).post('/admin/marketing/cms', { title: `QA V ${Date.now()}`, content: 'x' })).status).toBe(403);
+    expect((await as(editor.token).post('/admin/marketing/cms', { title: `QA E ${Date.now()}`, content: 'x' })).status).toBe(201);
+    expect((await as(editor.token).post('/admin/marketing/faqs', { question: 'q?', answer: 'a' })).status).toBe(201);
+  });
+
+  test('the full admin is never restricted by these keys', async () => {
+    const { token } = await createAdmin();
+    expect((await as(token).get('/admin/marketing/coupons')).status).toBe(200);
+    expect((await as(token).get('/admin/settings/general')).status).toBe(200);
+    expect((await as(token).get('/admin/accounts/ledger')).status).toBe(200);
+    expect((await as(token).get('/admin/marketing/faqs')).status).toBe(200);
+  });
+
+  test('re-activating a role restores its permissions', async () => {
+    const { token, role } = await createStaff(['admin.people.support'], { roleActive: false });
+    expect((await as(token).get('/admin/support/tickets')).status).toBe(403);
+    role.isActive = true;
+    await role.save();
+    expect((await as(token).get('/admin/support/tickets')).status).toBe(200);
   });
 });

@@ -26,7 +26,10 @@ async function protectAdmin(req, res, next) {
     // permissions changing takes effect immediately without re-login. Kept
     // separate from the Mongoose doc rather than assigned onto it, since
     // `permissions` is no longer a schema field on User.
-    req.permissions = user.role === 'admin' ? [] : user.roleId?.permissions || [];
+    // A deactivated role grants nothing — switching a role off has to take
+    // its permissions away from everyone holding it, immediately.
+    req.permissions =
+      user.role === 'admin' || !user.roleId || user.roleId.isActive === false ? [] : user.roleId.permissions || [];
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Not authorized, invalid token' });
@@ -60,4 +63,20 @@ function requirePermission(permissionKey) {
   };
 }
 
-module.exports = { protectAdmin, requireRole, requirePermission };
+// Passes when staff hold ANY of the keys — for a screen the sidebar shows
+// under one key while its edit actions sit under another.
+function requireAnyPermission(...permissionKeys) {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    }
+
+    if (req.admin.role === 'admin' || permissionKeys.some((key) => req.permissions.includes(key))) {
+      return next();
+    }
+
+    return res.status(403).json({ success: false, message: 'You do not have access to this module' });
+  };
+}
+
+module.exports = { protectAdmin, requireRole, requirePermission, requireAnyPermission };

@@ -11,13 +11,26 @@ const Order = require('../Models/Order');
 //   by that same authenticated user
 // - a ticket with no owning user (raised as a guest) is reachable by anyone
 //   who has its id, by design — same tradeoff as an order-tracking number.
+//   A seller's own ticket to admin ALSO has no user, so "no user" alone must
+//   never be read as "guest": those belong to the seller and admin only.
+function isSellerRaised(ticket) {
+  return ticket.raisedByRole === 'vendor' || ticket.party === 'seller';
+}
+
 function canAccessTicket(req, ticket) {
   if (req.admin) return true;
   if (req.vendor) {
     return Boolean(ticket.vendor) && ticket.vendor.toString() === req.vendor._id.toString();
   }
-  if (!ticket.user) return true;
+  if (!ticket.user) return !isSellerRaised(ticket);
   return Boolean(req.user) && ticket.user.toString() === req.user._id.toString();
+}
+
+// User input as a literal, case-insensitive match. A raw `new RegExp(search)`
+// turned "(" into a 500 and let a caller hand MongoDB a catastrophic pattern.
+function searchRegex(search) {
+  const escaped = String(search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(escaped, 'i');
 }
 
 function formatDate(d) {
@@ -295,11 +308,19 @@ async function listUserTickets(req, res) {
     const idList = ids.split(',').map((id) => id.trim()).filter(Boolean);
     if (idList.length > 0) {
       // Guest lookup by known ticket id(s) only — never exposes tickets
-      // that belong to a real account.
+      // that belong to a real account, or a seller's own tickets (which
+      // also have no user). Kept under $and so the search clause below can
+      // only NARROW this list: appending search terms to this same $or used
+      // to widen it to every guest and seller ticket on the platform.
       filter.user = null;
-      filter.$or = [
-        { ticketId: { $in: idList } },
-        { _id: { $in: idList.filter((id) => mongoose.isValidObjectId(id)) } },
+      filter.raisedByRole = { $ne: 'vendor' };
+      filter.$and = [
+        {
+          $or: [
+            { ticketId: { $in: idList } },
+            { _id: { $in: idList.filter((id) => mongoose.isValidObjectId(id)) } },
+          ],
+        },
       ];
     } else {
       return res.json({ success: true, data: { items: [], total: 0 } });
@@ -312,24 +333,21 @@ async function listUserTickets(req, res) {
     filter.status = status;
   }
 
+  // Status counts come from the same population as the list, before the
+  // status/search narrowing — for a guest that is only the tickets they
+  // named, never the platform-wide totals.
+  const countFilter = { ...filter };
+  delete countFilter.status;
+
   if (search) {
-    const regex = new RegExp(search.trim(), 'i');
-    filter.$or = [
-      ...(filter.$or || []),
-      { ticketId: regex },
-      { subject: regex },
-      { category: regex },
-    ];
+    const regex = searchRegex(search);
+    filter.$and = [...(filter.$and || []), { $or: [{ ticketId: regex }, { subject: regex }, { category: regex }] }];
   }
 
   const tickets = await Ticket.find(filter).sort({ updatedAt: -1, createdAt: -1 }).lean();
   const items = tickets.map((t) => serializeTicket(t, req));
 
-  // Group status counts
-  const allTickets = await Ticket.find({
-    ...(req.user ? { user: req.user._id } : {}),
-    isDeleted: false,
-  }).lean();
+  const allTickets = await Ticket.find(countFilter).select('status').lean();
 
   const counts = {
     all: allTickets.length,
@@ -360,7 +378,7 @@ async function listVendorTickets(req, res) {
   }
 
   if (search) {
-    const regex = new RegExp(search.trim(), 'i');
+    const regex = searchRegex(search);
     filter.$or = [{ ticketId: regex }, { subject: regex }, { category: regex }];
   }
 
@@ -616,7 +634,7 @@ async function listAdminTickets(req, res) {
   }
 
   if (search) {
-    const regex = new RegExp(search.trim(), 'i');
+    const regex = searchRegex(search);
     filter.$or = [
       { ticketId: regex },
       { subject: regex },

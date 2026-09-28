@@ -12,11 +12,13 @@ const {
   getCouponWhatsapp,
   sendCouponWhatsapp,
 } = require('../Controllers/adminCouponWhatsappController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.use(protectAdmin);
+// Coupons move money (a 100%-off code is free stock), and the WhatsApp picker
+// searches customer PII — the whole surface is behind the coupons key.
+router.use(protectAdmin, requirePermission('admin.marketing.coupons'));
 
 router.get('/', listCoupons);
 // Before '/:id' so "whatsapp" is not read as a coupon id.

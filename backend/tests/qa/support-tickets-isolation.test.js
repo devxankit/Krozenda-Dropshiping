@@ -66,37 +66,66 @@ describe('buyer-to-buyer isolation (works)', () => {
 });
 
 describe('guest / seller ticket exposure', () => {
-  knownBug('QA-002a', 'an anonymous caller must not list every guest and seller ticket via ?ids=<junk>&search=.', async () => {
+  test('QA-002a (regression): an anonymous caller must not list every guest and seller ticket via ?ids=<junk>&search=.', async () => {
     const res = await as(null).get('/user/tickets?ids=TKT-000000000&search=.');
     const ids = (res.body.data?.items || []).map((t) => t.ticketId);
     expect(ids).not.toContain(ctx.guestTicket);
     expect(ids).not.toContain(ctx.vendorTicket);
   });
 
-  knownBug('QA-002b', 'an anonymous caller must not read a seller→admin ticket by its id', async () => {
+  test('QA-002b (regression): an anonymous caller must not read a seller→admin ticket by its id', async () => {
     const res = await as(null).get(`/user/tickets/${ctx.vendorTicket}`);
     expect([401, 403, 404]).toContain(res.status);
   });
 
-  knownBug('QA-002c', 'a buyer must not be able to post into a seller→admin ticket', async () => {
+  test('QA-002c (regression): a buyer must not be able to post into a seller→admin ticket', async () => {
     const res = await as(ctx.buyerB.token).post(`/user/tickets/${ctx.vendorTicket}/messages`, { message: 'injected' });
     expect([401, 403, 404]).toContain(res.status);
   });
 
-  knownBug('QA-002d', 'an anonymous caller must not close a seller→admin ticket', async () => {
+  test('QA-002d (regression): an anonymous caller must not close a seller→admin ticket', async () => {
     const res = await as(null).patch(`/user/tickets/${ctx.vendorTicket}/status`, { status: 'closed' });
     const fresh = await Ticket.findOne({ ticketId: ctx.vendorTicket });
     expect(fresh.status).not.toBe('closed');
     expect([401, 403, 404]).toContain(res.status);
   });
 
-  knownBug('QA-002e', 'guest status counts must not reveal platform-wide ticket totals', async () => {
+  test('QA-002e (regression): guest status counts must not reveal platform-wide ticket totals', async () => {
     const res = await as(null).get(`/user/tickets?ids=${ctx.guestTicket}`);
     expect(res.body.data.counts.all).toBeLessThanOrEqual(1);
   });
 
-  knownBug('QA-021', 'an invalid regex in ?search= must be a 400, not a 500', async () => {
+  test('QA-021 (regression): regex metacharacters in ?search= are matched literally, never a 500', async () => {
     const res = await as(ctx.buyerA.token).get('/user/tickets?search=(');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body.data.items).toEqual([]);
+    // "." is a literal dot, not a wildcard: buyer A's ticket subject has none
+    const dot = await as(ctx.buyerA.token).get('/user/tickets?search=.');
+    expect(dot.body.data.items).toEqual([]);
+  });
+});
+
+describe('guest ticket access still works as designed', () => {
+  test('a guest can list, search and open their own ticket by its id', async () => {
+    const listed = await as(null).get(`/user/tickets?ids=${ctx.guestTicket}&search=guest`);
+    expect(listed.body.data.items.map((t) => t.ticketId)).toEqual([ctx.guestTicket]);
+    const opened = await as(null).get(`/user/tickets/${ctx.guestTicket}`);
+    expect(opened.status).toBe(200);
+  });
+
+  test('a search that does not match the guest’s ticket returns nothing, not other tickets', async () => {
+    const res = await as(null).get(`/user/tickets?ids=${ctx.guestTicket}&search=Payout`);
+    expect(res.body.data.items).toEqual([]);
+  });
+
+  test('the seller still reads and replies to their own ticket', async () => {
+    const r = await as(ctx.seller.token).get(`/vendor/tickets/${ctx.vendorTicket}`);
+    expect(r.status).toBe(200);
+    const m = await as(ctx.seller.token).post(`/vendor/tickets/${ctx.vendorTicket}/messages`, { message: 'any update?' });
+    expect(m.status).toBe(200);
+  });
+
+  test('regex metacharacters are searched literally on the seller and admin queues too', async () => {
+    expect((await as(ctx.seller.token).get('/vendor/tickets?search=(')).status).toBe(200);
   });
 });

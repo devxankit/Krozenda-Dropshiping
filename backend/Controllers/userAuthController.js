@@ -41,6 +41,36 @@ function generateOtp() {
   return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 }
 
+// Resend limits. The per-code attempt cap alone was not a limit: asking for
+// a new code reset it, so guessing was unbounded (and every ask cost an SMS).
+// With these, one number gets at most MAX_SENDS_PER_WINDOW codes an hour —
+// MAX_OTP_ATTEMPTS guesses each — against a million possible codes.
+const RESEND_COOLDOWN_MS = 30 * 1000;
+const SEND_WINDOW_MS = 60 * 60 * 1000;
+const MAX_SENDS_PER_WINDOW = 5;
+
+// HMAC, not bcrypt: a 6-digit code has a million values, so a slow hash adds
+// nothing a leaked table would not give up anyway — the attempt and resend
+// caps are what protect it. bcryptjs is pure JS on the event loop and was
+// the single slowest thing in a login (load test: 11 logins/s).
+function hashOtp(mobileNumber, otp) {
+  const pepper = process.env.JWT_SECRET || 'krozenda-otp';
+  return crypto.createHmac('sha256', pepper).update(`${mobileNumber}:${otp}`).digest('hex');
+}
+
+async function otpMatches(mobileNumber, otp, storedHash) {
+  if (!storedHash) return false;
+  // A code issued before this change, still inside its 5 minutes.
+  if (storedHash.startsWith('$2')) return bcrypt.compare(otp, storedHash);
+  const candidate = Buffer.from(hashOtp(mobileNumber, otp), 'hex');
+  const stored = Buffer.from(storedHash, 'hex');
+  return candidate.length === stored.length && crypto.timingSafeEqual(candidate, stored);
+}
+
+function maskNumber(mobileNumber) {
+  return `${mobileNumber.slice(0, 2)}******${mobileNumber.slice(-2)}`;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Normalize phone to clean 10-digit format
@@ -118,18 +148,74 @@ async function requestOtp(req, res) {
 
   const useLiveSms = isProduction && !isBypassNumber(cleanNumber);
   const otp = useLiveSms ? generateOtp() : DEV_FIXED_OTP;
-  const otpHash = await bcrypt.hash(otp, 10);
 
-  await OtpRequest.findOneAndUpdate(
-    { mobileNumber: cleanNumber },
-    { otpHash, attempts: 0, expiresAt: new Date(Date.now() + OTP_TTL_MS) },
-    { upsert: true }
-  );
+  // Rate limit, then store — as ONE conditional write. The filter pins the
+  // lastSentAt this request read, so of two parallel sends only one can
+  // match; the other upserts into the unique mobileNumber and is refused.
+  // Bypass numbers (reviewers, QA handsets) always get the fixed code, so
+  // limiting their resends protects nothing and only stalls a reviewer.
+  const rateLimited = !isBypassNumber(cleanNumber);
+  const now = Date.now();
+  const previous = await OtpRequest.findOne({ mobileNumber: cleanNumber }).lean();
+  const sinceLast =
+    rateLimited && previous?.lastSentAt ? now - new Date(previous.lastSentAt).getTime() : Infinity;
+  if (sinceLast < RESEND_COOLDOWN_MS) {
+    const retryAfterSeconds = Math.ceil((RESEND_COOLDOWN_MS - sinceLast) / 1000);
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      success: false,
+      code: 'OTP_RESEND_COOLDOWN',
+      message: `Please wait ${retryAfterSeconds} seconds before requesting a new OTP.`,
+      data: { retryAfterSeconds },
+    });
+  }
+  const windowOpen = previous?.windowStartedAt && now - new Date(previous.windowStartedAt).getTime() < SEND_WINDOW_MS;
+  const windowStartedAt = windowOpen ? new Date(previous.windowStartedAt) : new Date(now);
+  const sendCount = windowOpen ? previous.sendCount || 0 : 0;
+  if (rateLimited && sendCount >= MAX_SENDS_PER_WINDOW) {
+    const retryAfterSeconds = Math.ceil((windowStartedAt.getTime() + SEND_WINDOW_MS - now) / 1000);
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      success: false,
+      code: 'OTP_SEND_LIMIT',
+      message: 'Too many OTP requests for this number. Please try again later.',
+      data: { retryAfterSeconds },
+    });
+  }
 
-  // Always visible in server logs, on every path — the SMS gateway has been
-  // unreliable, so this is the fallback way to read/hand out an OTP without
-  // depending on it actually arriving on the phone.
-  console.log(`[requestOtp] OTP for ${cleanNumber}: ${otp}`);
+  try {
+    await OtpRequest.findOneAndUpdate(
+      { mobileNumber: cleanNumber, lastSentAt: previous ? previous.lastSentAt : null },
+      {
+        $set: {
+          otpHash: hashOtp(cleanNumber, otp),
+          attempts: 0,
+          otpExpiresAt: new Date(now + OTP_TTL_MS),
+          lastSentAt: new Date(now),
+          windowStartedAt,
+          sendCount: sendCount + 1,
+          expiresAt: new Date(windowStartedAt.getTime() + SEND_WINDOW_MS),
+        },
+      },
+      { upsert: true }
+    );
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    return res.status(429).json({
+      success: false,
+      code: 'OTP_RESEND_COOLDOWN',
+      message: 'An OTP was just sent to this number. Please wait before requesting another.',
+    });
+  }
+
+  // The code itself only ever reaches the logs outside production. In
+  // production it goes to the buyer's phone and nowhere else: a log line
+  // with the code in it lets anyone who can read the logs sign in as anyone.
+  if (isProduction) {
+    console.log(`[requestOtp] OTP issued for ${maskNumber(cleanNumber)}`);
+  } else {
+    console.log(`[requestOtp] OTP for ${cleanNumber}: ${otp}`);
+  }
 
   if (useLiveSms) {
     // OTP goes out over SMS only.
@@ -137,12 +223,18 @@ async function requestOtp(req, res) {
       await sendOtpSms(cleanNumber, otp);
     } catch (err) {
       console.error('[requestOtp] SMS send failed:', err.message);
+      // A code that never arrived must not hold the buyer behind the resend
+      // cooldown. It still counts toward the hourly cap.
+      await OtpRequest.updateOne(
+        { mobileNumber: cleanNumber },
+        { $set: { otpHash: null, lastSentAt: previous?.lastSentAt || null } }
+      );
       return res.status(502).json({ success: false, message: 'Could not send OTP right now. Please try again.' });
     }
   } else if (isProduction) {
-    // Bypass number in production: the OTP is never sent over SMS and never
-    // returned in the response body — read it from the log line above.
-    console.log(`[requestOtp] Bypass number ${cleanNumber}, SMS skipped.`);
+    // Bypass number in production: no SMS, and the code is the fixed
+    // DEV_FIXED_OTP the reviewers/QA handsets already know.
+    console.log(`[requestOtp] Bypass number ${maskNumber(cleanNumber)}, SMS skipped.`);
   }
 
   res.json({
@@ -172,34 +264,50 @@ async function verifyOtp(req, res) {
 
   const cleanOtp = String(otp || '').trim();
 
-  const otpRequest = await OtpRequest.findOne({ mobileNumber: cleanNumber });
-  if (!otpRequest || otpRequest.expiresAt < new Date()) {
+  const otpRequest = await OtpRequest.findOne({ mobileNumber: cleanNumber }).lean();
+  const codeExpiresAt = otpRequest?.otpExpiresAt || otpRequest?.expiresAt;
+  if (!otpRequest || !otpRequest.otpHash || codeExpiresAt < new Date()) {
     return res.status(400).json({
       success: false,
       message: 'OTP expired or not requested. Please request a new one.',
     });
   }
 
-  if (otpRequest.attempts >= MAX_OTP_ATTEMPTS) {
-    await otpRequest.deleteOne();
+  // Take the attempt BEFORE checking the code, atomically. A read-then-save
+  // counter let fifty parallel guesses all see "0 attempts so far".
+  const reserved = await OtpRequest.findOneAndUpdate(
+    { _id: otpRequest._id, otpHash: otpRequest.otpHash, attempts: { $lt: MAX_OTP_ATTEMPTS } },
+    { $inc: { attempts: 1 } },
+    { new: true }
+  );
+  if (!reserved) {
+    // Locked: the code is dead, but the row (and its resend window) stays.
+    await OtpRequest.updateOne({ _id: otpRequest._id, otpHash: otpRequest.otpHash }, { $set: { otpHash: null } });
     return res.status(429).json({
       success: false,
       message: 'Too many incorrect attempts. Please request a new OTP.',
     });
   }
 
-  const otpMatches = await bcrypt.compare(cleanOtp, otpRequest.otpHash);
-  if (!otpMatches) {
-    otpRequest.attempts += 1;
-    await otpRequest.save();
+  if (!(await otpMatches(cleanNumber, cleanOtp, otpRequest.otpHash))) {
     return res.status(400).json({
       success: false,
       message: 'Invalid OTP. Please try again.',
     });
   }
 
-  // OTP is single-use — consume it before any further processing.
-  await otpRequest.deleteOne();
+  // Single-use: consumed atomically, so two parallel correct submissions
+  // cannot both sign in on one code.
+  const consumed = await OtpRequest.findOneAndUpdate(
+    { _id: otpRequest._id, otpHash: otpRequest.otpHash },
+    { $set: { otpHash: null, attempts: 0 } }
+  );
+  if (!consumed) {
+    return res.status(400).json({
+      success: false,
+      message: 'OTP expired or not requested. Please request a new one.',
+    });
+  }
 
   let user = await Customer.findOne({
     mobileNumber: cleanNumber,

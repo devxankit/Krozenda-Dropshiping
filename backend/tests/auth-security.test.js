@@ -93,8 +93,12 @@ describe('OTP login (regression: no more universal 123456)', () => {
     const res = await request(app).post('/auth/verify-otp').send({ mobileNumber: number, otp: '000000' });
     expect(res.status).toBe(429);
 
+    // The code is dead — even the right one no longer signs in. The row
+    // itself is kept: it carries the resend window (see Models/OtpRequest).
     const remaining = await OtpRequest.findOne({ mobileNumber: number });
-    expect(remaining).toBeNull();
+    expect(remaining.otpHash).toBeNull();
+    const correct = await request(app).post('/auth/verify-otp').send({ mobileNumber: number, otp: '123456' });
+    expect(correct.status).toBe(400);
   });
 });
 

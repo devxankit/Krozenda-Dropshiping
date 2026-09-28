@@ -6,16 +6,20 @@ const {
   updateFaqStatus,
   deleteFaq,
 } = require('../Controllers/faqController');
-const { protectAdmin } = require('../Middlewares/authMiddleware');
+const { protectAdmin, requirePermission, requireAnyPermission } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
 
+// Same keys as the CMS pages the FAQs are edited alongside.
+const VIEW = requireAnyPermission('admin.marketing.banners', 'admin.marketing.manage');
+const MANAGE = requirePermission('admin.marketing.manage');
+
 router.use(protectAdmin);
 
-router.get('/', listFaqs);
-router.post('/', createFaq);
-router.put('/:id', updateFaq);
-router.patch('/:id/status', updateFaqStatus);
-router.delete('/:id', deleteFaq);
+router.get('/', VIEW, listFaqs);
+router.post('/', MANAGE, createFaq);
+router.put('/:id', MANAGE, updateFaq);
+router.patch('/:id/status', MANAGE, updateFaqStatus);
+router.delete('/:id', MANAGE, deleteFaq);
 
 module.exports = router;

@@ -32,7 +32,7 @@ describe('NoSQL injection', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/token/i);
   });
 
-  knownBug('QA-022', 'an operator payload at admin login is a 400, not an unhandled 500', async () => {
+  test('QA-022 (regression): an operator payload at admin login is a 400, not an unhandled 500', async () => {
     const res = await request(app).post('/admin/auth/login').send({ email: { $ne: null }, password: 'x' });
     expect(res.status).toBe(400);
   });
@@ -125,32 +125,161 @@ describe('production mode: CORS and error disclosure', () => {
 });
 
 describe('brute force and OTP handling', () => {
-  knownBug('QA-010', 'repeated failed admin logins are throttled (429) or locked', async () => {
-    const email = `bf${Date.now()}@test.local`;
-    await User.create({ name: 'BF', email, role: 'admin', isActive: true, password: await bcrypt.hash('Correct#123', 10) });
-    const statuses = [];
-    for (let i = 0; i < 25; i += 1) {
-      statuses.push((await request(app).post('/admin/auth/login').send({ email, password: `wrong${i}` })).status);
+  describe('QA-010 (regression): password sign-in is throttled per account', () => {
+    const LoginThrottle = require('../../Models/LoginThrottle');
+    async function adminWithPassword(password = 'Correct#123') {
+      const email = `bf${Date.now()}${Math.floor(Math.random() * 1e6)}@test.local`;
+      await User.create({ name: 'BF', email, role: 'admin', isActive: true, password: await bcrypt.hash(password, 10) });
+      return email;
     }
-    expect(statuses).toContain(429);
-  }, 60000);
+    const login = (email, password) => request(app).post('/admin/auth/login').send({ email, password });
 
-  knownBug('QA-011', 'requesting a new OTP straight away is throttled — the 5-guess cap must not reset on demand', async () => {
+    test('5 wrong passwords, then 429 with Retry-After — and the right password is refused while locked', async () => {
+      const email = await adminWithPassword();
+      const statuses = [];
+      for (let i = 0; i < 7; i += 1) statuses.push((await login(email, `wrong${i}`)).status);
+      expect(statuses).toEqual([401, 401, 401, 401, 401, 429, 429]);
+      const locked = await login(email, 'Correct#123');
+      expect(locked.status).toBe(429);
+      expect(Number(locked.headers['retry-after'])).toBeGreaterThan(0);
+    }, 60000);
+
+    test('a parallel burst of 30 guesses is held to 5 password checks', async () => {
+      const email = await adminWithPassword();
+      const results = await Promise.all(Array.from({ length: 30 }, (_, i) => login(email, `burst${i}`)));
+      expect(results.filter((r) => r.status === 401)).toHaveLength(5);
+      expect(results.filter((r) => r.status === 429)).toHaveLength(25);
+    }, 60000);
+
+    test('a successful sign-in clears the count', async () => {
+      const email = await adminWithPassword();
+      for (let i = 0; i < 4; i += 1) await login(email, 'nope');
+      expect((await login(email, 'Correct#123')).status).toBe(200);
+      for (let i = 0; i < 4; i += 1) expect((await login(email, 'nope')).status).toBe(401);
+    }, 60000);
+
+    test('an unknown email is throttled the same way (no account enumeration)', async () => {
+      const statuses = [];
+      for (let i = 0; i < 6; i += 1) statuses.push((await login('ghost@test.local', 'x')).status);
+      expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+    }, 60000);
+
+    test('the lock expires with its window', async () => {
+      const email = await adminWithPassword();
+      for (let i = 0; i < 6; i += 1) await login(email, 'nope');
+      await LoginThrottle.updateOne(
+        { key: `admin:${email}` },
+        { $set: { lockedUntil: new Date(Date.now() - 1000), windowStartedAt: new Date(Date.now() - 16 * 60000) } }
+      );
+      expect((await login(email, 'Correct#123')).status).toBe(200);
+    }, 60000);
+
+    test('seller login is throttled too, independently of admin', async () => {
+      const { createVendor } = require('./qaHelpers');
+      const { vendor } = await createVendor({ verificationStatus: 'APPROVED' });
+      const statuses = [];
+      for (let i = 0; i < 6; i += 1) {
+        statuses.push((await request(app).post('/vendor/auth/login').send({ email: vendor.email, password: 'nope' })).status);
+      }
+      expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+      expect((await request(app).post('/vendor/auth/login').send({ email: vendor.email, password: 'secret123' })).status).toBe(429);
+    }, 60000);
+  });
+
+  test('QA-011 (regression): a new OTP straight after the last one is refused (30s cooldown)', async () => {
     const mobileNumber = '9222200011';
     const first = await request(app).post('/auth/send-otp').send({ mobileNumber });
     expect(first.status).toBe(200);
     for (let i = 0; i < 5; i += 1) await request(app).post('/auth/verify-otp').send({ mobileNumber, otp: '000000' });
     const again = await request(app).post('/auth/send-otp').send({ mobileNumber });
     expect(again.status).toBe(429);
+    expect(again.body.code).toBe('OTP_RESEND_COOLDOWN');
+    expect(Number(again.headers['retry-after'])).toBeGreaterThan(0);
   });
 
-  knownBug('QA-013', 'the one-time password is never written to the server log', async () => {
+  test('QA-011: parallel resends cannot slip past the cooldown', async () => {
+    const mobileNumber = '9222200013';
+    const results = await Promise.all(Array.from({ length: 6 }, () => request(app).post('/auth/send-otp').send({ mobileNumber })));
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+  });
+
+  test('QA-011: at most 5 codes per number per hour', async () => {
+    const OtpRequest = require('../../Models/OtpRequest');
+    const mobileNumber = '9222200014';
+    const statuses = [];
+    for (let i = 0; i < 6; i += 1) {
+      // step past the 30s cooldown without waiting for it
+      await OtpRequest.updateOne({ mobileNumber }, { $set: { lastSentAt: new Date(Date.now() - 60000) } });
+      statuses.push((await request(app).post('/auth/send-otp').send({ mobileNumber })).status);
+    }
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
+  });
+
+  test('QA-011: 20 parallel wrong guesses still lock the code after 5', async () => {
+    const OtpRequest = require('../../Models/OtpRequest');
+    const mobileNumber = '9222200015';
+    await request(app).post('/auth/send-otp').send({ mobileNumber });
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => request(app).post('/auth/verify-otp').send({ mobileNumber, otp: '000000' }))
+    );
+    expect(results.filter((r) => r.status === 400)).toHaveLength(5);
+    expect((await OtpRequest.findOne({ mobileNumber })).otpHash).toBeNull();
+  });
+
+  test('bypass (reviewer) numbers are not rate-limited', async () => {
+    for (let i = 0; i < 3; i += 1) {
+      expect((await request(app).post('/auth/send-otp').send({ mobileNumber: '1111111111' })).status).toBe(200);
+    }
+  });
+
+  test('a correct code still signs in, and only once', async () => {
+    const mobileNumber = '9222200016';
+    await request(app).post('/auth/send-otp').send({ mobileNumber });
+    const [a, b] = await Promise.all([
+      request(app).post('/auth/verify-otp').send({ mobileNumber, otp: '123456' }),
+      request(app).post('/auth/verify-otp').send({ mobileNumber, otp: '123456' }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 400]);
+  });
+
+  test('QA-013 (regression): in production the one-time password is never written to the server log', async () => {
+    // isProduction is fixed at module load, so the controller is loaded on
+    // its own under ENV=production, bound to the models this test DB already
+    // has, and its handler called directly.
+    const Customer = require('../../Models/Customer');
+    const OtpRequest = require('../../Models/OtpRequest');
+    const Translation = require('../../Models/Translation');
+    let controller;
+    let sentOtp = null;
+    const saved = process.env.ENV;
+    process.env.ENV = 'production';
+    jest.isolateModules(() => {
+      jest.doMock('../../Models/Customer', () => Customer);
+      jest.doMock('../../Models/OtpRequest', () => OtpRequest);
+      jest.doMock('../../Models/Translation', () => Translation);
+      jest.doMock('../../utils/smsService', () => ({
+        sendOtpSms: jest.fn(async (number, otp) => {
+          sentOtp = otp;
+        }),
+      }));
+      controller = require('../../Controllers/userAuthController');
+    });
+    process.env.ENV = saved;
+
+    const res = { statusCode: 200, body: null, headers: {} };
+    res.status = (code) => ((res.statusCode = code), res);
+    res.json = (body) => ((res.body = body), res);
+    res.set = (k, v) => ((res.headers[k] = v), res);
+
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      const res = await request(app).post('/auth/send-otp').send({ mobileNumber: '9222200012' });
-      const otp = res.body.data?.otp || '123456';
+      await controller.requestOtp({ body: { mobileNumber: '9222200012' } }, res);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.otp).toBeUndefined();
+      expect(sentOtp).toMatch(/^\d{6}$/);
       const logged = spy.mock.calls.map((c) => c.join(' ')).join('\n');
-      expect(logged).not.toContain(otp);
+      expect(logged).not.toContain(sentOtp);
+      expect(logged).not.toContain('9222200012');
     } finally {
       spy.mockRestore();
     }

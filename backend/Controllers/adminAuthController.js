@@ -4,6 +4,7 @@ const User = require('../Models/User');
 const AdminPasswordReset = require('../Models/AdminPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { updateLanguageFor } = require('./languageController');
+const { reserveAttempt, clearAttempts, tooManyAttempts } = require('../utils/loginThrottle');
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — matches ForgotPasswordPage copy.
 const MAX_RESET_ATTEMPTS = 5;
@@ -16,9 +17,14 @@ function generateResetToken() {
 async function login(req, res) {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  // Strings only: an object here (an operator payload with its `$` keys
+  // stripped) used to reach .toLowerCase() and surface as a 500.
+  if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required' });
   }
+
+  const attempt = await reserveAttempt('admin', email);
+  if (!attempt.allowed) return tooManyAttempts(res, attempt.retryAfterSeconds);
 
   const user = await User.findOne({ email: email.toLowerCase().trim(), isDeleted: false })
     .select('+password')
@@ -27,6 +33,7 @@ async function login(req, res) {
   if (!user || !(await user.comparePassword(password))) {
     return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
+  await clearAttempts('admin', email);
 
   if (!user.isActive) {
     return res.status(403).json({ success: false, message: 'Account is deactivated' });
@@ -36,7 +43,9 @@ async function login(req, res) {
   // middleware learns who signed in from here.
   res.locals.auditActor = user;
 
-  const permissions = user.role === 'admin' ? [] : user.roleId?.permissions || [];
+  // Same rule as protectAdmin: a deactivated role grants nothing.
+  const permissions =
+    user.role === 'admin' || !user.roleId || user.roleId.isActive === false ? [] : user.roleId.permissions || [];
 
   const token = signToken('admin', {
     id: user._id,
@@ -161,6 +170,8 @@ async function resetPassword(req, res) {
 
   user.password = password;
   await user.save();
+  // A new password is a fresh start: the sign-in lock goes with the old one.
+  await clearAttempts('admin', normalizedEmail);
   await AdminPasswordReset.deleteOne({ _id: resetRequest._id });
 
   res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
