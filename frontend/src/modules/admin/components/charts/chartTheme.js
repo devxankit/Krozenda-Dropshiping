@@ -12,8 +12,6 @@
 
 export const SERIES = Object.freeze(['#2563eb', '#0d9488', '#7c3aed', '#db2777'])
 
-export const SERIES_SOFT = Object.freeze(['#dbeafe', '#ccfbf1', '#ede9fe', '#fce7f3'])
-
 // Status hues are NOT part of the categorical set — they mean a state, and
 // spending one on "series 3" makes both meanings unreadable.
 export const STATUS = Object.freeze({

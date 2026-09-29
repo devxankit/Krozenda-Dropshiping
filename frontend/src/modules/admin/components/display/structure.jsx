@@ -77,22 +77,6 @@ export function Timeline({ events = [] }) {
   )
 }
 
-// Business-model dot row — shows a parent order's vendor split at a glance.
-export function ModelDots({ models = [], label }) {
-  const COLOR = { marketplace: 'bg-chart-1', dropshipping: 'bg-chart-2', own_stock: 'bg-chart-3' }
-  return (
-    <span className="flex items-center gap-1.5">
-      {models.map((model, index) => (
-        <span
-          key={`${model}-${index}`}
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${COLOR[model] || 'bg-border-strong'}`}
-        />
-      ))}
-      {label && <span className="ml-1 truncate text-xs text-ink-muted">{label}</span>}
-    </span>
-  )
-}
-
 export function RowActions({ items = [] }) {
   return (
     <span className="flex items-center justify-end gap-1">

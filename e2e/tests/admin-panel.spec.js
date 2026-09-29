@@ -3,6 +3,7 @@
 //     Orders → "Delivery unconfirmed", opens it and confirms the delivery,
 //     which releases it to settlement (QA-003 payout hold).
 //  2. The product list pages and searches on the server.
+//  3. A placed order shows up under Invoices and its tax invoice opens.
 
 const { test, expect, API, seed } = require('./fixtures');
 
@@ -70,4 +71,25 @@ test('the product list pages and searches on the server', async ({ page }) => {
   await page.getByPlaceholder('Product name, SKU, brand…').fill('LOAD-26');
   await expect(page.getByText('shoe model 26').first()).toBeVisible();
   await expect.poll(() => pageRequests.some((u) => u.includes('search=LOAD-26'))).toBe(true);
+});
+
+test('a placed order is listed under Invoices and its tax invoice opens', async ({ page, request }) => {
+  const { buyers, productIds } = seed();
+  const b = buyers[4];
+  const buyer = { Authorization: `Bearer ${b.token}` };
+  await request.post(`${API}/user/cart/items`, { headers: buyer, data: { productId: productIds[7], quantity: 1 } });
+  const placed = await request.post(`${API}/user/orders`, { headers: buyer, data: { addressId: b.addressId, paymentMethod: 'COD' } });
+  const orderId = (await placed.json()).data.id;
+  const number = `INV-${orderId.slice(-10).toUpperCase()}`;
+
+  await loginAsAdmin(page);
+  await page.goto('/admin/orders/invoices');
+  await page.getByPlaceholder(/Invoice number/).fill(number);
+  const row = page.getByRole('row', { name: new RegExp(number) });
+  await expect(row).toBeVisible();
+  await row.click();
+
+  await expect(page.getByRole('heading', { name: number })).toBeVisible();
+  await expect(page.getByText('Cash on delivery (not yet collected)').first()).toBeVisible();
+  await expect(page.getByText(/TAX INVOICE|BILL OF SUPPLY/).first()).toBeVisible();
 });

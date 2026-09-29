@@ -1,6 +1,6 @@
 import { BUSINESS_MODEL } from '../../../config/constants'
 import { PRODUCT_TYPE, REVIEW_STATUS } from '../constants'
-import { drop, findOr404, insert, invalid, nextId } from './mutable'
+import { drop, findOr404, invalid } from './mutable'
 
 // Shapes match schemas/catalogSchema.js. Money is in PAISE.
 
@@ -18,104 +18,6 @@ const PRODUCTS = [
   { id: 'prd-11', name: 'Sunrise Wholesale Steel Tumbler, 24-pack', sku: 'KZ-HK-TMB-024', type: PRODUCT_TYPE.WHOLESALE, model: BUSINESS_MODEL.MARKETPLACE, seller: 'Sunrise Traders', category: 'Home & Kitchen › Drinkware', brand: 'Sunrise Steel', price: 720000, stock: 260, status: REVIEW_STATUS.CHANGES_REQUESTED, updatedAt: '2026-08-30T15:06:00+05:30' },
   { id: 'prd-12', name: 'Meher Silk Blend Dupatta', sku: 'KZ-AP-DUP-S', type: PRODUCT_TYPE.VARIABLE, model: BUSINESS_MODEL.MARKETPLACE, seller: 'Bharat Textiles LLP', category: 'Apparel › Ethnic Wear', brand: 'Meher Handloom', price: 89000, stock: 0, status: REVIEW_STATUS.REJECTED, updatedAt: '2026-08-27T13:22:00+05:30' },
 ]
-
-const TAB_MATCHERS = {
-  all: () => true,
-  live: (p) => p.status === REVIEW_STATUS.APPROVED,
-  pending: (p) => [REVIEW_STATUS.SUBMITTED, REVIEW_STATUS.REVIEWING].includes(p.status),
-  changes: (p) => [REVIEW_STATUS.CHANGES_REQUESTED, REVIEW_STATUS.REJECTED].includes(p.status),
-  out_of_stock: (p) => p.stock === 0,
-}
-
-export function productListFixture({ tab = 'all', filters = {}, sort, page = 1, rowsPerPage = 25 }) {
-  const term = (filters.search || '').trim().toLowerCase()
-  let rows = PRODUCTS.filter(TAB_MATCHERS[tab] || TAB_MATCHERS.all)
-
-  if (term) {
-    rows = rows.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.sku.toLowerCase().includes(term) ||
-        p.brand.toLowerCase().includes(term),
-    )
-  }
-  if (filters.model) rows = rows.filter((p) => p.model === filters.model)
-  if (filters.type) rows = rows.filter((p) => p.type === filters.type)
-  if (filters.status) rows = rows.filter((p) => p.status === filters.status)
-
-  if (sort?.key) {
-    const dir = sort.direction === 'asc' ? 1 : -1
-    rows = [...rows].sort((a, b) => (a[sort.key] === b[sort.key] ? 0 : a[sort.key] > b[sort.key] ? dir : -dir))
-  }
-
-  const totalItems = rows.length
-  const totalPages = Math.max(1, Math.ceil(totalItems / rowsPerPage))
-  const start = (page - 1) * rowsPerPage
-
-  return {
-    items: rows.slice(start, start + rowsPerPage),
-    page,
-    rowsPerPage,
-    totalItems,
-    totalPages,
-    tabCounts: Object.fromEntries(
-      Object.entries(TAB_MATCHERS).map(([tab, m]) => [tab, PRODUCTS.filter(m).length]),
-    ),
-  }
-}
-
-export function productDetailFixture(productId) {
-  const summary = PRODUCTS.find((p) => p.id === productId) || PRODUCTS[0]
-
-  return {
-    id: summary.id,
-    name: summary.name,
-    sku: summary.sku,
-    barcode: '8901234567894',
-    type: summary.type,
-    model: summary.model,
-    status: summary.status,
-    seller: { id: 'own-001', name: summary.seller },
-    category: summary.category,
-    brand: { name: summary.brand, status: REVIEW_STATUS.SUBMITTED },
-    description:
-      'Triply construction with a stainless steel core, induction and gas compatible. Supplied with a tempered glass lid.',
-    tax: { hsn: '732393', gstRate: 18, countryOfOrigin: 'India' },
-    moq: 1,
-    priceTiers: [
-      { role: 'retail_customer', label: 'Retail customer', mrp: 149900, price: 119900, minQty: 1, margin: 32.4 },
-      { role: 'wholesaler', label: 'Wholesaler', mrp: 149900, price: 102000, minQty: 25, margin: 20.6 },
-      { role: 'dealer', label: 'Dealer', mrp: 149900, price: 96500, minQty: 50, margin: 16.1 },
-      { role: 'distributor', label: 'Distributor', mrp: 149900, price: 78000, minQty: 100, margin: 3.7 },
-    ],
-    commission: {
-      resolvedFrom: 'category',
-      type: 'percentage',
-      value: 12.5,
-      chain: [
-        { scope: 'product', label: 'Product override', value: null, applies: false },
-        { scope: 'vendor', label: 'Vendor rate', value: null, applies: false },
-        { scope: 'category', label: 'Home & Kitchen', value: 12.5, applies: true },
-        { scope: 'company', label: 'Company rate', value: null, applies: false },
-        { scope: 'default', label: 'Platform default', value: 15, applies: false },
-      ],
-    },
-    inventory: [
-      { bucket: 'Own stock', location: 'Bhiwandi warehouse', onHand: 1840, reserved: 126, available: 1714 },
-      { bucket: 'Own stock', location: 'Hosur warehouse', onHand: 420, reserved: 38, available: 382 },
-    ],
-    approvalHistory: [
-      { label: 'Category approved', at: '12 Aug 2026, 10:04', actor: 'Priya Sharma', reason: null, done: true, tone: 'success' },
-      { label: 'Brand submitted', at: '1 Sep 2026, 09:20', actor: 'Krozenda Own Stock', reason: null, done: true },
-      { label: 'Brand approval', at: null, actor: null, reason: 'Nirvaan Steelworks awaiting review', done: false, tone: 'warning' },
-      { label: 'Product approval', at: null, actor: null, reason: 'Blocked until the brand is approved', done: false },
-      { label: 'Live on storefront', at: null, actor: null, reason: null, done: false },
-    ],
-    issues: [
-      { field: 'Distributor price', message: 'Margin 3.7% is below the 8% floor — raise to ₹818 or record an override' },
-    ],
-  }
-}
 
 const APPROVALS = [
     { id: 'apr-1', kind: 'brand', name: 'Nirvaan Steelworks', context: 'Home & Kitchen', submittedBy: 'Krozenda Own Stock', submittedAt: '1 Sep 2026', waitingDays: 1, blockedBy: null },
@@ -156,37 +58,6 @@ const CATEGORIES = [
       { id: 'cat-4-2', name: 'Spices', depth: 1, productCount: 3260, commissionRate: null, status: REVIEW_STATUS.APPROVED },
       { id: 'cat-5', name: 'Home Décor', depth: 0, productCount: 11110, commissionRate: 15, status: REVIEW_STATUS.APPROVED },
 ]
-
-export function categoryTreeFixture() {
-  return { nodes: CATEGORIES }
-}
-
-export function brandListFixture() {
-  return {
-    items: [
-      { id: 'brd-1', name: 'Nirvaan Steelworks', owner: 'Krozenda Own Stock', productCount: 142, status: REVIEW_STATUS.SUBMITTED, submittedAt: '1 Sep 2026' },
-      { id: 'brd-2', name: 'Aarohi Living', owner: 'Nova Retail Pvt Ltd', productCount: 386, status: REVIEW_STATUS.APPROVED, submittedAt: '4 Jul 2026' },
-      { id: 'brd-3', name: 'Vayu Appliances', owner: 'Arya Manufacturing', productCount: 214, status: REVIEW_STATUS.APPROVED, submittedAt: '18 Jun 2026' },
-      { id: 'brd-4', name: 'Surya Foods', owner: 'Meghna Wholesale', productCount: 508, status: REVIEW_STATUS.APPROVED, submittedAt: '2 May 2026' },
-      { id: 'brd-5', name: 'Meher Handloom', owner: 'Bharat Textiles LLP', productCount: 294, status: REVIEW_STATUS.APPROVED, submittedAt: '21 Apr 2026' },
-      { id: 'brd-6', name: 'Sunrise Steel', owner: 'Sunrise Traders', productCount: 0, status: REVIEW_STATUS.SUBMITTED, submittedAt: '28 Aug 2026' },
-      { id: 'brd-7', name: 'Kritika Mills', owner: 'Kritika Enterprises', productCount: 88, status: REVIEW_STATUS.CHANGES_REQUESTED, submittedAt: '19 Aug 2026' },
-    ],
-  }
-}
-
-const ATTRIBUTES = [
-      { id: 'att-1', name: 'Size', type: 'select', values: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], usedBy: 12840 },
-      { id: 'att-2', name: 'Colour', type: 'select', values: ['Indigo', 'Saffron', 'Ivory', 'Charcoal', 'Olive'], usedBy: 18420 },
-      { id: 'att-3', name: 'Capacity', type: 'select', values: ['0.5 L', '1.2 L', '2 L', '3 L', '5 L'], usedBy: 4210 },
-      { id: 'att-4', name: 'Material', type: 'multiselect', values: ['Stainless steel', 'Cotton', 'Jute', 'Silk blend'], usedBy: 9640 },
-      { id: 'att-5', name: 'Pack size', type: 'number', values: ['6', '12', '24', '48'], usedBy: 2180 },
-      { id: 'att-6', name: 'Star rating', type: 'select', values: ['3 Star', '4 Star', '5 Star'], usedBy: 1420 },
-]
-
-export function attributeListFixture() {
-  return { items: ATTRIBUTES }
-}
 
 const INVENTORY = [
   { id: 'inv-1', name: 'Nirvaan Triply Stainless Steel Kadai, 1.2 L', sku: 'KZ-HK-STL-1200', bucket: 'own_stock', owner: 'Bhiwandi warehouse', onHand: 1840, reserved: 126, available: 1714, daysCover: 42 },
@@ -232,69 +103,6 @@ export function inventoryFixture({ tab = 'all', filters = {} } = {}) {
 // exist yet.
 // ---------------------------------------------------------------------------
 
-const nowIso = () => new Date().toISOString()
-
-export function createProductFixture(body = {}) {
-  const name = String(body.name || '').trim()
-  const sku = String(body.sku || '').trim()
-
-  if (name.length < 3) throw invalid('Give the product a name.')
-  if (!sku) throw invalid('Every product needs a SKU.')
-  if (PRODUCTS.some((product) => product.sku === sku)) throw invalid(`SKU ${sku} is already in use.`)
-
-  const product = {
-    id: nextId('prd'),
-    name,
-    sku,
-    type: body.type || PRODUCT_TYPE.SIMPLE,
-    model: body.model || BUSINESS_MODEL.OWN_STOCK,
-    seller: body.seller || 'Krozenda Own Stock',
-    category: body.category || 'Uncategorised',
-    brand: body.brand || '—',
-    price: Math.round(Number(body.price) || 0),
-    stock: Math.round(Number(body.stock) || 0),
-    // Nothing a vendor submits goes live unreviewed.
-    status: body.status === 'draft' ? REVIEW_STATUS.DRAFT : REVIEW_STATUS.SUBMITTED,
-    updatedAt: nowIso(),
-  }
-  return insert(PRODUCTS, product)
-}
-
-export function updateProductFixture(id, body = {}) {
-  const product = findOr404(PRODUCTS, id)
-
-  if (body.sku && PRODUCTS.some((entry) => entry.sku === body.sku && entry.id !== id)) {
-    throw invalid(`SKU ${body.sku} is already in use.`)
-  }
-
-  Object.assign(product, {
-    name: body.name ?? product.name,
-    sku: body.sku ?? product.sku,
-    category: body.category ?? product.category,
-    brand: body.brand ?? product.brand,
-    price: body.price === undefined ? product.price : Math.round(Number(body.price) || 0),
-    stock: body.stock === undefined ? product.stock : Math.round(Number(body.stock) || 0),
-    updatedAt: nowIso(),
-  })
-  return product
-}
-
-export function setProductStatusFixture(id, status) {
-  const product = findOr404(PRODUCTS, id)
-  product.status = status
-  product.updatedAt = nowIso()
-  return product
-}
-
-export function deleteProductFixture(id) {
-  const product = findOr404(PRODUCTS, id)
-  if (product.stock > 0) {
-    throw invalid('This product still holds stock. Move it to zero before removing the listing.')
-  }
-  drop(PRODUCTS, id)
-  return { id }
-}
-
 /**
  * Approve one queue item. Approving a category unblocks anything that was
  * waiting on it, which is why this walks the rest of the queue afterwards.
@@ -338,78 +146,6 @@ export function rejectQueueItemFixture(id, { reason } = {}) {
   }
 
   return { id, kind: item.kind, name: item.name }
-}
-
-export function createCategoryFixture(body = {}) {
-  const name = String(body.name || '').trim()
-  if (name.length < 2) throw invalid('Give the category a name.')
-  if (CATEGORIES.some((node) => node.name === name)) throw invalid(`${name} already exists.`)
-
-  const node = {
-    id: nextId('cat'),
-    name,
-    depth: Math.max(0, Math.round(Number(body.depth) || 0)),
-    productCount: 0,
-    commissionRate: body.commissionRate === '' || body.commissionRate == null ? null : Number(body.commissionRate),
-    status: REVIEW_STATUS.APPROVED,
-  }
-  CATEGORIES.push(node)
-  return node
-}
-
-export function updateCategoryFixture(id, body = {}) {
-  const node = findOr404(CATEGORIES, id)
-  const rate = body.commissionRate
-
-  Object.assign(node, {
-    name: body.name ?? node.name,
-    commissionRate: rate === '' || rate == null ? null : Number(rate),
-  })
-  return node
-}
-
-export function deleteCategoryFixture(id) {
-  const node = findOr404(CATEGORIES, id)
-  // Deleting a category that still holds listings orphans them.
-  if (node.productCount > 0) {
-    throw invalid(`${node.name} still holds ${node.productCount} products.`)
-  }
-  drop(CATEGORIES, id)
-  return { id }
-}
-
-export function createAttributeFixture(body = {}) {
-  const name = String(body.name || '').trim()
-  if (name.length < 2) throw invalid('Give the attribute a name.')
-  if (ATTRIBUTES.some((entry) => entry.name === name)) throw invalid(`${name} already exists.`)
-
-  const attribute = {
-    id: nextId('att'),
-    name,
-    type: body.type || 'select',
-    values: (body.values || []).map((value) => String(value).trim()).filter(Boolean),
-    usedBy: 0,
-  }
-  if (attribute.values.length === 0) throw invalid('An attribute needs at least one value.')
-  return insert(ATTRIBUTES, attribute)
-}
-
-export function updateAttributeFixture(id, body = {}) {
-  const attribute = findOr404(ATTRIBUTES, id)
-  const values = (body.values ?? attribute.values).map((value) => String(value).trim()).filter(Boolean)
-  if (values.length === 0) throw invalid('An attribute needs at least one value.')
-
-  Object.assign(attribute, { name: body.name ?? attribute.name, type: body.type ?? attribute.type, values })
-  return attribute
-}
-
-export function deleteAttributeFixture(id) {
-  const attribute = findOr404(ATTRIBUTES, id)
-  if (attribute.usedBy > 0) {
-    throw invalid(`${attribute.name} is used by ${attribute.usedBy} products.`)
-  }
-  drop(ATTRIBUTES, id)
-  return { id }
 }
 
 /** A stock correction. `available` is on-hand less what carts have reserved. */

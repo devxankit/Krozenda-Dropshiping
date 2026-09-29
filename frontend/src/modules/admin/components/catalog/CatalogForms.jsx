@@ -1,7 +1,6 @@
-import { useId, useMemo, useState } from 'react'
-import { Avatar, Badge, Button, Checkbox, Icon, Input, Modal, Select, SegmentedControl, Textarea } from '../../../../components/ui'
+import { useMemo, useState } from 'react'
+import { Badge, Checkbox, Icon, Input, Select, SegmentedControl, Textarea } from '../../../../components/ui'
 import { FormDrawer } from '../forms'
-import { InlineAlert } from '../feedback'
 import { ConfirmDialog } from '../overlay/ConfirmDialog'
 import { ProductBarcode } from '../../../../components/common/ProductBarcode'
 import { GstTypeField } from '../../../../components/catalog/ProductAdvancedFields'
@@ -13,13 +12,7 @@ import {
   commissionPayload,
   initialCommission,
 } from '../commission/CommissionField'
-import {
-  attributeWriteSchema,
-  brandWriteSchema,
-  categoryWriteSchema,
-  inventoryAdjustSchema,
-  productWriteSchema,
-} from '../../schemas/catalogSchema'
+import { brandWriteSchema, categoryWriteSchema, inventoryAdjustSchema, productWriteSchema } from '../../schemas/catalogSchema'
 
 export function CategoryFormDrawer({ isOpen, onClose, category, writer }) {
   const editing = Boolean(category)
@@ -348,73 +341,6 @@ export function BrandFormDrawer({ isOpen, onClose, brand, writer }) {
   )
 }
 
-export function AttributeFormDrawer({ isOpen, onClose, attribute, writer }) {
-  const editing = Boolean(attribute)
-  const [form, setForm] = useState(() => ({
-    name: attribute?.name ?? '',
-    type: attribute?.type ?? 'select',
-    values: (attribute?.values ?? []).join('\n'),
-  }))
-  const [issue, setIssue] = useState(null)
-
-  const mutation = editing ? writer.update : writer.create
-
-  function handleSubmit(event) {
-    event.preventDefault()
-    const payload = {
-      name: form.name,
-      type: form.type,
-      values: form.values.split('\n').map((value) => value.trim()).filter(Boolean),
-    }
-    const result = attributeWriteSchema.safeParse(payload)
-    if (!result.success) {
-      setIssue(result.error.issues[0].message)
-      return
-    }
-    setIssue(null)
-    mutation.run(editing ? { id: attribute.id, ...payload } : payload)
-  }
-
-  return (
-    <FormDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editing ? `Edit ${attribute.name}` : 'New attribute'}
-      description="The option set a Variable product builds its variants from."
-      submitLabel={editing ? 'Save changes' : 'Create attribute'}
-      isSubmitting={mutation.isSubmitting}
-      error={issue ? { message: issue } : mutation.error}
-      onSubmit={handleSubmit}
-    >
-      <Input
-        id="attribute-name"
-        label="Name"
-        required
-        placeholder="Size, Colour, Capacity…"
-        value={form.name}
-        onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))}
-      />
-      <Select
-        id="attribute-type"
-        label="Type"
-        options={TYPE_OPTIONS}
-        value={form.type}
-        onChange={(event) => setForm((c) => ({ ...c, type: event.target.value }))}
-      />
-      <Textarea
-        id="attribute-values"
-        label="Values"
-        rows={6}
-        required
-        placeholder={'One per line\nS\nM\nL'}
-        description="One value per line."
-        value={form.values}
-        onChange={(event) => setForm((c) => ({ ...c, values: event.target.value }))}
-      />
-    </FormDrawer>
-  )
-}
-
 export function InventoryAdjustDialog({ isOpen, onClose, row, adjust }) {
   const [onHand, setOnHand] = useState(String(row.onHand))
   const [reason, setReason] = useState('')
@@ -475,15 +401,6 @@ export function InventoryAdjustDialog({ isOpen, onClose, row, adjust }) {
 
 const MAX_PRODUCT_IMAGES = 5
 
-const DISCOUNT_TYPE_OPTIONS = [
-  { id: 'percentage', label: '% Percentage' },
-  { id: 'flat', label: '₹ Flat amount' },
-]
-
-function round2(value) {
-  return Math.round(value * 100) / 100
-}
-
 // Strips anything that isn't a digit or the first "." — so typing "-" or
 // pasting "1-2e5" can never leave a negative or scientific-notation value.
 function sanitizeDecimalInput(raw) {
@@ -495,15 +412,6 @@ function sanitizeDecimalInput(raw) {
 
 function sanitizeIntegerInput(raw) {
   return raw.replace(/[^0-9]/g, '')
-}
-
-// Only rewrites the text when the number actually exceeds the cap, so a
-// trailing "." typed mid-decimal (e.g. "12.") isn't stripped on every keystroke.
-function clampDecimalText(text, max) {
-  if (text === '' || text === '.') return text
-  const n = Number(text)
-  if (!Number.isFinite(n) || n <= max) return text
-  return String(max)
 }
 
 function blockNegativeKeys(event) {
@@ -1160,7 +1068,3 @@ export function ProductFormDrawer({ isOpen, onClose, product, categories = [], b
     </FormDrawer>
   )
 }
-
-// Alias for backward compatibility
-export const ProductFormModal = ProductFormDrawer
-

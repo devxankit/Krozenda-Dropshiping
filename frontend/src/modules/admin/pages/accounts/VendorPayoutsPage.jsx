@@ -9,10 +9,8 @@ import {
   useVendorPayoutSummaryController,
 } from '../../controllers/useAccountsController'
 
-// Accounts MVP — vendor payouts. Deliberately separate from the existing
-// Accounting module's Settlements/Payouts screens: no settlement batches, no
-// commission calc, just "what's owed vs what's been paid" per vendor and a
-// manual log of payments made.
+// Accounts — vendor payouts: "what's owed vs what's been paid" per vendor and
+// a log of payments made.
 
 const METHODS = [
   { value: 'BANK_TRANSFER', label: 'Bank Transfer' },

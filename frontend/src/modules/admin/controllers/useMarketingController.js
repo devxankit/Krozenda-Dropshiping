@@ -199,8 +199,3 @@ export const useFaqWriteController = ({ onSaved } = {}) => ({
     success: 'FAQ removed',
   }),
 })
-
-export const useReportCatalogueController = () => useResource(['admin', 'reports'], service.fetchReportCatalogue)
-
-export const useReportRunController = (reportKey) =>
-  useResource(['admin', 'reports', reportKey], () => service.fetchReportRun(reportKey), Boolean(reportKey))

@@ -11,7 +11,8 @@ const {
   listCancellations,
   resolveCancellationRefund,
 } = require('../Controllers/adminFulfilmentController');
-const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
+const { listInvoices, getInvoice } = require('../Controllers/adminInvoiceController');
+const { protectAdmin, requirePermission, requireAnyPermission } = require('../Middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -21,6 +22,10 @@ router.get('/sub-orders', requirePermission('admin.orders.sub_orders'), listSubO
 router.get('/shipments', requirePermission('admin.orders.shipments'), listShipments);
 router.get('/rto', requirePermission('admin.returns.manage'), listRtos);
 router.get('/cancellations', requirePermission('admin.returns.manage'), listCancellations);
+// Same gate as the sidebar's Invoices item: its own key, or order view.
+const canViewInvoices = requireAnyPermission('admin.orders.invoices', 'admin.orders.view');
+router.get('/invoices', canViewInvoices, listInvoices);
+router.get('/invoices/:id', canViewInvoices, getInvoice);
 
 router.post('/fulfilment/sub-orders/:id/advance', requirePermission('admin.orders.sub_orders'), advanceSubOrder);
 router.post('/fulfilment/sub-orders/:id/cancel', requirePermission('admin.orders.sub_orders'), cancelSubOrder);

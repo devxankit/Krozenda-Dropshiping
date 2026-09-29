@@ -120,65 +120,6 @@ export const integrationListSchema = z.object({
       environment: z.string(),
       lastEventAt: z.string().nullable(),
       ownedBy: z.enum(['platform', 'client']),
-      settingsPath: z.string(),
-    }),
-  ),
-})
-
-export const securitySettingsSchema = z.object({
-  policies: z.array(
-    z.object({ key: z.string(), label: z.string(), description: z.string(), enabled: z.boolean() }),
-  ),
-  sessionMaxHours: z.number().int(),
-  passwordMinLength: z.number().int(),
-  lockoutAttempts: z.number().int(),
-  ipAllowlist: z.array(z.string()),
-  recentSignIns: z.array(
-    z.object({
-      id: z.string(),
-      person: z.string(),
-      at: z.string(),
-      ip: z.string(),
-      location: z.string(),
-      device: z.string(),
-      outcome: z.enum(['success', 'failed', 'locked']),
-    }),
-  ),
-})
-
-export const webhookListSchema = z.object({
-  keys: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-      prefix: z.string(),
-      createdAt: z.string(),
-      lastUsedAt: z.string().nullable(),
-      scopes: z.array(z.string()),
-    }),
-  ),
-  endpoints: z.array(
-    z.object({
-      id: z.string(),
-      url: z.string(),
-      events: z.array(z.string()),
-      status: z.enum(['healthy', 'failing', 'disabled']),
-      lastDeliveryAt: z.string().nullable(),
-      failures24h: z.number().int(),
-    }),
-  ),
-})
-
-export const policySettingsSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      version: z.string(),
-      effectiveFrom: z.string(),
-      acceptedBy: z.number().int(),
-      pendingAcceptance: z.number().int(),
-      requiresReacceptance: z.boolean(),
     }),
   ),
 })

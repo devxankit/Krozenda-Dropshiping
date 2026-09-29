@@ -17,7 +17,7 @@ export function shellSummaryFixture() {
         title: '2 payouts failed',
         body: 'Nova Retail and Sunrise Traders — bank details need updating before the next batch.',
         at: '18 minutes ago',
-        to: ADMIN_ROUTES.SETTLEMENTS,
+        to: ADMIN_ROUTES.ACCOUNTS_PAYOUTS,
         read: false,
       },
       {

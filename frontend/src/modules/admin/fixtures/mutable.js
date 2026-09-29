@@ -15,17 +15,6 @@ export function nextId(prefix) {
   return `${prefix}_${next}`
 }
 
-/** Human reference numbers: JV-0043, EXP-0112. */
-export function nextRef(prefix, existing = [], width = 4) {
-  const highest = existing.reduce((top, value) => {
-    const digits = Number(String(value).replace(/\D/g, ''))
-    return Number.isFinite(digits) && digits > top ? digits : top
-  }, 0)
-  return `${prefix}-${String(highest + 1).padStart(width, '0')}`
-}
-
-export const todayIso = () => new Date().toISOString().slice(0, 10)
-
 /** Newest first, matching how every list in the panel is ordered. */
 export function insert(collection, row) {
   collection.unshift(row)

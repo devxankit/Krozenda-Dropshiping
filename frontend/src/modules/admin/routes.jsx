@@ -3,22 +3,18 @@ import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { RoleGuard } from '../../routes/RoleGuard'
 import { useAuthStore } from '../../lib/authStore'
 import { LogisticsSettingsPage } from './pages/system/LogisticsSettingsPage'
-import { CarrierAccountsPage, CarrierShipmentsPage } from './pages/fulfilment/CarrierShipmentsPage'
+import { CarrierShipmentsPage } from './pages/fulfilment/CarrierShipmentsPage'
 import { ADMIN_ROUTES } from '../../config/routes'
 import { ADMIN_PERMISSIONS } from './constants'
 import { AdminLayout } from './components/shell'
 import { PageSkeleton } from './components/feedback'
-import { PLACEHOLDER_SCREENS } from './lib/placeholderScreens'
 import { ForbiddenPage } from './pages/ForbiddenPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
-import { ShowcasePage } from './pages/ShowcasePage'
 import { ProductsPage } from './pages/catalog/ProductsPage'
 import { ProductDetailPage } from './pages/catalog/ProductDetailPage'
 import { ApprovalsPage } from './pages/catalog/ApprovalsPage'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { BrandsPage } from './pages/catalog/BrandsPage'
-import { AttributesPage } from './pages/catalog/AttributesPage'
 import { InventoryPage } from './pages/catalog/InventoryPage'
 import { CjSettingsPage } from './pages/cj/CjSettingsPage'
 import { CjDashboardPage } from './pages/cj/CjDashboardPage'
@@ -32,7 +28,6 @@ import { CjDisputesPage } from './pages/cj/CjDisputesPage'
 import { CjSyncLogsPage } from './pages/cj/CjSyncLogsPage'
 import { OrdersPage } from './pages/orders/OrdersPage'
 import { OrderDetailPage } from './pages/orders/OrderDetailPage'
-import { SubOrderDetailPage } from './pages/fulfilment/SubOrderDetailPage'
 import { ReturnsPage } from './pages/fulfilment/ReturnsPage'
 import { ReturnDetailPage } from './pages/fulfilment/ReturnDetailPage'
 import { InvoicesPage } from './pages/fulfilment/InvoicesPage'
@@ -43,21 +38,7 @@ import { KycQueuePage } from './pages/people/KycQueuePage'
 import { KycReviewPage } from './pages/people/KycReviewPage'
 import { RolesManagementPage } from './pages/people/RolesManagementPage'
 import { UserManagementPage } from './pages/people/UserManagementPage'
-import { TransactionsPage, RefundsPage } from './pages/finance/FinanceListPages'
-import { SettlementsPage, VendorLedgersPage } from './pages/finance/SettlementListPages'
-import { SettlementBatchPage } from './pages/finance/SettlementBatchPage'
-import { VendorStatementPage } from './pages/finance/VendorStatementPage'
 import { CommissionRulesPage } from './pages/finance/RulesPages'
-import {
-  AccountingTransactionsPage,
-  AccountingTransactionDetailPage,
-} from './pages/accounting/TransactionsPage'
-import { SellerLedgerListPage, SellerLedgerDetailPage } from './pages/accounting/SellerLedgerPage'
-import { CommissionsPage } from './pages/accounting/CommissionsPage'
-import { AccountingSettlementsPage, AccountingSettlementDetailPage } from './pages/accounting/SettlementsPage'
-import { PayoutsPage, PayoutDetailPage } from './pages/accounting/PayoutsPage'
-import { AccountingRefundsPage } from './pages/accounting/RefundsPage'
-import { AccountingReportsPage, AccountingReportRunnerPage } from './pages/accounting/ReportsPage'
 import { AccountsDashboardPage } from './pages/accounts/AccountsDashboardPage'
 import { VendorPayoutsPage } from './pages/accounts/VendorPayoutsPage'
 import { TransactionsPage as AccountsTransactionsPage } from './pages/accounts/TransactionsPage'
@@ -65,16 +46,9 @@ import { LedgerPage } from './pages/accounts/LedgerPage'
 import { CouponsPage, CampaignsPage, ReviewsPage } from './pages/marketing/MarketingListPages'
 import { CmsPagesPage } from './pages/marketing/ContentPages'
 import { BannersPage } from './pages/marketing/BannersPage'
-import { ReportsPage, ReportRunnerPage } from './pages/reports/ReportPages'
+import { ReportsPage } from './pages/reports/ReportPages'
 import { BusinessRulesPage } from './pages/system/BusinessRulesPage'
-import {
-  GeneralSettingsPage,
-  TaxSettingsPage,
-  PoliciesPage,
-  NotificationSettingsPage,
-  IntegrationHealthPage,
-  ApiWebhooksPage,
-} from './pages/system/SettingsPages'
+import { GeneralSettingsPage, TaxSettingsPage, IntegrationHealthPage } from './pages/system/SettingsPages'
 import { AuditLogPage, BackupsPage, SupportTicketsPage, AdminProfilePage } from './pages/system/SystemPages'
 import { SupportTicketDetailPage } from './pages/system/SupportTicketDetailPage'
 import { LoginPage } from './pages/auth/LoginPage'
@@ -100,14 +74,6 @@ const RevenuePage = lazy(() =>
 )
 const CustomerAnalyticsPage = lazy(() =>
   import('./pages/analytics/CustomerAnalyticsPage').then((m) => ({ default: m.CustomerAnalyticsPage })),
-)
-const FinanceOverviewPage = lazy(() =>
-  import('./pages/finance/FinanceOverviewPage').then((m) => ({ default: m.FinanceOverviewPage })),
-)
-const AccountingOverviewPage = lazy(() =>
-  import('./pages/accounting/AccountingOverviewPage').then((m) => ({
-    default: m.AccountingOverviewPage,
-  })),
 )
 
 // Paths in config/routes.js are absolute; this router is mounted at /admin,
@@ -211,45 +177,26 @@ export default function AdminRoutes() {
                 }
               />
 
-              {/* Catalog. Product create/edit happens in a drawer (on the list
-                and on the detail screen); PRODUCT_NEW stays registered,
-                redirecting back to the list, so old links don't 404. */}
+              {/* Catalog. Product create/edit and CSV import happen in drawers
+                and modals on the list and detail screens. */}
               <Route path={rel(ADMIN_ROUTES.PRODUCTS)} element={<ProductsPage />} />
-              <Route
-                path={rel(ADMIN_ROUTES.PRODUCT_NEW)}
-                element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />}
-              />
               <Route
                 path={rel(ADMIN_ROUTES.PRODUCT_DETAIL)}
                 element={<ProductDetailPage />}
               />
               <Route path={rel(ADMIN_ROUTES.CATALOG_APPROVALS)} element={<ApprovalsPage />} />
-              {/* CSV import happens in a modal on the Products screen; the old
-                  URL stays registered so bookmarks land there. */}
-              <Route
-                path={rel(ADMIN_ROUTES.CATALOG_IMPORT)}
-                element={<Navigate to={ADMIN_ROUTES.PRODUCTS} replace />}
-              />
               <Route path={rel(ADMIN_ROUTES.CATEGORIES)} element={<CategoriesPage />} />
               <Route path={rel(ADMIN_ROUTES.BRANDS)} element={<BrandsPage />} />
-              <Route path={rel(ADMIN_ROUTES.ATTRIBUTES)} element={<AttributesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVENTORY)} element={<InventoryPage />} />
 
               {/* Orders — the reference list + detail pair every other list
                 and detail screen is assembled the same way. */}
               <Route path={rel(ADMIN_ROUTES.ORDERS)} element={<OrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.ORDER_DETAIL)} element={<OrderDetailPage />} />
-              {/* Sales is four screens: Orders, Shipments, Returns, Invoices.
-                The older lists these replaced redirect to their successor. */}
-              <Route path={rel(ADMIN_ROUTES.SUB_ORDERS)} element={<Navigate to={ADMIN_ROUTES.ORDERS} replace />} />
-              <Route path={rel(ADMIN_ROUTES.SUB_ORDER_DETAIL)} element={<SubOrderDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.SHIPMENTS)} element={<Navigate to={ADMIN_ROUTES.CARRIER_SHIPMENTS} replace />} />
+              {/* Sales is four screens: Orders, Shipments, Returns, Invoices. */}
               <Route path={rel(ADMIN_ROUTES.CARRIER_SHIPMENTS)} element={<CarrierShipmentsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CARRIER_ACCOUNTS)} element={<CarrierAccountsPage />} />
-              <Route path={rel(ADMIN_ROUTES.RTO)} element={<Navigate to={ADMIN_ROUTES.CARRIER_SHIPMENTS} replace />} />
               <Route path={rel(ADMIN_ROUTES.RETURNS)} element={<ReturnsPage />} />
               <Route path={rel(ADMIN_ROUTES.RETURN_DETAIL)} element={<ReturnDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.CANCELLATIONS)} element={<Navigate to={ADMIN_ROUTES.ORDERS} replace />} />
               <Route path={rel(ADMIN_ROUTES.INVOICES)} element={<InvoicesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVOICE_DETAIL)} element={<InvoiceDetailPage />} />
 
@@ -265,82 +212,19 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.CJ_SYNC_LOGS)} element={<CjSyncLogsPage />} />
               <Route path={rel(ADMIN_ROUTES.CJ_SETTINGS)} element={<CjSettingsPage />} />
 
-              {/* People. The customer, B2B, partner, company and channel lists
-                are the same screen with a different default filter. */}
+              {/* People */}
               <Route path={rel(ADMIN_ROUTES.CUSTOMERS)} element={<CustomersPage />} />
-              <Route path={rel(ADMIN_ROUTES.B2B_BUYERS)} element={<CustomersPage />} />
               <Route path={rel(ADMIN_ROUTES.CUSTOMER_DETAIL)} element={<CustomersPage />} />
               <Route path={rel(ADMIN_ROUTES.SELLERS)} element={<VendorsPage />} />
               <Route path={rel(ADMIN_ROUTES.SELLER_DETAIL)} element={<VendorsPage />} />
-              <Route path={rel(ADMIN_ROUTES.PARTNERS)} element={<VendorsPage />} />
-              <Route path={rel(ADMIN_ROUTES.PARTNER_DETAIL)} element={<VendorsPage />} />
-              <Route path={rel(ADMIN_ROUTES.COMPANIES)} element={<VendorsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CHANNEL_PARTNERS)} element={<VendorsPage />} />
               <Route path={rel(ADMIN_ROUTES.KYC_QUEUE)} element={<KycQueuePage />} />
               <Route path={rel(ADMIN_ROUTES.KYC_REVIEW)} element={<KycReviewPage />} />
               <Route path={rel(ADMIN_ROUTES.USER_MANAGEMENT)} element={<UserManagementPage />} />
               <Route path={rel(ADMIN_ROUTES.ROLES)} element={<RolesManagementPage />} />
 
-              {/* Finance & accounting */}
-              <Route
-                path={rel(ADMIN_ROUTES.FINANCE_OVERVIEW)}
-                element={
-                  <Suspense fallback={<ChunkFallback />}>
-                    <FinanceOverviewPage />
-                  </Suspense>
-                }
-              />
-              <Route path={rel(ADMIN_ROUTES.TRANSACTIONS)} element={<TransactionsPage />} />
-              <Route path={rel(ADMIN_ROUTES.REFUNDS)} element={<RefundsPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTLEMENTS)} element={<SettlementsPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTLEMENT_BATCH)} element={<SettlementBatchPage />} />
-              <Route path={rel(ADMIN_ROUTES.VENDOR_LEDGERS)} element={<VendorLedgersPage />} />
-              <Route path={rel(ADMIN_ROUTES.VENDOR_LEDGER_DETAIL)} element={<VendorStatementPage />} />
               <Route path={rel(ADMIN_ROUTES.COMMISSION_RULES)} element={<CommissionRulesPage />} />
 
-              {/* Accounting — the marketplace money trail. Eight screens plus
-                their detail views. */}
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING)}
-                element={
-                  <Suspense fallback={<ChunkFallback />}>
-                    <AccountingOverviewPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_TRANSACTIONS)}
-                element={<AccountingTransactionsPage />}
-              />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_TRANSACTION_DETAIL)}
-                element={<AccountingTransactionDetailPage />}
-              />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER)} element={<SellerLedgerListPage />} />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_SELLER_LEDGER_DETAIL)}
-                element={<SellerLedgerDetailPage />}
-              />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_COMMISSIONS)} element={<CommissionsPage />} />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_SETTLEMENTS)}
-                element={<AccountingSettlementsPage />}
-              />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_SETTLEMENT_DETAIL)}
-                element={<AccountingSettlementDetailPage />}
-              />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_PAYOUTS)} element={<PayoutsPage />} />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_PAYOUT_DETAIL)} element={<PayoutDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_REFUNDS)} element={<AccountingRefundsPage />} />
-              <Route path={rel(ADMIN_ROUTES.ACCOUNTING_REPORTS)} element={<AccountingReportsPage />} />
-              <Route
-                path={rel(ADMIN_ROUTES.ACCOUNTING_REPORT_DETAIL)}
-                element={<AccountingReportRunnerPage />}
-              />
-
-              {/* Accounts MVP — separate, minimal money screens (not the
-                Accounting module above). */}
+              {/* Accounts — order-level financials, vendor payouts, ledger. */}
               <Route path={rel(ADMIN_ROUTES.ACCOUNTS_DASHBOARD)} element={<AccountsDashboardPage />} />
               <Route path={rel(ADMIN_ROUTES.ACCOUNTS_PAYOUTS)} element={<VendorPayoutsPage />} />
               <Route path={rel(ADMIN_ROUTES.ACCOUNTS_TRANSACTIONS)} element={<AccountsTransactionsPage />} />
@@ -353,45 +237,22 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.CAMPAIGNS)} element={<CampaignsPage />} />
               <Route path={rel(ADMIN_ROUTES.REVIEWS)} element={<ReviewsPage />} />
               <Route path={rel(ADMIN_ROUTES.REPORTS)} element={<ReportsPage />} />
-              <Route path={rel(ADMIN_ROUTES.REPORT_RUNNER)} element={<ReportRunnerPage />} />
 
               {/* Settings & system */}
               <Route path="settings" element={<Navigate to={ADMIN_ROUTES.SETTINGS_GENERAL} replace />} />
-              <Route path="payments" element={<Navigate to={ADMIN_ROUTES.SETTINGS_PAYMENTS} replace />} />
-              <Route path="payment-methods" element={<Navigate to={ADMIN_ROUTES.SETTINGS_PAYMENTS} replace />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_GENERAL)} element={<GeneralSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_BUSINESS_RULES)} element={<BusinessRulesPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_TAXES)} element={<TaxSettingsPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTINGS_POLICIES)} element={<PoliciesPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_PAYMENTS)} element={<GeneralSettingsPage defaultTab="payments" />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_LOGISTICS)} element={<LogisticsSettingsPage />} />
-              <Route path={rel(ADMIN_ROUTES.SETTINGS_NOTIFICATIONS)} element={<NotificationSettingsPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_INTEGRATIONS)} element={<IntegrationHealthPage />} />
               <Route path={rel(ADMIN_ROUTES.SETTINGS_SECURITY)} element={<GeneralSettingsPage defaultTab="security" />} />
-              <Route path={rel(ADMIN_ROUTES.SETTINGS_API_WEBHOOKS)} element={<ApiWebhooksPage />} />
               <Route path={rel(ADMIN_ROUTES.AUDIT_LOGS)} element={<AuditLogPage />} />
               <Route path={rel(ADMIN_ROUTES.BACKUPS)} element={<BackupsPage />} />
               <Route path={rel(ADMIN_ROUTES.SUPPORT_TICKETS)} element={<SupportTicketsPage />} />
               <Route path={rel(ADMIN_ROUTES.SUPPORT_TICKET_DETAIL)} element={<SupportTicketDetailPage />} />
               <Route path={rel(ADMIN_ROUTES.PROFILE)} element={<AdminProfilePage />} />
 
-              {/* Routes whose screen lands in a later phase. Navigation,
-                breadcrumbs and the command palette all work today. */}
-              {PLACEHOLDER_SCREENS.map((screen) => (
-                <Route
-                  key={screen.path}
-                  path={rel(screen.path)}
-                  element={
-                    <PlaceholderPage
-                      title={screen.title}
-                      description={screen.description}
-                      phase={screen.phase}
-                    />
-                  }
-                />
-              ))}
-
-              <Route path={rel(ADMIN_ROUTES.SHOWCASE)} element={<ShowcasePage />} />
               <Route path={rel(ADMIN_ROUTES.FORBIDDEN)} element={<ForbiddenPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

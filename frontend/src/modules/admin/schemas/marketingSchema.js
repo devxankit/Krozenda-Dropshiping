@@ -41,28 +41,6 @@ export const couponSchema = z.object({
 
 export const couponListSchema = paged(couponSchema)
 
-export const bannerSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  productId: z.string().nullable().optional(),
-  productName: z.string().optional(),
-  image: z.string().nullable().optional(),
-  placement: z.enum(['hero', 'promo', 'strip']).optional(),
-  subtitle: z.string().optional(),
-  tag: z.string().optional(),
-  icon: z.string().optional(),
-  theme: z.string().optional(),
-  ctaPath: z.string().optional(),
-  status: z.enum(['active', 'inactive']),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-}).passthrough()
-
-export const bannerListSchema = z.object({
-  items: z.array(bannerSchema),
-  stats: z.record(z.string(), z.any()).optional(),
-}).passthrough()
-
 export const bannerWriteSchema = z.object({
   title: z.string().min(2, 'Give the banner a title'),
   productId: z.string().nullable().optional(),
@@ -74,41 +52,6 @@ export const bannerWriteSchema = z.object({
   icon: z.string().optional(),
   theme: z.string().optional(),
   ctaPath: z.string().optional(),
-})
-
-export const cmsPageSchema = z
-  .object({
-    id: z.string(),
-    _id: z.string().optional(),
-    title: z.string(),
-    slug: z.string(),
-    content: z.string().optional().default(''),
-    version: z.string().optional().default('v1.0'),
-    updatedAt: z.string().optional(),
-    updatedBy: z.string().optional(),
-    status: z.enum(['draft', 'published', 'archived']).default('published'),
-    requiresAcceptance: z.boolean().default(false),
-    metaTitle: z.string().optional(),
-    metaDescription: z.string().optional(),
-  })
-  .passthrough()
-
-export const cmsPageListSchema = z
-  .object({
-    items: z.array(cmsPageSchema),
-    stats: z.record(z.string(), z.any()).optional(),
-  })
-  .passthrough()
-
-export const cmsPageWriteSchema = z.object({
-  title: z.string().min(2, 'Page title is required'),
-  slug: z.string().optional(),
-  content: z.string().optional().default(''),
-  version: z.string().optional().default('v1.0'),
-  status: z.enum(['draft', 'published', 'archived']).default('published'),
-  requiresAcceptance: z.boolean().default(false),
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
 })
 
 export const campaignListSchema = paged(
@@ -142,39 +85,3 @@ export const reviewListSchema = paged(
     flagged: z.boolean(),
   }),
 )
-
-export const reportCatalogueSchema = z.object({
-  groups: z.array(
-    z.object({
-      label: z.string(),
-      reports: z.array(
-        z.object({
-          key: z.string(),
-          name: z.string(),
-          description: z.string(),
-          formats: z.array(z.string()),
-          lastRunAt: z.string().nullable(),
-        }),
-      ),
-    }),
-  ),
-})
-
-export const reportRunSchema = z.object({
-  key: z.string(),
-  name: z.string(),
-  description: z.string(),
-  formats: z.array(z.string()),
-  parameters: z.array(
-    z.object({
-      key: z.string(),
-      label: z.string(),
-      type: z.enum(['date-range', 'select', 'multiselect']),
-      options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-      value: z.string(),
-    }),
-  ),
-  columns: z.array(z.object({ key: z.string(), label: z.string(), align: z.string().optional() })),
-  rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
-  rowCount: z.number().int(),
-})

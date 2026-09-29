@@ -103,23 +103,17 @@ drift by a few paise every thousand orders.
 - **A parent order has no status of its own.** It has N sub-orders that each
   carry one; the orders list shows a derived roll-up (`FULFILMENT_STATUS`), and
   the "partly" values are the normal case, not an edge case.
-- **The accounting statements are computed from one chart of accounts**
-  (`fixtures/finance.js`). The P&L subtotals, balance sheet equity, trial
-  balance columns and settlement nets are all derived, so a changed line cannot
-  silently break a total.
 - **RTO is not a return.** The no-return policy does not cover a consignment
   that never reached the buyer, so it has its own workflow, cost bearer and
   settlement reversal.
 - **DLT registration gates SMS.** A template without an approved DLT id cannot
-  send, and registration is client-owned and takes 3–10 working days. The
-  templates screen shows that state rather than pretending the text is freely
-  editable.
+  send, and registration is client-owned and takes 3–10 working days.
 
 ---
 
 ## Bundle
 
-Chart-bearing screens (dashboard, four analytics, finance overview) are
+Chart-bearing screens (dashboard, four analytics, revenue) are
 `lazy()`-loaded so recharts (~400 kB) is a separate chunk. A session that goes
 straight to Orders or KYC never downloads it.
 

@@ -6,11 +6,7 @@
 // may inline a ternary over a status string; it looks up one of these maps.
 
 import { ADMIN_ROUTES } from '../../config/routes'
-import {
-  BUSINESS_MODEL,
-  ORDER_STATUS,
-  ORDER_STATUS_EXCEPTION,
-} from '../../config/constants'
+import { BUSINESS_MODEL } from '../../config/constants'
 
 // ---------------------------------------------------------------------------
 // Permissions
@@ -464,11 +460,8 @@ export const NAV_TREE = Object.freeze([
       },
     ],
   },
-  // Finance and Accounting nav groups intentionally removed from the sidebar
-  // (routes/pages/services/permissions kept in code, just not linked here).
-  //
-  // "Accounts" below is a separate, deliberately minimal MVP (not the
-  // Accounting module above) — see backend/Controllers/accountsController.js.
+  // Order-level financials, vendor payouts and the ledger — see
+  // backend/Controllers/accountsController.js.
   {
     id: 'accounts',
     label: 'Accounts',
@@ -606,109 +599,12 @@ export const CJ_SYNC_STATUS_TONE = Object.freeze({
   FAILED: 'danger',
 })
 
-export const ORDER_STATUS_TONE = Object.freeze({
-  [ORDER_STATUS.PLACED]: 'neutral',
-  [ORDER_STATUS.PAYMENT_VERIFIED]: 'brand',
-  [ORDER_STATUS.AUTO_ASSIGNED_TO_VENDOR]: 'neutral',
-  [ORDER_STATUS.VENDOR_ACCEPTED]: 'brand',
-  [ORDER_STATUS.PACKED]: 'brand',
-  [ORDER_STATUS.AWB_GENERATED]: 'brand',
-  [ORDER_STATUS.SHIPPED]: 'brand',
-  [ORDER_STATUS.IN_TRANSIT]: 'brand',
-  [ORDER_STATUS.DELIVERED]: 'success',
-  [ORDER_STATUS.SETTLEMENT_ELIGIBLE]: 'accent',
-  [ORDER_STATUS.SETTLED]: 'success',
-  [ORDER_STATUS_EXCEPTION.VENDOR_REJECTED]: 'danger',
-  [ORDER_STATUS_EXCEPTION.CANCELLED_BUYER]: 'danger',
-  [ORDER_STATUS_EXCEPTION.CANCELLED_ADMIN]: 'danger',
-  [ORDER_STATUS_EXCEPTION.RTO_INITIATED]: 'warning',
-  [ORDER_STATUS_EXCEPTION.RTO_DELIVERED]: 'warning',
-  [ORDER_STATUS_EXCEPTION.RETURN_REQUESTED]: 'warning',
-  [ORDER_STATUS_EXCEPTION.REPLACEMENT_ISSUED]: 'accent',
-})
-
-// A PARENT order has no status of its own — it has N sub-orders that each
-// carry one. These are the derived roll-ups the orders list shows, and the
-// "partly" values are the whole point: a cart split across three vendors is
-// routinely half shipped and half waiting.
-export const FULFILMENT_STATUS = Object.freeze({
-  AWAITING_VENDOR: 'awaiting_vendor',
-  PARTLY_PACKED: 'partly_packed',
-  PACKED: 'packed',
-  PARTLY_SHIPPED: 'partly_shipped',
-  SHIPPED: 'shipped',
-  IN_TRANSIT: 'in_transit',
-  PARTLY_DELIVERED: 'partly_delivered',
-  DELIVERED: 'delivered',
-  RTO: 'rto',
-  RETURNED: 'returned',
-  CANCELLED: 'cancelled',
-})
-
-export const FULFILMENT_STATUS_LABELS = Object.freeze({
-  [FULFILMENT_STATUS.AWAITING_VENDOR]: 'Awaiting vendor',
-  [FULFILMENT_STATUS.PARTLY_PACKED]: 'Partly packed',
-  [FULFILMENT_STATUS.PACKED]: 'Packed',
-  [FULFILMENT_STATUS.PARTLY_SHIPPED]: 'Partly shipped',
-  [FULFILMENT_STATUS.SHIPPED]: 'Shipped',
-  [FULFILMENT_STATUS.IN_TRANSIT]: 'In transit',
-  [FULFILMENT_STATUS.PARTLY_DELIVERED]: 'Partly delivered',
-  [FULFILMENT_STATUS.DELIVERED]: 'Delivered',
-  [FULFILMENT_STATUS.RTO]: 'RTO initiated',
-  [FULFILMENT_STATUS.RETURNED]: 'Returned',
-  [FULFILMENT_STATUS.CANCELLED]: 'Cancelled',
-})
-
-export const FULFILMENT_STATUS_TONE = Object.freeze({
-  [FULFILMENT_STATUS.AWAITING_VENDOR]: 'neutral',
-  [FULFILMENT_STATUS.PARTLY_PACKED]: 'neutral',
-  [FULFILMENT_STATUS.PACKED]: 'brand',
-  [FULFILMENT_STATUS.PARTLY_SHIPPED]: 'brand',
-  [FULFILMENT_STATUS.SHIPPED]: 'brand',
-  [FULFILMENT_STATUS.IN_TRANSIT]: 'brand',
-  [FULFILMENT_STATUS.PARTLY_DELIVERED]: 'accent',
-  [FULFILMENT_STATUS.DELIVERED]: 'success',
-  [FULFILMENT_STATUS.RTO]: 'warning',
-  [FULFILMENT_STATUS.RETURNED]: 'warning',
-  [FULFILMENT_STATUS.CANCELLED]: 'danger',
-})
-
 export const BUYER_TYPE_LABELS = Object.freeze({
   retail: 'Retail',
   b2b_dealer: 'B2B dealer',
   b2b_distributor: 'B2B distributor',
   b2b_wholesaler: 'B2B wholesaler',
   b2b_trader: 'B2B trader',
-})
-
-export const PAYMENT_STATUS = Object.freeze({
-  PENDING: 'pending',
-  AUTHORISED: 'authorised',
-  CAPTURED: 'captured',
-  FAILED: 'failed',
-  REFUND_PENDING: 'refund_pending',
-  REFUNDED: 'refunded',
-  PARTIALLY_REFUNDED: 'partially_refunded',
-})
-
-export const PAYMENT_STATUS_LABELS = Object.freeze({
-  [PAYMENT_STATUS.PENDING]: 'Pending',
-  [PAYMENT_STATUS.AUTHORISED]: 'Authorised',
-  [PAYMENT_STATUS.CAPTURED]: 'Captured',
-  [PAYMENT_STATUS.FAILED]: 'Failed',
-  [PAYMENT_STATUS.REFUND_PENDING]: 'Refund pending',
-  [PAYMENT_STATUS.REFUNDED]: 'Refunded',
-  [PAYMENT_STATUS.PARTIALLY_REFUNDED]: 'Partly refunded',
-})
-
-export const PAYMENT_STATUS_TONE = Object.freeze({
-  [PAYMENT_STATUS.PENDING]: 'neutral',
-  [PAYMENT_STATUS.AUTHORISED]: 'brand',
-  [PAYMENT_STATUS.CAPTURED]: 'success',
-  [PAYMENT_STATUS.FAILED]: 'danger',
-  [PAYMENT_STATUS.REFUND_PENDING]: 'warning',
-  [PAYMENT_STATUS.REFUNDED]: 'neutral',
-  [PAYMENT_STATUS.PARTIALLY_REFUNDED]: 'warning',
 })
 
 export const REVIEW_STATUS = Object.freeze({
@@ -741,178 +637,12 @@ export const REVIEW_STATUS_TONE = Object.freeze({
   [REVIEW_STATUS.NOT_APPLICABLE]: 'neutral',
 })
 
-export const SETTLEMENT_STATUS = Object.freeze({
-  LOCKED_IN_HOLD: 'locked_in_hold',
-  ELIGIBLE: 'eligible',
-  DRAFTED: 'drafted',
-  AWAITING_APPROVAL: 'awaiting_approval',
-  PROCESSING: 'processing',
-  SETTLED: 'settled',
-  FAILED: 'failed',
-  REVERSED: 'reversed',
-})
-
-export const SETTLEMENT_STATUS_LABELS = Object.freeze({
-  [SETTLEMENT_STATUS.LOCKED_IN_HOLD]: 'In hold',
-  [SETTLEMENT_STATUS.ELIGIBLE]: 'Eligible',
-  [SETTLEMENT_STATUS.DRAFTED]: 'Draft batch',
-  [SETTLEMENT_STATUS.AWAITING_APPROVAL]: 'Awaiting approval',
-  [SETTLEMENT_STATUS.PROCESSING]: 'Processing',
-  [SETTLEMENT_STATUS.SETTLED]: 'Settled',
-  [SETTLEMENT_STATUS.FAILED]: 'Failed',
-  [SETTLEMENT_STATUS.REVERSED]: 'Reversed',
-})
-
-export const SETTLEMENT_STATUS_TONE = Object.freeze({
-  [SETTLEMENT_STATUS.LOCKED_IN_HOLD]: 'neutral',
-  [SETTLEMENT_STATUS.ELIGIBLE]: 'brand',
-  [SETTLEMENT_STATUS.DRAFTED]: 'neutral',
-  [SETTLEMENT_STATUS.AWAITING_APPROVAL]: 'warning',
-  [SETTLEMENT_STATUS.PROCESSING]: 'brand',
-  [SETTLEMENT_STATUS.SETTLED]: 'success',
-  [SETTLEMENT_STATUS.FAILED]: 'danger',
-  [SETTLEMENT_STATUS.REVERSED]: 'danger',
-})
-
 // ---------------------------------------------------------------------------
 // Accounting (real backend — see backend/Models/AccountingTransaction.js).
 // Money in this module is INTEGER PAISE end to end: the ledger stores paise,
 // the API returns paise, formatMoney renders paise. Nothing converts on the
 // way through, so nothing can round twice.
 // ---------------------------------------------------------------------------
-
-export const ACCOUNTING_TXN_TYPE = Object.freeze({
-  SALE: 'SALE',
-  COMMISSION: 'COMMISSION',
-  PAYMENT_GATEWAY_FEE: 'PAYMENT_GATEWAY_FEE',
-  SHIPPING_CHARGE: 'SHIPPING_CHARGE',
-  REFUND: 'REFUND',
-  REFUND_REVERSAL: 'REFUND_REVERSAL',
-  PAYOUT: 'PAYOUT',
-  ADJUSTMENT: 'ADJUSTMENT',
-})
-
-export const ACCOUNTING_TXN_TYPE_LABELS = Object.freeze({
-  [ACCOUNTING_TXN_TYPE.SALE]: 'Sale',
-  [ACCOUNTING_TXN_TYPE.COMMISSION]: 'Commission',
-  [ACCOUNTING_TXN_TYPE.PAYMENT_GATEWAY_FEE]: 'Gateway fee',
-  [ACCOUNTING_TXN_TYPE.SHIPPING_CHARGE]: 'Shipping',
-  [ACCOUNTING_TXN_TYPE.REFUND]: 'Refund',
-  [ACCOUNTING_TXN_TYPE.REFUND_REVERSAL]: 'Refund reversal',
-  [ACCOUNTING_TXN_TYPE.PAYOUT]: 'Payout',
-  [ACCOUNTING_TXN_TYPE.ADJUSTMENT]: 'Adjustment',
-})
-
-export const ACCOUNTING_TXN_TYPE_TONE = Object.freeze({
-  [ACCOUNTING_TXN_TYPE.SALE]: 'success',
-  [ACCOUNTING_TXN_TYPE.COMMISSION]: 'brand',
-  [ACCOUNTING_TXN_TYPE.PAYMENT_GATEWAY_FEE]: 'neutral',
-  [ACCOUNTING_TXN_TYPE.SHIPPING_CHARGE]: 'neutral',
-  [ACCOUNTING_TXN_TYPE.REFUND]: 'danger',
-  [ACCOUNTING_TXN_TYPE.REFUND_REVERSAL]: 'warning',
-  [ACCOUNTING_TXN_TYPE.PAYOUT]: 'accent',
-  [ACCOUNTING_TXN_TYPE.ADJUSTMENT]: 'warning',
-})
-
-export const ACCOUNTING_TXN_STATUS_LABELS = Object.freeze({
-  PENDING: 'Pending',
-  COMPLETED: 'Completed',
-  REVERSED: 'Reversed',
-  FAILED: 'Failed',
-})
-
-export const ACCOUNTING_TXN_STATUS_TONE = Object.freeze({
-  PENDING: 'warning',
-  COMPLETED: 'success',
-  REVERSED: 'neutral',
-  FAILED: 'danger',
-})
-
-export const ACCOUNTING_SETTLEMENT_STATUS_LABELS = Object.freeze({
-  PENDING: 'Pending',
-  ELIGIBLE: 'Eligible',
-  PROCESSING: 'Processing',
-  COMPLETED: 'Completed',
-  ON_HOLD: 'On hold',
-  FAILED: 'Failed',
-  CANCELLED: 'Cancelled',
-  // Batches drafted before the Accounting module shipped still carry these.
-  AWAITING_APPROVAL: 'Eligible',
-  SETTLED: 'Completed',
-})
-
-export const ACCOUNTING_SETTLEMENT_STATUS_TONE = Object.freeze({
-  PENDING: 'neutral',
-  ELIGIBLE: 'brand',
-  PROCESSING: 'accent',
-  COMPLETED: 'success',
-  ON_HOLD: 'warning',
-  FAILED: 'danger',
-  CANCELLED: 'neutral',
-  AWAITING_APPROVAL: 'brand',
-  SETTLED: 'success',
-})
-
-export const PAYOUT_STATUS_LABELS = Object.freeze({
-  PENDING: 'Pending',
-  PROCESSING: 'Processing',
-  // RELEASED: release requested from Razorpay Route, awaiting the webhook
-  // that confirms the transfer actually settled — a distinct in-flight state
-  // from PROCESSING (which is the pre-transfer manual-payout state).
-  RELEASED: 'Release requested',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-  CANCELLED: 'Cancelled',
-  // The bank returned a RazorpayX payout after paying it (closed account…).
-  REVERSED: 'Reversed by bank',
-})
-
-export const PAYOUT_STATUS_TONE = Object.freeze({
-  PENDING: 'neutral',
-  PROCESSING: 'brand',
-  RELEASED: 'accent',
-  COMPLETED: 'success',
-  FAILED: 'danger',
-  CANCELLED: 'neutral',
-  REVERSED: 'danger',
-})
-
-// Payout.method — see backend/Models/Payout.js. RAZORPAYX_PAYOUT and
-// RAZORPAY_ROUTE are the automated seller-settlement paths (which one runs is
-// the server's SELLER_PAYOUT_PROVIDER); the others are manual/legacy entries
-// an operator typed in themselves.
-export const PAYOUT_METHOD_LABELS = Object.freeze({
-  RAZORPAYX_PAYOUT: 'RazorpayX',
-  RAZORPAY_ROUTE: 'Razorpay Route',
-  BANK_TRANSFER: 'Bank transfer',
-  UPI: 'UPI',
-  MANUAL: 'Manual',
-  CHEQUE: 'Cheque',
-})
-
-export const PAYOUT_METHOD_TONE = Object.freeze({
-  RAZORPAYX_PAYOUT: 'accent',
-  RAZORPAY_ROUTE: 'accent',
-})
-
-// Settlement.holdReason — free text for older holds, but the automation puts
-// one of these fixed codes on a hold it created itself. Anything not in this
-// map (an older, hand-typed reason) is shown as-is.
-export const SETTLEMENT_HOLD_REASON_LABELS = Object.freeze({
-  VENDOR_RAZORPAY_NOT_ACTIVE: "Seller's Razorpay account is not active",
-  ACTIVE_RETURN_OR_REFUND: 'An order in this settlement has an active return or refund',
-  AMOUNT_MISMATCH: 'Computed payable does not match the amount on file',
-  NO_RAZORPAY_PAYMENT_TO_TRANSFER_AGAINST: 'No matching Razorpay payment to transfer against',
-  MULTI_ORDER_SETTLEMENT_UNSUPPORTED: 'Settlement spans multiple orders — not yet supported for auto-transfer',
-  REFUND_AFTER_SETTLEMENT_GENERATED_NEEDS_REGEN: 'A refund landed after this settlement was generated — needs regeneration',
-  REFUND_BEFORE_RELEASE_REVERSAL_FAILED_MANUAL_RECONCILIATION:
-    'A pre-release refund reversal failed — needs manual reconciliation',
-  REFUND_BEFORE_RELEASE: 'A refund came in before release — the transfer was reversed; re-batched automatically',
-  VENDOR_PAYOUT_ACCOUNT_NOT_READY:
-    "Seller's payout bank account is not set up on RazorpayX yet, or was changed recently (cool-off)",
-  PAYOUT_REVERSED_BY_BANK: "The bank returned the payout — waiting for the seller to update their bank account",
-  AMOUNT_BELOW_PAYOUT_MINIMUM: 'Amount is below the ₹1 payout minimum',
-})
 
 // backend/Models/Vendor.js razorpay.onboardingStatus
 export const RAZORPAY_ONBOARDING_STATUS_OPTIONS = Object.freeze([
@@ -944,57 +674,6 @@ export const RAZORPAY_ONBOARDING_STATUS_TONE = Object.freeze({
   REJECTED: 'danger',
   SUSPENDED: 'danger',
 })
-
-export const ACCOUNTING_REFUND_STATUS_LABELS = Object.freeze({
-  REQUESTED: 'Requested',
-  APPROVED: 'Approved',
-  PROCESSING: 'Processing',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-  CANCELLED: 'Cancelled',
-})
-
-export const ACCOUNTING_REFUND_STATUS_TONE = Object.freeze({
-  REQUESTED: 'warning',
-  APPROVED: 'brand',
-  PROCESSING: 'brand',
-  COMPLETED: 'success',
-  FAILED: 'danger',
-  CANCELLED: 'neutral',
-})
-
-export const COMMISSION_SCOPE_LABELS = Object.freeze({
-  GLOBAL: 'Global',
-  SELLER: 'Seller',
-  CATEGORY: 'Category',
-  PRODUCT: 'Product',
-})
-
-export const COMMISSION_RULE_STATE_LABELS = Object.freeze({
-  ACTIVE: 'Active',
-  SCHEDULED: 'Scheduled',
-  EXPIRED: 'Expired',
-  INACTIVE: 'Retired',
-})
-
-export const COMMISSION_RULE_STATE_TONE = Object.freeze({
-  ACTIVE: 'success',
-  SCHEDULED: 'brand',
-  EXPIRED: 'neutral',
-  INACTIVE: 'neutral',
-})
-
-// The Overview/report range picker. `custom` opens the two date inputs.
-export const ACCOUNTING_RANGES = Object.freeze([
-  { id: 'today', label: 'Today' },
-  { id: 'yesterday', label: 'Yesterday' },
-  { id: 'last_7_days', label: 'Last 7 days' },
-  { id: 'last_30_days', label: 'Last 30 days' },
-  { id: 'this_month', label: 'This month' },
-  { id: 'previous_month', label: 'Previous month' },
-  { id: 'all', label: 'All time' },
-  { id: 'custom', label: 'Custom' },
-])
 
 export const INTEGRATION_HEALTH = Object.freeze({
   OPERATIONAL: 'operational',

@@ -1,4 +1,3 @@
-import React from 'react'
 import { formatMoney } from '../../lib/format'
 
 function numberToWords(amountInRupees) {
@@ -38,9 +37,20 @@ function numberToWords(amountInRupees) {
   return `Rupees ${words.trim()} Only`
 }
 
+const sumOf = (lines, key) => lines.reduce((total, line) => total + (line[key] || 0), 0)
+
+const NATURE = {
+  INTER: 'Inter-State Supply (IGST)',
+  INTRA: 'Intra-State Supply (CGST + SGST)',
+  NONE: 'Supply by a supplier not registered for GST (no tax charged)',
+}
+
 export function TaxInvoice({ invoice }) {
   const isInterState = invoice.isInterState
+  const noTax = invoice.taxType === 'NONE'
+  const isBillOfSupply = invoice.documentType === 'BILL_OF_SUPPLY'
   const totalRupees = invoice.total / 100
+  const isPaid = invoice.paymentStatus === 'Paid'
 
   return (
     <article className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm print:border-none print:shadow-none print:m-0 print:p-0">
@@ -53,11 +63,13 @@ export function TaxInvoice({ invoice }) {
                 KROZENDA
               </span>
               <span className="rounded bg-slate-100 text-slate-800 border border-slate-300 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider">
-                TAX INVOICE
+                {isBillOfSupply ? 'BILL OF SUPPLY' : 'TAX INVOICE'}
               </span>
             </div>
             <p className="mt-1 text-2xs text-slate-500">
-              Official GST Tax Invoice · Issued under Section 31 of CGST Act, 2017
+              {isBillOfSupply
+                ? 'Bill of Supply · the supplier is not registered for GST, so no tax is charged'
+                : 'GST Tax Invoice · Issued under Section 31 of CGST Act, 2017'}
             </p>
           </div>
 
@@ -88,9 +100,9 @@ export function TaxInvoice({ invoice }) {
         </div>
         <div>
           <span className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Payment Status</span>
-          <p className="mt-0.5 font-medium text-success-600 flex items-center gap-1">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-500" />
-            Paid (Online Verified)
+          <p className={`mt-0.5 font-medium flex items-center gap-1 ${isPaid ? 'text-success-600' : 'text-slate-700'}`}>
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${isPaid ? 'bg-success-500' : 'bg-slate-400'}`} />
+            {invoice.paymentStatus}
           </p>
         </div>
       </div>
@@ -104,7 +116,7 @@ export function TaxInvoice({ invoice }) {
               Sold By / Supplier Details
             </span>
             <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-2xs font-mono font-semibold text-slate-700">
-              Registered Seller
+              {invoice.seller.gstin ? 'GST registered' : 'Not GST registered'}
             </span>
           </div>
           <div className="mt-2.5">
@@ -112,11 +124,13 @@ export function TaxInvoice({ invoice }) {
             <p className="mt-1 text-xs leading-relaxed text-slate-600">{invoice.seller.address}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-2xs">
               <span className="rounded-md bg-white border border-slate-200 px-2 py-1 font-mono font-medium text-slate-800 shadow-2xs">
-                GSTIN: <strong className="font-semibold text-slate-900">{invoice.seller.gstin}</strong>
+                GSTIN: <strong className="font-semibold text-slate-900">{invoice.seller.gstin || 'Not registered'}</strong>
               </span>
-              <span className="rounded-md bg-white border border-slate-200 px-2 py-1 font-medium text-slate-600 shadow-2xs">
-                State: Maharashtra (27)
-              </span>
+              {invoice.seller.state && (
+                <span className="rounded-md bg-white border border-slate-200 px-2 py-1 font-medium text-slate-600 shadow-2xs">
+                  State: {invoice.seller.state}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -128,7 +142,7 @@ export function TaxInvoice({ invoice }) {
               Billing & Delivery Details
             </span>
             <span className="rounded bg-brand-100 text-brand-800 px-1.5 py-0.5 text-2xs font-medium">
-              Consumer / Retail
+              {invoice.buyerDetail.isB2B ? 'Business (B2B)' : 'Consumer / Retail'}
             </span>
           </div>
           <div className="mt-2.5">
@@ -157,23 +171,22 @@ export function TaxInvoice({ invoice }) {
               <th className="w-16 px-3 py-3 text-center">Qty</th>
               <th className="w-28 px-3 py-3 text-right">Taxable Val</th>
               <th className="w-32 px-3 py-3 text-right">
-                {isInterState ? 'IGST (Rate)' : 'CGST + SGST'}
+                {noTax ? 'GST' : isInterState ? 'IGST (Rate)' : 'CGST + SGST'}
               </th>
               <th className="w-28 px-4 py-3 text-right">Total Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {invoice.lines.map((line, idx) => (
-              <tr key={line.name} className="hover:bg-slate-50/50">
+              <tr key={idx} className="hover:bg-slate-50/50">
                 <td className="px-4 py-3.5 text-center font-mono text-2xs text-slate-400">
                   {idx + 1}
                 </td>
                 <td className="px-4 py-3.5">
                   <span className="font-semibold text-slate-900 block">{line.name}</span>
-                  <span className="text-2xs text-slate-500">Standard fulfillment warranty applies</span>
                 </td>
                 <td className="tabular px-3 py-3.5 text-center text-slate-600 font-mono text-xs">
-                  {line.hsn}
+                  {line.hsn || '—'}
                 </td>
                 <td className="tabular px-3 py-3.5 text-center font-bold text-slate-900 text-xs">
                   {line.quantity}
@@ -182,10 +195,16 @@ export function TaxInvoice({ invoice }) {
                   {formatMoney(line.taxableValue)}
                 </td>
                 <td className="tabular px-3 py-3.5 text-right text-slate-700">
-                  <span>{formatMoney(isInterState ? line.igst : line.cgst * 2)}</span>
-                  <span className="block text-2xs text-slate-500 font-medium">
-                    {isInterState ? `${line.gstRate}% IGST` : `${line.gstRate / 2}% + ${line.gstRate / 2}%`}
-                  </span>
+                  {noTax ? (
+                    <span className="text-slate-400">—</span>
+                  ) : (
+                    <>
+                      <span>{formatMoney(isInterState ? line.igst : line.cgst + line.sgst)}</span>
+                      <span className="block text-2xs text-slate-500 font-medium">
+                        {isInterState ? `${line.gstRate}% IGST` : `${line.gstRate / 2}% + ${line.gstRate / 2}%`}
+                      </span>
+                    </>
+                  )}
                 </td>
                 <td className="tabular px-4 py-3.5 text-right font-bold text-slate-950 text-xs">
                   {formatMoney(line.total)}
@@ -215,7 +234,7 @@ export function TaxInvoice({ invoice }) {
               1. Whether tax is payable under Reverse Charge: <strong>No</strong>.
             </p>
             <p className="text-slate-600 leading-normal">
-              2. Nature of Transaction: <strong>{isInterState ? 'Inter-State Supply (IGST)' : 'Intra-State Supply (CGST + SGST)'}</strong>.
+              2. Nature of Transaction: <strong>{NATURE[invoice.taxType]}</strong>.
             </p>
             <p className="text-slate-600 leading-normal">
               3. We declare that this invoice shows the actual price of goods described and particulars are true and correct.
@@ -224,13 +243,8 @@ export function TaxInvoice({ invoice }) {
 
           <div className="pt-2 flex items-center justify-between border-t border-slate-200/80">
             <div>
-              <p className="font-bold text-slate-900 text-xs">For {invoice.seller.name}:</p>
-              <p className="text-2xs text-slate-500 mt-0.5">Authorized Signatory (Digital Signature)</p>
-            </div>
-            <div className="text-right">
-              <span className="inline-block rounded border border-success-500 bg-success-50 px-2 py-0.5 text-2xs font-bold text-success-800">
-                VERIFIED DOCUMENT
-              </span>
+              <p className="font-bold text-slate-900 text-xs">For {invoice.seller.name}</p>
+              <p className="text-2xs text-slate-500 mt-0.5">Computer-generated document</p>
             </div>
           </div>
         </div>
@@ -243,28 +257,36 @@ export function TaxInvoice({ invoice }) {
               <span className="tabular font-medium text-slate-900">{formatMoney(invoice.taxableValue)}</span>
             </div>
 
-            {isInterState ? (
+            {noTax ? null : isInterState ? (
               <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>Integrated GST (IGST 18%)</span>
-                <span className="tabular font-medium text-slate-900">{formatMoney(invoice.gst)}</span>
+                <span>Integrated GST (IGST)</span>
+                <span className="tabular font-medium text-slate-900">{formatMoney(sumOf(invoice.lines, 'igst'))}</span>
               </div>
             ) : (
               <>
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Central GST (CGST 9%)</span>
-                  <span className="tabular font-medium text-slate-900">{formatMoney(invoice.gst / 2)}</span>
+                  <span>Central GST (CGST)</span>
+                  <span className="tabular font-medium text-slate-900">{formatMoney(sumOf(invoice.lines, 'cgst'))}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>State GST (SGST 9%)</span>
-                  <span className="tabular font-medium text-slate-900">{formatMoney(invoice.gst / 2)}</span>
+                  <span>State GST (SGST)</span>
+                  <span className="tabular font-medium text-slate-900">{formatMoney(sumOf(invoice.lines, 'sgst'))}</span>
                 </div>
               </>
             )}
 
-            <div className="flex items-center justify-between text-xs text-slate-600 border-t border-dashed border-slate-200 pt-2">
-              <span>Shipping & Delivery Fee</span>
-              <span className="font-semibold text-success-600 uppercase text-2xs">Free / Included</span>
-            </div>
+            {invoice.shipping > 0 && (
+              <div className="flex items-center justify-between text-xs text-slate-600 border-t border-dashed border-slate-200 pt-2">
+                <span>Delivery charge</span>
+                <span className="tabular font-medium text-slate-900">{formatMoney(invoice.shipping)}</span>
+              </div>
+            )}
+            {invoice.platformFee > 0 && (
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Platform fee</span>
+                <span className="tabular font-medium text-slate-900">{formatMoney(invoice.platformFee)}</span>
+              </div>
+            )}
 
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span>Total Tax Amount</span>
@@ -274,7 +296,7 @@ export function TaxInvoice({ invoice }) {
             <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-300 px-4 py-3 text-slate-900 mt-2 shadow-2xs">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-800">Grand Total</span>
-                <span className="block text-2xs text-slate-500">Inclusive of all taxes</span>
+                <span className="block text-2xs text-slate-500">{noTax ? 'No GST charged' : 'Inclusive of all taxes'}</span>
               </div>
               <span className="tabular text-xl font-black tracking-tight text-slate-950">
                 {formatMoney(invoice.total)}

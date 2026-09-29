@@ -245,40 +245,6 @@ export const SLAB_COLUMNS = Object.freeze([
   },
 ])
 
-export const POLICY_COLUMNS = Object.freeze([
-  { key: 'name', header: 'Policy', cellClassName: 'text-xs font-semibold text-slate-900' },
-  {
-    key: 'version',
-    header: 'Version',
-    width: '6.5rem',
-    render: (row) => <span className="tabular text-xs text-slate-800">{row.version}</span>,
-  },
-  { key: 'effectiveFrom', header: 'Effective', width: '8rem', cellClassName: 'text-xs text-ink-muted' },
-  {
-    key: 'acceptedBy',
-    header: 'Accepted',
-    width: '8rem',
-    align: 'right',
-    render: (row) => (
-      <span className="tabular text-xs text-ink-muted">{row.acceptedBy.toLocaleString('en-IN')}</span>
-    ),
-  },
-  {
-    key: 'pendingAcceptance',
-    header: 'Pending',
-    width: '9rem',
-    align: 'right',
-    render: (row) =>
-      row.pendingAcceptance ? (
-        <Badge tone={row.requiresReacceptance ? 'warning' : 'neutral'} size="sm" dot={row.requiresReacceptance}>
-          {row.pendingAcceptance.toLocaleString('en-IN')} outstanding
-        </Badge>
-      ) : (
-        <span className="text-2xs text-ink-faint">none</span>
-      ),
-  },
-])
-
 export const BACKUP_COLUMNS = Object.freeze([
   { key: 'startedAt', header: 'Started', width: '13rem', cellClassName: 'text-xs text-ink-muted' },
   { key: 'destination', header: 'Destination', cellClassName: 'text-xs text-ink-muted' },

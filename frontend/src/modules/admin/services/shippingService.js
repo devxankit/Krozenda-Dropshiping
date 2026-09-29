@@ -1,12 +1,6 @@
 import { fetchResource, mutateResource } from './mockTransport'
-import { shipmentListSchema, shipmentSchema, trackingSchema } from '../../../lib/shipping/contracts'
-import {
-  adminCarrierAccountListSchema,
-  adminShippingOverviewSchema,
-  adminShippingSaveSchema,
-  adminShippingSettingsSchema,
-  platformConnectionSchema,
-} from '../schemas/shippingSchema'
+import { shipmentListSchema } from '../../../lib/shipping/contracts'
+import { adminShippingOverviewSchema, adminShippingSaveSchema, adminShippingSettingsSchema, platformConnectionSchema } from '../schemas/shippingSchema'
 
 // Admin shipping API. Live end to end — there is no fixture, and there must
 // not be: a mocked carrier makes a screen look finished while being untestable
@@ -26,37 +20,6 @@ export const saveShippingSettings = (body) =>
 
 export const fetchShippingOverview = () =>
   fetchResource({ path: '/admin/shipping/overview', schema: adminShippingOverviewSchema, live: true })
-
-// Read-only by design: an admin can see that a seller's account is failing but
-// cannot test, edit or re-authenticate it, because that would mean handling
-// that seller's credentials (task §4, §7).
-export async function fetchCarrierAccounts(query = {}) {
-  const rowsPerPage = query.rowsPerPage || 20
-  const tab = query.tab && query.tab !== 'all' ? query.tab.toUpperCase() : undefined
-
-  const data = await fetchResource({
-    path: '/admin/shipping/integrations',
-    params: {
-      page: query.page,
-      limit: rowsPerPage,
-      accountType: tab,
-      status: query.filters?.status || undefined,
-    },
-    schema: adminCarrierAccountListSchema,
-    live: true,
-  })
-
-  // Adapted onto the paged shape every list screen consumes. The endpoint
-  // returns no per-tab counts, so the tabs carry none rather than a guess.
-  return {
-    items: data.items,
-    page: query.page || 1,
-    rowsPerPage,
-    totalItems: data.total,
-    totalPages: Math.max(1, Math.ceil(data.total / rowsPerPage)),
-    tabCounts: {},
-  }
-}
 
 // Verifies the credentials already in the server's environment. Takes NO body:
 // an admin never types the platform password into a browser.
@@ -96,9 +59,3 @@ export async function fetchAdminShipments(query = {}) {
     tabCounts: Object.fromEntries(Object.entries(data.groupCounts).map(([k, v]) => [k.toLowerCase(), v])),
   }
 }
-
-export const fetchAdminShipment = (id) =>
-  fetchResource({ path: `/admin/shipping/shipments/${id}`, schema: shipmentSchema, live: true })
-
-export const fetchAdminTracking = (id) =>
-  fetchResource({ path: `/admin/shipping/shipments/${id}/tracking`, schema: trackingSchema, live: true })

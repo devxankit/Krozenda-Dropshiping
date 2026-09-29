@@ -9,6 +9,24 @@ import { KeyValueList, SectionCard, formatMoney } from '../../components/display
 import { useInvoiceDetailController } from '../../controllers/useFulfilmentController'
 import { toast } from '../../../../lib/toast'
 
+const TAX_BADGE = {
+  INTER: { tone: 'accent', label: 'IGST' },
+  INTRA: { tone: 'brand', label: 'CGST + SGST' },
+  NONE: { tone: 'neutral', label: 'Bill of Supply · no GST' },
+}
+
+// Why this invoice carries the tax it does, from the parties' states.
+function taxReason(invoice) {
+  const supplierState = invoice.seller.state || 'an unknown state'
+  if (invoice.taxType === 'NONE') {
+    return `${invoice.seller.name} has no GSTIN, so this is a Bill of Supply and no GST is charged.`
+  }
+  if (invoice.taxType === 'INTER') {
+    return `The supplier is registered in ${supplierState} and the place of supply is ${invoice.placeOfSupply} — an inter-state supply, so IGST applies.`
+  }
+  return `The supplier is registered in ${supplierState}, the same state as the place of supply (${invoice.placeOfSupply}) — an intra-state supply, so CGST and SGST apply.`
+}
+
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams()
   const { invoice, isLoading, error, refetch } = useInvoiceDetailController(invoiceId)
@@ -103,22 +121,19 @@ export function InvoiceDetailPage() {
           }
         >
           <div className="mt-1.5 flex flex-wrap items-center gap-2.5 text-xs text-ink-subtle">
-            <Badge tone={invoice.isInterState ? 'accent' : 'brand'} size="sm">
-              {invoice.isInterState ? 'IGST 18%' : 'CGST + SGST'}
+            <Badge tone={TAX_BADGE[invoice.taxType].tone} size="sm">
+              {TAX_BADGE[invoice.taxType].label}
             </Badge>
             <span className="tabular font-medium text-slate-800">{invoice.subOrderId}</span>
             <span className="text-border-strong">·</span>
             <span>Issued {invoice.issuedAt}</span>
             <span className="text-border-strong">·</span>
-            <span className="text-success-700 font-medium bg-success-50 px-2 py-0.5 rounded border border-success-200 text-2xs">
-              Verified & Paid
-            </span>
+            <span className="text-2xs font-medium text-slate-700">{invoice.paymentStatus}</span>
           </div>
         </PageHeader>
 
         <InlineAlert tone="info" title={`Seller of record: ${invoice.sellerOfRecord}`}>
-          Place of supply is {invoice.placeOfSupply}, and the supplier is registered in Maharashtra —
-          so this is an inter-state supply and attracts IGST rather than CGST and SGST.
+          {taxReason(invoice)}
         </InlineAlert>
       </div>
 
@@ -168,7 +183,14 @@ export function InvoiceDetailPage() {
               <KeyValueList
                 items={[
                   { label: 'Supplier', value: invoice.seller.name },
-                  { label: 'Supplier GSTIN', value: <span className="tabular font-mono text-2xs">{invoice.seller.gstin}</span> },
+                  {
+                    label: 'Supplier GSTIN',
+                    value: invoice.seller.gstin ? (
+                      <span className="tabular font-mono text-2xs">{invoice.seller.gstin}</span>
+                    ) : (
+                      <span className="text-ink-faint">Not registered</span>
+                    ),
+                  },
                   { label: 'Recipient', value: invoice.buyerDetail.name },
                   {
                     label: 'Recipient GSTIN',

@@ -3,14 +3,7 @@
 import { api } from '../../../lib/axios'
 import { fetchResource } from './mockTransport'
 import * as fixtures from '../fixtures/marketing'
-import {
-  campaignListSchema,
-  cmsPageListSchema,
-  couponListSchema,
-  reportCatalogueSchema,
-  reportRunSchema,
-  reviewListSchema,
-} from '../schemas/marketingSchema'
+import { campaignListSchema, couponListSchema, reviewListSchema } from '../schemas/marketingSchema'
 
 const params = (query) => ({
   tab: query.tab,
@@ -18,9 +11,6 @@ const params = (query) => ({
   rowsPerPage: query.rowsPerPage,
   ...query.filters,
 })
-
-const list = (path, fixture, schema) => (query) =>
-  fetchResource({ path, params: params(query), fixture: () => fixture(query), schema })
 
 export const fetchCoupons = (query) =>
   fetchResource({ path: '/admin/marketing/coupons', params: params(query), fixture: () => fixtures.couponListFixture(query), schema: couponListSchema, live: true })
@@ -94,17 +84,6 @@ export async function deleteCmsPage({ id }) {
 
 
 // --- Reports (real backend — dynamic) --------------------------------------
-
-export const fetchReportCatalogue = () =>
-  fetchResource({ path: '/admin/reports', fixture: fixtures.reportCatalogueFixture, schema: reportCatalogueSchema, live: true })
-
-export const fetchReportRun = (reportKey) =>
-  fetchResource({
-    path: `/admin/reports/${reportKey}`,
-    fixture: () => fixtures.reportRunFixture(reportKey),
-    schema: reportRunSchema,
-    live: true,
-  })
 
 // --- banners (real backend — no mocks) -------------------------------------
 

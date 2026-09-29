@@ -29,11 +29,6 @@ export function FormSection({ title, description, badge, columns = 3, children, 
   )
 }
 
-// A field that spans more than one column of the grid above.
-export function FormSpan({ span = 2, children }) {
-  return <div style={{ gridColumn: `span ${span} / span ${span}` }}>{children}</div>
-}
-
 // A row where the label and help sit left and the control sits right —
 // the shape settings screens want, as opposed to the stacked grid above.
 export function FormRow({ label, description, children, className = '' }) {
@@ -120,23 +115,4 @@ export function UnsavedIndicator({ count, fields = [] }) {
   )
 }
 
-// A dropzone that is honest about being a mockup surface: no fake upload
-// progress, just the target and its constraints.
-export function FileDropzone({ accept = 'CSV or Excel', maxSize = '10 MB', onBrowse }) {
-  return (
-    <button
-      type="button"
-      onClick={onBrowse}
-      className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-strong bg-surface-muted px-6 py-8 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-    >
-      <Icon name="upload" className="h-5 w-5 text-ink-faint" />
-      <span className="text-xs font-semibold text-slate-900">
-        Drop a file here, or click to browse
-      </span>
-      <span className="text-2xs text-ink-faint">
-        {accept} · up to {maxSize}
-      </span>
-    </button>
-  )
-}
 export { FormDrawer } from './FormDrawer'

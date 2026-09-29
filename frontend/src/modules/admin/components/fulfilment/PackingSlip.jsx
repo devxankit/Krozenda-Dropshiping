@@ -1,4 +1,3 @@
-import React from 'react'
 
 // A warehouse packing slip for fulfillment verification: shows sub-order ref,
 // dispatch and delivery locations, items, HSN, quantities, and a check box
@@ -17,7 +16,6 @@ export function PackingSlip({ invoice }) {
         <div className="text-right">
           <p className="text-2xs text-ink-faint">Date Issued</p>
           <p className="text-xs font-semibold text-slate-900">{invoice.issuedAt}</p>
-          <p className="text-2xs font-semibold text-brand-700 mt-1 uppercase tracking-wide">Krozenda Fulfillment</p>
         </div>
       </header>
 
@@ -26,7 +24,7 @@ export function PackingSlip({ invoice }) {
           <p className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">Dispatch From (Supplier)</p>
           <p className="mt-1 text-xs font-bold text-slate-900">{invoice.seller.name}</p>
           <p className="mt-0.5 text-2xs leading-relaxed text-ink-muted">{invoice.seller.address}</p>
-          <p className="tabular mt-1 text-2xs text-ink-muted">GSTIN: {invoice.seller.gstin}</p>
+          {invoice.seller.gstin && <p className="tabular mt-1 text-2xs text-ink-muted">GSTIN: {invoice.seller.gstin}</p>}
         </div>
         <div className="rounded-lg bg-surface-muted/50 p-3.5 border border-border-subtle print:bg-transparent">
           <p className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">Deliver To (Customer)</p>
@@ -61,7 +59,7 @@ export function PackingSlip({ invoice }) {
           </thead>
           <tbody>
             {invoice.lines.map((line, idx) => (
-              <tr key={line.name} className="border-b border-border-subtle">
+              <tr key={idx} className="border-b border-border-subtle">
                 <td className="px-4 py-3 text-2xs text-ink-faint font-mono">{idx + 1}</td>
                 <td className="px-4 py-3 font-medium text-slate-800">{line.name}</td>
                 <td className="tabular px-3 py-3 text-ink-muted">{line.hsn}</td>

@@ -124,79 +124,35 @@ export const ADMIN_ROUTES = Object.freeze({
 
   // ---- catalog ------------------------------------------------------------
   PRODUCTS: '/admin/catalog/products',
-  PRODUCT_NEW: '/admin/catalog/products/new',
   PRODUCT_DETAIL: '/admin/catalog/products/:productId',
   CATALOG_APPROVALS: '/admin/catalog/approvals',
-  CATALOG_IMPORT: '/admin/catalog/import',
   CATEGORIES: '/admin/catalog/categories',
   BRANDS: '/admin/catalog/brands',
-  ATTRIBUTES: '/admin/catalog/attributes',
   INVENTORY: '/admin/catalog/inventory',
 
   // ---- orders & fulfilment ------------------------------------------------
   ORDERS: '/admin/orders',
   ORDER_DETAIL: '/admin/orders/detail/:orderId',
-  SUB_ORDERS: '/admin/orders/sub-orders',
-  SUB_ORDER_DETAIL: '/admin/orders/sub-orders/:subOrderId',
-  SHIPMENTS: '/admin/orders/shipments',
-  // Carrier-backed parcels, distinct from SHIPMENTS above — that screen lists
-  // tracking numbers typed onto order items by hand, which is still a valid
-  // flow for sellers with no courier account connected.
   CARRIER_SHIPMENTS: '/admin/orders/carrier-shipments',
-  CARRIER_ACCOUNTS: '/admin/orders/carrier-accounts',
-  RTO: '/admin/orders/rto',
   RETURNS: '/admin/orders/returns',
   RETURN_DETAIL: '/admin/orders/returns/:returnId',
-  CANCELLATIONS: '/admin/orders/cancellations',
   INVOICES: '/admin/orders/invoices',
   INVOICE_DETAIL: '/admin/orders/invoices/:invoiceId',
 
   // ---- people & vendors ---------------------------------------------------
   CUSTOMERS: '/admin/people/customers',
   CUSTOMER_DETAIL: '/admin/people/customers/:customerId',
-  B2B_BUYERS: '/admin/people/b2b-buyers',
   SELLERS: '/admin/people/sellers',
   SELLER_DETAIL: '/admin/people/sellers/:sellerId',
-  PARTNERS: '/admin/people/partners',
-  PARTNER_DETAIL: '/admin/people/partners/:partnerId',
-  COMPANIES: '/admin/people/companies',
-  CHANNEL_PARTNERS: '/admin/people/channel',
   KYC_QUEUE: '/admin/people/kyc',
   KYC_REVIEW: '/admin/people/kyc/:applicationId',
-  STAFF: '/admin/people/staff',
   USER_MANAGEMENT: '/admin/people/user-management',
   ROLES: '/admin/people/roles',
-  ROLE_DETAIL: '/admin/people/roles/:roleId',
 
-  // ---- finance & accounting -----------------------------------------------
-  FINANCE_OVERVIEW: '/admin/finance/overview',
-  TRANSACTIONS: '/admin/finance/transactions',
-  REFUNDS: '/admin/finance/refunds',
-  SETTLEMENTS: '/admin/finance/settlements',
-  SETTLEMENT_BATCH: '/admin/finance/settlements/:batchId',
-  VENDOR_LEDGERS: '/admin/finance/vendor-ledger',
-  VENDOR_LEDGER_DETAIL: '/admin/finance/vendor-ledger/:vendorId',
+  // ---- finance ------------------------------------------------------------
   COMMISSION_RULES: '/admin/finance/commission-rules',
 
-  // ---- accounting ---------------------------------------------------------
-  // The marketplace money trail: order -> payment -> commission -> seller
-  // ledger -> settlement -> payout -> refund. Distinct from the Finance group
-  // above, which is the operational payments view over orders.
-  ACCOUNTING: '/admin/accounting',
-  ACCOUNTING_TRANSACTIONS: '/admin/accounting/transactions',
-  ACCOUNTING_TRANSACTION_DETAIL: '/admin/accounting/transactions/:transactionId',
-  ACCOUNTING_SELLER_LEDGER: '/admin/accounting/seller-ledger',
-  ACCOUNTING_SELLER_LEDGER_DETAIL: '/admin/accounting/seller-ledger/:sellerId',
-  ACCOUNTING_COMMISSIONS: '/admin/accounting/commissions',
-  ACCOUNTING_SETTLEMENTS: '/admin/accounting/settlements',
-  ACCOUNTING_SETTLEMENT_DETAIL: '/admin/accounting/settlements/:settlementId',
-  ACCOUNTING_PAYOUTS: '/admin/accounting/payouts',
-  ACCOUNTING_PAYOUT_DETAIL: '/admin/accounting/payouts/:payoutId',
-  ACCOUNTING_REFUNDS: '/admin/accounting/refunds',
-  ACCOUNTING_REPORTS: '/admin/accounting/reports',
-  ACCOUNTING_REPORT_DETAIL: '/admin/accounting/reports/:reportKey',
-
-  // ---- accounts MVP (separate from accounting above) ----------------------
+  // ---- accounts -----------------------------------------------------------
   ACCOUNTS_DASHBOARD: '/admin/accounts/dashboard',
   ACCOUNTS_PAYOUTS: '/admin/accounts/payouts',
   ACCOUNTS_TRANSACTIONS: '/admin/accounts/transactions',
@@ -223,18 +179,14 @@ export const ADMIN_ROUTES = Object.freeze({
 
   // ---- reports ------------------------------------------------------------
   REPORTS: '/admin/reports',
-  REPORT_RUNNER: '/admin/reports/:reportKey',
 
   // ---- settings & system --------------------------------------------------
   SETTINGS_GENERAL: '/admin/settings/general',
   SETTINGS_BUSINESS_RULES: '/admin/settings/business-rules',
   SETTINGS_PAYMENTS: '/admin/settings/payments',
   SETTINGS_LOGISTICS: '/admin/settings/logistics',
-  SETTINGS_NOTIFICATIONS: '/admin/settings/notifications',
   SETTINGS_TAXES: '/admin/settings/taxes',
-  SETTINGS_POLICIES: '/admin/settings/policies',
   SETTINGS_SECURITY: '/admin/settings/security',
-  SETTINGS_API_WEBHOOKS: '/admin/settings/api-webhooks',
   SETTINGS_INTEGRATIONS: '/admin/settings/integrations',
   AUDIT_LOGS: '/admin/system/audit-logs',
   BACKUPS: '/admin/system/backups',
@@ -244,7 +196,6 @@ export const ADMIN_ROUTES = Object.freeze({
 
   // ---- utility ------------------------------------------------------------
   FORBIDDEN: '/admin/403',
-  SHOWCASE: '/admin/showcase',
 })
 
 // Builders for the routes that carry a parameter. Keeping these beside the
@@ -253,24 +204,13 @@ export const ADMIN_ROUTES = Object.freeze({
 export const adminPath = Object.freeze({
   productDetail: (productId) => `/admin/catalog/products/${productId}`,
   orderDetail: (orderId) => `/admin/orders/detail/${orderId}`,
-  subOrderDetail: (subOrderId) => `/admin/orders/sub-orders/${subOrderId}`,
   returnDetail: (returnId) => `/admin/orders/returns/${returnId}`,
   invoiceDetail: (invoiceId) => `/admin/orders/invoices/${invoiceId}`,
   supportTicketDetail: (ticketId) => `/admin/support/tickets/${ticketId}`,
   customerDetail: (customerId) => `/admin/people/customers/${customerId}`,
   sellerDetail: (sellerId) => `/admin/people/sellers/${sellerId}`,
-  partnerDetail: (partnerId) => `/admin/people/partners/${partnerId}`,
   cjProductDetail: (productId) => `/admin/cj/products/${productId}`,
   kycReview: (applicationId) => `/admin/people/kyc/${applicationId}`,
-  roleDetail: (roleId) => `/admin/people/roles/${roleId}`,
-  settlementBatch: (batchId) => `/admin/finance/settlements/${batchId}`,
-  vendorLedger: (vendorId) => `/admin/finance/vendor-ledger/${vendorId}`,
-  reportRunner: (reportKey) => `/admin/reports/${reportKey}`,
-  accountingTransaction: (transactionId) => `/admin/accounting/transactions/${transactionId}`,
-  accountingSellerLedger: (sellerId) => `/admin/accounting/seller-ledger/${sellerId}`,
-  accountingSettlement: (settlementId) => `/admin/accounting/settlements/${settlementId}`,
-  accountingPayout: (payoutId) => `/admin/accounting/payouts/${payoutId}`,
-  accountingReport: (reportKey) => `/admin/accounting/reports/${reportKey}`,
 })
 
 export const ROUTES = Object.freeze({

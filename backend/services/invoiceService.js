@@ -73,14 +73,48 @@ function vendorSupplier(vendor) {
   };
 }
 
+function supplierKeysFor(order) {
+  const keys = new Set(order.items.map((item) => supplierKeyFor(order, item)));
+  if (toPaise(order.shippingFee || 0) > 0 || toPaise(order.platformFee || 0) > 0) keys.add(PLATFORM_KEY);
+  return keys;
+}
+
+const isFrozen = (order) => Array.isArray(order.invoiceSuppliers) && order.invoiceSuppliers.length > 0;
+
+// Read-only supplier maps for many orders at once (the admin invoice list):
+// frozen suppliers where the order has them, current details otherwise.
+// Nothing is frozen here — listing invoices must not issue them.
+async function supplierMapsFor(orders, settings) {
+  const vendorIds = new Set();
+  for (const order of orders) {
+    if (isFrozen(order)) continue;
+    for (const key of supplierKeysFor(order)) {
+      if (key.startsWith('VENDOR:')) vendorIds.add(key.slice('VENDOR:'.length));
+    }
+  }
+  const vendors = vendorIds.size
+    ? await Vendor.find({ _id: { $in: [...vendorIds] } }).select('name business address').lean()
+    : [];
+  const current = new Map(vendors.map((v) => [`VENDOR:${v._id}`, vendorSupplier(v)]));
+  current.set(PLATFORM_KEY, platformSupplier(settings));
+
+  return new Map(
+    orders.map((order) => [
+      String(order._id),
+      isFrozen(order)
+        ? new Map(order.invoiceSuppliers.map((s) => [s.key, s]))
+        : new Map([...supplierKeysFor(order)].filter((k) => current.has(k)).map((k) => [k, current.get(k)])),
+    ])
+  );
+}
+
 // The suppliers on this order, frozen on first use.
 async function suppliersFor(order) {
-  if (Array.isArray(order.invoiceSuppliers) && order.invoiceSuppliers.length) {
+  if (isFrozen(order)) {
     return new Map(order.invoiceSuppliers.map((s) => [s.key, s]));
   }
 
-  const keys = new Set(order.items.map((item) => supplierKeyFor(order, item)));
-  if (toPaise(order.shippingFee || 0) > 0) keys.add(PLATFORM_KEY);
+  const keys = supplierKeysFor(order);
   const vendorIds = [...keys].filter((k) => k.startsWith('VENDOR:')).map((k) => k.slice('VENDOR:'.length));
 
   const [settings, vendors] = await Promise.all([
@@ -129,6 +163,12 @@ function emptyTotals() {
 async function buildInvoices(order) {
   const suppliers = await suppliersFor(order);
   const settings = await PlatformSettings.getSettings();
+  return composeInvoices(order, suppliers, settings);
+}
+
+// The invoice set for one order from already-resolved suppliers and platform
+// settings. No I/O, so a list can run it over many orders.
+function composeInvoices(order, suppliers, settings) {
   const fallbackRate = Number(settings.defaultGstRate ?? 18);
 
   const address = order.shippingAddress || {};
@@ -249,4 +289,4 @@ async function buildInvoices(order) {
   };
 }
 
-module.exports = { buildInvoices, splitInclusive, PLATFORM_KEY };
+module.exports = { buildInvoices, composeInvoices, supplierMapsFor, splitInclusive, PLATFORM_KEY };

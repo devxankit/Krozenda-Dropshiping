@@ -22,8 +22,6 @@ const EXPECTED_API_ERRORS = [
   // CJ is not connected on the isolated stack (no credentials): the catalogue
   // screens answer 400 "not connected" and show that state.
   /^400 \/admin\/cj\/catalogue/,
-  // QA-033 (open, owner's decision): the Invoices screen has no backend yet.
-  /^404 \/admin\/invoices/,
 ];
 
 // Collected once from the real sidebar, so a new module is covered without

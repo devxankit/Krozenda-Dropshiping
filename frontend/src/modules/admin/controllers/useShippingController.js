@@ -1,18 +1,10 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useListController } from './useListController'
-import {
-  fetchAdminShipments,
-  fetchCarrierAccounts,
-  fetchShippingOverview,
-  fetchShippingSettings,
-  saveShippingSettings,
-  testPlatformConnection,
-} from '../services/shippingService'
+import { fetchAdminShipments, fetchShippingOverview, fetchShippingSettings, saveShippingSettings, testPlatformConnection } from '../services/shippingService'
 
 const SETTINGS_KEY = ['admin', 'shipping', 'settings']
 const OVERVIEW_KEY = ['admin', 'shipping', 'overview']
-const ACCOUNTS_KEY = ['admin', 'shipping', 'accounts']
 const SHIPMENTS_KEY = ['admin', 'shipping', 'shipments']
 
 // Platform shipping policy: the switches, the platform's own carrier account,
@@ -107,10 +99,6 @@ export function useShippingOverviewController() {
     error: query.error,
     refetch: query.refetch,
   }
-}
-
-export function useCarrierAccountsController() {
-  return useListController({ queryKey: ACCOUNTS_KEY, queryFn: fetchCarrierAccounts })
 }
 
 export function useAdminShipmentsController() {

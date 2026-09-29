@@ -2,34 +2,13 @@
 // and are the ONLY thing pages/ are allowed to call into.
 
 import { useQuery } from '@tanstack/react-query'
-import {
-  fetchCancellations,
-  fetchInvoiceDetail,
-  fetchInvoices,
-  fetchReturnDetail,
-  fetchReturns,
-  fetchRtos,
-  fetchShipments,
-  fetchSubOrders,
-} from '../services/fulfilmentService'
+import { fetchInvoiceDetail, fetchInvoices, fetchReturnDetail, fetchReturns } from '../services/fulfilmentService'
 import * as service from '../services/fulfilmentService'
 import { useListController } from './useListController'
 import { useAdminMutation } from './useAdminMutation'
 
-export const useSubOrderListController = () =>
-  useListController({ queryKey: ['admin', 'sub-orders'], queryFn: fetchSubOrders })
-
-export const useShipmentListController = () =>
-  useListController({ queryKey: ['admin', 'shipments'], queryFn: fetchShipments })
-
-export const useRtoListController = () =>
-  useListController({ queryKey: ['admin', 'rto'], queryFn: fetchRtos })
-
 export const useReturnListController = () =>
   useListController({ queryKey: ['admin', 'returns'], queryFn: fetchReturns })
-
-export const useCancellationListController = () =>
-  useListController({ queryKey: ['admin', 'cancellations'], queryFn: fetchCancellations })
 
 export const useInvoiceListController = () =>
   useListController({ queryKey: ['admin', 'invoices'], queryFn: fetchInvoices })
@@ -78,23 +57,6 @@ export const useSubOrderWriteController = ({ onDone } = {}) => ({
   }),
 })
 
-export const useShipmentWriteController = () => ({
-  update: useAdminMutation({
-    mutationFn: service.updateShipment,
-    invalidate: FULFILMENT,
-    success: (row) => `${row.awb} marked ${row.status.replace(/_/g, ' ')}`,
-  }),
-})
-
-export const useRtoWriteController = () => ({
-  restock: useAdminMutation({
-    mutationFn: service.restockRto,
-    invalidate: FULFILMENT,
-    success: (row) => `${row.subOrderId} back in stock`,
-    describe: (row) => (row.costBearer === 'vendor' ? 'The vendor settlement was reversed.' : 'The platform bears the freight.'),
-  }),
-})
-
 export const useReturnWriteController = ({ onDone } = {}) => ({
   decide: useAdminMutation({
     mutationFn: service.decideReturn,
@@ -112,24 +74,6 @@ export const useReturnWriteController = ({ onDone } = {}) => ({
     mutationFn: service.completeReturn,
     invalidate: FULFILMENT,
     success: (row) => `${row.subOrderId} — ${row.status.replace(/_/g, ' ')}`,
-    onDone,
-  }),
-})
-
-export const useCancellationWriteController = () => ({
-  refund: useAdminMutation({
-    mutationFn: service.resolveCancellationRefund,
-    invalidate: FULFILMENT,
-    success: (row) => `Refund for ${row.subOrderId} paid`,
-  }),
-})
-
-export const useInvoiceWriteController = ({ onDone } = {}) => ({
-  void: useAdminMutation({
-    mutationFn: service.voidInvoice,
-    invalidate: FULFILMENT,
-    success: (row) => `Invoice ${row.number} voided`,
-    describe: () => 'The number stays in the series — reissue against the same sub-order.',
     onDone,
   }),
 })

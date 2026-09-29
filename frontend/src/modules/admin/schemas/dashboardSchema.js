@@ -5,13 +5,6 @@ import { INTEGRATION_HEALTH } from '../constants'
 // Runtime contract for GET /admin/dashboard-summary.
 // Money is in PAISE, integer, throughout.
 
-export const adminDashboardSummarySchema = z.object({
-  totalUsers: z.number(),
-  totalSellers: z.number(),
-  pendingApprovals: z.number(),
-  ordersToday: z.number(),
-})
-
 const deltaSchema = z.object({
   direction: z.enum(['up', 'down', 'flat']),
   label: z.string(),

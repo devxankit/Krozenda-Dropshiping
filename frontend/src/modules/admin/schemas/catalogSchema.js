@@ -76,19 +76,6 @@ export const approvalQueueSchema = z.object({
   tabCounts: z.record(z.string(), z.number()),
 })
 
-export const categoryTreeSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      image: z.string().nullable().optional(),
-      isActive: z.boolean(),
-      isTopCategory: z.boolean().optional(),
-    }).passthrough(),
-  ),
-  stats: z.record(z.string(), z.any()).optional(),
-}).passthrough()
-
 export const brandListSchema = z.object({
   items: z.array(
     z.object({
@@ -122,46 +109,11 @@ export const inventorySchema = z.object({
   tabCounts: z.record(z.string(), z.number()),
 })
 
-export const attributeListSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      type: z.enum(['select', 'multiselect', 'text', 'number']),
-      values: z.array(z.string()),
-      usedBy: z.number().int(),
-    }),
-  ),
-})
-
 // ---------------------------------------------------------------------------
 // Write contracts
 // ---------------------------------------------------------------------------
 
 export const productSchema = productNodeSchema
-
-export const categoryNodeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  image: z.string().nullable().optional(),
-  isActive: z.boolean(),
-  isTopCategory: z.boolean().optional(),
-}).passthrough()
-
-export const brandNodeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  logo: z.string().nullable().optional(),
-  isActive: z.boolean(),
-}).passthrough()
-
-export const attributeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.enum(['select', 'multiselect', 'text', 'number']),
-  values: z.array(z.string()),
-  usedBy: z.number().int(),
-})
 
 export const inventoryRowSchema = z.object({
   id: z.string(),
@@ -180,8 +132,6 @@ export const queueDecisionSchema = z.object({
   kind: z.enum(['product', 'brand', 'category']),
   name: z.string(),
 })
-
-export const deletedSchema = z.object({ id: z.string() })
 
 export const productWriteSchema = z
   .object({
@@ -220,12 +170,6 @@ export const categoryWriteSchema = z.object({
 export const brandWriteSchema = z.object({
   name: z.string().min(2, 'Give the brand a name'),
   isActive: z.boolean().optional(),
-})
-
-export const attributeWriteSchema = z.object({
-  name: z.string().min(2, 'Give the attribute a name'),
-  type: z.enum(['select', 'multiselect', 'text', 'number']),
-  values: z.array(z.string().min(1)).min(1, 'Add at least one value'),
 })
 
 export const inventoryAdjustSchema = z.object({

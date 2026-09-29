@@ -5,10 +5,8 @@ import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { MoneyCell, DateCell } from '../../components/display'
 import { useCreateTransactionController, useTransactionsController } from '../../controllers/useAccountsController'
 
-// Accounts MVP — gateway transactions. Deliberately separate from the
-// existing Accounting module's transaction ledger: this is a simple log of
-// settlements into, and refunds out of, the gateway account against an
-// order — no COD-remittance handling, no reconciliation flags.
+// Accounts — gateway transactions: a simple log of settlements into, and
+// refunds out of, the gateway account against an order.
 
 const TYPE_OPTIONS = [
   { value: '', label: 'All types' },

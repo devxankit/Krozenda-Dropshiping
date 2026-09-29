@@ -37,11 +37,6 @@ export const adminCarrierAccountSchema = z.object({
   createdAt: z.string(),
 })
 
-export const adminCarrierAccountListSchema = z.object({
-  items: z.array(adminCarrierAccountSchema),
-  total: z.number().int().nonnegative(),
-})
-
 export const shippingPolicySchema = z.object({
   shippingEnabled: z.boolean(),
   provider: z.string(),

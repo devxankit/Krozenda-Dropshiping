@@ -5,9 +5,7 @@ import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { useAccountsDashboardController } from '../../controllers/useAccountsController'
 import { formatMoney } from '../../lib/format'
 
-// Accounts MVP — dashboard. Deliberately separate from the existing
-// Accounting module's overview screen (pages/accounting/AccountingOverviewPage.jsx):
-// this is a minimal, order-level revenue/cost/profit summary only.
+// Accounts — dashboard: an order-level revenue/cost/profit summary.
 
 const CARDS = [
   { key: 'totalRevenue', label: 'Total Revenue', icon: 'trendUp', tone: 'text-brand-600 bg-brand-50 ring-brand-500/10' },

@@ -52,10 +52,3 @@ export async function mutateResource({ method = 'post', path, body, fixture, sch
   const { data } = await api[method](path, body)
   return schema ? schema.parse(data.data) : data.data
 }
-
-// Deliberately failing and empty variants, so the error and empty states
-// required of every screen can actually be exercised in development.
-export async function failResource(message = 'Mocked failure') {
-  await delay(env.mockLatencyMs)
-  throw { status: 500, code: 'MOCK_ERROR', message, details: null }
-}

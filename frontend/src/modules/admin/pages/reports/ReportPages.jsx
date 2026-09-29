@@ -1,8 +1,7 @@
-import { useParams } from 'react-router-dom'
-import { Button, Icon, Select, SegmentedControl } from '../../../../components/ui'
+import { Button, SegmentedControl } from '../../../../components/ui'
 import { PageBody, PageHeader, RefreshControl } from '../../components/shell'
 import { ErrorState, InlineAlert, NoData, PageSkeleton } from '../../components/feedback'
-import { SectionCard, formatMoney } from '../../components/display'
+import { formatMoney } from '../../components/display'
 import { KpiGrid } from '../../components/dashboard'
 import {
   AreaTrend,
@@ -11,7 +10,6 @@ import {
   DonutSplit,
   formatAxisRupees,
 } from '../../components/charts'
-import { useReportRunController } from '../../controllers/useMarketingController'
 import { useAnalyticsController } from '../../controllers/useAnalyticsController'
 import { DASHBOARD_RANGES } from '../../controllers/useDashboardController'
 import { downloadCsv, rupees } from '../../lib/exportCsv'
@@ -211,117 +209,6 @@ export function ReportsPage() {
           </ChartFrame>
         </>
       )}
-    </PageBody>
-  )
-}
-
-// Money columns arrive in paise; a report column named `revenue` or `aov` is
-// formatted as currency, everything else as a plain figure.
-const MONEY_KEYS = new Set(['revenue', 'aov', 'amount', 'net', 'gross'])
-
-export function ReportRunnerPage() {
-  const { reportKey } = useParams()
-  const { data, isLoading, error, refetch } = useReportRunController(reportKey)
-
-  if (isLoading) {
-    return (
-      <PageBody>
-        <PageSkeleton rows={3} />
-      </PageBody>
-    )
-  }
-  if (error) {
-    return (
-      <PageBody>
-        <ErrorState error={error} onRetry={refetch} />
-      </PageBody>
-    )
-  }
-
-  return (
-    <PageBody>
-      <PageHeader
-        title={data.name}
-        trail={[{ label: data.name }]}
-        description={data.description}
-        actions={
-          <>
-            <Button variant="secondary" size="control" icon="refresh">
-              Run again
-            </Button>
-            {data.formats.map((format) => (
-              <Button key={format} variant="secondary" size="control" icon="download">
-                {format}
-              </Button>
-            ))}
-          </>
-        }
-      />
-
-      <SectionCard title="Parameters" description="Changing a parameter re-runs the report">
-        <div className="grid gap-4 p-4 sm:grid-cols-3">
-          {data.parameters.map((parameter) => (
-            <div key={parameter.key} className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-900">{parameter.label}</label>
-              {parameter.options ? (
-                <Select
-                  id={parameter.key}
-                  size="control"
-                  options={parameter.options}
-                  defaultValue={parameter.options[0]?.value}
-                />
-              ) : (
-                <div className="flex h-control items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs text-slate-900">
-                  <Icon name="calendar" className="h-3.5 w-3.5 text-ink-faint" />
-                  {parameter.value}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <InlineAlert tone="info" title={`Showing 6 of ${data.rowCount} rows`}>
-        The preview is capped so the screen stays fast. An export contains every row for the
-        chosen period.
-      </InlineAlert>
-
-      <SectionCard title="Preview">
-        <div className="admin-scroll overflow-x-auto">
-          <table className="w-full min-w-[40rem] border-collapse text-xs">
-            <thead>
-              <tr className="border-y border-border bg-surface-muted">
-                {data.columns.map((column) => (
-                  <th
-                    key={column.key}
-                    className={`px-4 py-2.5 text-2xs font-semibold uppercase tracking-wider text-ink-faint ${column.align === 'right' ? 'text-right' : 'text-left'}`}
-                  >
-                    {column.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row, index) => (
-                <tr key={index} className="border-b border-border-subtle last:border-b-0">
-                  {data.columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`px-4 py-2 ${column.align === 'right' ? 'tabular text-right text-slate-900' : 'text-ink-muted'}`}
-                    >
-                      {MONEY_KEYS.has(column.key)
-                        ? formatMoney(row[column.key])
-                        : typeof row[column.key] === 'number'
-                          ? row[column.key].toLocaleString('en-IN')
-                          : row[column.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </SectionCard>
     </PageBody>
   )
 }

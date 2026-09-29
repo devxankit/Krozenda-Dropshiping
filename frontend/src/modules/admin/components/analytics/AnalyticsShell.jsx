@@ -13,12 +13,6 @@ const TABS = Object.freeze([
   { id: ADMIN_ROUTES.ANALYTICS_CUSTOMERS, label: 'Customers' },
 ])
 
-// Kept as a named export because the finance overview renders the same strip
-// of headline figures; it is the shared KPI tile in a four-column grid.
-export function KpiStrip({ kpis = [] }) {
-  return <KpiGrid kpis={kpis} columns={4} />
-}
-
 // The four analytics screens share a header, a tab strip, a range picker, an
 // export and all four states — so each page is only its own charts.
 export function AnalyticsShell({ title, description, controller, onExport, showTabs = true, toolbar = null, children }) {

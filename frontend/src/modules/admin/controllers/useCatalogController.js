@@ -4,14 +4,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import * as service from '../services/catalogService'
 import { useAdminMutation } from './useAdminMutation'
-import {
-  fetchApprovalQueue,
-  fetchAttributes,
-  fetchBrands,
-  fetchCategoryTree,
-  fetchInventory,
-  fetchProducts,
-} from '../services/catalogService'
+import { fetchApprovalQueue, fetchBrands, fetchCategoryTree, fetchInventory } from '../services/catalogService'
 import { useListController } from './useListController'
 
 export function useInventoryController() {
@@ -26,8 +19,6 @@ function useCatalogResource(key, queryFn) {
   const query = useQuery({ queryKey: ['admin', 'catalog', key], queryFn })
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
 }
-
-export const useProductListController = () => useCatalogResource('products', fetchProducts)
 
 // Server-paged admin product list. Keyed under ['admin', 'catalog'] so every
 // product write refreshes it; the previous page stays on screen while the
@@ -70,8 +61,6 @@ export function useApprovalSettingsController({ enabled = true } = {}) {
 }
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
-export const useAttributesController = () => useCatalogResource('attributes', fetchAttributes)
-
 // Catalog writes touch listings, the approval queue and the category tree at
 // once — approving a category unblocks the products waiting on it — so they
 // all invalidate the catalog subtree rather than one list.
@@ -204,22 +193,6 @@ export const useBrandWriteController = ({ onSaved } = {}) => ({
     success: 'Brand removed',
     onDone: onSaved,
   }),
-})
-
-export const useAttributeWriteController = ({ onSaved } = {}) => ({
-  create: useAdminMutation({
-    mutationFn: service.createAttribute,
-    invalidate: CATALOG,
-    success: (attribute) => `${attribute.name} added`,
-    onDone: onSaved,
-  }),
-  update: useAdminMutation({
-    mutationFn: service.updateAttribute,
-    invalidate: CATALOG,
-    success: (attribute) => `${attribute.name} updated`,
-    onDone: onSaved,
-  }),
-  remove: useAdminMutation({ mutationFn: service.deleteAttribute, invalidate: CATALOG, success: 'Attribute removed' }),
 })
 
 export const useInventoryWriteController = ({ onSaved } = {}) => ({

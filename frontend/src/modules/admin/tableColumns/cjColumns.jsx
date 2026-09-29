@@ -66,54 +66,6 @@ export function money(amount, currency = 'USD') {
   }
 }
 
-export const CJ_PRODUCT_COLUMNS = Object.freeze([
-  {
-    key: 'product',
-    header: 'Product',
-    render: (row) => (
-      <PrimaryCell title={row.product?.name || row.cjProductName || row.cjProductId} subtitle={`CJ #${row.cjProductId}`} />
-    ),
-  },
-  {
-    key: 'category',
-    header: 'Category',
-    width: '9rem',
-    render: (row) => row.product?.category?.name || '—',
-  },
-  {
-    key: 'pricingMode',
-    header: 'Pricing',
-    width: '7rem',
-    render: (row) => <StatusPill status={row.pricingMode} tones={{ MANUAL: 'neutral', AUTOMATIC: 'brand' }} />,
-  },
-  {
-    key: 'price',
-    header: 'Selling price',
-    width: '7rem',
-    align: 'right',
-    render: (row) => (row.product?.price != null ? `₹${row.product.price.toLocaleString('en-IN')}` : '—'),
-  },
-  {
-    key: 'stock',
-    header: 'Stock',
-    width: '6rem',
-    align: 'right',
-    render: (row) => row.product?.stock ?? '—',
-  },
-  {
-    key: 'syncStatus',
-    header: 'Sync status',
-    width: '8rem',
-    render: (row) => <StatusPill status={row.syncStatus} tones={{ IDLE: 'success', SYNCING: 'brand', FAILED: 'danger' }} />,
-  },
-  {
-    key: 'lastSyncedAt',
-    header: 'Last synced',
-    width: '9rem',
-    render: (row) => (row.lastSyncedAt ? <DateCell value={row.lastSyncedAt} /> : '—'),
-  },
-])
-
 export const CJ_ORDER_COLUMNS = Object.freeze([
   {
     key: 'cjOrderId',

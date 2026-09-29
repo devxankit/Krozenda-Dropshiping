@@ -95,97 +95,10 @@ export function getCustomerActionColumn(onToggleStatus) {
   }
 }
 
-export const CUSTOMER_FILTERS = Object.freeze([
-  {
-    key: 'type',
-    label: 'Buyer type',
-    options: Object.entries(BUYER_TYPE_LABELS).map(([value, label]) => ({ value, label })),
-  },
-])
-
 export const CUSTOMER_TABS = Object.freeze([
   { id: 'all', label: 'All customers' },
   { id: 'top', label: 'Top 10 customers' },
   { id: 'blocked', label: 'Blocked' },
-])
-
-export const VENDOR_COLUMNS = Object.freeze([
-  {
-    key: 'name',
-    header: 'Vendor',
-    sortable: true,
-    render: (row) => (
-      <PrimaryCell
-        title={row.name}
-        subtitle={`${row.role} · ${row.city}`}
-        to={adminPath.sellerDetail(row.id)}
-      />
-    ),
-  },
-  {
-    key: 'model',
-    header: 'Model',
-    width: '8rem',
-    render: (row) => (
-      <span className="text-xs text-ink-muted">{MODEL_LABELS[row.model]}</span>
-    ),
-  },
-  {
-    key: 'gstin',
-    header: 'GSTIN',
-    width: '10rem',
-    render: (row) =>
-      row.gstin ? (
-        <span className="tabular text-xs text-ink-muted">{row.gstin}</span>
-      ) : (
-        <span className="text-2xs text-ink-faint">not supplied</span>
-      ),
-  },
-  { key: 'products', header: 'SKUs', width: '5.5rem', align: 'right', sortable: true, cellClassName: 'tabular' },
-  {
-    key: 'revenue',
-    header: 'Revenue',
-    width: '7.5rem',
-    align: 'right',
-    sortable: true,
-    render: (row) => <MoneyCell amount={row.revenue} compact />,
-  },
-  {
-    key: 'kycStatus',
-    header: 'KYC',
-    width: '9.5rem',
-    render: (row) => (
-      <StatusPill
-        status={row.kycStatus}
-        labels={REVIEW_STATUS_LABELS}
-        tones={REVIEW_STATUS_TONE}
-        size="sm"
-      />
-    ),
-  },
-  {
-    key: 'routeLinked',
-    header: 'Payouts',
-    width: '8.5rem',
-    render: (row) => (
-      <Badge tone={row.routeLinked ? 'success' : 'warning'} size="sm" dot>
-        {row.routeLinked ? 'Route linked' : 'Not linked'}
-      </Badge>
-    ),
-  },
-])
-
-export const VENDOR_FILTERS = Object.freeze([
-  {
-    key: 'model',
-    label: 'Business model',
-    options: Object.entries(MODEL_LABELS).map(([value, label]) => ({ value, label })),
-  },
-  {
-    key: 'kycStatus',
-    label: 'KYC status',
-    options: Object.entries(REVIEW_STATUS_LABELS).map(([value, label]) => ({ value, label })),
-  },
 ])
 
 export const VENDOR_TABS = Object.freeze([
@@ -265,57 +178,6 @@ export const KYC_TABS = Object.freeze([
   { id: 'changes', label: 'Changes requested' },
   { id: 'overdue', label: 'Waiting over 3 days' },
 ])
-
-export const STAFF_COLUMNS = Object.freeze([
-  {
-    key: 'name',
-    header: 'Person',
-    render: (row) => <PrimaryCell title={row.name} subtitle={row.email} />,
-  },
-  {
-    key: 'role',
-    header: 'Role',
-    width: '11rem',
-    render: (row) => (
-      <Badge tone={row.roleId === 'super_admin' ? 'accent' : 'brand'} size="sm">
-        {row.role}
-      </Badge>
-    ),
-  },
-  {
-    key: 'twoFactor',
-    header: 'Two-factor',
-    width: '9rem',
-    render: (row) => (
-      <Badge tone={row.twoFactor ? 'success' : 'danger'} size="sm" dot>
-        {row.twoFactor ? 'Enabled' : 'Not set up'}
-      </Badge>
-    ),
-  },
-  {
-    key: 'lastSignInAt',
-    header: 'Last sign-in',
-    width: '11rem',
-    render: (row) =>
-      row.lastSignInAt ? (
-        <span className="text-xs text-ink-muted">{row.lastSignInAt}</span>
-      ) : (
-        <span className="text-2xs text-ink-faint">never</span>
-      ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '7.5rem',
-    render: (row) => (
-      <Badge tone={ACCOUNT_TONE[row.status]} size="sm" dot>
-        {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-      </Badge>
-    ),
-  },
-])
-
-const GENDER_LABELS = Object.freeze({ male: 'Male', female: 'Female', other: 'Other' })
 
 function formatDate(value) {
   if (!value) return null

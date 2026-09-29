@@ -1,18 +1,8 @@
-import { ADMIN_ROUTES, adminPath } from '../../../config/routes'
+import { ADMIN_ROUTES } from '../../../config/routes'
 import { BUSINESS_MODEL, ORDER_STATUS } from '../../../config/constants'
 import { INTEGRATION_HEALTH } from '../constants'
 
 // Shape matches schemas/dashboardSchema.js. Money is in PAISE.
-
-// Kept for the interim summary endpoint the backend already exposes.
-export function adminDashboardSummaryFixture() {
-  return {
-    totalUsers: 24816,
-    totalSellers: 318,
-    pendingApprovals: 34,
-    ordersToday: 412,
-  }
-}
 
 const trend = (values) => values.map((value) => ({ value }))
 
@@ -134,7 +124,7 @@ export function dashboardFixture() {
         title: 'Failed payouts to retry',
         subtitle: 'Bank details need updating',
         count: 2,
-        to: ADMIN_ROUTES.SETTLEMENTS,
+        to: ADMIN_ROUTES.ACCOUNTS_PAYOUTS,
       },
     ],
 
@@ -160,7 +150,3 @@ export function dashboardFixture() {
     ],
   }
 }
-
-export const DASHBOARD_LINKS = Object.freeze({
-  order: (orderId) => adminPath.orderDetail(orderId),
-})

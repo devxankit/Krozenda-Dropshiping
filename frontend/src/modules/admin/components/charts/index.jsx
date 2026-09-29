@@ -1,20 +1,5 @@
 import { useId } from 'react'
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   AXIS_PROPS,
   CHART_MARGIN,
@@ -180,25 +165,6 @@ export function SparkArea({ data, dataKey = 'value', color = SERIES[0], height =
           isAnimationActive={false}
         />
       </AreaChart>
-    </ResponsiveContainer>
-  )
-}
-
-// Inline trend for a stat tile. No axes, no tooltip — it shows shape only,
-// and the number beside it carries the value.
-export function Sparkline({ data, dataKey = 'value', color = SERIES[0], height = 32 }) {
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-        <Line
-          type="monotone"
-          dataKey={dataKey}
-          stroke={color}
-          strokeWidth={1.75}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
     </ResponsiveContainer>
   )
 }

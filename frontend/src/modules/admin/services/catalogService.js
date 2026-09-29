@@ -1,20 +1,8 @@
 import { api } from '../../../lib/axios'
 import { fetchResource, mutateResource } from './mockTransport'
 import * as fixtures from '../fixtures/catalog'
-const {
-  approvalQueueFixture,
-  attributeListFixture,
-  inventoryFixture,
-} = fixtures
-import {
-  approvalQueueSchema,
-  attributeListSchema,
-  inventorySchema,
-  attributeSchema,
-  deletedSchema,
-  inventoryRowSchema,
-  queueDecisionSchema,
-} from '../schemas/catalogSchema'
+const { approvalQueueFixture, inventoryFixture } = fixtures
+import { approvalQueueSchema, inventorySchema, inventoryRowSchema, queueDecisionSchema } from '../schemas/catalogSchema'
 
 // The whole catalogue in one response — only for the order form's product
 // picker. The list screen uses fetchProductPage.
@@ -68,15 +56,6 @@ export async function fetchCategoryTree() {
 export async function fetchBrands() {
   const { data } = await api.get('/admin/catalog/brands')
   return data.data
-}
-
-export function fetchAttributes() {
-  return fetchResource({
-    path: '/admin/catalog/attributes',
-    fixture: attributeListFixture,
-    schema: attributeListSchema,
-    live: true,
-  })
 }
 
 export function fetchInventory(query = {}) {
@@ -232,15 +211,6 @@ export async function deleteBrand({ id }) {
   const { data } = await api.delete(`/admin/catalog/brands/${id}`)
   return data.data
 }
-
-export const createAttribute = (body) =>
-  mutateResource({ path: '/admin/catalog/attributes', body, fixture: fixtures.createAttributeFixture, schema: attributeSchema, live: true })
-
-export const updateAttribute = ({ id, ...body }) =>
-  mutateResource({ method: 'put', path: `/admin/catalog/attributes/${id}`, body, fixture: (p) => fixtures.updateAttributeFixture(id, p), schema: attributeSchema, live: true })
-
-export const deleteAttribute = ({ id }) =>
-  mutateResource({ method: 'delete', path: `/admin/catalog/attributes/${id}`, fixture: () => fixtures.deleteAttributeFixture(id), schema: deletedSchema, live: true })
 
 export const adjustInventory = ({ id, onHand, reason }) =>
   mutateResource({

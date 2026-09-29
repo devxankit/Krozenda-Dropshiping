@@ -45,27 +45,6 @@ const SUB_ORDERS = [
   { id: 'KZ-40118-A', orderId: 'KZ-40118', placedAt: '2026-08-31T18:36:00+05:30', model: BUSINESS_MODEL.MARKETPLACE, seller: 'Bharat Textiles LLP', buyer: 'Arjun Pillai', status: ORDER_STATUS_EXCEPTION.CANCELLED_BUYER, awb: null, ageHours: 44, total: 245000 },
 ]
 
-const AWAITING = [ORDER_STATUS.AUTO_ASSIGNED_TO_VENDOR, ORDER_STATUS.VENDOR_ACCEPTED]
-const IN_FLIGHT = [ORDER_STATUS.PACKED, ORDER_STATUS.AWB_GENERATED, ORDER_STATUS.SHIPPED, ORDER_STATUS.IN_TRANSIT]
-const EXCEPTIONS = Object.values(ORDER_STATUS_EXCEPTION)
-
-const SUB_ORDER_TABS = {
-  all: () => true,
-  awaiting: (s) => AWAITING.includes(s.status),
-  in_flight: (s) => IN_FLIGHT.includes(s.status),
-  exceptions: (s) => EXCEPTIONS.includes(s.status),
-  delivered: (s) => s.status === ORDER_STATUS.DELIVERED,
-}
-
-export function subOrderListFixture(query = {}) {
-  const { tab = 'all', filters = {} } = query
-  let rows = SUB_ORDERS.filter(SUB_ORDER_TABS[tab] || SUB_ORDER_TABS.all)
-  rows = search(rows, filters.search, ['id', 'orderId', 'seller', 'buyer', 'awb'])
-  if (filters.model) rows = rows.filter((s) => s.model === filters.model)
-  if (filters.status) rows = rows.filter((s) => s.status === filters.status)
-  return page(rows, SUB_ORDERS, SUB_ORDER_TABS, query)
-}
-
 // ---------------------------------------------------------------------------
 // Shipments
 // ---------------------------------------------------------------------------
@@ -98,27 +77,6 @@ export function shipmentListFixture(query = {}) {
 // ---------------------------------------------------------------------------
 // RTO — "no return" policy does not cover return to origin (context §6.3)
 // ---------------------------------------------------------------------------
-const RTOS = [
-  { id: 'rto-1', subOrderId: 'KZ-40126-A', awb: 'SRTP4471901980', seller: 'Sunrise Traders', reason: 'customer_unreachable', initiatedAt: '1 Sep 2026', costBearer: 'vendor', shippingCost: 42000, orderValue: 4860000, settlementReversed: true, stockRestored: false },
-  { id: 'rto-2', subOrderId: 'KZ-40112-A', awb: 'SRTP4471881204', seller: 'Nova Retail Pvt Ltd', reason: 'address_failure', initiatedAt: '29 Aug 2026', costBearer: 'platform', shippingCost: 18000, orderValue: 214000, settlementReversed: true, stockRestored: true },
-  { id: 'rto-3', subOrderId: 'KZ-40098-B', awb: 'SRTP4471862911', seller: 'Krozenda Own Stock', reason: 'refused', initiatedAt: '26 Aug 2026', costBearer: 'platform', shippingCost: 15000, orderValue: 128000, settlementReversed: false, stockRestored: true },
-  { id: 'rto-4', subOrderId: 'KZ-40074-A', awb: 'SRTP4471840118', seller: 'Meghna Wholesale', reason: 'undelivered', initiatedAt: '22 Aug 2026', costBearer: 'vendor', shippingCost: 26000, orderValue: 682000, settlementReversed: true, stockRestored: false },
-]
-
-const RTO_TABS = {
-  all: () => true,
-  open: (r) => !r.settlementReversed || !r.stockRestored,
-  vendor_bears: (r) => r.costBearer === 'vendor',
-  platform_bears: (r) => r.costBearer === 'platform',
-}
-
-export function rtoListFixture(query = {}) {
-  const { tab = 'all', filters = {} } = query
-  let rows = RTOS.filter(RTO_TABS[tab] || RTO_TABS.all)
-  rows = search(rows, filters.search, ['awb', 'subOrderId', 'seller'])
-  return page(rows, RTOS, RTO_TABS, query)
-}
-
 // ---------------------------------------------------------------------------
 // Returns — default policy is NO RETURN; only three reasons are allowed
 // ---------------------------------------------------------------------------
@@ -189,103 +147,6 @@ const CANCELLATIONS = [
   { id: 'cnl-4', subOrderId: 'KZ-40101-A', orderId: 'KZ-40101', cancelledBy: 'admin', actor: 'Priya Sharma', reason: 'Suspected fraudulent order — flagged by risk rules', cancelledAt: '28 Aug 2026, 14:50', refundStatus: 'completed', refundAmount: 1240000 },
   { id: 'cnl-5', subOrderId: 'KZ-40095-A', orderId: 'KZ-40095', cancelledBy: 'buyer', actor: 'Fatima Sheikh', reason: 'Delivery taking too long', cancelledAt: '26 Aug 2026, 11:20', refundStatus: 'failed', refundAmount: 84900 },
 ]
-
-const CANCELLATION_TABS = {
-  all: () => true,
-  buyer: (c) => c.cancelledBy === 'buyer',
-  admin: (c) => c.cancelledBy === 'admin',
-  vendor: (c) => c.cancelledBy === 'vendor',
-  refund_open: (c) => ['pending', 'processing', 'failed'].includes(c.refundStatus),
-}
-
-export function cancellationListFixture(query = {}) {
-  const { tab = 'all', filters = {} } = query
-  let rows = CANCELLATIONS.filter(CANCELLATION_TABS[tab] || CANCELLATION_TABS.all)
-  rows = search(rows, filters.search, ['subOrderId', 'orderId', 'actor'])
-  return page(rows, CANCELLATIONS, CANCELLATION_TABS, query)
-}
-
-// ---------------------------------------------------------------------------
-// Invoices — one per sub-order, by seller of record
-// ---------------------------------------------------------------------------
-const INVOICES = [
-  { id: 'inv-1', number: 'KZ/2627/000841', subOrderId: 'KZ-40128-A', sellerOfRecord: 'Nova Retail Pvt Ltd', buyer: 'Ananya Iyer', issuedAt: '2 Sep 2026', taxableValue: 249745, gst: 44955, total: 294700, placeOfSupply: 'Karnataka (29)', isInterState: true },
-  { id: 'inv-2', number: 'KZ/2627/000842', subOrderId: 'KZ-40128-B', sellerOfRecord: 'Krozenda Entity', buyer: 'Ananya Iyer', issuedAt: '2 Sep 2026', taxableValue: 84505, gst: 10395, total: 94900, placeOfSupply: 'Karnataka (29)', isInterState: true },
-  { id: 'inv-3', number: 'KZ/2627/000840', subOrderId: 'KZ-40127-A', sellerOfRecord: 'Krozenda Entity', buyer: 'Rakesh Menon', issuedAt: '2 Sep 2026', taxableValue: 798305, gst: 143695, total: 942000, placeOfSupply: 'Kerala (32)', isInterState: true },
-  { id: 'inv-4', number: 'KZ/2627/000838', subOrderId: 'KZ-40126-A', sellerOfRecord: 'Sunrise Traders', buyer: 'Bharat Textiles LLP', issuedAt: '2 Sep 2026', taxableValue: 4118644, gst: 741356, total: 4860000, placeOfSupply: 'Gujarat (24)', isInterState: true },
-  { id: 'inv-5', number: 'KZ/2627/000835', subOrderId: 'KZ-40122-A', sellerOfRecord: 'Krozenda Entity', buyer: 'Kritika Enterprises', issuedAt: '1 Sep 2026', taxableValue: 11116071, gst: 1333929, total: 12450000, placeOfSupply: 'Rajasthan (08)', isInterState: true },
-  { id: 'inv-6', number: 'KZ/2627/000831', subOrderId: 'KZ-40120-A', sellerOfRecord: 'Krozenda Entity', buyer: 'Fatima Sheikh', issuedAt: '1 Sep 2026', taxableValue: 367857, gst: 44143, total: 412000, placeOfSupply: 'Uttar Pradesh (09)', isInterState: true },
-]
-
-const INVOICE_TABS = {
-  all: () => true,
-  krozenda: (i) => i.sellerOfRecord === 'Krozenda Entity',
-  vendor: (i) => i.sellerOfRecord !== 'Krozenda Entity',
-  inter_state: (i) => i.isInterState,
-}
-
-export function invoiceListFixture(query = {}) {
-  const { tab = 'all', filters = {} } = query
-  let rows = INVOICES.filter(INVOICE_TABS[tab] || INVOICE_TABS.all)
-  rows = search(rows, filters.search, ['number', 'subOrderId', 'buyer', 'sellerOfRecord'])
-  return page(rows, INVOICES, INVOICE_TABS, query)
-}
-
-export function invoiceDetailFixture(invoiceId) {
-  const summary = INVOICES.find((i) => i.id === invoiceId) || INVOICES[0]
-  // Inter-state supply → IGST only. Intra-state would split into CGST + SGST.
-  return {
-    ...summary,
-    seller: {
-      name: summary.sellerOfRecord,
-      gstin: summary.sellerOfRecord === 'Krozenda Entity' ? '27AAECK4821M1Z9' : '27AAFCN9612R1ZQ',
-      address: 'Unit 4, Marol Industrial Estate, Andheri East, Mumbai 400059',
-    },
-    buyerDetail: {
-      name: summary.buyer,
-      gstin: null,
-      address: 'Flat 402, Brigade Palmgrove, Koramangala 6th Block, Bengaluru 560034',
-    },
-    lines: [
-      {
-        name: 'Nirvaan Triply Stainless Steel Kadai, 1.2 L',
-        hsn: '732393',
-        quantity: 2,
-        unitPrice: 101610,
-        taxableValue: 203220,
-        gstRate: 18,
-        cgst: 0,
-        sgst: 0,
-        igst: 36580,
-        total: 239800,
-      },
-      {
-        name: 'Nirvaan Silicone Spatula Set of 3',
-        hsn: '392410',
-        quantity: 1,
-        unitPrice: 42288,
-        taxableValue: 42288,
-        gstRate: 18,
-        cgst: 0,
-        sgst: 0,
-        igst: 7612,
-        total: 49900,
-      },
-      {
-        name: 'Shipping and handling',
-        hsn: '996819',
-        quantity: 1,
-        unitPrice: 4237,
-        taxableValue: 4237,
-        gstRate: 18,
-        cgst: 0,
-        sgst: 0,
-        igst: 763,
-        total: 5000,
-      },
-    ],
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Writes
@@ -367,40 +228,6 @@ export function cancelSubOrderFixture(id, { reason } = {}) {
   return subOrder
 }
 
-export function updateShipmentFixture(id, { status, lastEvent } = {}) {
-  const shipment = findOr404(SHIPMENTS, id)
-  const allowed = ['in_transit', 'out_for_delivery', 'delivered', 'rto_in_transit', 'rto_delivered']
-
-  if (status && !allowed.includes(status)) throw invalid(`${status} is not a shipment state.`)
-
-  if (status) shipment.status = status
-  if (lastEvent) shipment.lastEvent = lastEvent
-  shipment.lastEventAt = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short' })
-  if (status === 'delivered') shipment.isLate = false
-
-  return shipment
-}
-
-/**
- * Take an RTO parcel back into stock.
- *
- * An RTO is not a return (PRD 6.3): the buyer never accepted the goods, so
- * there is no refund leg here — only the stock coming back and, where the
- * vendor bears the cost, the settlement reversal.
- */
-export function restockRtoFixture(id) {
-  const rto = findOr404(RTOS, id)
-  if (rto.stockRestored) throw invalid('That parcel is already back in stock.')
-
-  rto.stockRestored = true
-  if (rto.costBearer === 'vendor') rto.settlementReversed = true
-
-  const subOrder = SUB_ORDERS.find((entry) => entry.id === rto.subOrderId)
-  if (subOrder) subOrder.status = ORDER_STATUS_EXCEPTION.RTO_DELIVERED
-
-  return rto
-}
-
 export function decideReturnFixture(id, { decision, reason } = {}) {
   const entry = findOr404(RETURNS, id)
   if (entry.status !== 'awaiting_review') throw invalid('That return has already been decided.')
@@ -416,25 +243,4 @@ export function decideReturnFixture(id, { decision, reason } = {}) {
   }
 
   return entry
-}
-
-export function resolveCancellationRefundFixture(id) {
-  const cancellation = findOr404(CANCELLATIONS, id)
-  if (cancellation.refundStatus === 'completed') throw invalid('That refund is already paid.')
-  if (cancellation.refundStatus === 'not_required') throw invalid('Nothing was captured to refund.')
-
-  cancellation.refundStatus = 'completed'
-  return cancellation
-}
-
-export function voidInvoiceFixture(id, { reason } = {}) {
-  const invoice = findOr404(INVOICES, id)
-  if (invoice.voided) throw invalid('That invoice is already void.')
-  if (!reason || reason.trim().length < 5) throw invalid('A void needs a reason for the audit trail.')
-
-  // A tax invoice is never edited or deleted — it is voided and reissued, so
-  // the number series stays unbroken for GSTR-1.
-  invoice.voided = true
-  invoice.voidReason = reason.trim()
-  return invoice
 }

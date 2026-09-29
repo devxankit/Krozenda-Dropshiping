@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchAdminDashboardSummary, fetchDashboard } from '../services/dashboardService'
+import { fetchDashboard } from '../services/dashboardService'
 
 export const DASHBOARD_RANGES = Object.freeze([
   { id: '7d', label: 'Last 7 days' },
@@ -44,22 +44,5 @@ export function useDashboardController() {
     refetch: query.refetch,
     // When the server computed the payload, not when react-query cached it.
     updatedAt: query.data?.updatedAt ?? null,
-  }
-}
-
-// Kept for the interim summary endpoint; the seller and partner panels use
-// the same four counters.
-export function useDashboardSummaryController() {
-  const query = useQuery({
-    queryKey: ['admin', 'dashboard-summary'],
-    queryFn: fetchAdminDashboardSummary,
-  })
-
-  return {
-    summary: query.data,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    refetch: query.refetch,
   }
 }

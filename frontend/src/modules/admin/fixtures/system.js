@@ -1,4 +1,3 @@
-import { ADMIN_ROUTES } from '../../../config/routes'
 import { INTEGRATION_HEALTH } from '../constants'
 
 // Shapes match schemas/systemSchema.js. Money is in PAISE.
@@ -83,61 +82,11 @@ export function generalSettingsFixture() {
 export function integrationListFixture() {
   return {
     items: [
-      { id: 'razorpay', name: 'Razorpay Route', purpose: 'Payments and split settlement to vendor linked accounts', status: INTEGRATION_HEALTH.OPERATIONAL, note: null, environment: 'Live', lastEventAt: '2 Sep 2026, 14:36', ownedBy: 'client', settingsPath: ADMIN_ROUTES.SETTINGS_PAYMENTS },
-      { id: 'shiprocket', name: 'Shiprocket', purpose: 'AWB, courier allocation, pickup and tracking webhooks', status: INTEGRATION_HEALTH.OPERATIONAL, note: null, environment: 'Live', lastEventAt: '2 Sep 2026, 14:31', ownedBy: 'client', settingsPath: ADMIN_ROUTES.SETTINGS_LOGISTICS },
-      { id: 'sms', name: 'SMS India Hub', purpose: 'Transactional SMS and every OTP', status: INTEGRATION_HEALTH.DEGRADED, note: '3 DLT templates awaiting TRAI approval — affected messages are queued', environment: 'Live', lastEventAt: '2 Sep 2026, 14:28', ownedBy: 'client', settingsPath: ADMIN_ROUTES.SETTINGS_NOTIFICATIONS },
-      { id: 'smtp', name: 'SMTP', purpose: 'Order confirmations, invoices and verification links', status: INTEGRATION_HEALTH.OPERATIONAL, note: 'SPF, DKIM and DMARC all verified', environment: 'Live', lastEventAt: '2 Sep 2026, 14:34', ownedBy: 'client', settingsPath: ADMIN_ROUTES.SETTINGS_NOTIFICATIONS },
-      { id: 'fcm', name: 'Firebase Cloud Messaging', purpose: 'Push notifications to the buyer and seller apps', status: INTEGRATION_HEALTH.OPERATIONAL, note: 'Push only — no Firebase Auth, Firestore or Storage', environment: 'Live', lastEventAt: '2 Sep 2026, 14:20', ownedBy: 'client', settingsPath: ADMIN_ROUTES.SETTINGS_NOTIFICATIONS },
-    ],
-  }
-}
-
-export function securitySettingsFixture() {
-  return {
-    policies: [
-      { key: 'require_2fa', label: 'Require two-factor for every admin', description: 'Nobody reaches the panel with a password alone.', enabled: true },
-      { key: 'login_alerts', label: 'Login alerts', description: 'Email the account owner on a sign-in from a new device or location.', enabled: true },
-      { key: 'ip_allowlist', label: 'Restrict to allowlisted IPs', description: 'Sign-in is refused from anywhere outside the list below.', enabled: false },
-      { key: 'encrypt_kyc', label: 'Encrypt KYC documents at rest', description: 'Uploaded PAN, Aadhaar and bank documents are stored encrypted.', enabled: true },
-      { key: 'session_pinning', label: 'Bind sessions to a device', description: 'A stolen token cannot be replayed from another device.', enabled: true },
-    ],
-    sessionMaxHours: 12,
-    passwordMinLength: 12,
-    lockoutAttempts: 5,
-    ipAllowlist: ['103.21.244.0/24', '49.36.180.22', '157.32.14.201'],
-    recentSignIns: [
-      { id: 'si-1', person: 'Priya Sharma', at: '2 Sep 2026, 09:14', ip: '103.21.244.18', location: 'Mumbai, IN', device: 'Chrome on macOS', outcome: 'success' },
-      { id: 'si-2', person: 'Anil Varma', at: '2 Sep 2026, 08:40', ip: '103.21.244.22', location: 'Mumbai, IN', device: 'Firefox on Windows', outcome: 'success' },
-      { id: 'si-3', person: 'Deepa Raghunathan', at: '1 Sep 2026, 18:22', ip: '49.36.180.22', location: 'Bengaluru, IN', device: 'Chrome on Windows', outcome: 'success' },
-      { id: 'si-4', person: 'unknown@krozenda.in', at: '1 Sep 2026, 03:11', ip: '45.148.10.94', location: 'Amsterdam, NL', device: 'curl/8.4', outcome: 'failed' },
-      { id: 'si-5', person: 'Rahul Bhatt', at: '31 Aug 2026, 22:48', ip: '182.70.11.65', location: 'Pune, IN', device: 'Safari on iOS', outcome: 'locked' },
-    ],
-  }
-}
-
-export function webhookListFixture() {
-  return {
-    keys: [
-      { id: 'key-1', label: 'Shiprocket callback key', prefix: 'kz_live_srkt_', createdAt: '18 Jun 2026', lastUsedAt: '2 Sep 2026, 14:31', scopes: ['shipments.write'] },
-      { id: 'key-2', label: 'Razorpay webhook secret', prefix: 'kz_live_rzp_', createdAt: '12 Jun 2026', lastUsedAt: '2 Sep 2026, 14:36', scopes: ['payments.write', 'settlements.write'] },
-      { id: 'key-3', label: 'Internal reporting key', prefix: 'kz_live_rpt_', createdAt: '4 Jul 2026', lastUsedAt: null, scopes: ['reports.read'] },
-    ],
-    endpoints: [
-      { id: 'ep-1', url: 'https://api.krozenda.in/hooks/razorpay', events: ['payment.captured', 'payment.failed', 'refund.processed', 'payout.processed', 'payout.failed'], status: 'healthy', lastDeliveryAt: '2 Sep 2026, 14:36', failures24h: 0 },
-      { id: 'ep-2', url: 'https://api.krozenda.in/hooks/shiprocket', events: ['shipment.picked', 'shipment.in_transit', 'shipment.delivered', 'shipment.rto'], status: 'healthy', lastDeliveryAt: '2 Sep 2026, 14:31', failures24h: 0 },
-      { id: 'ep-3', url: 'https://ops.krozenda.in/hooks/alerts', events: ['payout.failed', 'kyc.submitted'], status: 'failing', lastDeliveryAt: '1 Sep 2026, 22:04', failures24h: 14 },
-    ],
-  }
-}
-
-export function policySettingsFixture() {
-  return {
-    items: [
-      { id: 'pol-1', name: 'Vendor Agreement', version: 'v2.1', effectiveFrom: '4 Jul 2026', acceptedBy: 306, pendingAcceptance: 12, requiresReacceptance: false },
-      { id: 'pol-2', name: 'Privacy Policy', version: 'v1.4', effectiveFrom: '12 Aug 2026', acceptedBy: 24680, pendingAcceptance: 136, requiresReacceptance: false },
-      { id: 'pol-3', name: 'Terms & Conditions', version: 'v3.0', effectiveFrom: '12 Aug 2026', acceptedBy: 24612, pendingAcceptance: 204, requiresReacceptance: false },
-      { id: 'pol-4', name: 'Return Policy', version: 'v1.3', effectiveFrom: '20 Aug 2026', acceptedBy: 184, pendingAcceptance: 134, requiresReacceptance: true },
-      { id: 'pol-5', name: 'Shipping Policy', version: 'v1.1', effectiveFrom: '2 May 2026', acceptedBy: 318, pendingAcceptance: 0, requiresReacceptance: false },
+      { id: 'razorpay', name: 'Razorpay Route', purpose: 'Payments and split settlement to vendor linked accounts', status: INTEGRATION_HEALTH.OPERATIONAL, note: null, environment: 'Live', lastEventAt: '2 Sep 2026, 14:36', ownedBy: 'client' },
+      { id: 'shiprocket', name: 'Shiprocket', purpose: 'AWB, courier allocation, pickup and tracking webhooks', status: INTEGRATION_HEALTH.OPERATIONAL, note: null, environment: 'Live', lastEventAt: '2 Sep 2026, 14:31', ownedBy: 'client' },
+      { id: 'sms', name: 'SMS India Hub', purpose: 'Transactional SMS and every OTP', status: INTEGRATION_HEALTH.DEGRADED, note: '3 DLT templates awaiting TRAI approval — affected messages are queued', environment: 'Live', lastEventAt: '2 Sep 2026, 14:28', ownedBy: 'client' },
+      { id: 'smtp', name: 'SMTP', purpose: 'Order confirmations, invoices and verification links', status: INTEGRATION_HEALTH.OPERATIONAL, note: 'SPF, DKIM and DMARC all verified', environment: 'Live', lastEventAt: '2 Sep 2026, 14:34', ownedBy: 'client' },
+      { id: 'fcm', name: 'Firebase Cloud Messaging', purpose: 'Push notifications to the buyer and seller apps', status: INTEGRATION_HEALTH.OPERATIONAL, note: 'Push only — no Firebase Auth, Firestore or Storage', environment: 'Live', lastEventAt: '2 Sep 2026, 14:20', ownedBy: 'client' },
     ],
   }
 }

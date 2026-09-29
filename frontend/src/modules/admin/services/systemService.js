@@ -3,20 +3,7 @@
 import { api } from '../../../lib/axios'
 import { fetchResource, mutateResource } from './mockTransport'
 import * as fixtures from '../fixtures/system'
-import {
-  adminProfileSchema,
-  auditLogSchema,
-  backupSchema,
-  businessRulesSchema,
-  generalSettingsSchema,
-  integrationListSchema,
-  policySettingsSchema,
-  securitySettingsSchema,
-  supportTicketDetailSchema,
-  supportTicketListSchema,
-  taxSettingsSchema,
-  webhookListSchema,
-} from '../schemas/systemSchema'
+import { adminProfileSchema, auditLogSchema, backupSchema, businessRulesSchema, generalSettingsSchema, integrationListSchema, supportTicketDetailSchema, supportTicketListSchema, taxSettingsSchema } from '../schemas/systemSchema'
 
 const params = (query) => ({
   tab: query.tab,
@@ -104,21 +91,6 @@ export const fetchIntegrations = one(
   fixtures.integrationListFixture,
   integrationListSchema,
   true,
-)
-export const fetchSecuritySettings = one(
-  '/admin/settings/security',
-  fixtures.securitySettingsFixture,
-  securitySettingsSchema,
-)
-export const fetchWebhooks = one(
-  '/admin/settings/api-webhooks',
-  fixtures.webhookListFixture,
-  webhookListSchema,
-)
-export const fetchPolicySettings = one(
-  '/admin/settings/policies',
-  fixtures.policySettingsFixture,
-  policySettingsSchema,
 )
 export const fetchTaxSettings = one(
   '/admin/settings/taxes',

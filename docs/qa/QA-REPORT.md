@@ -384,7 +384,7 @@ Totals: **E2E 32 passed / 0 failed** (6 skipped = desktop-only specs on mobile a
 |---|---|---|
 | QA-026 | Seller keeps seeing buyer phone and address before accepting — **by design** | Closed, no change |
 | QA-038 | Add a cart link on the mobile product page | **Fixed:** cart button with item badge next to Share in the mobile top bar (same look as the web header), opens the existing cart page — no new route or menu. E2E: add to cart → badge "1" → cart opens with the product (mobile) |
-| QA-033 | Remove the admin screens that are not in the sidebar and have no backend | **Done** — see §16. Invoices (in the sidebar, no backend) is still open |
+| QA-033 | Remove the admin screens that are not in the sidebar and have no backend | **Done** — see §16 and §17 (Invoices built; all unlinked screens removed) |
 
 ## 16. QA-033: unlinked admin screens removed (2026-09-29)
 
@@ -395,3 +395,50 @@ For each screen the route, route constant, page, controller hook, service call, 
 Kept on purpose: Invoice detail (opened from Invoices, which is in the sidebar) and Vendor statement (opened from Vendor ledgers). The dropshipping partner drawer stays because the Sellers screen uses it.
 
 Verified: `vite build` OK; lint shows nothing new; admin E2E (sidebar smoke over every module, admin panel, staff permissions) 7 passed / 3 skipped by design.
+
+## 17. QA-033 round 2: Invoices built, all remaining unlinked screens removed (2026-09-29)
+
+Owner decisions: build the Invoices backend; remove every admin screen that is not reachable from the sidebar.
+
+**Invoices (Orders → Invoices) now run on the real backend.**
+- `GET /admin/invoices` (paged; tabs *All / Krozenda is seller / Vendor is seller / Inter-state*; search by invoice number, order, buyer or seller) and `GET /admin/invoices/:id`, in `Controllers/adminInvoiceController.js`. Access: `admin.orders.invoices` or `admin.orders.view`, the same rule the sidebar uses.
+- Invoices are not stored. They are derived by `services/invoiceService` — the same code behind the buyer's own invoice — so admin and buyer figures cannot differ. There is one invoice per supplier on an order.
+- An order is invoiced once it is a real supply: not cancelled, payment not failed, and paid unless it is COD.
+- Listing never freezes supplier details; opening an invoice does, exactly like the buyer opening theirs.
+- `invoiceService` was split into a bulk, read-only supplier loader and a pure `composeInvoices`, so the list fetches platform settings and sellers once for all orders.
+- Bug fixed on the way: an order whose only platform charge was the platform fee (no delivery fee, only seller lines) produced a Krozenda invoice with no supplier, printed as "Seller". The platform is now included whenever there is a platform fee.
+- The invoice screen no longer shows hard-coded content:
+  - "Paid (Online Verified)" → the real payment state
+  - "State: Maharashtra (27)" → the supplier's state
+  - a fixed "IGST 18% / CGST 9%" → per-line rates and summed amounts
+  - "Shipping: Free / Included" → the actual delivery charge and platform fee
+  - "Registered Seller" / "VERIFIED DOCUMENT" → removed
+  - A supplier without a GSTIN now shows a **Bill of Supply** with no tax.
+- The unused invoice "void" chain and the invoice fixtures were removed.
+- Tests: `tests/qa/admin-invoices.test.js` (9 tests: parity with the buyer invoice, eligibility, tabs, paging, no freeze on list, detail, platform-fee fix, bad ids, permissions). E2E: a placed COD order appears under Invoices and its tax invoice opens (desktop and mobile). The admin smoke no longer tolerates `/admin/invoices` 404.
+
+**Unreachable screens removed.** Reachability was computed from the sidebar, settings sub-menu, shell and auth pages, following every link in the pages and components they render (fixture/mock links excluded), then checked by hand.
+
+Removed:
+- the Accounting module (13 screens)
+- legacy Finance: overview, transactions, refunds, settlements, settlement batch, vendor ledgers, vendor statement
+- Attributes
+- Sub-order detail and the old Sub-orders, Cancellations, RTO and Shipments lists
+- Carrier accounts
+- Report runner
+- Policies, Notifications and API & webhooks settings
+- the Showcase index and the empty placeholder-route mechanism
+- alias routes: B2B buyers, Partners, Companies and Channel partners, which reused the Customers/Sellers screens
+- the old redirect-only URLs
+
+Their controllers, services, schemas, fixtures, columns, components and constants went with them. An iterative dead-code pass removed anything no remaining file used: 42 more files and about 12,600 lines in total across both rounds.
+
+Seller payouts are unaffected: they run from `Jobs/settlementAutomationJob.js`, and none of the removed screens was in that path. Backend endpoints were left as they are.
+
+**Kept, awaiting the owner:**
+- `/admin/settings/logistics` is the only UI that turns shipping on and picks the courier strategy. The backend's "enable it in Shipping Settings" message points there.
+- `/admin/finance/commission-rules` is the only UI that changes a seller's commission after KYC approval.
+
+Neither is in the sidebar today. The owner should choose between adding each to the Settings sub-menu and deleting it.
+
+Verified: `vite build` OK; no new lint errors (one latent `no-undef` disappeared with dead code); reachability re-run shows only the two kept screens; admin E2E 9 passed / 3 skipped by design (smoke: 43 sidebar modules, 0 problems); backend invoice, RBAC, security, shell and money suites 99/99.

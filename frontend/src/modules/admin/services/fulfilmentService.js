@@ -2,32 +2,8 @@
 
 import { fetchResource, mutateResource } from './mockTransport'
 import * as fixtures from '../fixtures/fulfilment'
-const {
-  cancellationListFixture,
-  invoiceDetailFixture,
-  invoiceListFixture,
-  returnDetailFixture,
-  returnListFixture,
-  rtoListFixture,
-  shipmentListFixture,
-  subOrderListFixture,
-} = fixtures
-import {
-  cancellationListSchema,
-  invoiceDetailSchema,
-  invoiceListSchema,
-  returnDetailSchema,
-  returnListSchema,
-  rtoListSchema,
-  shipmentListSchema,
-  subOrderListSchema,
-  cancellationSchema,
-  invoiceSchema,
-  returnSchema,
-  rtoSchema,
-  shipmentSchema,
-  subOrderSchema,
-} from '../schemas/fulfilmentSchema'
+const { returnDetailFixture, returnListFixture, shipmentListFixture } = fixtures
+import { invoiceDetailSchema, invoiceListSchema, returnDetailSchema, returnListSchema, shipmentListSchema, returnSchema, subOrderSchema } from '../schemas/fulfilmentSchema'
 
 const params = (query) => ({
   tab: query.tab,
@@ -36,34 +12,12 @@ const params = (query) => ({
   ...query.filters,
 })
 
-// Sub-orders/Shipments/RTO/Returns/Cancellations are a real backend — see
-// adminFulfilmentController and adminReturnController. Invoices (GST/tax
-// document generation) stay on fixtures, same accounting-scope trade-off as
-// financeService's chart of accounts / tax centre / statements.
-export const fetchSubOrders = (query) =>
-  fetchResource({
-    path: '/admin/sub-orders',
-    params: params(query),
-    fixture: () => subOrderListFixture(query),
-    schema: subOrderListSchema,
-    live: true,
-  })
-
 export const fetchShipments = (query) =>
   fetchResource({
     path: '/admin/shipments',
     params: params(query),
     fixture: () => shipmentListFixture(query),
     schema: shipmentListSchema,
-    live: true,
-  })
-
-export const fetchRtos = (query) =>
-  fetchResource({
-    path: '/admin/rto',
-    params: params(query),
-    fixture: () => rtoListFixture(query),
-    schema: rtoListSchema,
     live: true,
   })
 
@@ -84,28 +38,21 @@ export const fetchReturnDetail = (returnId) =>
     live: true,
   })
 
-export const fetchCancellations = (query) =>
-  fetchResource({
-    path: '/admin/cancellations',
-    params: params(query),
-    fixture: () => cancellationListFixture(query),
-    schema: cancellationListSchema,
-    live: true,
-  })
-
+// Invoices are derived from orders by the backend's invoiceService — the same
+// code behind the buyer's own invoice — so there is no fixture for them.
 export const fetchInvoices = (query) =>
   fetchResource({
     path: '/admin/invoices',
     params: params(query),
-    fixture: () => invoiceListFixture(query),
     schema: invoiceListSchema,
+    live: true,
   })
 
 export const fetchInvoiceDetail = (invoiceId) =>
   fetchResource({
     path: `/admin/invoices/${invoiceId}`,
-    fixture: () => invoiceDetailFixture(invoiceId),
     schema: invoiceDetailSchema,
+    live: true,
   })
 
 // --- writes ---------------------------------------------------------------
@@ -120,12 +67,6 @@ export const advanceSubOrder = ({ id, awb }) =>
 export const cancelSubOrder = ({ id, reason }) =>
   mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/cancel`, body: { reason }, fixture: (p) => fixtures.cancelSubOrderFixture(id, p), schema: subOrderSchema, live: true })
 
-export const updateShipment = ({ id, status, lastEvent }) =>
-  mutateResource({ method: 'put', path: `/admin/fulfilment/shipments/${id}`, body: { status, lastEvent }, fixture: (p) => fixtures.updateShipmentFixture(id, p), schema: shipmentSchema, live: true })
-
-export const restockRto = ({ id }) =>
-  mutateResource({ path: `/admin/fulfilment/rto/${id}/restock`, body: { id }, fixture: () => fixtures.restockRtoFixture(id), schema: rtoSchema, live: true })
-
 // APPROVED accepts the return (pickup booked, no money yet); REJECTED needs a
 // reason. `requireItemBack: false` completes at once (nothing to send back).
 export const decideReturn = ({ id, decision, reason, requireItemBack = true, restock = false }) =>
@@ -138,9 +79,3 @@ export const markReturnReceived = ({ id }) =>
 // replacement order; `restock` puts the returned units back on sale.
 export const completeReturn = ({ id, restock = false }) =>
   mutateResource({ path: `/admin/returns/${id}/complete`, body: { restock }, fixture: () => fixtures.decideReturnFixture(id, {}), schema: returnSchema, live: true })
-
-export const resolveCancellationRefund = ({ id }) =>
-  mutateResource({ path: `/admin/fulfilment/cancellations/${id}/refund`, body: { id }, fixture: () => fixtures.resolveCancellationRefundFixture(id), schema: cancellationSchema, live: true })
-
-export const voidInvoice = ({ id, reason }) =>
-  mutateResource({ method: 'put', path: `/admin/fulfilment/invoices/${id}/void`, body: { reason }, fixture: (p) => fixtures.voidInvoiceFixture(id, p), schema: invoiceSchema })

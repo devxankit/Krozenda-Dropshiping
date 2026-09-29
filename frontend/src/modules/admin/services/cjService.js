@@ -44,11 +44,6 @@ export async function fetchCjDashboard() {
   return data.data
 }
 
-export async function fetchCjBalance() {
-  const { data } = await api.get('/admin/cj/balance')
-  return data.data
-}
-
 export async function searchCjCatalogue(params) {
   const { data } = await api.get('/admin/cj/catalogue', { params })
   return data.data
@@ -109,16 +104,6 @@ export async function fetchOnboardedCjProduct(productId) {
 export async function fetchCjProductCategorySummary() {
   const { data } = await api.get('/admin/cj/products/category-summary')
   return data.data.categories
-}
-
-export async function fetchCjCategoryMappings() {
-  const { data } = await api.get('/admin/cj/category-mappings')
-  return data.data
-}
-
-export async function saveCjCategoryMapping(body) {
-  const { data } = await api.post('/admin/cj/category-mappings', body)
-  return data.data
 }
 
 export async function fetchCjOrders(params) {

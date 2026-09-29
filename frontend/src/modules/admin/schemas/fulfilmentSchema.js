@@ -34,8 +34,6 @@ export const subOrderListItemSchema = z.object({
   total: z.number().int(),
 })
 
-export const subOrderListSchema = paged(subOrderListItemSchema)
-
 export const shipmentSchema = z.object({
   id: z.string(),
   subOrderId: z.string(),
@@ -52,22 +50,6 @@ export const shipmentSchema = z.object({
 })
 
 export const shipmentListSchema = paged(shipmentSchema)
-
-export const rtoSchema = z.object({
-  id: z.string(),
-  subOrderId: z.string(),
-  awb: z.string(),
-  seller: z.string(),
-  reason: z.enum(['undelivered', 'address_failure', 'customer_unreachable', 'refused']),
-  initiatedAt: z.string(),
-  costBearer: z.enum(['platform', 'vendor', 'buyer']),
-  shippingCost: z.number().int(),
-  orderValue: z.number().int(),
-  settlementReversed: z.boolean(),
-  stockRestored: z.boolean(),
-})
-
-export const rtoListSchema = paged(rtoSchema)
 
 export const returnListItemSchema = z.object({
   rejectionReason: z.string().optional(),
@@ -128,25 +110,13 @@ export const returnDetailSchema = returnListItemSchema.extend({
   ),
 })
 
-export const cancellationSchema = z.object({
-  id: z.string(),
-  subOrderId: z.string(),
-  orderId: z.string(),
-  cancelledBy: z.enum(['buyer', 'admin', 'vendor']),
-  actor: z.string(),
-  reason: z.string(),
-  cancelledAt: z.string(),
-  refundStatus: z.enum(['not_required', 'pending', 'processing', 'completed', 'failed']),
-  refundAmount: z.number().int(),
-})
-
-export const cancellationListSchema = paged(cancellationSchema)
-
+// One buyer invoice: one per supplier on an order (Krozenda for own-stock/CJ
+// lines and the delivery/platform charges, each seller for theirs). Money in
+// paise. A supplier with no GSTIN issues a Bill of Supply with no tax.
 export const invoiceSchema = z.object({
-  voided: z.boolean().optional(),
-  voidReason: z.string().optional(),
   id: z.string(),
   number: z.string(),
+  orderId: z.string(),
   subOrderId: z.string(),
   sellerOfRecord: z.string(),
   buyer: z.string(),
@@ -156,13 +126,18 @@ export const invoiceSchema = z.object({
   total: z.number().int(),
   placeOfSupply: z.string(),
   isInterState: z.boolean(),
+  documentType: z.enum(['TAX_INVOICE', 'BILL_OF_SUPPLY']),
 })
 
 export const invoiceListSchema = paged(invoiceSchema)
 
 export const invoiceDetailSchema = invoiceSchema.extend({
-  seller: z.object({ name: z.string(), gstin: z.string(), address: z.string() }),
-  buyerDetail: z.object({ name: z.string(), gstin: z.string().nullable(), address: z.string() }),
+  taxType: z.enum(['INTRA', 'INTER', 'NONE']),
+  paymentStatus: z.string(),
+  shipping: z.number().int(),
+  platformFee: z.number().int(),
+  seller: z.object({ name: z.string(), gstin: z.string(), address: z.string(), state: z.string() }),
+  buyerDetail: z.object({ name: z.string(), gstin: z.string().nullable(), address: z.string(), isB2B: z.boolean() }),
   lines: z.array(
     z.object({
       name: z.string(),

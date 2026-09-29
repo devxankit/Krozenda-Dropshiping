@@ -51,12 +51,6 @@ export const useGeneralSettingsController = () =>
   useResource(['admin', 'settings', 'general'], service.fetchGeneralSettings)
 export const useIntegrationsController = () =>
   useResource(['admin', 'settings', 'integrations'], service.fetchIntegrations)
-export const useSecuritySettingsController = () =>
-  useResource(['admin', 'settings', 'security'], service.fetchSecuritySettings)
-export const useWebhooksController = () =>
-  useResource(['admin', 'settings', 'webhooks'], service.fetchWebhooks)
-export const usePolicySettingsController = () =>
-  useResource(['admin', 'settings', 'policies'], service.fetchPolicySettings)
 export const useTaxSettingsController = () =>
   useResource(['admin', 'settings', 'taxes'], service.fetchTaxSettings)
 export const useBackupsController = () => useResource(['admin', 'system', 'backups'], service.fetchBackups)
