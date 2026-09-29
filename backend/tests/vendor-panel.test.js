@@ -232,6 +232,10 @@ describe('seller product B2B fields', () => {
       .post('/vendor/products')
       .set(auth(token))
       .field('name', 'Bulk Cotton Tee')
+      // SKU, weight and a main image are required, in tests as in production.
+      .field('sku', `BULK-TEE-${Date.now()}`)
+      .field('weight', '0.3')
+      .field('images', JSON.stringify(['/uploads/products/tee.webp']))
       .field('category', category._id.toString())
       .field('price', '500')
       .field('stock', '100')

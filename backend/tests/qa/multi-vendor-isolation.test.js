@@ -204,8 +204,8 @@ describe('delivery confirmation releases the payout', () => {
   test('an admin confirming it from the sub-orders screen makes it settleable (once)', async () => {
     const { seller, product, orderId } = await sellerDeliveredLine();
     const admin = await adminClient();
-    const unconfirmed = await admin.get('/admin/sub-orders?tab=unconfirmed&rowsPerPage=100');
-    expect(unconfirmed.body.data.items.map((r) => r.orderId)).toContain(orderId);
+    const unconfirmed = await admin.get('/admin/orders?tab=delivery_unconfirmed&rowsPerPage=100');
+    expect(unconfirmed.body.data.items.map((o) => o.id)).toContain(orderId);
     const id = `${orderId}:${product._id}:`;
     const ok = await admin.post(`/admin/fulfilment/sub-orders/${id}/confirm-delivery`);
     expect(ok.status).toBe(200);

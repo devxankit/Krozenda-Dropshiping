@@ -23,5 +23,23 @@ export const env = Object.freeze({
     vapidKey: RAW.VITE_FIREBASE_VAPID_KEY || '',
   }),
   isDev: (RAW.VITE_APP_ENV || 'development') === 'development',
+  // True only under the Vite dev server — never in any `vite build`, whatever
+  // VITE_APP_ENV says. For things that must never ship (demo credentials).
+  isDevServer: Boolean(RAW.DEV),
+  // Demo seller sign-ins, pre-filled on the seller login page in local dev
+  // only. Behind a literal import.meta.env.DEV so a production build drops
+  // them entirely — they are not in the shipped JS at all.
+  // The admin sign-in pre-fill, same rule: dev server only, absent from any
+  // build. It is the real bootstrap admin from backend/.env — shipping it in
+  // the public bundle published the super-admin password.
+  demoAdminLogin: import.meta.env.DEV
+    ? Object.freeze({ email: 'admin@example.com', password: 'Krozenda@Admin123' })
+    : null,
+  demoSellerLogins: import.meta.env.DEV
+    ? Object.freeze({
+        B2C: { email: 'b2c.demo@krozenda.com', password: 'Demo@1234' },
+        B2B: { email: 'b2b.demo@krozenda.com', password: 'Demo@1234' },
+      })
+    : null,
   isProd: RAW.VITE_APP_ENV === 'production',
 })

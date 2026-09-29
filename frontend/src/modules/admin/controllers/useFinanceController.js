@@ -18,12 +18,6 @@ export const useSettlementListController = () =>
 export const useVendorLedgerListController = () =>
   useListController({ queryKey: ['admin', 'finance', 'ledgers'], queryFn: service.fetchVendorLedgers })
 
-export const useJournalVoucherListController = () =>
-  useListController({ queryKey: ['admin', 'finance', 'vouchers'], queryFn: service.fetchJournalVouchers })
-
-export const useExpenseListController = () =>
-  useListController({ queryKey: ['admin', 'finance', 'expenses'], queryFn: service.fetchExpenses })
-
 function useResource(key, queryFn, enabled = true) {
   const query = useQuery({ queryKey: key, queryFn, enabled })
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
@@ -42,21 +36,6 @@ export const useCommissionRuleWriteController = () =>
     success: (rule) => `${rule.target} commission set to ${rule.value}%`,
   })
 
-export const usePricingRulesController = () =>
-  useResource(['admin', 'finance', 'pricing-rules'], service.fetchPricingRules)
-
-export const useChartOfAccountsController = () =>
-  useResource(['admin', 'finance', 'coa'], service.fetchChartOfAccounts)
-
-export const useTrialBalanceController = () =>
-  useResource(['admin', 'finance', 'trial-balance'], service.fetchTrialBalance)
-
-export const useTaxCentreController = () =>
-  useResource(['admin', 'finance', 'tax'], service.fetchTaxCentre)
-
-export const useStatementController = (kind) =>
-  useResource(['admin', 'finance', 'statement', kind], () => service.fetchStatement(kind))
-
 export const useSettlementBatchController = (batchId) =>
   useResource(
     ['admin', 'finance', 'settlements', batchId],
@@ -71,103 +50,10 @@ export const useVendorStatementController = (vendorId) =>
     Boolean(vendorId),
   )
 
-export const useAccountOptionsController = () =>
-  useResource(['admin', 'finance', 'account-options'], service.fetchAccountOptions)
-
-// Every accounting write invalidates the whole finance tree rather than one
-// list. That is not laziness: a posting moves the vouchers list, the trial
-// balance, the P&L and the balance sheet at once, so refreshing only the list
-// it was made from would leave the statements showing stale figures.
+// Every finance write invalidates the whole finance tree rather than one
+// list: a settlement or refund moves the overview, the ledgers and the lists
+// at once.
 const LEDGER = [['admin', 'finance']]
-
-export const useJournalVoucherWriteController = ({ onSaved } = {}) => {
-  const create = useAdminMutation({
-    mutationFn: service.createJournalVoucher,
-    invalidate: LEDGER,
-    success: (voucher) => `${voucher.number} ${voucher.status === 'draft' ? 'saved as draft' : 'posted'}`,
-    describe: (voucher) => voucher.narration,
-    onDone: onSaved,
-  })
-
-  const update = useAdminMutation({
-    mutationFn: service.updateJournalVoucher,
-    invalidate: LEDGER,
-    success: (voucher) => `${voucher.number} updated`,
-    onDone: onSaved,
-  })
-
-  const post = useAdminMutation({
-    mutationFn: service.postJournalVoucher,
-    invalidate: LEDGER,
-    success: (voucher) => `${voucher.number} posted to the ledger`,
-  })
-
-  const reverse = useAdminMutation({
-    mutationFn: service.reverseJournalVoucher,
-    invalidate: LEDGER,
-    success: (voucher) => `${voucher.number} reversed`,
-    describe: () => 'The original entry stays in the audit trail.',
-  })
-
-  const remove = useAdminMutation({
-    mutationFn: service.deleteJournalVoucher,
-    invalidate: LEDGER,
-    success: 'Draft voucher deleted',
-  })
-
-  return { create, update, post, reverse, remove }
-}
-
-export const useExpenseWriteController = ({ onSaved } = {}) => {
-  const create = useAdminMutation({
-    mutationFn: service.createExpense,
-    invalidate: LEDGER,
-    success: 'Expense recorded',
-    describe: (expense) => `${expense.category} — ${expense.vendor}`,
-    onDone: onSaved,
-  })
-
-  const update = useAdminMutation({
-    mutationFn: service.updateExpense,
-    invalidate: LEDGER,
-    success: 'Expense updated',
-    onDone: onSaved,
-  })
-
-  const remove = useAdminMutation({
-    mutationFn: service.deleteExpense,
-    invalidate: LEDGER,
-    success: 'Expense deleted',
-    describe: () => 'Its ledger postings were backed out.',
-  })
-
-  return { create, update, remove }
-}
-
-export const useAccountWriteController = ({ onSaved } = {}) => {
-  const create = useAdminMutation({
-    mutationFn: service.createAccount,
-    invalidate: LEDGER,
-    success: (account) => `Account ${account.code} created`,
-    describe: (account) => account.name,
-    onDone: onSaved,
-  })
-
-  const update = useAdminMutation({
-    mutationFn: service.updateAccount,
-    invalidate: LEDGER,
-    success: (account) => `Account ${account.code} updated`,
-    onDone: onSaved,
-  })
-
-  const setActive = useAdminMutation({
-    mutationFn: service.setAccountActive,
-    invalidate: LEDGER,
-    success: (account) => `${account.code} ${account.isActive ? 'reactivated' : 'deactivated'}`,
-  })
-
-  return { create, update, setActive }
-}
 
 // Maker–checker lives in two places on purpose: PAYOUT_APPROVE decides who
 // sees the button, and the two-factor code decides whether the release goes

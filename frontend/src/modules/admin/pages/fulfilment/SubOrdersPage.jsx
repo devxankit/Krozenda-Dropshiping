@@ -29,7 +29,6 @@ export function SubOrdersPage() {
   const writer = useSubOrderWriteController({ onDone: () => setCancelling(null) })
 
   const advance = (row) => writer.advance.run({ id: row.id })
-  const confirmDelivery = (row) => writer.confirmDelivery.run({ id: row.id })
 
   const columns = useMemo(
     () =>
@@ -38,12 +37,11 @@ export function SubOrdersPage() {
         subOrderRowActions({
           open: (row) => navigate(adminPath.orderDetail(row.orderId)),
           advance,
-          confirmDelivery,
           onCancel: setCancelling,
         }),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [navigate, writer.advance, writer.confirmDelivery],
+    [navigate, writer.advance],
   )
 
   return (

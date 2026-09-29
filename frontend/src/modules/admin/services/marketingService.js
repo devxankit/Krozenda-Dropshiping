@@ -7,11 +7,9 @@ import {
   campaignListSchema,
   cmsPageListSchema,
   couponListSchema,
-  offerListSchema,
   reportCatalogueSchema,
   reportRunSchema,
   reviewListSchema,
-  templateListSchema,
 } from '../schemas/marketingSchema'
 
 const params = (query) => ({
@@ -67,9 +65,6 @@ export async function sendCouponWhatsapp({ id, audience, customerIds }) {
 export const fetchReviews = (query) =>
   fetchResource({ path: '/admin/marketing/reviews', params: params(query), fixture: () => fixtures.reviewListFixture(query), schema: reviewListSchema, live: true })
 
-export const fetchOffers = () =>
-  fetchResource({ path: '/admin/marketing/offers', fixture: fixtures.offerListFixture, schema: offerListSchema })
-
 // --- CMS Pages (real backend — dynamic) -----------------------------------
 
 export async function fetchCmsPages(query = {}) {
@@ -97,9 +92,6 @@ export async function deleteCmsPage({ id }) {
   return data.data
 }
 
-
-export const fetchTemplates = () =>
-  fetchResource({ path: '/admin/marketing/templates', fixture: fixtures.templateListFixture, schema: templateListSchema })
 
 // --- Reports (real backend — dynamic) --------------------------------------
 

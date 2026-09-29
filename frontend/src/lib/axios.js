@@ -124,6 +124,10 @@ function refreshAccessToken() {
   return refreshPromise
 }
 
+// Endpoints whose 401 means "these credentials are wrong", never "your
+// session expired" — see the response interceptor.
+const SIGN_IN_PATHS = ['/auth/login', '/auth/verify-otp', '/auth/login-otp', '/auth/reset-password'];
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -132,6 +136,16 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config
+    // A 401 from a sign-in call (wrong password / OTP), or from a request
+    // that carried no token at all, is not a session that expired — there
+    // was none. It passes through with the server's own message ("Invalid
+    // email or password") instead of "Your session has expired", and does
+    // not clear a session or attempt a refresh.
+    const isCredentialCheck =
+      !originalRequest?.headers?.Authorization || SIGN_IN_PATHS.some((path) => originalRequest?.url?.includes(path))
+    if (error.response?.status === 401 && isCredentialCheck) {
+      return Promise.reject(normaliseError(error))
+    }
     const is401 = error.response?.status === 401
 
     // `_retry` is the loop guard: a request is only ever replayed once. Without

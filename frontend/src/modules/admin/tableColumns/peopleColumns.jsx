@@ -266,39 +266,6 @@ export const KYC_TABS = Object.freeze([
   { id: 'overdue', label: 'Waiting over 3 days' },
 ])
 
-export const POLICY_ACCEPTANCE_COLUMNS = Object.freeze([
-  {
-    key: 'party',
-    header: 'Party',
-    render: (row) => <PrimaryCell title={row.party} subtitle={row.partyType} />,
-  },
-  { key: 'policy', header: 'Policy', width: '13rem', cellClassName: 'text-xs text-slate-800' },
-  {
-    key: 'version',
-    header: 'Version',
-    width: '7.5rem',
-    render: (row) => (
-      <Badge tone={row.current ? 'success' : 'neutral'} size="sm">
-        {row.version}
-        {!row.current && ' · superseded'}
-      </Badge>
-    ),
-  },
-  { key: 'acceptedAt', header: 'Accepted', width: '11rem', cellClassName: 'text-xs text-ink-muted' },
-  {
-    key: 'ip',
-    header: 'From IP',
-    width: '9rem',
-    render: (row) => <span className="tabular text-xs text-ink-muted">{row.ip}</span>,
-  },
-])
-
-export const POLICY_ACCEPTANCE_TABS = Object.freeze([
-  { id: 'all', label: 'All acceptances' },
-  { id: 'current', label: 'Current version' },
-  { id: 'superseded', label: 'Needs re-acceptance' },
-])
-
 export const STAFF_COLUMNS = Object.freeze([
   {
     key: 'name',

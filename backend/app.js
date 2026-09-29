@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const { UPLOADS_ROOT } = require('./Config/uploads');
 
 const app = express();
 const isProduction = process.env.ENV === 'production';
@@ -26,7 +27,9 @@ app.use(
       if (!isProduction || !origin || ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error('Not allowed by CORS'));
+      // A refused origin is the caller's problem, not a server fault: 403,
+      // not the 500 the global handler would otherwise report it as.
+      return callback(Object.assign(new Error('Not allowed by CORS'), { status: 403 }));
     },
     credentials: true,
   })
@@ -73,7 +76,7 @@ app.use((req, res, next) => {
 // --- Static uploads & brand assets ---
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'), {
+  express.static(UPLOADS_ROOT, {
     maxAge: '7d',
     acceptRanges: true,
     setHeaders(res) {

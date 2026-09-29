@@ -10,19 +10,7 @@ export function toPaise(input) {
   return Math.round(rupees * 100)
 }
 
-/** 123450 paise -> '1234.50', for putting a stored figure back in an input. */
-export function toRupeeInput(paise) {
-  if (!paise) return ''
-  return (paise / 100).toFixed(2)
-}
-
 /** Plain grouped rupees for totals rendered beside an input. */
 export function formatRupees(paise) {
   return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
-
-/** A voucher opens with two empty lines — the minimum a double entry needs. */
-export const blankVoucherLines = () => [
-  { code: '', debit: 0, credit: 0 },
-  { code: '', debit: 0, credit: 0 },
-]

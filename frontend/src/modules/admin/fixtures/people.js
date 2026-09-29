@@ -159,33 +159,6 @@ export function kycApplicationFixture(applicationId) {
 }
 
 // ---------------------------------------------------------------------------
-// Policy acceptances — who agreed to which version, when, from where
-// ---------------------------------------------------------------------------
-const ACCEPTANCES = [
-  { id: 'pa-1', party: 'Nova Retail Pvt Ltd', partyType: 'Seller', policy: 'Vendor Agreement', version: 'v2.1', acceptedAt: '24 Aug 2026, 15:08', ip: '49.36.180.22', current: true },
-  { id: 'pa-2', party: 'Nova Retail Pvt Ltd', partyType: 'Seller', policy: 'Return Policy', version: 'v1.2', acceptedAt: '24 Aug 2026, 15:09', ip: '49.36.180.22', current: false },
-  { id: 'pa-3', party: 'Arya Manufacturing', partyType: 'Partner', policy: 'Vendor Agreement', version: 'v2.1', acceptedAt: '18 Jun 2026, 09:44', ip: '103.21.58.90', current: true },
-  { id: 'pa-4', party: 'Arya Manufacturing', partyType: 'Partner', policy: 'Return Policy', version: 'v1.3', acceptedAt: '20 Aug 2026, 11:02', ip: '103.21.58.90', current: true },
-  { id: 'pa-5', party: 'Ananya Iyer', partyType: 'Buyer', policy: 'Terms & Conditions', version: 'v3.0', acceptedAt: '4 Mar 2026, 20:11', ip: '157.32.14.201', current: true },
-  { id: 'pa-6', party: 'Meghna Wholesale', partyType: 'Partner', policy: 'Vendor Agreement', version: 'v2.0', acceptedAt: '2 May 2026, 12:30', ip: '106.51.72.14', current: false },
-  { id: 'pa-7', party: 'Bharat Textiles LLP', partyType: 'Seller', policy: 'Privacy Policy', version: 'v1.4', acceptedAt: '21 Apr 2026, 17:55', ip: '117.230.44.8', current: true },
-  { id: 'pa-8', party: 'Sunrise Traders', partyType: 'Seller', policy: 'Vendor Agreement', version: 'v2.0', acceptedAt: '12 Feb 2026, 10:18', ip: '182.70.11.65', current: false },
-]
-
-const ACCEPTANCE_TABS = {
-  all: () => true,
-  current: (a) => a.current,
-  superseded: (a) => !a.current,
-}
-
-export function policyAcceptanceFixture(query = {}) {
-  const { tab = 'all', filters = {} } = query
-  let rows = ACCEPTANCES.filter(ACCEPTANCE_TABS[tab] || ACCEPTANCE_TABS.all)
-  rows = search(rows, filters.search, ['party', 'policy', 'version', 'ip'])
-  return page(rows, ACCEPTANCES, ACCEPTANCE_TABS, query)
-}
-
-// ---------------------------------------------------------------------------
 // Staff & roles
 // ---------------------------------------------------------------------------
 export function staffListFixture() {

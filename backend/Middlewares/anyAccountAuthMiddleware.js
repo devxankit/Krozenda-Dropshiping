@@ -23,6 +23,11 @@ async function protectAnyAccount(req, res, next) {
     }
 
     const { aud, decoded } = verifyAnyToken(token);
+    // A 30-day refresh token is for /auth/refresh-token only — accepting it
+    // here made it a long-lived bearer credential for push registration.
+    if (decoded.typ === 'refresh') {
+      return res.status(401).json({ success: false, message: 'Not authorized, invalid token' });
+    }
     const model = OWNER_MODELS[aud];
     const account = await model.findById(decoded.id);
 

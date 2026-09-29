@@ -3,29 +3,17 @@
 import { fetchResource, mutateResource } from './mockTransport'
 import * as fixtures from '../fixtures/finance'
 import {
-  accountOptionsSchema,
-  accountSchema,
-  chartOfAccountsSchema,
   commissionRuleListSchema,
-  expenseListSchema,
   financeOverviewSchema,
-  journalVoucherListSchema,
-  pricingRuleListSchema,
   refundListSchema,
   settlementBatchDetailSchema,
   settlementListSchema,
-  statementSchema,
-  taxCentreSchema,
-  deletedSchema,
-  expenseSchema,
   reconciledBatchSchema,
   refundSchema,
   settlementBatchSchema,
   transactionSchema,
   vendorLedgerSchema,
-  journalVoucherSchema,
   transactionListSchema,
-  trialBalanceSchema,
   vendorLedgerListSchema,
   vendorStatementSchema,
 } from '../schemas/financeSchema'
@@ -37,14 +25,8 @@ const params = (query) => ({
   ...query.filters,
 })
 
-const list = (path, fixture, schema) => (query) =>
-  fetchResource({ path, params: params(query), fixture: () => fixture(query), schema })
-
 // Practical marketplace finance (Transactions/Refunds/Settlements/Vendor
 // Ledger/Commission Rules) is a real backend — see adminFinanceController.
-// Full double-entry accounting (vouchers, chart of accounts, trial balance,
-// P&L/balance sheet, tax centre) is intentionally out of scope for this
-// platform and stays on fixtures below.
 const liveList = (path, fixture, schema) => (query) =>
   fetchResource({ path, params: params(query), fixture: () => fixture(query), schema, live: true })
 
@@ -72,12 +54,6 @@ export const fetchVendorLedgers = liveList(
   fixtures.vendorLedgerListFixture,
   vendorLedgerListSchema,
 )
-export const fetchJournalVouchers = list(
-  '/admin/finance/journal-vouchers',
-  fixtures.journalVoucherListFixture,
-  journalVoucherListSchema,
-)
-export const fetchExpenses = list('/admin/finance/expenses', fixtures.expenseListFixture, expenseListSchema)
 
 export const fetchSettlementBatch = (batchId) =>
   fetchResource({
@@ -111,152 +87,6 @@ export const updateCommissionRule = ({ id, value }) =>
     fixture: () => fixtures.commissionRuleListFixture().items.find((r) => r.id === id),
     schema: commissionRuleListSchema.shape.items.element,
     live: true,
-  })
-
-export const fetchPricingRules = () =>
-  fetchResource({
-    path: '/admin/finance/pricing-rules',
-    fixture: fixtures.pricingRuleListFixture,
-    schema: pricingRuleListSchema,
-  })
-
-export const fetchChartOfAccounts = () =>
-  fetchResource({
-    path: '/admin/finance/chart-of-accounts',
-    fixture: fixtures.chartOfAccountsFixture,
-    schema: chartOfAccountsSchema,
-  })
-
-export const fetchTrialBalance = () =>
-  fetchResource({
-    path: '/admin/finance/trial-balance',
-    fixture: fixtures.trialBalanceFixture,
-    schema: trialBalanceSchema,
-  })
-
-export const fetchTaxCentre = () =>
-  fetchResource({
-    path: '/admin/finance/tax-center',
-    fixture: fixtures.taxCentreFixture,
-    schema: taxCentreSchema,
-  })
-
-// The three comparative statements share one shape, so they share one call.
-const STATEMENTS = {
-  pnl: fixtures.profitAndLossFixture,
-  'balance-sheet': fixtures.balanceSheetFixture,
-  'cash-flow': fixtures.cashFlowFixture,
-}
-
-export const fetchStatement = (kind) =>
-  fetchResource({
-    path: `/admin/finance/${kind}`,
-    fixture: STATEMENTS[kind],
-    schema: statementSchema,
-  })
-
-// ---------------------------------------------------------------------------
-// Writes. Same shape as the reads: one path for the API, one fixture standing
-// in for it, and the SAME schema over both.
-// ---------------------------------------------------------------------------
-
-export const fetchAccountOptions = () =>
-  fetchResource({
-    path: '/admin/finance/accounts/options',
-    fixture: fixtures.accountOptionsFixture,
-    schema: accountOptionsSchema,
-  })
-
-export const createJournalVoucher = (body) =>
-  mutateResource({
-    path: '/admin/finance/vouchers',
-    body,
-    fixture: fixtures.createJournalVoucherFixture,
-    schema: journalVoucherSchema,
-  })
-
-export const updateJournalVoucher = ({ id, ...body }) =>
-  mutateResource({
-    method: 'put',
-    path: `/admin/finance/vouchers/${id}`,
-    body,
-    fixture: (payload) => fixtures.updateJournalVoucherFixture(id, payload),
-    schema: journalVoucherSchema,
-  })
-
-export const postJournalVoucher = ({ id }) =>
-  mutateResource({
-    path: `/admin/finance/vouchers/${id}/post`,
-    body: { id },
-    fixture: () => fixtures.postJournalVoucherFixture(id),
-    schema: journalVoucherSchema,
-  })
-
-export const reverseJournalVoucher = ({ id }) =>
-  mutateResource({
-    path: `/admin/finance/vouchers/${id}/reverse`,
-    body: { id },
-    fixture: () => fixtures.reverseJournalVoucherFixture(id),
-    schema: journalVoucherSchema,
-  })
-
-export const deleteJournalVoucher = ({ id }) =>
-  mutateResource({
-    method: 'delete',
-    path: `/admin/finance/vouchers/${id}`,
-    fixture: () => fixtures.deleteJournalVoucherFixture(id),
-    schema: deletedSchema,
-  })
-
-export const createExpense = (body) =>
-  mutateResource({
-    path: '/admin/finance/expenses',
-    body,
-    fixture: fixtures.createExpenseFixture,
-    schema: expenseSchema,
-  })
-
-export const updateExpense = ({ id, ...body }) =>
-  mutateResource({
-    method: 'put',
-    path: `/admin/finance/expenses/${id}`,
-    body,
-    fixture: (payload) => fixtures.updateExpenseFixture(id, payload),
-    schema: expenseSchema,
-  })
-
-export const deleteExpense = ({ id }) =>
-  mutateResource({
-    method: 'delete',
-    path: `/admin/finance/expenses/${id}`,
-    fixture: () => fixtures.deleteExpenseFixture(id),
-    schema: deletedSchema,
-  })
-
-export const createAccount = (body) =>
-  mutateResource({
-    path: '/admin/finance/accounts',
-    body,
-    fixture: fixtures.createAccountFixture,
-    schema: accountSchema,
-  })
-
-export const updateAccount = ({ code, ...body }) =>
-  mutateResource({
-    method: 'put',
-    path: `/admin/finance/accounts/${code}`,
-    body,
-    fixture: (payload) => fixtures.updateAccountFixture(code, payload),
-    schema: accountSchema,
-  })
-
-export const setAccountActive = ({ code, isActive }) =>
-  mutateResource({
-    method: 'put',
-    path: `/admin/finance/accounts/${code}/active`,
-    body: { isActive },
-    fixture: () => fixtures.setAccountActiveFixture(code, isActive),
-    schema: accountSchema,
   })
 
 // --- money movement -------------------------------------------------------

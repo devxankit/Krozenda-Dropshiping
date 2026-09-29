@@ -47,15 +47,6 @@ export function shellSummaryFixture() {
         to: ADMIN_ROUTES.CATALOG_APPROVALS,
         read: true,
       },
-      {
-        id: 'ntf-5',
-        tone: 'success',
-        title: 'GSTR-3B filed',
-        body: 'July 2026 return filed on 18 August. Acknowledgement stored against the period.',
-        at: '2 days ago',
-        to: ADMIN_ROUTES.TAX_CENTER,
-        read: true,
-      },
     ],
   }
 }

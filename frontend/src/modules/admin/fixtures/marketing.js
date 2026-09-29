@@ -48,18 +48,6 @@ export function couponListFixture(query = {}) {
   return page(rows, COUPONS, COUPON_TABS, query)
 }
 
-export function offerListFixture() {
-  return {
-    items: [
-      { id: 'ofr-1', name: 'Buy 2 get 10% off — cookware', scope: 'Home & Kitchen › Cookware', condition: 'Quantity ≥ 2 of the same SKU', effect: '10% off the line total', startsOn: '1 Aug 2026', endsOn: '30 Sep 2026', active: true, redemptions: 1842 },
-      { id: 'ofr-2', name: 'Bulk apparel tier', scope: 'Apparel', condition: 'Quantity ≥ 100', effect: '5% off, stacks with tier price', startsOn: '1 Jul 2026', endsOn: '31 Dec 2026', active: true, redemptions: 214 },
-      { id: 'ofr-3', name: 'New seller spotlight', scope: 'Sellers joined in the last 60 days', condition: 'Cart value ≥ ₹999', effect: 'Free shipping', startsOn: '15 Aug 2026', endsOn: '15 Oct 2026', active: true, redemptions: 628 },
-      { id: 'ofr-4', name: 'Diwali electronics', scope: 'Electronics', condition: '15–25 Oct only', effect: '7% off, capped at ₹2,000', startsOn: '15 Oct 2026', endsOn: '25 Oct 2026', active: false, redemptions: 0 },
-      { id: 'ofr-5', name: 'Clear slow-moving stock', scope: 'Own stock, 90+ days cover', condition: 'Any quantity', effect: '12% off', startsOn: '1 Sep 2026', endsOn: '30 Sep 2026', active: true, redemptions: 96 },
-    ],
-  }
-}
-
 export function cmsPageListFixture() {
   return {
     items: [
@@ -98,25 +86,6 @@ export function campaignListFixture(query = {}) {
   rows = search(rows, filters.search, ['name', 'audience'])
   if (filters.channel) rows = rows.filter((c) => c.channel === filters.channel)
   return page(rows, CAMPAIGNS, CAMPAIGN_TABS, query)
-}
-
-// Templates are DATA, not code (project context §12). DLT-approved SMS text
-// cannot be edited freely once registered — which is exactly why it has to be
-// swappable without a deploy.
-export function templateListFixture() {
-  return {
-    items: [
-      { id: 'tpl-1', name: 'Order placed', trigger: 'order.placed', channels: ['push', 'sms', 'email'], dltTemplateId: '1307161234567890123', dltStatus: 'approved', updatedAt: '4 Jul 2026', active: true },
-      { id: 'tpl-2', name: 'Payment captured', trigger: 'payment.captured', channels: ['push', 'email'], dltTemplateId: null, dltStatus: 'not_required', updatedAt: '4 Jul 2026', active: true },
-      { id: 'tpl-3', name: 'Order shipped', trigger: 'suborder.shipped', channels: ['push', 'sms'], dltTemplateId: '1307161234567890456', dltStatus: 'approved', updatedAt: '18 Jul 2026', active: true },
-      { id: 'tpl-4', name: 'Out for delivery', trigger: 'suborder.out_for_delivery', channels: ['sms'], dltTemplateId: null, dltStatus: 'pending', updatedAt: '28 Aug 2026', active: false },
-      { id: 'tpl-5', name: 'Delivered', trigger: 'suborder.delivered', channels: ['push', 'sms', 'email'], dltTemplateId: '1307161234567890789', dltStatus: 'approved', updatedAt: '18 Jul 2026', active: true },
-      { id: 'tpl-6', name: 'RTO initiated', trigger: 'suborder.rto_initiated', channels: ['sms', 'email'], dltTemplateId: null, dltStatus: 'pending', updatedAt: '30 Aug 2026', active: false },
-      { id: 'tpl-7', name: 'Refund processed', trigger: 'refund.completed', channels: ['sms', 'email'], dltTemplateId: null, dltStatus: 'rejected', updatedAt: '25 Aug 2026', active: false },
-      { id: 'tpl-8', name: 'KYC approved', trigger: 'seller.kyc_approved', channels: ['email'], dltTemplateId: null, dltStatus: 'not_required', updatedAt: '4 Jul 2026', active: true },
-      { id: 'tpl-9', name: 'Login OTP', trigger: 'auth.otp', channels: ['sms'], dltTemplateId: '1307161234567890012', dltStatus: 'approved', updatedAt: '1 Jan 2026', active: true },
-    ],
-  }
 }
 
 const REVIEWS = [

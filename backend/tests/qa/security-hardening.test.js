@@ -110,17 +110,32 @@ describe('production mode: CORS and error disclosure', () => {
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 
-  knownBug('QA-023', 'a foreign origin is refused with 403, not reported as a 500 server error', async () => {
+  test('QA-023 (regression): a foreign origin is refused with 403, not reported as a 500 server error', async () => {
     const res = await request(prodApp).get('/health').set('Origin', 'https://evil.example');
     expect(res.status).toBe(403);
   });
 
   test('an unhandled 500 in production says nothing about the internals', async () => {
-    // The CORS refusal is raised as an error and reaches the global handler.
-    const res = await request(prodApp).get('/health').set('Origin', 'https://evil.example');
+    // A production app whose translate controller throws a driver-style error.
+    let throwingApp;
+    const saved = process.env.ENV;
+    process.env.ENV = 'production';
+    jest.isolateModules(() => {
+      jest.doMock('../../Controllers/translateController', () => ({
+        listLanguages: (req, res) => res.json({ success: true, data: [] }),
+        translateTexts: () => {
+          throw new Error('MongoServerError: E11000 duplicate key collection: krozenda.users index: email_1');
+        },
+      }));
+      throwingApp = require('../../app');
+    });
+    process.env.ENV = saved;
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await request(throwingApp).post('/translate').send({ texts: ['x'], target: 'hi' });
+    spy.mockRestore();
     expect(res.status).toBe(500);
     expect(res.body.message).toBe('Something went wrong');
-    expect(JSON.stringify(res.body)).not.toMatch(/stack|TypeError|at .*\.js|Mongo/);
+    expect(JSON.stringify(res.body)).not.toMatch(/stack|Mongo|E11000|collection|index/);
   });
 });
 

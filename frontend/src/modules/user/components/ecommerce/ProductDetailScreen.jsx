@@ -24,11 +24,12 @@ import { SectionErrorBoundary } from '../../../../components/common/ErrorBoundar
 import { DeliveryCheckCard } from './DeliveryCheckCard'
 import { CartQuantityStepper } from './CartQuantityStepper'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
-import { useCartStore } from '../../../../lib/cartStore'
+import { useCartCount, useCartStore } from '../../../../lib/cartStore'
 import { useWishlistStore } from '../../../../lib/wishlistStore'
 import { toast } from '../../../../lib/toast'
 import {
   buildBreadcrumbStructuredData,
+  toJsonLd,
   buildProductStructuredData,
   usePageMeta,
 } from '../../../../lib/usePageMeta'
@@ -60,6 +61,7 @@ export function ProductDetailScreen() {
   const isWishlisted = useWishlistStore((state) => state.items.some((item) => item.id === productId))
   const toggleWishlistItem = useWishlistStore((state) => state.toggleItem)
   const addToCart = useCartStore((state) => state.addItem)
+  const cartCount = useCartCount()
 
   const images = product?.images?.length ? product.images : []
   const variants = product?.variants ?? []
@@ -298,7 +300,7 @@ export function ProductDetailScreen() {
         // Breadcrumb schema is separate from the Product schema usePageMeta
         // injects, so both can be present without one overwriting the other.
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildBreadcrumbStructuredData(breadcrumbs)),
+          __html: toJsonLd(buildBreadcrumbStructuredData(breadcrumbs)),
         }}
       />
 
@@ -341,14 +343,32 @@ export function ProductDetailScreen() {
             <HiArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span>Back</span>
           </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            aria-label="Share this product"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
-          >
-            <HiShare className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Share this product"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
+            >
+              <HiShare className="h-4 w-4" />
+            </button>
+            {/* The mobile layout has no header here, and the bottom nav has no
+                cart — without this a buyer who just added an item had no way
+                to the cart from the product. Same badge as the web header. */}
+            <button
+              type="button"
+              onClick={() => navigate(USER_ROUTES.CART)}
+              aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-sm"
+            >
+              <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-blue-600 px-1 text-[10px] font-bold text-white">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-10">

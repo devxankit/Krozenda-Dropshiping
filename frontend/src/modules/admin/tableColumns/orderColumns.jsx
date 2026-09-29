@@ -111,4 +111,6 @@ export const ORDER_TABS = Object.freeze([
   { id: 'shipped', label: 'Shipped' },
   { id: 'delivered', label: 'Delivered' },
   { id: 'cancelled', label: 'Cancelled' },
+  // Delivered on the seller's word only: payout waits for a confirmation.
+  { id: 'delivery_unconfirmed', label: 'Delivery unconfirmed' },
 ])

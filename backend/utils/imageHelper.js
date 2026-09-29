@@ -5,7 +5,7 @@ const path = require('path');
 // and requested under another.
 const { VARIANTS, CANONICAL_WIDTH } = require('../Config/imageSizes');
 
-const UPLOADS_ROOT = path.join(__dirname, '..', 'uploads');
+const { UPLOADS_ROOT } = require('../Config/uploads');
 
 function getImageUrl(relativePath) {
   if (!relativePath) return null;

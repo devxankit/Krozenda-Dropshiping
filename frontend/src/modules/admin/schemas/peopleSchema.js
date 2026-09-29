@@ -189,19 +189,6 @@ export const kycQueueSchema = paged(
   }),
 )
 
-export const policyAcceptanceListSchema = paged(
-  z.object({
-    id: z.string(),
-    party: z.string(),
-    partyType: z.string(),
-    policy: z.string(),
-    version: z.string(),
-    acceptedAt: z.string(),
-    ip: z.string(),
-    current: z.boolean(),
-  }),
-)
-
 export const staffListSchema = z.object({
   items: z.array(
     z.object({

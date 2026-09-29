@@ -99,7 +99,6 @@ function useResource(key, queryFn, enabled = true) {
   return { data: query.data, isLoading: query.isLoading, error: query.error, refetch: query.refetch }
 }
 
-export const useOffersController = () => useResource(['admin', 'marketing', 'offers'], service.fetchOffers)
 export const useBannersController = () => useResource(['admin', 'marketing', 'banners'], service.fetchBanners)
 export const useCmsPagesController = (query = {}) => {
   const q = useQuery({
@@ -201,7 +200,6 @@ export const useFaqWriteController = ({ onSaved } = {}) => ({
   }),
 })
 
-export const useTemplatesController = () => useResource(['admin', 'marketing', 'templates'], service.fetchTemplates)
 export const useReportCatalogueController = () => useResource(['admin', 'reports'], service.fetchReportCatalogue)
 
 export const useReportRunController = (reportKey) =>

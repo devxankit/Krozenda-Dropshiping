@@ -19,21 +19,12 @@ import {
   useVendorPushRegistration,
   useVendorResetPasswordController,
 } from '../controllers/useVendorController'
+import { env } from '../../../config/env'
 
-const DEMO_CREDENTIALS = {
-  B2C: {
-    email: 'b2c.demo@krozenda.com',
-    password: 'Demo@1234',
-    label: 'Individual Seller (B2C)',
-    badge: 'No GST Required',
-  },
-  B2B: {
-    email: 'b2b.demo@krozenda.com',
-    password: 'Demo@1234',
-    label: 'Registered Business (B2B)',
-    badge: 'GST & ITC Ready',
-  },
-}
+// Pre-filled only under the dev server (env.demoSellerLogins is null in any
+// build). In production the page is public, and pre-filling it handed every
+// visitor a working password for any demo seller in that database.
+const prefill = (type) => env.demoSellerLogins?.[type] || { email: '', password: '' }
 
 export function VendorLoginPage({ mode = 'seller' }) {
   if (mode === 'partner') return <PartnerDemoLoginPage />
@@ -45,8 +36,8 @@ function SellerLoginPage() {
   const registerPushToken = useVendorPushRegistration()
   const { login, isSubmitting } = useVendorLoginController()
   const [vendorType, setVendorType] = useState('B2C')
-  const [email, setEmail] = useState(DEMO_CREDENTIALS.B2C.email)
-  const [password, setPassword] = useState(DEMO_CREDENTIALS.B2C.password)
+  const [email, setEmail] = useState(prefill('B2C').email)
+  const [password, setPassword] = useState(prefill('B2C').password)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [errorCode, setErrorCode] = useState(null)
@@ -54,8 +45,8 @@ function SellerLoginPage() {
 
   function handleTypeSwitch(nextType) {
     setVendorType(nextType)
-    setEmail(DEMO_CREDENTIALS[nextType].email)
-    setPassword(DEMO_CREDENTIALS[nextType].password)
+    setEmail(prefill(nextType).email)
+    setPassword(prefill(nextType).password)
     setError(null)
     setErrorCode(null)
   }

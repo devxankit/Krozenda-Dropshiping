@@ -26,7 +26,13 @@ export function LoginPage() {
   const [userProfile,   setUserProfile]   = useState(null)
   const [isLoading,     setIsLoading]     = useState(false)
   const [error,         setError]         = useState(null)
-  const [otp,           setOtp]           = useState(['','','','','',''])
+  const [otp,           setOtpState]      = useState(['','','','','',''])
+  // The latest digits, written synchronously. Building the next code from the
+  // `otp` of the last render lost a digit whenever two arrived before React
+  // re-rendered (fast typing, SMS auto-fill) — and a 5-digit code never
+  // submits, leaving the buyer stuck on this screen.
+  const otpRef = useRef(['','','','','',''])
+  const setOtp = (next) => { otpRef.current = next; setOtpState(next) }
   const [timer,         setTimer]         = useState(45)
   const [resendNotice,  setResendNotice]  = useState('')
   const [stepVisible,   setStepVisible]   = useState(true)
@@ -94,11 +100,11 @@ export function LoginPage() {
 
   const handleOtpChange = (i, val) => {
     const ch = val.replace(/\D/g,'').slice(-1)
-    const next = [...otp]; next[i] = ch; setOtp(next)
+    const next = [...otpRef.current]; next[i] = ch; setOtp(next)
     if (error) setError(null)
     if (ch && i < 5) inputRefs.current[i+1]?.focus()
     if (ch && i === 5) {
-      const full = [...next.slice(0,5), ch].join('')
+      const full = next.join('')
       if (full.length === 6) verifyOtpCode(full)
     }
   }

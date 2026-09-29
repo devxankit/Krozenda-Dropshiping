@@ -39,7 +39,14 @@ export function OrdersPage() {
         order={selectedOrder}
         isOpen={Boolean(selectedOrder) && !shippingOrderId && !openShipmentId}
         onClose={() => setSelectedOrder(null)}
-        onUpdateItemStatus={controller.updateItemStatus}
+        // The drawer shows a snapshot of the row it was opened from; after a
+        // move it must show the order the server sent back, or it keeps
+        // offering "Start Processing" on a line that is already processing.
+        onUpdateItemStatus={async (...args) => {
+          const updated = await controller.updateItemStatus(...args)
+          if (updated) setSelectedOrder(updated)
+          return updated
+        }}
         onCreateShipment={(order) => setShippingOrderId(order.orderId || order.id)}
         onOpenShipment={(id) => setOpenShipmentId(id)}
       />

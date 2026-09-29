@@ -8,4 +8,7 @@ backups/
 !.env.example
 
 # QA load-test artefacts (fixtures hold signed test tokens)
-tests/performance/fixtures.json
+tests/performance/fixtures*.json
+
+# Written by @shelf/jest-mongodb on every test run
+globalConfig.json

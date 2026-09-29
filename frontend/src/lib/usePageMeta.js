@@ -60,7 +60,7 @@ function setJsonLd(id, data) {
       document.head.appendChild(node)
       return node
     })()
-  el.textContent = JSON.stringify(data)
+  el.textContent = toJsonLd(data)
 }
 
 export function usePageMeta({
@@ -145,6 +145,15 @@ export function buildProductStructuredData(product, { url, reviewCount, ratingVa
   }
 
   return data
+}
+
+// JSON for a <script type="application/ld+json"> body. JSON.stringify leaves
+// "<", ">" and "&" as they are, so a seller-controlled name containing
+// "</script><img onerror=…>" would close the tag wherever the page is
+// server-rendered or prerendered. Escaped as < etc. it is the same JSON
+// to every parser and can never end the script.
+export function toJsonLd(data) {
+  return JSON.stringify(data).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
 }
 
 export function buildBreadcrumbStructuredData(crumbs = []) {

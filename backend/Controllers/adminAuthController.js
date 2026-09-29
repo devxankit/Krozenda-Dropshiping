@@ -5,6 +5,7 @@ const AdminPasswordReset = require('../Models/AdminPasswordReset');
 const { signToken } = require('../utils/jwt');
 const { updateLanguageFor } = require('./languageController');
 const { reserveAttempt, clearAttempts, tooManyAttempts } = require('../utils/loginThrottle');
+const { sendServerError } = require('../utils/sendServerError');
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — matches ForgotPasswordPage copy.
 const MAX_RESET_ATTEMPTS = 5;
@@ -247,7 +248,7 @@ async function updateProfile(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to update profile' });
+    sendServerError(res, err, 'Failed to update profile');
   }
 }
 
@@ -283,7 +284,7 @@ async function changePassword(req, res) {
       message: 'Password updated successfully',
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to change password' });
+    sendServerError(res, err, 'Failed to change password');
   }
 }
 

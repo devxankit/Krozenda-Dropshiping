@@ -1,5 +1,6 @@
 const PlatformSettings = require('../Models/PlatformSettings');
 const AccountingConfig = require('../Models/AccountingConfig');
+const { sendServerError } = require('../utils/sendServerError');
 
 async function getGeneralSettings(req, res) {
   try {
@@ -80,7 +81,7 @@ async function getGeneralSettings(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch settings' });
+    sendServerError(res, err, 'Failed to fetch settings');
   }
 }
 
@@ -254,7 +255,7 @@ async function updateGeneralSettings(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to update settings' });
+    sendServerError(res, err, 'Failed to update settings');
   }
 }
 
@@ -288,7 +289,7 @@ async function getPublicSettings(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch public settings' });
+    sendServerError(res, err, 'Failed to fetch public settings');
   }
 }
 

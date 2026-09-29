@@ -105,6 +105,10 @@ async function createMyCoupon(req, res) {
   if (discountValueNum === null || discountValueNum <= 0) {
     return res.status(400).json({ success: false, message: 'Enter a valid discount value' });
   }
+  // Same cap as admin coupons (couponController.validateCouponFields).
+  if (discountType === 'PERCENTAGE' && discountValueNum > 100) {
+    return res.status(400).json({ success: false, message: 'Percentage discount cannot exceed 100' });
+  }
 
   const start = toDate(startDate);
   const end = toDate(endDate);

@@ -4,6 +4,7 @@ const Vendor = require('../Models/Vendor');
 const VendorPayout = require('../Models/VendorPayout');
 const GatewayTransaction = require('../Models/GatewayTransaction');
 const { toPaise } = require('../utils/money');
+const { sendServerError } = require('../utils/sendServerError');
 
 // Accounts MVP — a small, standalone order-level financial dashboard plus a
 // vendor payout log and a gateway settlement/refund log. Deliberately NOT
@@ -83,7 +84,7 @@ async function getDashboardSummary(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to load dashboard summary' });
+    sendServerError(res, err, 'Failed to load dashboard summary');
   }
 }
 
@@ -162,7 +163,7 @@ async function listVendorPayouts(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to list vendor payouts' });
+    sendServerError(res, err, 'Failed to list vendor payouts');
   }
 }
 
@@ -199,7 +200,7 @@ async function createVendorPayout(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to create vendor payout' });
+    sendServerError(res, err, 'Failed to create vendor payout');
   }
 }
 
@@ -224,7 +225,7 @@ async function getVendorPayoutSummary(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to load vendor payout summary' });
+    sendServerError(res, err, 'Failed to load vendor payout summary');
   }
 }
 
@@ -267,7 +268,7 @@ async function listTransactions(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to list transactions' });
+    sendServerError(res, err, 'Failed to list transactions');
   }
 }
 
@@ -309,7 +310,7 @@ async function createTransaction(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to create transaction' });
+    sendServerError(res, err, 'Failed to create transaction');
   }
 }
 
@@ -404,7 +405,7 @@ async function listLedger(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to load ledger' });
+    sendServerError(res, err, 'Failed to load ledger');
   }
 }
 

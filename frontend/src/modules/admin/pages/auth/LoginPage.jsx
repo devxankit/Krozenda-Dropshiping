@@ -5,13 +5,12 @@ import { InlineAlert } from '../../components/feedback'
 import { useAdminLoginController } from '../../controllers/useAdminAuthController'
 import { adminLoginSchema } from '../../schemas/authSchema'
 import { zodResolver } from '../../lib/zodResolver'
+import { env } from '../../../../config/env'
 
-// Matches backend/.env's ADMIN_EMAIL/ADMIN_PASSWORD (seedAdmin.js bootstraps
-// this account on first boot). Prefilled for demo convenience at the
-// explicit request of the project owner, who was told this ships the
-// super-admin password in the public bundle — swap or remove before any
-// real deployment.
-const DEMO_ADMIN = { email: 'admin@example.com', password: 'Krozenda@Admin123' }
+// Pre-filled for demo convenience under the Vite dev server only (owner's
+// decision, 2026-09-29). Any build leaves the form empty and the credentials
+// out of the bundle — see env.demoAdminLogin.
+const DEMO_ADMIN = env.demoAdminLogin || { email: '', password: '' }
 
 export function LoginPage() {
   const { submit, isSubmitting, error } = useAdminLoginController()

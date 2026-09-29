@@ -1,18 +1,16 @@
 import { useState } from 'react'
-import { Badge, Button, Input, Switch, Table } from '../../../../components/ui'
+import { Button, Input, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, InlineAlert, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { SectionCard } from '../../components/display'
 import {
   COMMISSION_RULE_COLUMNS,
-  PRICE_TIER_COLUMNS,
   SCOPE_ORDER,
 } from '../../tableColumns/financeColumns'
 import { ADMIN_PERMISSIONS } from '../../constants'
 import {
   useCommissionRulesController,
   useCommissionRuleWriteController,
-  usePricingRulesController,
 } from '../../controllers/useFinanceController'
 
 export function CommissionRulesPage() {
@@ -112,75 +110,6 @@ export function CommissionRulesPage() {
           getRowKey={(row) => row.id}
           density="compact"
         />
-      </SectionCard>
-    </PageBody>
-  )
-}
-
-export function PricingRulesPage() {
-  const { data, isLoading, error, refetch } = usePricingRulesController()
-
-  if (isLoading) {
-    return (
-      <PageBody>
-        <PageSkeleton rows={3} />
-      </PageBody>
-    )
-  }
-  if (error) {
-    return (
-      <PageBody>
-        <ErrorState error={error} onRetry={refetch} />
-      </PageBody>
-    )
-  }
-
-  return (
-    <PageBody>
-      <PageHeader
-        title="Pricing rules"
-        description="Price levels by buyer role, and the discount and shipping rules layered over them."
-        actions={
-          <PermissionGate permission={ADMIN_PERMISSIONS.FINANCE_MANAGE}>
-            <Button size="control" icon="add">
-              New rule
-            </Button>
-          </PermissionGate>
-        }
-      />
-
-      <SectionCard
-        title="Price tiers"
-        description="A buyer's role decides which tier resolves when a cart line is added"
-      >
-        <Table
-          className="rounded-none border-0 border-t"
-          columns={PRICE_TIER_COLUMNS}
-          data={data.tiers}
-          getRowKey={(row) => row.role}
-          density="compact"
-        />
-      </SectionCard>
-
-      <SectionCard title="Rules" description="Applied after the tier price resolves">
-        <ul className="divide-y divide-border-subtle">
-          {data.rules.map((rule) => (
-            <li key={rule.id} className="flex items-center gap-4 px-4 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-900">{rule.name}</span>
-                  <Badge tone="neutral" size="sm">
-                    {rule.kind}
-                  </Badge>
-                </span>
-                <span className="mt-0.5 block text-2xs text-ink-subtle">
-                  When {rule.condition} → {rule.effect}
-                </span>
-              </span>
-              <Switch id={rule.id} checked={rule.active} onChange={() => {}} />
-            </li>
-          ))}
-        </ul>
       </SectionCard>
     </PageBody>
   )

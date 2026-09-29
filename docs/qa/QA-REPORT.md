@@ -282,3 +282,116 @@ node tests/performance/loadRunner.js quick|full|scenarios|hot
 | Checkout (50, warm) | 46.9 → **104** | 1.4 s → **0.89 s** | 2.5% → **0%** |
 
 **Still open:** seller earnings summary re-prices commission per unsettled order (p99 ~4.5 s at 20 sellers); frontend image weight; P2/P3 list in §6; live index check (§8).
+
+---
+
+## 12. Round 2 (2026-09-29): P2 fixes and browser E2E
+
+**Fixed**
+
+| ID | Fix | Tests |
+|---|---|---|
+| QA-012 | COD and wallet checkouts without an `Idempotency-Key` get a server key from the **cart version** (items + `updatedAt`) + address + method + coupon. A double-tap places one order; buying the same item again seconds later is a new order. Razorpay excluded (payment id already unique; a replay stays a hard 409) | `concurrency-inventory-coupons.test.js` |
+| QA-016 | Stock reservation, wallet debit, orders, wallet ledger row and cart-clear run in **one MongoDB transaction**; the hand-written undo code is gone. "Order placed" WhatsApp is sent after commit (the insert hook stays quiet inside a transaction). Load: checkout 76 req/s at 50 users, 0 errors; hot-product race still exact (10 of 100) | `checkout-transaction.test.js`: failure injected after each step → nothing written; retry succeeds |
+| QA-003 (UI) | The admin "Confirm delivery" action was unreachable (the Sub-orders list route redirects to Orders). Now: **Orders → "Delivery unconfirmed" tab**, and a **Confirm delivery** button on each seller-marked line in the order detail | E2E `admin-panel.spec.js` |
+| QA-032 (new, P1) | Seller login page pre-filled the demo seller password in production builds, and the password was in the shipped JS. Now dev-server only (`import.meta.env.DEV`); verified absent from `vite build` output | bundle grep |
+| QA-034 (new, P2) | Seller order dialog kept showing the old status after "Start Processing" and offered the same action again. Now shows the order the server returns | E2E `seller-fulfilment.spec.js` |
+| QA-035 (new, P2) | A wrong admin/seller password (or OTP) showed "Your session has expired". A 401 from a sign-in call, or from an unauthenticated request, now passes the server's message through | E2E |
+| QA-036 (new, P1) | Buyer OTP boxes lost a digit when two arrived before a re-render (fast typing, SMS auto-fill); the 5-digit code never submitted and the buyer was stuck. Next code is built from a synchronously updated ref | E2E (fast fill), 2 clean runs |
+
+**Open — needs your decision**
+
+| ID | Finding |
+|---|---|
+| QA-037 (P0 if live) — **fixed 2026-09-29 (owner: dev-only)** | The **admin** login page pre-fills `admin@example.com` / the super-admin password, which equals `ADMIN_EMAIL`/`ADMIN_PASSWORD` in `backend/.env`, and it is in the public JS bundle. A code comment records this as the owner's deliberate demo choice (commit `c056644`), "remove before any real deployment". If the live admin was bootstrapped from that `.env`, the live admin password is public. Now pre-filled under the Vite dev server only; verified absent from `vite build` output. **Still to do by the owner: change the live admin password**, since it has already shipped in earlier builds. |
+| QA-033 (P2) | ~29 admin service functions have no backend (finance vouchers/COA/trial balance/tax centre/statements/expenses, invoices, offers, templates, policy acceptances, shell summary, 2FA verify, supplier sync, dropship products) and show **fixture data** whenever the build does not set `VITE_USE_MOCKS=false` — including the sidebar summary counts |
+| QA-038 (P3) | Mobile product page has no header/cart link (cart reachable from Home only) |
+
+**Browser E2E (new, `e2e/`)** — Playwright 1.63.0 (pinned), isolated stack (in-memory DB backend on :5056 + Vite on :5174, every other origin refused), desktop and Pixel 7 viewports:
+
+| Spec | Covers |
+|---|---|
+| `buyer-checkout.spec.js` | OTP sign-in → product → cart → new address → summary → COD → My Orders; stock moved; guest redirect; invalid coupon; mobile cart entry |
+| `seller-fulfilment.spec.js` | Processing → Shipped (manual AWB) → Delivered with live dialog; lands in admin unconfirmed queue; seller isolation; wrong password message |
+| `admin-panel.spec.js` | Confirm a seller-declared delivery from the order screen; product list server paging + search |
+
+Run: `cd e2e && npx playwright test` (starts both servers itself). Result: **34 passed / 0 failed, ×2 runs**.
+
+---
+
+## 13. Round 3 (2026-09-29): E2E coverage, admin modules, small fixes
+
+**New browser E2E**
+
+| Spec | Covers |
+|---|---|
+| `buyer-after-delivery.spec.js` | Review (4 stars, HTML payload stays text on the product page); refund claim for a delivered item |
+| `buyer-discovery.spec.js` | Search by name / SKU / nonsense; "Price: low to high"; wishlist |
+| `catalog-approval.spec.js` | Seller lists a product with a real image upload → PENDING and hidden → admin "Skip & approve" → live |
+| `admin-smoke.spec.js` | Every admin sidebar module (42) opens without error screen, page error or unexpected API error |
+| `admin-staff-permissions.spec.js` | Support-only staff: sidebar shows only Support; coupons / settings / ledger URLs get no data (403) |
+| `coupon-end-to-end.spec.js` | Admin creates a ₹100 flat coupon in the UI → buyer applies it → order placed ₹100 less; usedCount 1 |
+
+Totals: **E2E 32 passed / 0 failed** (6 skipped = desktop-only specs on mobile and vice versa). **Backend 64 suites / 850 tests, 0 failed.**
+
+**Fixed**
+
+| ID | Fix |
+|---|---|
+| QA-033 (part) | `GET /admin/shell-summary` built for real (sidebar counts + tray from actual pending work, scoped to the caller's permissions); the invented fixture alerts are gone. The admin smoke test found it 404-ing on every admin page. |
+| QA-017 | Socket handshake: refresh tokens, deleted/deactivated accounts and suspended sellers refused; staff join the admin feed only with `admin.dashboard.view` |
+| QA-019 | `/fcm-token` refuses refresh tokens |
+| QA-023 | Refused CORS origin → 403 |
+| QA-024 | Test-mode shortcuts removed from both product-create endpoints (SKU / weight / image required under test as in production) |
+| QA-025 | `frontend/public/images` recompressed in place, same names and formats: 17.2 MB → 2.1 MB; `dist` 23 MB → 7.6 MB |
+| QA-027 | 14 handlers no longer echo raw errors on 500 (`utils/sendServerError`: validation → 400 with reason, else generic 500 + log) |
+| QA-028 | JSON-LD escaped (`toJsonLd`), verified against a `</script>` payload |
+| QA-029 | Seller percentage coupons capped at 100% |
+| QA-030 | `UPLOADS_DIR` (Config/uploads.js); jest and the E2E server write to temp folders |
+| QA-031 | `globalConfig.json` untracked and ignored (concurrent jest runs in one checkout still clash — run one at a time) |
+| A11y | Review screen: named rating stars (`aria-pressed`), back / add-photo buttons, review textbox, product select label |
+
+**Open**
+
+| ID | Item |
+|---|---|
+| QA-033 | Invoices and ~27 other admin screens still have no backend (owner's decision) |
+| QA-026 | Seller sees buyer phone/address before accepting (owner's decision) |
+| QA-038 | Mobile product page has no cart link (UX decision) |
+| Perf | Seller earnings summary re-prices commission per unsettled order (money code — needs a careful rewrite) |
+| A11y | Seller product form fields have placeholders but no labels |
+| Housekeeping | 7 duplicate images (`*_1787…jpg`) unreferenced in code — may still be referenced from the live DB, so not deleted. 29 untracked files in `backend/uploads/` from test runs before QA-030 (mixed in the same folder as the dev server's real uploads, so left for the owner to review) |
+
+---
+
+## 14. Round 4 (2026-09-29): remaining engineering items
+
+| Item | Change | Verified by |
+|---|---|---|
+| Sub-orders leftovers | The unreachable "Delivery unconfirmed" tab / "Confirm delivery" action added to the hidden Sub-orders page (QA-003) removed: the three frontend files are back to their pre-audit version, and the backend `unconfirmed` sub-order tab is gone. The admin confirms deliveries from **Orders → Delivery unconfirmed** and the order detail page, as before. No sidebar menu or route was added at any point in the audit (checked with git against the pre-audit commit). | Tests retargeted to the Orders queue |
+| Seller earnings summary | Coupons for all orders needing an estimate are read in one query, and orders are priced up to 8 at a time. Output unchanged: `tests/qa/earnings-equivalence.test.js` runs the ORIGINAL implementation (copied verbatim) and the new one on a dataset covering ledger-posted, estimated, legacy (no snapshot), seller- and platform-funded coupon, multi-seller and batch-claimed lines — identical rows. On load-test data (all legacy orders) the gain is small, p95 ≈ 3.75 s at 20 sellers, because legacy lines still look up commission rules per order date; orders placed since the commission snapshot (2026-09-25) need no per-order query. Batching rule lookups across order dates would touch commission resolution and was not done without the owner. | Equivalence test; load run |
+| Form labels (a11y) | Shared `Input` / `Select` / `Textarea` generate an id when none is passed, so every label is linked to its field across the app (seller product form, seller order dialog, …) | E2E fills the seller product form by label; the seller dialog's fields are now named "Tracking number" / "Courier (optional)" |
+
+**Totals:** backend **65 suites / 851 tests, 0 failed**; browser E2E **32 passed, 0 failed** (6 skipped by design); admin smoke 42 modules clean; frontend build OK.
+
+**Left for the owner:** change the live admin password; commit; review 29 old test files in `backend/uploads/`; check live DB indexes; decide QA-033 (admin screens without backend), QA-026 (buyer contact before acceptance), QA-038 (mobile cart link); optionally, batching legacy commission lookups for the earnings summary.
+
+---
+
+## 15. Owner decisions (2026-09-29)
+
+| ID | Decision | Result |
+|---|---|---|
+| QA-026 | Seller keeps seeing buyer phone and address before accepting — **by design** | Closed, no change |
+| QA-038 | Add a cart link on the mobile product page | **Fixed:** cart button with item badge next to Share in the mobile top bar (same look as the web header), opens the existing cart page — no new route or menu. E2E: add to cart → badge "1" → cart opens with the product (mobile) |
+| QA-033 | Remove the admin screens that are not in the sidebar and have no backend | **Done** — see §16. Invoices (in the sidebar, no backend) is still open |
+
+## 16. QA-033: unlinked admin screens removed (2026-09-29)
+
+Removed: Pricing rules, Chart of accounts, Journal vouchers, Expenses, Trial balance, P&L, Balance sheet, Cash flow, Tax centre, legacy Dropshipping (overview, partners, products, orders, margins), Supplier sync, Policy acceptances, Offers, Templates, and the Two-factor page. None of them was in the sidebar, the command palette (which reads the sidebar), or linked from a reachable screen; all ran on fixtures only.
+
+For each screen the route, route constant, page, controller hook, service call, fixture, schema, table columns and components were deleted, down to helpers only they used (29 files deleted). Their URLs now show the panel's Not found page.
+
+Kept on purpose: Invoice detail (opened from Invoices, which is in the sidebar) and Vendor statement (opened from Vendor ledgers). The dropshipping partner drawer stays because the Sellers screen uses it.
+
+Verified: `vite build` OK; lint shows nothing new; admin E2E (sidebar smoke over every module, admin panel, staff permissions) 7 passed / 3 skipped by design.

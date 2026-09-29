@@ -10,6 +10,7 @@ const {
 const { getAdminRevenue, getAdminSellerRevenue } = require('../Controllers/revenueController');
 const { protectAdmin, requirePermission } = require('../Middlewares/authMiddleware');
 const { responseCache } = require('../Middlewares/responseCache');
+const { getShellSummary } = require('../Controllers/adminShellController');
 
 const router = express.Router();
 
@@ -19,6 +20,9 @@ router.use(protectAdmin);
 // the permission check on each route, so caching never widens access.
 const cached = responseCache();
 
+// Every admin screen's badges and tray. No permission of its own: each
+// figure inside is scoped to what the caller's role covers.
+router.get('/shell-summary', getShellSummary);
 router.get('/dashboard', requirePermission('admin.dashboard.view'), cached, getDashboard);
 router.get('/dashboard-summary', requirePermission('admin.dashboard.view'), cached, getDashboardSummary);
 router.get('/analytics/sales', requirePermission('admin.analytics.view'), cached, getSalesAnalytics);

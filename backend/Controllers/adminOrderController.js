@@ -34,7 +34,20 @@ function withCustomer(o) {
   const serialized = serializeOrder(o);
   return {
     ...serialized,
-    items: serialized.items.map((item) => ({ ...item, price: toPaise(item.price) })),
+    // Line state for the admin: its own status, and whether its delivery is
+    // only the seller's word (held from payout until confirmed — see
+    // adminFulfilmentController.confirmSubOrderDelivery, keyed by subOrderId).
+    items: serialized.items.map((item, index) => {
+      const line = o.items[index] || {};
+      return {
+        ...item,
+        price: toPaise(item.price),
+        status: line.status || 'PENDING',
+        deliveryConfirmedBy: line.deliveryConfirmedBy || null,
+        awaitingDeliveryConfirmation: line.status === 'DELIVERED' && line.deliveryConfirmedBy === 'SELLER',
+        subOrderId: `${o._id}:${line.product}:${line.variantId || ''}`,
+      };
+    }),
     subtotal: toPaise(serialized.subtotal),
     discountAmount: toPaise(serialized.discountAmount),
     shippingFee: toPaise(serialized.shippingFee),
@@ -57,8 +70,13 @@ async function listOrders(req, res) {
   const { tab, status, search, page = 1, rowsPerPage = 25, sort } = req.query;
   const filter = {};
 
+  // Lines a seller marked delivered themselves, waiting for an admin (or
+  // the carrier) to confirm before they can be paid out.
+  const AWAITING_CONFIRMATION = { items: { $elemMatch: { status: 'DELIVERED', deliveryConfirmedBy: 'SELLER' } } };
   const effectiveStatus = status || (tab && tab !== 'all' ? tab.toUpperCase() : null);
-  if (effectiveStatus && Order.STATUSES.includes(effectiveStatus)) {
+  if (tab === 'delivery_unconfirmed') {
+    Object.assign(filter, AWAITING_CONFIRMATION);
+  } else if (effectiveStatus && Order.STATUSES.includes(effectiveStatus)) {
     filter.status = effectiveStatus;
   }
 
@@ -87,7 +105,7 @@ async function listOrders(req, res) {
   const perPage = Math.min(100, Math.max(1, Number(rowsPerPage) || 25));
   const currentPage = Math.min(500, Math.max(1, Number(page) || 1));
 
-  const [orders, totalItems, tabCountsRaw] = await Promise.all([
+  const [orders, totalItems, tabCountsRaw, awaitingConfirmation] = await Promise.all([
     Order.find(filter)
       .sort(sortSpec)
       .skip((currentPage - 1) * perPage)
@@ -95,6 +113,7 @@ async function listOrders(req, res) {
       .populate('user', 'name mobileNumber email'),
     Order.countDocuments(filter),
     Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Order.countDocuments(AWAITING_CONFIRMATION),
   ]);
 
   const tabCounts = { all: 0 };
@@ -103,6 +122,7 @@ async function listOrders(req, res) {
     tabCounts.all += row.count;
     if (row._id) tabCounts[row._id.toLowerCase()] = row.count;
   }
+  tabCounts.delivery_unconfirmed = awaitingConfirmation;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
 

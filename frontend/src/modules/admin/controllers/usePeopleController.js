@@ -10,7 +10,6 @@ import {
   fetchCustomers,
   fetchKycApplication,
   fetchKycQueue,
-  fetchPolicyAcceptances,
   fetchVendors,
   setVendorActive,
   syncVendorRazorpay,
@@ -59,9 +58,6 @@ export const useVendorWriteController = ({ onSaved } = {}) => ({
 
 export const useKycQueueController = () =>
   useListController({ queryKey: ['admin', 'kyc'], queryFn: fetchKycQueue })
-
-export const usePolicyAcceptanceController = () =>
-  useListController({ queryKey: ['admin', 'policy-acceptances'], queryFn: fetchPolicyAcceptances })
 
 function useResource(key, queryFn, enabled = true) {
   const query = useQuery({ queryKey: key, queryFn, enabled })

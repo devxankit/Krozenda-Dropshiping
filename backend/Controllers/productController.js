@@ -448,15 +448,11 @@ async function createProduct(req, res) {
     return res.status(400).json({ success: false, message: b2bError });
   }
 
-  const isTest = process.env.NODE_ENV === 'test';
-
+  // No test-mode shortcuts: SKU, weight and a main image are required under
+  // the test suite exactly as in production, so the tests exercise the real rules.
   let finalSku = sku && sku.trim() ? sku.trim() : null;
   if (!finalSku) {
-    if (isTest) {
-      finalSku = `TEST-SKU-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    } else {
-      return res.status(400).json({ success: false, message: 'SKU is required' });
-    }
+    return res.status(400).json({ success: false, message: 'SKU is required' });
   }
 
   if (!category) {
@@ -475,11 +471,7 @@ async function createProduct(req, res) {
 
   let weightNum = toNumber(weight);
   if (weightNum === null || weightNum <= 0) {
-    if (isTest) {
-      weightNum = 0.5;
-    } else {
-      return res.status(400).json({ success: false, message: 'Weight (kg) is required and must be greater than 0' });
-    }
+    return res.status(400).json({ success: false, message: 'Weight (kg) is required and must be greater than 0' });
   }
 
   const salePriceNum = toNumber(salePrice);
@@ -503,11 +495,7 @@ async function createProduct(req, res) {
   }
   let images = [...uploadedImages, ...(Array.isArray(bodyImages) ? bodyImages : [])];
   if (images.length === 0) {
-    if (isTest) {
-      images = ['/uploads/products/placeholder.webp'];
-    } else {
-      return res.status(400).json({ success: false, message: 'Main image is required' });
-    }
+    return res.status(400).json({ success: false, message: 'Main image is required' });
   }
   resolveVariantImages(variants, uploadedImages);
 

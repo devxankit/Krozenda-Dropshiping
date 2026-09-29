@@ -76,7 +76,7 @@ describe('token handling', () => {
     expect((await as(refresh).get('/user/orders')).status).toBe(401);
   });
 
-  knownBug('QA-019', 'a 30-day buyer refresh token must not authenticate /fcm-token (protectAnyAccount skips the typ check)', async () => {
+  test('QA-019 (regression): a 30-day buyer refresh token does not authenticate /fcm-token', async () => {
     const { user } = await createCustomer();
     const refresh = signRefreshToken('user', { id: String(user._id) });
     const res = await as(refresh).post('/fcm-token', { token: 'qa-device-token', deviceType: 'web' });

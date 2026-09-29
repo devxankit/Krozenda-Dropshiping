@@ -11,7 +11,6 @@ import {
   fetchCategoryTree,
   fetchInventory,
   fetchProducts,
-  fetchSupplierSync,
 } from '../services/catalogService'
 import { useListController } from './useListController'
 
@@ -72,7 +71,6 @@ export function useApprovalSettingsController({ enabled = true } = {}) {
 export const useCategoryTreeController = () => useCatalogResource('categories', fetchCategoryTree)
 export const useBrandsController = () => useCatalogResource('brands', fetchBrands)
 export const useAttributesController = () => useCatalogResource('attributes', fetchAttributes)
-export const useSupplierSyncController = () => useCatalogResource('supplier-sync', fetchSupplierSync)
 
 // Catalog writes touch listings, the approval queue and the category tree at
 // once — approving a category unblocks the products waiting on it — so they

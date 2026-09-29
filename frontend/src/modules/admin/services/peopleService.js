@@ -6,14 +6,12 @@ import {
   customerListFixture,
   kycApplicationFixture,
   kycQueueFixture,
-  policyAcceptanceFixture,
   vendorListFixture,
 } from '../fixtures/people'
 import {
   customerListSchema,
   kycApplicationSchema,
   kycQueueSchema,
-  policyAcceptanceListSchema,
   vendorListSchema,
   vendorRazorpaySyncSchema,
   vendorSchema,
@@ -163,11 +161,3 @@ export async function decideKycDocument({ vendorId, documentId, status, rejectio
   })
   return data.data
 }
-
-export const fetchPolicyAcceptances = (query) =>
-  fetchResource({
-    path: '/admin/policy-acceptances',
-    params: params(query),
-    fixture: () => policyAcceptanceFixture(query),
-    schema: policyAcceptanceListSchema,
-  })

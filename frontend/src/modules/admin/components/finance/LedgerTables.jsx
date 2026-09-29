@@ -1,9 +1,8 @@
 import { SectionCard } from '../display'
 import { formatMoney } from '../../lib/format'
 
-// Two accounting tables that do not fit the comparative `Statement` shape:
-// a trial balance has debit and credit columns, and a vendor statement has a
-// running balance. Both keep the same typographic rules.
+// A vendor statement has a running balance, so it is its own table rather
+// than a generic one.
 
 function Head({ children, align = 'left', width }) {
   return (
@@ -13,48 +12,6 @@ function Head({ children, align = 'left', width }) {
     >
       {children}
     </th>
-  )
-}
-
-export function TrialBalanceTable({ rows, debit, credit }) {
-  return (
-    <div className="admin-scroll overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full min-w-[36rem] border-collapse text-xs">
-        <thead>
-          <tr className="border-b border-border bg-surface-muted">
-            <Head width="5rem">Code</Head>
-            <Head>Account</Head>
-            <Head align="right" width="9rem">
-              Debit
-            </Head>
-            <Head align="right" width="9rem">
-              Credit
-            </Head>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.code} className="border-b border-border-subtle">
-              <td className="tabular px-4 py-2 font-semibold text-slate-900">{row.code}</td>
-              <td className="px-4 py-2 text-ink-muted">{row.name}</td>
-              <td className="tabular px-4 py-2 text-right text-slate-800">
-                {row.debit ? formatMoney(row.debit) : '—'}
-              </td>
-              <td className="tabular px-4 py-2 text-right text-slate-800">
-                {row.credit ? formatMoney(row.credit) : '—'}
-              </td>
-            </tr>
-          ))}
-          <tr className="border-y-2 border-brand-600 bg-brand-50/40 font-bold text-slate-900">
-            <td className="px-4 py-2.5" colSpan={2}>
-              Total
-            </td>
-            <td className="tabular px-4 py-2.5 text-right">{formatMoney(debit)}</td>
-            <td className="tabular px-4 py-2.5 text-right">{formatMoney(credit)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   )
 }
 

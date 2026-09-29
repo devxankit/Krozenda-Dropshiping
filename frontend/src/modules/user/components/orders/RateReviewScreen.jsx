@@ -161,7 +161,7 @@ export function RateReviewScreen() {
       <div className="flex-1 pb-20 md:pb-12 max-w-2xl mx-auto w-full md:px-6 md:py-6">
         <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
           <div className="flex items-center space-x-3">
-            <button onClick={onBack} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
+            <button onClick={onBack} aria-label="Go back" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
               <HiArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="text-base font-bold text-slate-900">Rate & Review</h2>
@@ -183,8 +183,9 @@ export function RateReviewScreen() {
             <>
               {/* Delivered products dropdown */}
               <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 block">Select a delivered product</label>
+                <label htmlFor="review-product" className="text-[11px] font-bold text-slate-500 block">Select a delivered product</label>
                 <select
+                  id="review-product"
                   value={resolvedProductId || ''}
                   onChange={(e) => setSelectedProductId(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
@@ -231,10 +232,15 @@ export function RateReviewScreen() {
                       {selectedItem.alreadyReviewed ? 'Update your rating' : 'How would you rate this product?'}
                     </h3>
 
-                    <div className="flex items-center justify-center space-x-2">
+                    {/* Each star is named and reports whether it is chosen, so a
+                        screen reader can rate — the icons alone said nothing. */}
+                    <div className="flex items-center justify-center space-x-2" role="group" aria-label="Rating">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
+                          type="button"
+                          aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                          aria-pressed={star === rating}
                           onClick={() => setRating(star)}
                           className="p-1 focus:outline-none transition-transform hover:scale-110"
                         >
@@ -256,6 +262,7 @@ export function RateReviewScreen() {
                     <textarea
                       rows={4}
                       maxLength={500}
+                      aria-label="Your review"
                       placeholder="Write your detailed review here..."
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
@@ -288,6 +295,7 @@ export function RateReviewScreen() {
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
+                          aria-label="Add photo"
                           className="w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-colors"
                         >
                           <HiPlus className="w-6 h-6" />

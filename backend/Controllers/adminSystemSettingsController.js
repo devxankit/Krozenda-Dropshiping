@@ -3,6 +3,7 @@ const Product = require('../Models/Product');
 const PlatformSettings = require('../Models/PlatformSettings');
 const { isFirebaseConfigured } = require('../Config/firebase');
 const whatsapp = require('../services/whatsappService');
+const { sendServerError } = require('../utils/sendServerError');
 
 // Same reasoning as adminAnalyticsController's integrationHealth(): reported
 // from what this server can actually see (live connection state and which
@@ -112,7 +113,7 @@ async function getIntegrations(req, res) {
       data: { items: integrationRows() },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch integrations' });
+    sendServerError(res, err, 'Failed to fetch integrations');
   }
 }
 
@@ -150,7 +151,7 @@ async function getTaxSettings(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch tax settings' });
+    sendServerError(res, err, 'Failed to fetch tax settings');
   }
 }
 

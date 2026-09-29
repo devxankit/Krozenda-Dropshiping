@@ -41,22 +41,6 @@ export const couponSchema = z.object({
 
 export const couponListSchema = paged(couponSchema)
 
-export const offerListSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      scope: z.string(),
-      condition: z.string(),
-      effect: z.string(),
-      startsOn: z.string(),
-      endsOn: z.string(),
-      active: z.boolean(),
-      redemptions: z.number().int(),
-    }),
-  ),
-})
-
 export const bannerSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -140,23 +124,6 @@ export const campaignListSchema = paged(
     opened: z.number().int(),
   }),
 )
-
-export const templateListSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      trigger: z.string(),
-      channels: z.array(z.enum(['push', 'sms', 'email'])),
-      // DLT applies to SMS only, and only in India. A template without an
-      // approved DLT id cannot be sent at all.
-      dltTemplateId: z.string().nullable(),
-      dltStatus: z.enum(['approved', 'pending', 'rejected', 'not_required']),
-      updatedAt: z.string(),
-      active: z.boolean(),
-    }),
-  ),
-})
 
 export const reviewListSchema = paged(
   z.object({

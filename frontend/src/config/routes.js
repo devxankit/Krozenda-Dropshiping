@@ -110,7 +110,6 @@ export const ADMIN_ROUTES = Object.freeze({
 
   // ---- authentication (unguarded) ----------------------------------------
   LOGIN: '/admin/login',
-  TWO_FACTOR: '/admin/two-factor',
   FORGOT_PASSWORD: '/admin/forgot-password',
   RESET_PASSWORD: '/admin/reset-password',
   LOCKED: '/admin/locked',
@@ -133,7 +132,6 @@ export const ADMIN_ROUTES = Object.freeze({
   BRANDS: '/admin/catalog/brands',
   ATTRIBUTES: '/admin/catalog/attributes',
   INVENTORY: '/admin/catalog/inventory',
-  SUPPLIER_SYNC: '/admin/catalog/supplier-sync',
 
   // ---- orders & fulfilment ------------------------------------------------
   ORDERS: '/admin/orders',
@@ -165,7 +163,6 @@ export const ADMIN_ROUTES = Object.freeze({
   CHANNEL_PARTNERS: '/admin/people/channel',
   KYC_QUEUE: '/admin/people/kyc',
   KYC_REVIEW: '/admin/people/kyc/:applicationId',
-  POLICY_ACCEPTANCES: '/admin/people/policy-acceptances',
   STAFF: '/admin/people/staff',
   USER_MANAGEMENT: '/admin/people/user-management',
   ROLES: '/admin/people/roles',
@@ -180,15 +177,6 @@ export const ADMIN_ROUTES = Object.freeze({
   VENDOR_LEDGERS: '/admin/finance/vendor-ledger',
   VENDOR_LEDGER_DETAIL: '/admin/finance/vendor-ledger/:vendorId',
   COMMISSION_RULES: '/admin/finance/commission-rules',
-  PRICING_RULES: '/admin/finance/pricing-rules',
-  CHART_OF_ACCOUNTS: '/admin/finance/chart-of-accounts',
-  JOURNAL_VOUCHERS: '/admin/finance/journal-vouchers',
-  EXPENSES: '/admin/finance/expenses',
-  PNL: '/admin/finance/pnl',
-  BALANCE_SHEET: '/admin/finance/balance-sheet',
-  TRIAL_BALANCE: '/admin/finance/trial-balance',
-  CASH_FLOW: '/admin/finance/cash-flow',
-  TAX_CENTER: '/admin/finance/tax-center',
 
   // ---- accounting ---------------------------------------------------------
   // The marketplace money trail: order -> payment -> commission -> seller
@@ -214,14 +202,6 @@ export const ADMIN_ROUTES = Object.freeze({
   ACCOUNTS_TRANSACTIONS: '/admin/accounts/transactions',
   ACCOUNTS_LEDGER: '/admin/accounts/ledger',
 
-  // ---- dropshipping -------------------------------------------------------
-  DROPSHIPPING_OVERVIEW: '/admin/dropshipping',
-  DROPSHIPPING_PARTNERS: '/admin/dropshipping/partners',
-  DROPSHIPPING_PARTNER_DETAIL: '/admin/dropshipping/partners/:partnerId',
-  DROPSHIPPING_PRODUCTS: '/admin/dropshipping/products',
-  DROPSHIPPING_ORDERS: '/admin/dropshipping/orders',
-  DROPSHIPPING_MARGINS: '/admin/dropshipping/margins',
-
   // ---- CJ Dropshipping (provider-specific, admin-only) --------------------
   CJ_DASHBOARD: '/admin/cj',
   CJ_SETTINGS: '/admin/cj/settings',
@@ -236,11 +216,9 @@ export const ADMIN_ROUTES = Object.freeze({
 
   // ---- marketing & content ------------------------------------------------
   COUPONS: '/admin/marketing/coupons',
-  OFFERS: '/admin/marketing/offers',
   BANNERS: '/admin/marketing/banners',
   CMS_PAGES: '/admin/marketing/cms',
   CAMPAIGNS: '/admin/marketing/campaigns',
-  TEMPLATES: '/admin/marketing/templates',
   REVIEWS: '/admin/marketing/reviews',
 
   // ---- reports ------------------------------------------------------------
@@ -282,7 +260,6 @@ export const adminPath = Object.freeze({
   customerDetail: (customerId) => `/admin/people/customers/${customerId}`,
   sellerDetail: (sellerId) => `/admin/people/sellers/${sellerId}`,
   partnerDetail: (partnerId) => `/admin/people/partners/${partnerId}`,
-  dropshipPartnerDetail: (partnerId) => `/admin/dropshipping/partners/${partnerId}`,
   cjProductDetail: (productId) => `/admin/cj/products/${productId}`,
   kycReview: (applicationId) => `/admin/people/kyc/${applicationId}`,
   roleDetail: (roleId) => `/admin/people/roles/${roleId}`,

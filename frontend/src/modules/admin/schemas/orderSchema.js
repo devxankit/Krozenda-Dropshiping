@@ -27,6 +27,12 @@ export const orderItemSchema = z.object({
   quantity: z.number().int().positive(),
   variant: z.string(),
   vendorId: z.string().nullable(),
+  // Line state (admin only). A seller-declared delivery is held from payout
+  // until an admin confirms it — see OrderItemsCard.
+  status: z.string().optional(),
+  deliveryConfirmedBy: z.string().nullable().optional(),
+  awaitingDeliveryConfirmation: z.boolean().optional(),
+  subOrderId: z.string().optional(),
 })
 
 export const orderShippingAddressSchema = z.object({

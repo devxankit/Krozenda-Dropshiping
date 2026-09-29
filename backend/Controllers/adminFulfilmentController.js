@@ -41,10 +41,9 @@ function serializeSubOrder(order, item) {
     seller: vendorLabel(item.vendorDoc),
     buyer: order.user?.name || '',
     status: item.status,
-    // Marked delivered by the seller alone: shows delivered, but is not paid
-    // out until confirmed (confirmSubOrderDelivery / the carrier).
+    // Who confirmed the delivery (CARRIER / ADMIN / SELLER) — see
+    // confirmSubOrderDelivery. The admin works the queue from Orders.
     deliveryConfirmedBy: item.deliveryConfirmedBy || null,
-    awaitingDeliveryConfirmation: item.status === 'DELIVERED' && item.deliveryConfirmedBy === 'SELLER',
     awb: item.trackingNumber || null,
     ageHours: ageHours(order.createdAt),
     total: toPaise(item.price * item.quantity),
@@ -78,7 +77,6 @@ async function listSubOrders(req, res) {
   else if (effectiveTab === 'in_flight') items = items.filter((s) => s.status === 'PROCESSING' || s.status === 'SHIPPED');
   else if (effectiveTab === 'exceptions') items = items.filter((s) => s.status === 'CANCELLED');
   else if (effectiveTab === 'delivered') items = items.filter((s) => s.status === 'DELIVERED');
-  else if (effectiveTab === 'unconfirmed') items = items.filter((s) => s.awaitingDeliveryConfirmation);
 
   const tabCounts = {
     all: allSerialized.length,
@@ -86,7 +84,6 @@ async function listSubOrders(req, res) {
     in_flight: allSerialized.filter((s) => s.status === 'PROCESSING' || s.status === 'SHIPPED').length,
     exceptions: allSerialized.filter((s) => s.status === 'CANCELLED').length,
     delivered: allSerialized.filter((s) => s.status === 'DELIVERED').length,
-    unconfirmed: allSerialized.filter((s) => s.awaitingDeliveryConfirmation).length,
   };
 
   res.json({ success: true, data: paged(items, { page, rowsPerPage }, tabCounts) });

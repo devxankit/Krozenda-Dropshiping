@@ -148,20 +148,19 @@ describe('double-submitted checkout', () => {
     expect((await Product.findById(product._id)).stock).toBe(9);
   });
 
-  test('QA-012: the same cart bought again after the double-tap window is a new order', async () => {
+  test('QA-012: buying the very same item again seconds later is a new order, not a double tap', async () => {
     const product = await createProduct({ stock: 10, price: 200 });
     const b = await buyerWithAddress();
     await addToCart(b.token, product._id, 1);
-    expect((await placeCod(b.token, b.address._id)).status).toBe(201);
+    const first = await placeCod(b.token, b.address._id);
+    expect(first.status).toBe(201);
+    // the first order emptied the cart; the buyer adds the same item again
     await addToCart(b.token, product._id, 1);
-    const realNow = Date.now;
-    const spy = jest.spyOn(Date, 'now').mockImplementation(() => realNow() + 31 * 1000);
-    try {
-      expect((await placeCod(b.token, b.address._id)).status).toBe(201);
-    } finally {
-      spy.mockRestore();
-    }
+    const second = await placeCod(b.token, b.address._id);
+    expect(second.status).toBe(201);
+    expect(second.body.data.id).not.toBe(first.body.data.id);
     expect(await Order.countDocuments({ user: b.user._id })).toBe(2);
+    expect((await Product.findById(product._id)).stock).toBe(8);
   });
 
   test('QA-012: a different cart from the same buyer is never mistaken for a double tap', async () => {

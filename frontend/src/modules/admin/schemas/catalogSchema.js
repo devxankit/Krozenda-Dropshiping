@@ -122,30 +122,6 @@ export const inventorySchema = z.object({
   tabCounts: z.record(z.string(), z.number()),
 })
 
-export const supplierSyncSchema = z.object({
-  adapters: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      status: z.enum(['operational', 'degraded', 'down', 'not_configured']),
-      lastRunAt: z.string().nullable(),
-      productsTracked: z.number().int(),
-      syncs: z.array(z.string()),
-    }),
-  ),
-  runs: z.array(
-    z.object({
-      id: z.string(),
-      adapter: z.string(),
-      startedAt: z.string(),
-      durationSeconds: z.number(),
-      updated: z.number().int(),
-      failed: z.number().int(),
-      status: z.enum(['success', 'partial', 'failed']),
-    }),
-  ),
-})
-
 export const attributeListSchema = z.object({
   items: z.array(
     z.object({

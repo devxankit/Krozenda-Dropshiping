@@ -212,12 +212,19 @@ function isMoneyReceived(order) {
  * order from before snapshots existed) is resolved against the rules in
  * force on the ORDER date, never "now".
  */
-async function priceOrderCommissions(order, { config: configInput = null, ignoreSnapshots = false } = {}) {
+async function priceOrderCommissions(
+  order,
+  { config: configInput = null, ignoreSnapshots = false, couponFundedByVendor: knownCouponFunding } = {}
+) {
   const config = configInput || (await AccountingConfig.resolve());
 
-  // Seller-funded vs platform-funded discount (see explodeOrderLines).
+  // Seller-funded vs platform-funded discount (see explodeOrderLines). A
+  // caller pricing many orders may pass it in, already looked up in one
+  // query; otherwise it is looked up here, as it always was.
   let couponFundedByVendor = false;
-  if (order.couponCode) {
+  if (knownCouponFunding !== undefined) {
+    couponFundedByVendor = Boolean(knownCouponFunding);
+  } else if (order.couponCode) {
     const coupon = await Coupon.findOne({ code: order.couponCode }).select('vendorId').lean();
     couponFundedByVendor = Boolean(coupon?.vendorId);
   }

@@ -27,9 +27,8 @@ export const subOrderListItemSchema = z.object({
   seller: z.string(),
   buyer: z.string(),
   status: z.string(),
-  // Delivered on the seller's word only — not paid out until confirmed.
+  // Who confirmed a delivery (CARRIER / ADMIN / SELLER).
   deliveryConfirmedBy: z.string().nullable().optional(),
-  awaitingDeliveryConfirmation: z.boolean().optional(),
   awb: z.string().nullable(),
   ageHours: z.number().int(),
   total: z.number().int(),

@@ -26,6 +26,13 @@ for (const key of BLANK) process.env[key] = '';
 process.env.ENV = 'loadtest'; // not 'production' (fixed dev OTP), not 'test' (real validation paths)
 process.env.RAZORPAY_KEY_ID = 'rzp_test_loadtest';
 process.env.RAZORPAY_KEY_SECRET = 'loadtest';
+// Image and link URLs are built from BACKEND_URL. Left as .env has it, they
+// point at the developer's own server (e.g. :5000, on the shared Atlas DB)
+// and a browser on this stack would request them from there.
+process.env.BACKEND_URL = `http://localhost:${Number(process.env.PERF_PORT || 5055)}`;
+process.env.FRONTEND_URL = '';
+// Uploads from the load/E2E stack go to a temp folder, never backend/uploads.
+process.env.UPLOADS_DIR = require('path').join(require('os').tmpdir(), 'krozenda-e2e-uploads');
 
 const realFetch = global.fetch;
 global.fetch = (url, ...rest) => {
@@ -70,7 +77,10 @@ async function main() {
   await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
 
   const fixtures = await seed(mongoose);
-  fs.writeFileSync(path.join(__dirname, 'fixtures.json'), JSON.stringify(fixtures));
+  // PERF_FIXTURES names the file, so the browser E2E stack (fixtures-e2e.json)
+  // and a load-test run never overwrite each other's tokens.
+  const fixturesName = process.env.PERF_FIXTURES ? `fixtures-${process.env.PERF_FIXTURES}.json` : 'fixtures.json';
+  fs.writeFileSync(path.join(__dirname, fixturesName), JSON.stringify(fixtures));
 
   // Profile everything slower than 20ms, for the slow-query/missing-index report.
   await mongoose.connection.db.command({ profile: 1, slowms: 20 });
@@ -167,7 +177,8 @@ async function seed(mongoose) {
     { upsert: true }
   );
 
-  const admin = await User.create({ name: 'Load Admin', email: 'load.admin@test.local', role: 'admin', isActive: true });
+  // Password only for the browser E2E admin sign-in; throwaway in-memory DB.
+  const admin = await User.create({ name: 'Load Admin', email: 'load.admin@test.local', password: 'Admin@12345', role: 'admin', isActive: true });
 
   const categories = await Category.insertMany(
     Array.from({ length: SEED.categories }, (_, i) => ({ name: `Category ${i}`, isActive: true }))

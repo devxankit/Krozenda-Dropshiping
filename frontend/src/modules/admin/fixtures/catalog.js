@@ -223,22 +223,6 @@ export function inventoryFixture({ tab = 'all', filters = {} } = {}) {
   }
 }
 
-export function supplierSyncFixture() {
-  return {
-    adapters: [
-      { id: 'adp-1', name: 'Arya Manufacturing feed', status: 'operational', lastRunAt: '2 Sep 2026, 02:00', productsTracked: 2140, syncs: ['Stock', 'Price', 'Images', 'Description'] },
-      { id: 'adp-2', name: 'Meghna Wholesale feed', status: 'degraded', lastRunAt: '2 Sep 2026, 02:00', productsTracked: 1860, syncs: ['Stock', 'Price'] },
-    ],
-    runs: [
-      { id: 'run-1', adapter: 'Arya Manufacturing feed', startedAt: '2 Sep 2026, 02:00', durationSeconds: 184, updated: 2118, failed: 22, status: 'partial' },
-      { id: 'run-2', adapter: 'Meghna Wholesale feed', startedAt: '2 Sep 2026, 02:00', durationSeconds: 96, updated: 1204, failed: 656, status: 'partial' },
-      { id: 'run-3', adapter: 'Arya Manufacturing feed', startedAt: '1 Sep 2026, 02:00', durationSeconds: 176, updated: 2140, failed: 0, status: 'success' },
-      { id: 'run-4', adapter: 'Meghna Wholesale feed', startedAt: '1 Sep 2026, 02:00', durationSeconds: 88, updated: 1860, failed: 0, status: 'success' },
-      { id: 'run-5', adapter: 'Meghna Wholesale feed', startedAt: '31 Aug 2026, 02:00', durationSeconds: 12, updated: 0, failed: 1860, status: 'failed' },
-    ],
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Writes
 //

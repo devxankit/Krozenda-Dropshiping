@@ -7,6 +7,7 @@ const path = require('path');
 const { URL } = require('url');
 const { writeImageSet, generateFilename } = require('../../Middlewares/uploadMiddleware');
 const { VARIANTS } = require('../../Config/imageSizes');
+const { UPLOADS_ROOT } = require('../../Config/uploads');
 
 // Fetches an image a seller or admin named by URL in a CSV import and runs it
 // through the same sharp/WebP pipeline as a form upload (writeImageSet).
@@ -23,7 +24,7 @@ const MAX_REDIRECTS = 3;
 const ALLOWED_PORTS = new Set(['', '80', '443']);
 
 const SUBFOLDER = 'products';
-const DEST_DIR = path.join(__dirname, '..', '..', 'uploads', SUBFOLDER);
+const DEST_DIR = path.join(UPLOADS_ROOT, SUBFOLDER);
 // Every file this module writes carries this prefix, and cleanup refuses to
 // touch anything without it — so discarding a rejected import can never
 // delete an image a live product is using.

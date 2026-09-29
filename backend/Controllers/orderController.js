@@ -68,24 +68,26 @@ function normaliseIdempotencyKey(raw) {
 }
 
 // For a client that sends no Idempotency-Key (an older app build, a direct
-// API caller), the server makes one: the same buyer submitting the same cart
-// to the same address the same way inside one short window IS a double tap.
-// It rides the same unique index as a client key, so two parallel submits
-// place one order. The window keeps it from ever matching a genuine repeat
-// purchase later — by then the cart was emptied and refilled anyway.
-const AUTO_IDEMPOTENCY_WINDOW_MS = 30 * 1000;
-
+// API caller), the server makes one from THIS VERSION of the cart: the same
+// buyer submitting the same, untouched cart to the same address the same way
+// IS a double tap. It rides the same unique index as a client key, so two
+// parallel submits place one order.
+//
+// The cart's updatedAt is what tells a double tap from a genuine repeat
+// purchase: both taps see the same cart, while a repeat purchase — even of
+// the very same item seconds later — comes from a cart that was emptied by
+// the first order and filled again, so it has a new updatedAt.
 async function autoIdempotencyKey(userId, { addressId, paymentMethod, couponCode }) {
-  const cart = await Cart.findOne({ user: userId }).select('items.product items.variantId items.quantity').lean();
+  const cart = await Cart.findOne({ user: userId }).select('items.product items.variantId items.quantity updatedAt').lean();
   const lines = (cart?.items || [])
     .map((i) => `${i.product}:${i.variantId || ''}:${i.quantity}`)
     .sort()
     .join('|');
   if (!lines) return null;
-  const bucket = Math.floor(Date.now() / AUTO_IDEMPOTENCY_WINDOW_MS);
+  const version = cart.updatedAt ? new Date(cart.updatedAt).getTime() : 0;
   const digest = crypto
     .createHash('sha256')
-    .update([String(userId), lines, addressId, paymentMethod, couponCode || '', bucket].join('#'))
+    .update([String(userId), lines, version, addressId, paymentMethod, couponCode || ''].join('#'))
     .digest('hex');
   return `auto-${digest.slice(0, 40)}`;
 }

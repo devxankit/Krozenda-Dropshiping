@@ -3,6 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const sharp = require('sharp');
 const { VARIANTS } = require('../Config/imageSizes');
+const { UPLOADS_ROOT } = require('../Config/uploads');
 
 const storage = multer.memoryStorage();
 
@@ -178,7 +179,7 @@ function processImage(subfolder, { width = 1000, height = 1000, fit = 'contain' 
 
     try {
       const result = await writeImageSet(req.file.buffer, {
-        destDir: path.join(__dirname, '..', 'uploads', subfolder),
+        destDir: path.join(UPLOADS_ROOT, subfolder),
         subfolder,
         filename: generateFilename(),
         width,
@@ -199,7 +200,7 @@ function processImages(subfolder, { width = 1000, height = 1000, fit = 'contain'
     if (!req.files || req.files.length === 0) return next();
 
     try {
-      const destDir = path.join(__dirname, '..', 'uploads', subfolder);
+      const destDir = path.join(UPLOADS_ROOT, subfolder);
       await ensureDir(destDir);
 
       // Sequential rather than Promise.all: each sharp pipeline holds a
@@ -230,7 +231,7 @@ function processDocument(subfolder) {
     if (!req.file) return next();
 
     try {
-      const destDir = path.join(__dirname, '..', 'uploads', subfolder);
+      const destDir = path.join(UPLOADS_ROOT, subfolder);
       await ensureDir(destDir);
 
       if (req.file.mimetype === 'application/pdf') {

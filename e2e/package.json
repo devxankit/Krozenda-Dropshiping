@@ -1,0 +1,12 @@
+{
+  "name": "krozenda-e2e",
+  "private": true,
+  "description": "Browser end-to-end tests. Runs against an isolated stack: the backend on an in-memory MongoDB (backend/tests/performance/perfServer.js) and the Vite dev server pointed at it. Never against the shared Atlas-backed API.",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

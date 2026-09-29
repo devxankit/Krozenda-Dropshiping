@@ -20,8 +20,6 @@ import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { BrandsPage } from './pages/catalog/BrandsPage'
 import { AttributesPage } from './pages/catalog/AttributesPage'
 import { InventoryPage } from './pages/catalog/InventoryPage'
-import { SupplierSyncPage } from './pages/catalog/SupplierSyncPage'
-import { DropshippingOverviewPage } from './pages/dropshipping/DropshippingOverviewPage'
 import { CjSettingsPage } from './pages/cj/CjSettingsPage'
 import { CjDashboardPage } from './pages/cj/CjDashboardPage'
 import { CjCataloguePage } from './pages/cj/CjCataloguePage'
@@ -32,10 +30,6 @@ import { CjOrdersPage } from './pages/cj/CjOrdersPage'
 import { CjShipmentsPage } from './pages/cj/CjShipmentsPage'
 import { CjDisputesPage } from './pages/cj/CjDisputesPage'
 import { CjSyncLogsPage } from './pages/cj/CjSyncLogsPage'
-import { DropshippingPartnersPage } from './pages/dropshipping/DropshippingPartnersPage'
-import { DropshippingProductsPage } from './pages/dropshipping/DropshippingProductsPage'
-import { DropshippingOrdersPage } from './pages/dropshipping/DropshippingOrdersPage'
-import { DropshippingMarginsPage } from './pages/dropshipping/DropshippingMarginsPage'
 import { OrdersPage } from './pages/orders/OrdersPage'
 import { OrderDetailPage } from './pages/orders/OrderDetailPage'
 import { SubOrderDetailPage } from './pages/fulfilment/SubOrderDetailPage'
@@ -47,20 +41,13 @@ import { CustomersPage } from './pages/people/CustomersPage'
 import { VendorsPage } from './pages/people/VendorsPage'
 import { KycQueuePage } from './pages/people/KycQueuePage'
 import { KycReviewPage } from './pages/people/KycReviewPage'
-import { PolicyAcceptancesPage } from './pages/people/PolicyAcceptancesPage'
 import { RolesManagementPage } from './pages/people/RolesManagementPage'
 import { UserManagementPage } from './pages/people/UserManagementPage'
 import { TransactionsPage, RefundsPage } from './pages/finance/FinanceListPages'
 import { SettlementsPage, VendorLedgersPage } from './pages/finance/SettlementListPages'
 import { SettlementBatchPage } from './pages/finance/SettlementBatchPage'
 import { VendorStatementPage } from './pages/finance/VendorStatementPage'
-import { CommissionRulesPage, PricingRulesPage } from './pages/finance/RulesPages'
-import { TrialBalancePage } from './pages/finance/LedgerPages'
-import { ChartOfAccountsPage } from './pages/finance/ChartOfAccountsPage'
-import { JournalVouchersPage } from './pages/finance/JournalVouchersPage'
-import { ExpensesPage } from './pages/finance/ExpensesPage'
-import { ProfitAndLossPage, BalanceSheetPage, CashFlowPage } from './pages/finance/StatementPages'
-import { TaxCentrePage } from './pages/finance/TaxCentrePage'
+import { CommissionRulesPage } from './pages/finance/RulesPages'
 import {
   AccountingTransactionsPage,
   AccountingTransactionDetailPage,
@@ -76,7 +63,7 @@ import { VendorPayoutsPage } from './pages/accounts/VendorPayoutsPage'
 import { TransactionsPage as AccountsTransactionsPage } from './pages/accounts/TransactionsPage'
 import { LedgerPage } from './pages/accounts/LedgerPage'
 import { CouponsPage, CampaignsPage, ReviewsPage } from './pages/marketing/MarketingListPages'
-import { OffersPage, CmsPagesPage, TemplatesPage } from './pages/marketing/ContentPages'
+import { CmsPagesPage } from './pages/marketing/ContentPages'
 import { BannersPage } from './pages/marketing/BannersPage'
 import { ReportsPage, ReportRunnerPage } from './pages/reports/ReportPages'
 import { BusinessRulesPage } from './pages/system/BusinessRulesPage'
@@ -91,7 +78,6 @@ import {
 import { AuditLogPage, BackupsPage, SupportTicketsPage, AdminProfilePage } from './pages/system/SystemPages'
 import { SupportTicketDetailPage } from './pages/system/SupportTicketDetailPage'
 import { LoginPage } from './pages/auth/LoginPage'
-import { TwoFactorPage } from './pages/auth/TwoFactorPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage'
 import { LockedPage } from './pages/auth/LockedPage'
@@ -162,7 +148,6 @@ export default function AdminRoutes() {
         {/* Unauthenticated. Deliberately outside the guard — the admin panel
           has its own email + 2FA sign-in rather than the buyer OTP flow. */}
         <Route path={rel(ADMIN_ROUTES.LOGIN)} element={<LoginPage />} />
-        <Route path={rel(ADMIN_ROUTES.TWO_FACTOR)} element={<TwoFactorPage />} />
         <Route path={rel(ADMIN_ROUTES.FORGOT_PASSWORD)} element={<ForgotPasswordPage />} />
         <Route path={rel(ADMIN_ROUTES.RESET_PASSWORD)} element={<ResetPasswordPage />} />
         <Route path={rel(ADMIN_ROUTES.LOCKED)} element={<LockedPage />} />
@@ -249,7 +234,6 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.BRANDS)} element={<BrandsPage />} />
               <Route path={rel(ADMIN_ROUTES.ATTRIBUTES)} element={<AttributesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVENTORY)} element={<InventoryPage />} />
-              <Route path={rel(ADMIN_ROUTES.SUPPLIER_SYNC)} element={<SupplierSyncPage />} />
 
               {/* Orders — the reference list + detail pair every other list
                 and detail screen is assembled the same way. */}
@@ -268,13 +252,6 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.CANCELLATIONS)} element={<Navigate to={ADMIN_ROUTES.ORDERS} replace />} />
               <Route path={rel(ADMIN_ROUTES.INVOICES)} element={<InvoicesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVOICE_DETAIL)} element={<InvoiceDetailPage />} />
-
-              {/* Dropshipping Module */}
-              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_OVERVIEW)} element={<DropshippingOverviewPage />} />
-              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_PARTNERS)} element={<DropshippingPartnersPage />} />
-              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_PRODUCTS)} element={<DropshippingProductsPage />} />
-              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_ORDERS)} element={<DropshippingOrdersPage />} />
-              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING_MARGINS)} element={<DropshippingMarginsPage />} />
 
               {/* CJ Dropshipping Module — provider-specific, admin-only. */}
               <Route path={rel(ADMIN_ROUTES.CJ_DASHBOARD)} element={<CjDashboardPage />} />
@@ -301,7 +278,6 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.CHANNEL_PARTNERS)} element={<VendorsPage />} />
               <Route path={rel(ADMIN_ROUTES.KYC_QUEUE)} element={<KycQueuePage />} />
               <Route path={rel(ADMIN_ROUTES.KYC_REVIEW)} element={<KycReviewPage />} />
-              <Route path={rel(ADMIN_ROUTES.POLICY_ACCEPTANCES)} element={<PolicyAcceptancesPage />} />
               <Route path={rel(ADMIN_ROUTES.USER_MANAGEMENT)} element={<UserManagementPage />} />
               <Route path={rel(ADMIN_ROUTES.ROLES)} element={<RolesManagementPage />} />
 
@@ -321,15 +297,6 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.VENDOR_LEDGERS)} element={<VendorLedgersPage />} />
               <Route path={rel(ADMIN_ROUTES.VENDOR_LEDGER_DETAIL)} element={<VendorStatementPage />} />
               <Route path={rel(ADMIN_ROUTES.COMMISSION_RULES)} element={<CommissionRulesPage />} />
-              <Route path={rel(ADMIN_ROUTES.PRICING_RULES)} element={<PricingRulesPage />} />
-              <Route path={rel(ADMIN_ROUTES.CHART_OF_ACCOUNTS)} element={<ChartOfAccountsPage />} />
-              <Route path={rel(ADMIN_ROUTES.JOURNAL_VOUCHERS)} element={<JournalVouchersPage />} />
-              <Route path={rel(ADMIN_ROUTES.EXPENSES)} element={<ExpensesPage />} />
-              <Route path={rel(ADMIN_ROUTES.PNL)} element={<ProfitAndLossPage />} />
-              <Route path={rel(ADMIN_ROUTES.BALANCE_SHEET)} element={<BalanceSheetPage />} />
-              <Route path={rel(ADMIN_ROUTES.TRIAL_BALANCE)} element={<TrialBalancePage />} />
-              <Route path={rel(ADMIN_ROUTES.CASH_FLOW)} element={<CashFlowPage />} />
-              <Route path={rel(ADMIN_ROUTES.TAX_CENTER)} element={<TaxCentrePage />} />
 
               {/* Accounting — the marketplace money trail. Eight screens plus
                 their detail views. */}
@@ -381,11 +348,9 @@ export default function AdminRoutes() {
 
               {/* Marketing, content & reports */}
               <Route path={rel(ADMIN_ROUTES.COUPONS)} element={<CouponsPage />} />
-              <Route path={rel(ADMIN_ROUTES.OFFERS)} element={<OffersPage />} />
               <Route path={rel(ADMIN_ROUTES.BANNERS)} element={<BannersPage />} />
               <Route path={rel(ADMIN_ROUTES.CMS_PAGES)} element={<CmsPagesPage />} />
               <Route path={rel(ADMIN_ROUTES.CAMPAIGNS)} element={<CampaignsPage />} />
-              <Route path={rel(ADMIN_ROUTES.TEMPLATES)} element={<TemplatesPage />} />
               <Route path={rel(ADMIN_ROUTES.REVIEWS)} element={<ReviewsPage />} />
               <Route path={rel(ADMIN_ROUTES.REPORTS)} element={<ReportsPage />} />
               <Route path={rel(ADMIN_ROUTES.REPORT_RUNNER)} element={<ReportRunnerPage />} />

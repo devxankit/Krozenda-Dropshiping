@@ -1,4 +1,4 @@
-import { Table } from '../../../../components/ui'
+import { Badge, Button, Table } from '../../../../components/ui'
 import { MoneyCell, SectionCard } from '../display'
 
 const ITEM_COLUMNS = Object.freeze([
@@ -34,11 +34,43 @@ const ITEM_COLUMNS = Object.freeze([
   },
 ])
 
-export function OrderItemsCard({ items }) {
+// Each line's own status, and — for a line the seller marked delivered on
+// their own — the admin's "Confirm delivery", which releases it to payout.
+function statusColumn({ onConfirmDelivery, confirmingId }) {
+  return {
+    key: 'status',
+    header: 'Status',
+    width: '12rem',
+    render: (item) =>
+      item.awaitingDeliveryConfirmation ? (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Badge tone="warning" dot>
+            Delivered · seller-marked
+          </Badge>
+          {onConfirmDelivery && (
+            <Button
+              size="xs"
+              variant="secondary"
+              isLoading={confirmingId === item.subOrderId}
+              onClick={() => onConfirmDelivery(item)}
+            >
+              Confirm delivery
+            </Button>
+          )}
+        </span>
+      ) : (
+        <span className="text-xs text-ink-subtle">{item.status ? item.status.charAt(0) + item.status.slice(1).toLowerCase() : '—'}</span>
+      ),
+  }
+}
+
+export function OrderItemsCard({ items, onConfirmDelivery, confirmingId }) {
+  const hasLineStatus = items.some((item) => item.status)
+  const columns = hasLineStatus ? [...ITEM_COLUMNS, statusColumn({ onConfirmDelivery, confirmingId })] : ITEM_COLUMNS
   return (
     <SectionCard title="Items">
       <div className="p-4">
-        <Table columns={ITEM_COLUMNS} data={items} getRowKey={(item, index) => `${item.productId}-${index}`} density="compact" />
+        <Table columns={columns} data={items} getRowKey={(item, index) => `${item.productId}-${index}`} density="compact" />
       </div>
     </SectionCard>
   )

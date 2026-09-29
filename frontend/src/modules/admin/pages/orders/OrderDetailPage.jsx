@@ -15,6 +15,7 @@ import {
   useOrderDetailController,
   useOrderStatusController,
 } from '../../controllers/useOrderController'
+import { useSubOrderWriteController } from '../../controllers/useFulfilmentController'
 
 // Reference implementation for every detail screen: header with the primary
 // actions, a stack of section cards, and a right rail for money and metadata.
@@ -22,6 +23,8 @@ export function OrderDetailPage() {
   const { orderId } = useParams()
   const { order, isLoading, error, refetch } = useOrderDetailController(orderId)
   const statusMutation = useOrderStatusController()
+  const lineWriter = useSubOrderWriteController()
+  const [confirmingId, setConfirmingId] = useState(null)
   const navigate = useNavigate()
   const isSuperAdmin = useAuthStore((state) => state.roles.includes('admin'))
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -73,7 +76,21 @@ export function OrderDetailPage() {
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          <OrderItemsCard items={order.items} />
+          <OrderItemsCard
+            items={order.items}
+            confirmingId={confirmingId}
+            onConfirmDelivery={async (item) => {
+              setConfirmingId(item.subOrderId)
+              try {
+                // Success invalidates the order, so the line re-renders as confirmed.
+                await lineWriter.confirmDelivery.runAsync({ id: item.subOrderId })
+              } catch {
+                // The mutation hook has already shown the error toast.
+              } finally {
+                setConfirmingId(null)
+              }
+            }}
+          />
 
           <SectionCard title="Status history">
             <div className="p-4">

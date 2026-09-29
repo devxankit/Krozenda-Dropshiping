@@ -5,11 +5,14 @@ import { fetchResource } from './mockTransport'
 import { shellSummaryFixture } from '../fixtures/shell'
 import { shellSummarySchema } from '../schemas/shellSchema'
 
+// Real counts and a tray of what needs attention, scoped to the caller's role
+// (adminShellController). Live always — the fixture showed invented alerts.
 export function fetchShellSummary() {
   return fetchResource({
     path: '/admin/shell-summary',
     fixture: shellSummaryFixture,
     schema: shellSummarySchema,
+    live: true,
   })
 }
 

@@ -5,13 +5,11 @@ const {
   approvalQueueFixture,
   attributeListFixture,
   inventoryFixture,
-  supplierSyncFixture,
 } = fixtures
 import {
   approvalQueueSchema,
   attributeListSchema,
   inventorySchema,
-  supplierSyncSchema,
   attributeSchema,
   deletedSchema,
   inventoryRowSchema,
@@ -94,14 +92,6 @@ export function fetchInventory(query = {}) {
     fixture: () => inventoryFixture(query),
     schema: inventorySchema,
     live: true,
-  })
-}
-
-export function fetchSupplierSync() {
-  return fetchResource({
-    path: '/admin/catalog/supplier-sync',
-    fixture: supplierSyncFixture,
-    schema: supplierSyncSchema,
   })
 }
 

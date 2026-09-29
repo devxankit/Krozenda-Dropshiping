@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import { FIELD_BASE, FieldHint, FieldLabel, fieldStateClass } from './fieldStyles'
 import { Icon } from './Icon'
 
@@ -15,7 +15,7 @@ export const Select = forwardRef(function Select(
     label,
     error,
     description,
-    id,
+    id: idProp,
     options = [],
     placeholder,
     size = 'md',
@@ -26,6 +26,11 @@ export const Select = forwardRef(function Select(
   },
   ref,
 ) {
+  // Every field gets an id, so its label is linked to it (screen readers
+  // announce it, and clicking the label focuses the field) even when the
+  // caller passes none — most forms in the app do not.
+  const autoId = useId()
+  const id = idProp || autoId
   const describedBy = error ? `${id}-error` : description ? `${id}-description` : undefined
 
   return (

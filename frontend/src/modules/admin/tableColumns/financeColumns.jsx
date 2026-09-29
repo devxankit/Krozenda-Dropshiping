@@ -25,19 +25,6 @@ const REFUND_STATUS_TONE = Object.freeze({
   failed: 'danger',
 })
 
-const POST_STATUS_LABELS = Object.freeze({
-  draft: 'Draft',
-  posted: 'Posted',
-  reversed: 'Reversed',
-  paid: 'Paid',
-})
-const POST_STATUS_TONE = Object.freeze({
-  draft: 'neutral',
-  posted: 'brand',
-  reversed: 'danger',
-  paid: 'success',
-})
-
 export const TRANSACTION_COLUMNS = Object.freeze([
   {
     key: 'reference',
@@ -307,97 +294,11 @@ export const VENDOR_LEDGER_TABS = Object.freeze([
   { id: 'never_settled', label: 'Never settled' },
 ])
 
-export const VOUCHER_COLUMNS = Object.freeze([
-  {
-    key: 'number',
-    header: 'Voucher',
-    width: '11rem',
-    render: (row) => <PrimaryCell title={row.number} subtitle={row.date} />,
-  },
-  { key: 'narration', header: 'Narration', cellClassName: 'text-xs text-ink-muted' },
-  { key: 'postedBy', header: 'Posted by', width: '10rem', cellClassName: 'text-xs text-ink-muted' },
-  {
-    key: 'debit',
-    header: 'Debit',
-    width: '8rem',
-    align: 'right',
-    render: (row) => <MoneyCell amount={row.debit} muted />,
-  },
-  {
-    key: 'credit',
-    header: 'Credit',
-    width: '8rem',
-    align: 'right',
-    render: (row) => <MoneyCell amount={row.credit} muted />,
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '7.5rem',
-    render: (row) => (
-      <StatusPill
-        status={row.status}
-        labels={POST_STATUS_LABELS}
-        tones={POST_STATUS_TONE}
-        size="sm"
-      />
-    ),
-  },
-])
-
 export const VOUCHER_TABS = Object.freeze([
   { id: 'all', label: 'All vouchers' },
   { id: 'posted', label: 'Posted' },
   { id: 'draft', label: 'Draft' },
   { id: 'reversed', label: 'Reversed' },
-])
-
-export const EXPENSE_COLUMNS = Object.freeze([
-  {
-    key: 'category',
-    header: 'Category',
-    render: (row) => <PrimaryCell title={row.category} subtitle={row.narration} />,
-  },
-  { key: 'vendor', header: 'Paid to', width: '12rem', cellClassName: 'text-xs text-ink-muted' },
-  { key: 'date', header: 'Date', width: '8rem', cellClassName: 'text-xs text-ink-muted' },
-  {
-    key: 'amount',
-    header: 'Amount',
-    width: '8rem',
-    align: 'right',
-    sortable: true,
-    render: (row) => <MoneyCell amount={row.amount} />,
-  },
-  {
-    key: 'gst',
-    header: 'GST',
-    width: '7rem',
-    align: 'right',
-    render: (row) => <MoneyCell amount={row.gst} muted />,
-  },
-  {
-    key: 'itcClaimable',
-    header: 'Input credit',
-    width: '8rem',
-    render: (row) => (
-      <Badge tone={row.itcClaimable ? 'success' : 'neutral'} size="sm">
-        {row.itcClaimable ? 'Claimable' : 'Not claimable'}
-      </Badge>
-    ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '7rem',
-    render: (row) => (
-      <StatusPill
-        status={row.status}
-        labels={POST_STATUS_LABELS}
-        tones={POST_STATUS_TONE}
-        size="sm"
-      />
-    ),
-  },
 ])
 
 export const EXPENSE_TABS = Object.freeze([
@@ -452,83 +353,4 @@ export const COMMISSION_RULE_COLUMNS = Object.freeze([
     ),
   },
   { key: 'updatedAt', header: 'Updated', width: '8rem', cellClassName: 'text-xs text-ink-muted' },
-])
-
-export const PRICE_TIER_COLUMNS = Object.freeze([
-  { key: 'label', header: 'Buyer role', cellClassName: 'text-xs font-medium text-slate-900' },
-  {
-    key: 'discountFromRetail',
-    header: 'Off retail',
-    width: '8rem',
-    align: 'right',
-    render: (row) => (
-      <span className="tabular font-semibold text-slate-900">
-        {row.discountFromRetail === 0 ? '—' : `${row.discountFromRetail}%`}
-      </span>
-    ),
-  },
-  { key: 'minQty', header: 'MOQ', width: '6rem', align: 'right', cellClassName: 'tabular' },
-  {
-    key: 'products',
-    header: 'Products on this tier',
-    width: '11rem',
-    align: 'right',
-    render: (row) => (
-      <span className="tabular text-xs text-ink-muted">{row.products.toLocaleString('en-IN')}</span>
-    ),
-  },
-])
-
-const GROUP_LABELS = Object.freeze({
-  asset: 'Asset',
-  liability: 'Liability',
-  equity: 'Equity',
-  income: 'Income',
-  expense: 'Expense',
-})
-
-const GROUP_TONE = Object.freeze({
-  asset: 'text-brand-700',
-  liability: 'text-warning-700',
-  equity: 'text-accent-700',
-  income: 'text-success-700',
-  expense: 'text-danger-700',
-})
-
-export const ACCOUNT_COLUMNS = Object.freeze([
-  {
-    key: 'code',
-    header: 'Code',
-    width: '5.5rem',
-    render: (row) => <span className="tabular font-semibold text-slate-900">{row.code}</span>,
-  },
-  { key: 'name', header: 'Account', cellClassName: 'text-xs text-slate-800' },
-  {
-    key: 'group',
-    header: 'Group',
-    width: '7rem',
-    render: (row) => (
-      <span className={`text-2xs font-semibold uppercase tracking-wider ${GROUP_TONE[row.group]}`}>
-        {GROUP_LABELS[row.group]}
-      </span>
-    ),
-  },
-  {
-    key: 'isSubLedger',
-    header: 'Sub-ledger',
-    width: '7rem',
-    render: (row) =>
-      row.isSubLedger ? (
-        <span className="text-2xs text-ink-muted">Per vendor</span>
-      ) : (
-        <span className="text-2xs text-ink-faint">—</span>
-      ),
-  },
-  {
-    key: 'balance',
-    header: 'Balance',
-    width: '9rem',
-    align: 'right',
-    render: (row) => <MoneyCell amount={row.balance} />,
-  },
 ])

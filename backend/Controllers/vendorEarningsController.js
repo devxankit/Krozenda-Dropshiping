@@ -4,6 +4,7 @@ const Settlement = require('../Models/Settlement');
 const Payout = require('../Models/Payout');
 const AccountingTransaction = require('../Models/AccountingTransaction');
 const AccountingConfig = require('../Models/AccountingConfig');
+const Coupon = require('../Models/Coupon');
 const { sellerRatesFor } = require('../services/commissionResolver');
 const { priceOrderCommissions } = require('../services/accountingPosting');
 const { toPaise } = require('../utils/money');
@@ -85,11 +86,12 @@ async function unsettledLines(vendorId, claimed) {
   const posted = new Map(ledger.map((entry) => [`${entry._id.order}:${entry._id.product}`, entry]));
 
   const config = await AccountingConfig.resolve();
-  const rows = [];
 
+  // 1. Every unclaimed delivered line, in order; posted ones are read off the
+  //    ledger here, the rest are marked for an estimate.
+  const pending = [];
+  const ordersToPrice = new Map();
   for (const order of orders) {
-    let estimate = null;
-
     for (const item of order.items) {
       if (String(item.vendor) !== String(vendorId) || item.status !== 'DELIVERED') continue;
       const key = `${order._id}:${item.product}`;
@@ -114,25 +116,56 @@ async function unsettledLines(vendorId, claimed) {
           entry.commissionPaise -
           entry.feesPaise -
           entry.refundPaise;
-        rows.push({ ...base, grossPaise: entry.salePaise, commissionPaise, netPaise, estimated: false });
+        pending.push({ row: { ...base, grossPaise: entry.salePaise, commissionPaise, netPaise, estimated: false } });
         continue;
       }
-
-      // Priced once per order, however many of its lines are this seller's.
-      if (!estimate) estimate = await priceOrderCommissions(order, { config });
-      const line = estimate.sellerLines.find(
-        (candidate) =>
-          String(candidate.product) === String(item.product) && String(candidate.vendor) === String(vendorId)
-      );
-      if (!line) continue;
-      rows.push({
-        ...base,
-        grossPaise: line.sellerGrossPaise,
-        commissionPaise: line.commission.amountPaise,
-        netPaise: line.sellerGrossPaise - line.commission.amountPaise,
-        estimated: true,
-      });
+      ordersToPrice.set(String(order._id), order);
+      pending.push({ base, orderId: String(order._id), product: item.product });
     }
+  }
+
+  // 2. Price each order that needs it once. This used to be one order at a
+  //    time with a coupon lookup each; the coupons are now read in one query
+  //    and the orders priced a few at a time. Same function, same inputs —
+  //    the figures are identical (tests/qa/earnings-equivalence.test.js).
+  const estimates = new Map();
+  if (ordersToPrice.size > 0) {
+    const codes = [...new Set([...ordersToPrice.values()].map((order) => order.couponCode).filter(Boolean))];
+    const coupons = codes.length ? await Coupon.find({ code: { $in: codes } }).select('code vendorId').lean() : [];
+    const vendorFunded = new Map(coupons.map((coupon) => [coupon.code, Boolean(coupon.vendorId)]));
+
+    const queue = [...ordersToPrice.entries()];
+    const PRICING_CONCURRENCY = 8;
+    await Promise.all(
+      Array.from({ length: Math.min(PRICING_CONCURRENCY, queue.length) }, async () => {
+        while (queue.length > 0) {
+          const [orderId, order] = queue.shift();
+          const couponFundedByVendor = order.couponCode ? vendorFunded.get(order.couponCode) ?? false : false;
+          estimates.set(orderId, await priceOrderCommissions(order, { config, couponFundedByVendor }));
+        }
+      })
+    );
+  }
+
+  // 3. Rows in the original order.
+  const rows = [];
+  for (const entry of pending) {
+    if (entry.row) {
+      rows.push(entry.row);
+      continue;
+    }
+    const line = estimates.get(entry.orderId).sellerLines.find(
+      (candidate) =>
+        String(candidate.product) === String(entry.product) && String(candidate.vendor) === String(vendorId)
+    );
+    if (!line) continue;
+    rows.push({
+      ...entry.base,
+      grossPaise: line.sellerGrossPaise,
+      commissionPaise: line.commission.amountPaise,
+      netPaise: line.sellerGrossPaise - line.commission.amountPaise,
+      estimated: true,
+    });
   }
 
   return rows;
@@ -354,4 +387,4 @@ async function listMyPayouts(req, res) {
   });
 }
 
-module.exports = { getMyEarningsSummary, listMyEarningsEntries, listMyPayouts };
+module.exports = { getMyEarningsSummary, listMyEarningsEntries, listMyPayouts, unsettledLines, claimedKeys };

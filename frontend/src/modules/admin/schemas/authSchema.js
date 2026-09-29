@@ -8,13 +8,6 @@ export const adminLoginSchema = z.object({
   password: z.string().min(8, 'Passwords are at least 8 characters'),
 })
 
-export const adminTwoFactorSchema = z.object({
-  code: z
-    .string()
-    .length(6, 'The code is 6 digits')
-    .regex(/^\d{6}$/, 'The code is 6 digits'),
-})
-
 export const forgotPasswordSchema = z.object({
   email: z.string().min(1, 'Enter your work email').email('That does not look like an email address'),
 })
@@ -49,10 +42,4 @@ export const adminSessionSchema = z.object({
   roles: z.array(z.string()),
   permissions: z.array(z.string()),
   accessToken: z.string(),
-})
-
-export const twoFactorChallengeSchema = z.object({
-  challengeId: z.string(),
-  maskedDestination: z.string(),
-  expiresInSeconds: z.number(),
 })

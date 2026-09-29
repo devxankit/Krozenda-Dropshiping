@@ -163,7 +163,6 @@ export const SUB_ORDER_TABS = Object.freeze([
   { id: 'in_flight', label: 'In flight' },
   { id: 'exceptions', label: 'Exceptions' },
   { id: 'delivered', label: 'Delivered' },
-  { id: 'unconfirmed', label: 'Delivery unconfirmed' },
 ])
 
 export const SHIPMENT_COLUMNS = Object.freeze([

@@ -8,3 +8,6 @@ require('dotenv').config();
 
 process.env.ENV = 'test';
 process.env.MONGODB_URL = global.__MONGO_URI__ || process.env.MONGO_URL;
+// Uploads (KYC PDFs, product images) go to a temp folder, not backend/uploads,
+// so a test run leaves nothing behind in the real uploads directory.
+process.env.UPLOADS_DIR = require('path').join(require('os').tmpdir(), 'krozenda-test-uploads');

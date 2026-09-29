@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { URL } = require('url');
 const { writeImageSet, sniffImageType } = require('../../Middlewares/uploadMiddleware');
+const { UPLOADS_ROOT } = require('../../Config/uploads');
 
 // Downloads a CJ-hosted product image and runs it through the SAME
 // sharp/WebP pipeline every other upload in this codebase uses
@@ -142,7 +143,7 @@ function downloadBuffer(url) {
 }
 
 const CJ_SUBFOLDER = 'cj';
-const DEST_DIR = path.join(__dirname, '..', '..', 'uploads', CJ_SUBFOLDER);
+const DEST_DIR = path.join(UPLOADS_ROOT, CJ_SUBFOLDER);
 
 // Content-hash filename: the same CJ image URL always maps to the same
 // local filename, so re-onboarding a product (or two products sharing a
