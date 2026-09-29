@@ -159,6 +159,9 @@ async function getMyEarningsSummary(req, res) {
     // Every line's status and value, for the in-transit and delivered counts.
     // No commission is worked out from these.
     Order.aggregate([
+      // Orders holding this seller's lines first — through the items.vendor
+      // index — then their lines. Unwinding first scanned every order.
+      { $match: { 'items.vendor': vendorId } },
       { $unwind: '$items' },
       { $match: { 'items.vendor': vendorId } },
       {

@@ -85,6 +85,12 @@ const accountingConfigSchema = new mongoose.Schema(
 // Read-through singleton. Uses an upsert rather than create() so two
 // concurrent first reads cannot race into a duplicate-key error.
 accountingConfigSchema.statics.resolve = async function resolve() {
+  // A read first: resolve() runs on every checkout, settlement and earnings
+  // call, and an upsert takes a write on the one config document each time —
+  // under load those queued behind each other (~0.8s in the load test). The
+  // upsert only runs the first time, when the document does not exist yet.
+  const existing = await this.findOne({ key: 'GLOBAL' }).lean();
+  if (existing) return existing;
   return this.findOneAndUpdate(
     { key: 'GLOBAL' },
     { $setOnInsert: { key: 'GLOBAL' } },

@@ -78,9 +78,11 @@ const S = {
     return out;
   },
   async login() {
-    const b = pick(fx.buyers);
-    const a = await call('POST', '/auth/send-otp', { body: { mobileNumber: b.mobileNumber }, label: 'login: send-otp' });
-    const v = await call('POST', '/auth/verify-otp', { body: { mobileNumber: b.mobileNumber, otp: '123456' }, label: 'login: verify-otp' });
+    // A fresh number every time: re-using a pool would mostly measure the
+    // 30s resend cooldown (cheap 429s), not a sign-in.
+    const mobileNumber = `6${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`;
+    const a = await call('POST', '/auth/send-otp', { body: { mobileNumber }, label: 'login: send-otp' });
+    const v = await call('POST', '/auth/verify-otp', { body: { mobileNumber, otp: '123456' }, label: 'login: verify-otp' });
     return [a, v];
   },
   async cart(vu) {

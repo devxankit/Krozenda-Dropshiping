@@ -178,7 +178,7 @@ describe('seller-declared delivery', () => {
 });
 
 describe('suspended / unapproved seller catalogue', () => {
-  knownBug('QA-004a', 'a suspended seller’s products must disappear from the storefront', async () => {
+  test('QA-004a (regression): a suspended seller’s products must disappear from the storefront', async () => {
     const seller = await createVendor({ verificationStatus: 'APPROVED' });
     const product = await createProduct({ vendor: seller.vendor._id, name: `QA Suspended ${Date.now()}` });
     expect((await as(null).get(`/catalog/products/${product._id}`)).status).toBe(200);
@@ -190,7 +190,7 @@ describe('suspended / unapproved seller catalogue', () => {
     expect(res.status).toBe(404);
   });
 
-  knownBug('QA-004b', 'a suspended seller’s products must not be purchasable', async () => {
+  test('QA-004b (regression): a suspended seller’s products must not be purchasable', async () => {
     const seller = await createVendor({ verificationStatus: 'APPROVED' });
     const product = await createProduct({ vendor: seller.vendor._id, stock: 5 });
     const buyer = await buyerWithAddress();
@@ -201,7 +201,7 @@ describe('suspended / unapproved seller catalogue', () => {
     expect(res.status).not.toBe(201);
   });
 
-  knownBug('QA-004c', 'a KYC-pending seller’s product must not go live even with auto-approval on', async () => {
+  test('QA-004c (regression): a KYC-pending seller’s product must not go live even with auto-approval on', async () => {
     const CatalogSettings = require('../../Models/CatalogSettings');
     const settings = await CatalogSettings.getSettings();
     const prev = settings.autoApprovalEnabled;
@@ -224,6 +224,44 @@ describe('suspended / unapproved seller catalogue', () => {
       settings.autoApprovalEnabled = prev;
       await settings.save();
     }
+  });
+});
+
+describe('seller state round-trip', () => {
+  test('re-activating a suspended seller restores exactly what was live (not their drafts)', async () => {
+    const seller = await createVendor({ verificationStatus: 'APPROVED' });
+    const live = await createProduct({ vendor: seller.vendor._id });
+    const draft = await createProduct({ vendor: seller.vendor._id, isActive: false });
+    seller.vendor.isActive = false;
+    await seller.vendor.save();
+    expect((await as(null).get(`/catalog/products/${live._id}`)).status).toBe(404);
+    seller.vendor.isActive = true;
+    await seller.vendor.save();
+    expect((await as(null).get(`/catalog/products/${live._id}`)).status).toBe(200);
+    expect((await as(null).get(`/catalog/products/${draft._id}`)).status).toBe(404);
+  });
+
+  test('approving a pending seller puts their approved products on sale', async () => {
+    const seller = await createVendor({ verificationStatus: 'PENDING', isActive: false });
+    const product = await createProduct({ vendor: seller.vendor._id });
+    expect((await as(null).get(`/catalog/products/${product._id}`)).status).toBe(404);
+    seller.vendor.verificationStatus = 'APPROVED';
+    seller.vendor.isActive = true;
+    await seller.vendor.save();
+    expect((await as(null).get(`/catalog/products/${product._id}`)).status).toBe(200);
+  });
+
+  test('a suspended seller’s product already in a cart cannot be checked out, and says why', async () => {
+    const seller = await createVendor({ verificationStatus: 'APPROVED' });
+    const product = await createProduct({ vendor: seller.vendor._id, stock: 5 });
+    const buyer = await buyerWithAddress();
+    await addToCart(buyer.token, product._id, 1);
+    seller.vendor.isActive = false;
+    await seller.vendor.save();
+    const res = await placeCod(buyer.token, buyer.address._id);
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('CART_ITEM_UNAVAILABLE');
+    expect((await addToCart(buyer.token, product._id, 1)).status).toBe(404);
   });
 });
 

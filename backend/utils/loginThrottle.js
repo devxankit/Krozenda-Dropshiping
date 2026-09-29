@@ -55,7 +55,8 @@ async function reserveAttempt(audience, email) {
       },
       { $set: { expiresAt: { $max: [{ $add: ['$windowStartedAt', WINDOW_MS] }, { $ifNull: ['$lockedUntil', now] }] } } },
     ],
-    { upsert: true, new: true }
+    // Mongoose 9 refuses an update pipeline unless it is asked for.
+    { upsert: true, new: true, updatePipeline: true }
   );
 
   if (row.lockedUntil && row.lockedUntil > now) {

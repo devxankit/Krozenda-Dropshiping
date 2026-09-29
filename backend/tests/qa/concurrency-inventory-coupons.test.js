@@ -169,7 +169,7 @@ describe('coupon usage caps under concurrency', () => {
     expect(second.status).toBe(400);
   });
 
-  knownBug('QA-006a', 'a usageLimit-1 coupon raced by 8 buyers must discount exactly one order', async () => {
+  test('QA-006a (regression): a usageLimit-1 coupon raced by 8 buyers discounts exactly one order', async () => {
     const c = await coupon({ usageLimit: 1 });
     const product = await createProduct({ stock: 50, price: 1000 });
     const buyers = await buyersWithItemInCart(8, product._id);
@@ -178,7 +178,7 @@ describe('coupon usage caps under concurrency', () => {
     expect(discounted).toBe(1);
   });
 
-  knownBug('QA-006b', 'a perUserLimit-1 coupon raced by ONE buyer (two tabs, two carts) must discount one order', async () => {
+  test('QA-006b (regression): a perUserLimit-1 coupon raced by ONE buyer (two tabs) discounts one order', async () => {
     const c = await coupon({ perUserLimit: 1 });
     const product = await createProduct({ stock: 50, price: 1000 });
     const b = await buyerWithAddress();
@@ -195,6 +195,55 @@ describe('coupon usage caps under concurrency', () => {
       )
     );
     expect(await Order.countDocuments({ user: b.user._id, discountAmount: { $gt: 0 } })).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('coupon hold is released when the checkout fails', () => {
+  test('stock-out after redemption gives the coupon slot back', async () => {
+    const c = await Coupon.create({
+      code: `QAREL${Date.now()}`,
+      discountType: 'FIXED',
+      discountValue: 50,
+      applicableTo: 'ALL',
+      usageLimit: 1,
+      startDate: new Date(Date.now() - 1000),
+      endDate: new Date(Date.now() + 86400000),
+      isActive: true,
+    });
+    const product = await createProduct({ stock: 1, price: 500 });
+    const [a, b] = [await buyerWithAddress(), await buyerWithAddress()];
+    await addToCart(a.token, product._id, 1);
+    // stock gone between cart and checkout
+    await Product.updateOne({ _id: product._id }, { $set: { stock: 0 } });
+    // cart still says 1, so checkout reaches redemption and then fails on stock
+    const failed = await placeCod(a.token, a.address._id, { couponCode: c.code });
+    expect(failed.status).toBe(409);
+    expect((await Coupon.findById(c._id)).usedCount).toBe(0);
+
+    await Product.updateOne({ _id: product._id }, { $set: { stock: 5 } });
+    await addToCart(b.token, product._id, 1);
+    expect((await placeCod(b.token, b.address._id, { couponCode: c.code })).status).toBe(201);
+    expect((await Coupon.findById(c._id)).usedCount).toBe(1);
+  });
+
+  test('wallet shortfall after redemption gives the coupon slot back', async () => {
+    const c = await Coupon.create({
+      code: `QAWAL${Date.now()}`,
+      discountType: 'FIXED',
+      discountValue: 50,
+      applicableTo: 'ALL',
+      usageLimit: 1,
+      startDate: new Date(Date.now() - 1000),
+      endDate: new Date(Date.now() + 86400000),
+      isActive: true,
+    });
+    const product = await createProduct({ stock: 5, price: 500 });
+    const b = await buyerWithAddress({ walletBalance: 10 });
+    await addToCart(b.token, product._id, 1);
+    const res = await as(b.token).post('/user/orders', { addressId: String(b.address._id), paymentMethod: 'WALLET', couponCode: c.code });
+    expect(res.status).toBe(400);
+    expect((await Coupon.findById(c._id)).usedCount).toBe(0);
+    expect((await Product.findById(product._id)).stock).toBe(5);
   });
 });
 

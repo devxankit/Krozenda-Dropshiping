@@ -271,9 +271,8 @@ describe('payment webhook', () => {
 });
 
 describe('partial refund reconciliation (multi-seller order)', () => {
-  knownBug(
-    'QA-009',
-    'a partial return refund on one seller’s line must not mark the whole order REFUNDED, or the other seller’s later cancellation refunds nothing',
+  test(
+    'QA-009 (regression): a partial return refund on one seller’s line does not mark the whole order REFUNDED, so the other seller’s later cancellation still refunds',
     async () => {
       const sellerA = await createVendor({ verificationStatus: 'APPROVED' });
       const sellerB = await createVendor({ verificationStatus: 'APPROVED' });
@@ -304,4 +303,36 @@ describe('partial refund reconciliation (multi-seller order)', () => {
       expect(after - before).toBeCloseTo(600, 2);
     }
   );
+
+  async function paidOrder(total) {
+    const product = await createProduct({ stock: 5, price: total, gstRate: 0 });
+    const b = await buyerWithAddress();
+    await addToCart(b.token, product._id, 1);
+    const ids = paymentIds();
+    const t = await quoteTotal(b.token, b.address._id);
+    razorpay.payments.fetch.mockResolvedValue(captured(ids, Math.round(t * 100)));
+    const placed = await as(b.token).post('/user/orders', { addressId: String(b.address._id), paymentMethod: 'RAZORPAY', ...ids });
+    return { orderId: placed.body.data.id, ids, total: t };
+  }
+  const refundWebhook = (ids, orderId, amountPaise) =>
+    webhook({
+      event: 'refund.processed',
+      payload: { refund: { entity: { id: `rfnd_${Date.now()}${Math.random()}`, payment_id: ids.razorpay_payment_id, amount: amountPaise, notes: { orderId } } } },
+    });
+
+  test('a refund for the full amount still marks the order REFUNDED', async () => {
+    const { orderId, ids, total } = await paidOrder(800);
+    await refundWebhook(ids, orderId, Math.round(total * 100));
+    expect((await Order.findById(orderId)).paymentStatus).toBe('REFUNDED');
+  });
+
+  test('partial refunds that add up to the total mark it REFUNDED on the last one', async () => {
+    const { orderId, ids, total } = await paidOrder(800);
+    await Order.updateOne({ _id: orderId }, { $set: { refundedAmount: total / 2 } });
+    await refundWebhook(ids, orderId, Math.round((total / 2) * 100));
+    expect((await Order.findById(orderId)).paymentStatus).toBe('PAID');
+    await Order.updateOne({ _id: orderId }, { $set: { refundedAmount: total } });
+    await refundWebhook(ids, orderId, Math.round((total / 2) * 100));
+    expect((await Order.findById(orderId)).paymentStatus).toBe('REFUNDED');
+  });
 });

@@ -17,7 +17,8 @@ function serializeItem(entry, { hideOwnStock = false } = {}) {
   // A wishlisted product that was later deactivated or sold out must say so,
   // rather than rendering as an ordinary card that fails on "Move to Cart".
   let availability = 'AVAILABLE';
-  if (!p.isActive) availability = 'UNAVAILABLE';
+  // A suspended or unapproved seller's product can't be bought either.
+  if (!p.isActive || p.vendorSuspended === true) availability = 'UNAVAILABLE';
   // Admin switched "Own stock" off, so admin's own products can't be bought.
   else if (hideOwnStock && isOwnStockProduct(p)) availability = 'UNAVAILABLE';
   else if (p.stock <= 0) availability = 'OUT_OF_STOCK';
@@ -54,7 +55,7 @@ async function getWishlist(req, res) {
 
   const wishlist = await Wishlist.findOne({ user: req.user._id }).populate({
     path: 'items.product',
-    select: 'name images price salePrice discountPercent stock isActive rating reviewsCount category brand vendor fulfillmentProvider',
+    select: 'name images price salePrice discountPercent stock isActive vendorSuspended rating reviewsCount category brand vendor fulfillmentProvider',
     populate: [
       { path: 'category', select: 'name' },
       { path: 'brand', select: 'name' },

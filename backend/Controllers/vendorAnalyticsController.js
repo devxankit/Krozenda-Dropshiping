@@ -9,6 +9,9 @@ async function getMyAnalytics(req, res) {
 
   const [salesByDay, topProducts, statusBreakdown, productStats] = await Promise.all([
     Order.aggregate([
+      // Orders holding this seller's lines first — through the items.vendor
+      // index — then their lines. Unwinding first scanned every order.
+      { $match: { 'items.vendor': vendorId, createdAt: { $gte: since } } },
       { $unwind: '$items' },
       { $match: { 'items.vendor': vendorId, createdAt: { $gte: since } } },
       {
@@ -21,6 +24,9 @@ async function getMyAnalytics(req, res) {
       { $sort: { _id: 1 } },
     ]),
     Order.aggregate([
+      // Orders holding this seller's lines first — through the items.vendor
+      // index — then their lines. Unwinding first scanned every order.
+      { $match: { 'items.vendor': vendorId } },
       { $unwind: '$items' },
       { $match: { 'items.vendor': vendorId } },
       {
@@ -35,6 +41,9 @@ async function getMyAnalytics(req, res) {
       { $limit: 5 },
     ]),
     Order.aggregate([
+      // Orders holding this seller's lines first — through the items.vendor
+      // index — then their lines. Unwinding first scanned every order.
+      { $match: { 'items.vendor': vendorId } },
       { $unwind: '$items' },
       { $match: { 'items.vendor': vendorId } },
       { $group: { _id: '$items.status', count: { $sum: 1 } } },

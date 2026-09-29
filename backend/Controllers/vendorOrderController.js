@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../Models/Order');
+const Customer = require('../Models/Customer');
 const { cancelLine } = require('../services/orderCancellationService');
 const { toPaise } = require('../utils/money');
 const { createNotification } = require('./notificationController');
@@ -64,45 +65,107 @@ function serializeVendorOrder(order, vendorId) {
   };
 }
 
+// The seller's status for an order, as a Mongo expression over `myItems` —
+// the same rules as serializeVendorOrder's `status`, so tabs and counts can
+// be computed in the database. Keep the two in step.
+function sellerStatusExpr() {
+  const all = (predicate) => ({ $allElementsTrue: [{ $map: { input: '$myItems', as: 'i', in: predicate } }] });
+  const some = (value) => ({ $in: [value, '$myItems.status'] });
+  return {
+    $switch: {
+      branches: [
+        { case: { $eq: ['$status', 'CANCELLED'] }, then: 'CANCELLED' },
+        { case: all({ $eq: ['$$i.status', 'DELIVERED'] }), then: 'DELIVERED' },
+        {
+          case: { $and: [some('CANCELLED'), all({ $in: ['$$i.status', ['CANCELLED', 'DELIVERED']] })] },
+          then: 'CANCELLED',
+        },
+        { case: some('SHIPPED'), then: 'SHIPPED' },
+        { case: some('PROCESSING'), then: 'PROCESSING' },
+      ],
+      default: 'PENDING',
+    },
+  };
+}
+
+// GET /vendor/orders — paged in the database. It used to load and serialize
+// every order the seller ever had on each call, then filter and slice in
+// memory (load test: p95 8.6s with 20 sellers).
 async function listMyOrders(req, res) {
   const { tab, status, search, page = 1, rowsPerPage = 25 } = req.query;
   const vendorId = req.vendor._id.toString();
 
-  const orders = await Order.find({ 'items.vendor': req.vendor._id })
-    .populate('user', 'name mobileNumber email')
-    .sort({ createdAt: -1 });
+  const perPage = Math.min(100, Math.max(1, Number(rowsPerPage) || 25));
+  const currentPage = Math.min(500, Math.max(1, Number(page) || 1));
 
-  const allSerialized = orders.map((o) => serializeVendorOrder(o, vendorId));
-
-  let items = allSerialized;
-  const term = (search || '').trim().toLowerCase();
-  if (term) {
-    items = items.filter(
-      (o) =>
-        o.id.toLowerCase().includes(term) ||
-        o.customer.name.toLowerCase().includes(term) ||
-        o.items.some((i) => i.name.toLowerCase().includes(term))
-    );
-  }
-
+  const narrow = {};
   const effectiveStatus = status || (tab && tab !== 'all' ? tab.toUpperCase() : null);
-  if (effectiveStatus && Order.STATUSES.includes(effectiveStatus)) {
-    items = items.filter((o) => o.status === effectiveStatus);
+  if (effectiveStatus && Order.STATUSES.includes(effectiveStatus)) narrow.sellerStatus = effectiveStatus;
+
+  // Search: order id fragment, buyer name, or the name of one of THIS
+  // seller's own lines.
+  const term = String(search || '').trim().slice(0, 100);
+  if (term) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escaped, 'i');
+    const buyerIds = await Customer.find({ name: re }).distinct('_id');
+    narrow.$or = [
+      { user: { $in: buyerIds } },
+      { 'myItems.name': re },
+      { $expr: { $regexMatch: { input: { $toString: '$_id' }, regex: escaped, options: 'i' } } },
+    ];
   }
 
-  const tabCounts = { all: allSerialized.length };
-  for (const s of Order.STATUSES) tabCounts[s.toLowerCase()] = allSerialized.filter((o) => o.status === s).length;
+  const [result] = await Order.aggregate([
+    { $match: { 'items.vendor': req.vendor._id } },
+    {
+      $project: {
+        createdAt: 1,
+        user: 1,
+        status: 1,
+        myItems: {
+          $map: {
+            input: { $filter: { input: '$items', as: 'i', cond: { $eq: ['$$i.vendor', req.vendor._id] } } },
+            as: 'i',
+            in: { status: { $ifNull: ['$$i.status', 'PENDING'] }, name: '$$i.name' },
+          },
+        },
+      },
+    },
+    { $addFields: { sellerStatus: sellerStatusExpr() } },
+    {
+      $facet: {
+        counts: [{ $group: { _id: '$sellerStatus', n: { $sum: 1 } } }],
+        total: [{ $match: narrow }, { $count: 'n' }],
+        page: [
+          { $match: narrow },
+          { $sort: { createdAt: -1, _id: -1 } },
+          { $skip: (currentPage - 1) * perPage },
+          { $limit: perPage },
+          { $project: { _id: 1 } },
+        ],
+      },
+    },
+  ]);
 
-  const perPage = Number(rowsPerPage) || 25;
-  const currentPage = Number(page) || 1;
-  const totalItems = items.length;
+  const tabCounts = { all: 0 };
+  for (const s of Order.STATUSES) tabCounts[s.toLowerCase()] = 0;
+  for (const row of result.counts) {
+    tabCounts.all += row.n;
+    tabCounts[String(row._id).toLowerCase()] = row.n;
+  }
+  const totalItems = result.total[0]?.n || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
-  const start = (currentPage - 1) * perPage;
+
+  // Only this page is loaded in full and serialized.
+  const ids = result.page.map((row) => row._id);
+  const docs = await Order.find({ _id: { $in: ids } }).populate('user', 'name mobileNumber email');
+  const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
 
   res.json({
     success: true,
     data: {
-      items: items.slice(start, start + perPage),
+      items: ids.map((id) => byId.get(String(id))).filter(Boolean).map((o) => serializeVendorOrder(o, vendorId)),
       page: currentPage,
       rowsPerPage: perPage,
       totalItems,

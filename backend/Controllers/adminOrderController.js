@@ -62,8 +62,38 @@ async function listOrders(req, res) {
     filter.status = effectiveStatus;
   }
 
-  const [orders, tabCountsRaw] = await Promise.all([
-    Order.find(filter).sort({ createdAt: -1 }).populate('user', 'name mobileNumber email'),
+  // Search: order id fragment, or the buyer's name / mobile / email. Buyers
+  // are matched first (small set), then their orders — rather than loading
+  // every order with its buyer and filtering in memory, which is what this
+  // did before (load test: timeouts under 10 admins).
+  const term = String(search || '').trim().slice(0, 100);
+  if (term) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escaped, 'i');
+    const buyerIds = await Customer.find({ $or: [{ name: re }, { mobileNumber: re }, { email: re }] }).distinct('_id');
+    filter.$or = [
+      { user: { $in: buyerIds } },
+      { $expr: { $regexMatch: { input: { $toString: '$_id' }, regex: escaped, options: 'i' } } },
+    ];
+  }
+
+  // Sortable on the order's own fields; anything else is newest first.
+  const SORT_FIELDS = { placedAt: 'createdAt', createdAt: 'createdAt', total: 'total', subtotal: 'subtotal', status: 'status', paymentStatus: 'paymentStatus', paymentMethod: 'paymentMethod' };
+  const [sortKey, direction] = String(sort || '').split(':');
+  const sortSpec = SORT_FIELDS[sortKey]
+    ? { [SORT_FIELDS[sortKey]]: direction === 'asc' ? 1 : -1, _id: direction === 'asc' ? 1 : -1 }
+    : { createdAt: -1, _id: -1 };
+
+  const perPage = Math.min(100, Math.max(1, Number(rowsPerPage) || 25));
+  const currentPage = Math.min(500, Math.max(1, Number(page) || 1));
+
+  const [orders, totalItems, tabCountsRaw] = await Promise.all([
+    Order.find(filter)
+      .sort(sortSpec)
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage)
+      .populate('user', 'name mobileNumber email'),
+    Order.countDocuments(filter),
     Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
   ]);
 
@@ -74,40 +104,12 @@ async function listOrders(req, res) {
     if (row._id) tabCounts[row._id.toLowerCase()] = row.count;
   }
 
-  let items = orders.map(withCustomer);
-
-  const term = (search || '').trim().toLowerCase();
-  if (term) {
-    items = items.filter(
-      (o) =>
-        o.id.toLowerCase().includes(term) ||
-        o.customer.name.toLowerCase().includes(term) ||
-        o.customer.mobileNumber.toLowerCase().includes(term) ||
-        o.customer.email.toLowerCase().includes(term)
-    );
-  }
-
-  if (sort) {
-    const [key, direction] = String(sort).split(':');
-    const dir = direction === 'asc' ? 1 : -1;
-    items = [...items].sort((a, b) => {
-      const left = key === 'placedAt' ? a.createdAt : a[key];
-      const right = key === 'placedAt' ? b.createdAt : b[key];
-      if (left === right) return 0;
-      return left > right ? dir : -dir;
-    });
-  }
-
-  const totalItems = items.length;
-  const perPage = Number(rowsPerPage) || 25;
-  const currentPage = Number(page) || 1;
   const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
-  const start = (currentPage - 1) * perPage;
 
   res.json({
     success: true,
     data: {
-      items: items.slice(start, start + perPage),
+      items: orders.map(withCustomer),
       page: currentPage,
       rowsPerPage: perPage,
       totalItems,

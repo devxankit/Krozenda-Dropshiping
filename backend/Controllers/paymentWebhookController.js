@@ -110,9 +110,25 @@ async function handleRazorpayWebhook(req, res) {
           orderIds: orders.map((o) => String(o._id)),
         });
       } else if (order && order.paymentStatus !== 'REFUNDED') {
-        order.paymentStatus = 'REFUNDED';
-        await order.save();
-        log({ event: 'RAZORPAY_WEBHOOK_REFUND_RECONCILED', orderId: String(order._id) });
+        // Only a refund that covers the whole order makes it REFUNDED. A
+        // return refunds ONE line of a multi-seller order; marking the order
+        // REFUNDED for it meant the other sellers' lines, cancelled later,
+        // were no longer refundable (orderCancellationService only refunds a
+        // PAID order) and the buyer got nothing back for them.
+        //
+        // Refunds issued from here already add to refundedAmount; a refund
+        // made by hand in the Razorpay dashboard does not, so a single refund
+        // for the full amount counts on its own.
+        const totalPaise = Math.round(Number(order.total || 0) * 100);
+        const refundedPaise = Math.round(Number(order.refundedAmount || 0) * 100);
+        const coversOrder = Number(refundEntity.amount || 0) >= totalPaise || refundedPaise >= totalPaise;
+        if (coversOrder) {
+          order.paymentStatus = 'REFUNDED';
+          await order.save();
+          log({ event: 'RAZORPAY_WEBHOOK_REFUND_RECONCILED', orderId: String(order._id) });
+        } else {
+          log({ event: 'RAZORPAY_WEBHOOK_PARTIAL_REFUND', orderId: String(order._id), amount: refundEntity.amount });
+        }
       }
       // The money has actually left for the buyer's card/UPI — tell them.
       // Keyed on the Razorpay refund id, so a replayed webhook is silent.

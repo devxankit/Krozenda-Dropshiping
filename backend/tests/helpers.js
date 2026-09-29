@@ -71,6 +71,10 @@ async function createVendor(overrides = {}) {
     email: `vendor${suffix}@test.local`,
     mobile: `8${suffix.slice(-9).padStart(9, '0')}`.slice(0, 10),
     password: 'secret123',
+    // A trading seller by default: only an APPROVED, active seller's products
+    // are on sale (Product.vendorSuspended). Tests about pending/rejected
+    // sellers pass verificationStatus explicitly.
+    verificationStatus: 'APPROVED',
     isActive: true,
     ...overrides,
   });

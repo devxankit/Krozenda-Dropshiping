@@ -8,7 +8,7 @@ const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping')
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { normaliseVariants, validateVariants, resolveVariantImages } = require('../utils/productVariants');
 const { readPagination, buildPagination } = require('../utils/pagination');
-const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { publiclyVisible } = require('../utils/publicVisibility');
 const { isOwnStockProduct, isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 const { syncPreviewBatch } = require('../services/productImport/importService');
@@ -176,25 +176,106 @@ function serializeProduct(p) {
   };
 }
 
+// Tab → filter, for the paged admin list.
+const ADMIN_PRODUCT_TABS = {
+  active: { isActive: true },
+  inactive: { isActive: { $ne: true } },
+  out_of_stock: { stock: { $lte: 0 } },
+  flash_sale: { isFlashsale: true },
+  trending: { isTrending: true },
+  preview: { importPreview: true },
+};
+
+const ADMIN_PRODUCT_SORTS = {
+  newest: { createdAt: -1, _id: -1 },
+  'price-asc': { effectivePrice: 1, _id: 1 },
+  'price-desc': { effectivePrice: -1, _id: -1 },
+  'name-asc': { name: 1, _id: 1 },
+  'stock-low': { stock: 1, _id: 1 },
+};
+
+// Every tab's count in one pass — the list page shows all of them at once.
+async function adminProductStats() {
+  const [row] = await Product.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        active: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
+        outOfStock: { $sum: { $cond: [{ $lte: ['$stock', 0] }, 1, 0] } },
+        flashSale: { $sum: { $cond: [{ $eq: ['$isFlashsale', true] }, 1, 0] } },
+        trending: { $sum: { $cond: [{ $eq: ['$isTrending', true] }, 1, 0] } },
+        preview: { $sum: { $cond: [{ $eq: ['$importPreview', true] }, 1, 0] } },
+      },
+    },
+  ]);
+  const stats = row || { total: 0, active: 0, outOfStock: 0, flashSale: 0, trending: 0, preview: 0 };
+  delete stats._id;
+  return { ...stats, inactive: stats.total - stats.active };
+}
+
+// GET /admin/catalog/products
+//
+// With ?page= it is a real server-side page: tab (?status=), search (name,
+// SKU, category or brand name) and sort happen in the query, and only one
+// page of rows is serialized. The unpaged form — the whole catalogue in one
+// response — is kept for the order form's product picker; the load test
+// measured it at 2.6 MB for 3,000 products and it timed out under 10 admins,
+// so the list screen no longer uses it.
 async function listProducts(req, res) {
-  const products = await Product.find()
+  if (req.query.page === undefined) {
+    const products = await Product.find()
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ success: true, data: { items: products.map(serializeProduct), stats: await adminProductStats() } });
+  }
+
+  const { page, limit, skip } = readPagination(req.query, { defaultLimit: 24, maxLimit: 100 });
+  const match = { ...(ADMIN_PRODUCT_TABS[req.query.status] || {}) };
+
+  const term = String(req.query.search || '').trim().slice(0, 100);
+  if (term) {
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const [categoryIds, brandIds] = await Promise.all([
+      mongoose.model('Category').find({ name: re }).distinct('_id'),
+      mongoose.model('Brand').find({ name: re }).distinct('_id'),
+    ]);
+    match.$or = [{ name: re }, { sku: re }, { category: { $in: categoryIds } }, { brand: { $in: brandIds } }];
+  }
+
+  const sort = ADMIN_PRODUCT_SORTS[req.query.sort] || ADMIN_PRODUCT_SORTS.newest;
+  const [pageIds, total, stats] = await Promise.all([
+    Product.aggregate([
+      { $match: match },
+      ...(sort.effectivePrice ? [{ $addFields: { effectivePrice: { $ifNull: ['$salePrice', '$price'] } } }] : []),
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+      { $project: { _id: 1 } },
+    ]),
+    Product.countDocuments(match),
+    adminProductStats(),
+  ]);
+
+  // Aggregation picks the page (it can sort on the computed price); the docs
+  // themselves come back through find so they populate like everywhere else.
+  const ids = pageIds.map((row) => row._id);
+  const docs = await Product.find({ _id: { $in: ids } })
     .populate('category', 'name')
     .populate('brand', 'name')
-    .sort({ createdAt: -1 })
     .lean();
+  const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
 
-  const items = products.map(serializeProduct);
-
-  const stats = {
-    total: items.length,
-    active: items.filter((p) => p.isActive).length,
-    inactive: items.filter((p) => !p.isActive).length,
-    outOfStock: items.filter((p) => p.stock <= 0).length,
-    flashSale: items.filter((p) => p.isFlashsale).length,
-    trending: items.filter((p) => p.isTrending).length,
-  };
-
-  res.json({ success: true, data: { items, stats } });
+  res.json({
+    success: true,
+    data: {
+      items: ids.map((id) => byId.get(String(id))).filter(Boolean).map(serializeProduct),
+      stats,
+    },
+    pagination: buildPagination({ page, limit, total }),
+  });
 }
 
 // GET /admin/catalog/products/:id — the product detail screen. Same shape as a
@@ -955,7 +1036,7 @@ async function listPublicProducts(req, res) {
   //
   // It is a $nin rather than an equality check because documents predating the
   // approval workflow carry no approvalStatus at all — see utils/publicVisibility.
-  const query = { isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER };
+  const query = publiclyVisible();
 
   if (flashSale === 'true' || flashSale === true) query.isFlashsale = true;
   if (trending === 'true' || trending === true) query.isTrending = true;
@@ -1193,7 +1274,7 @@ async function getPublicProduct(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid product id' });
   }
 
-  const product = await Product.findOne({ _id: id, isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER })
+  const product = await Product.findOne({ _id: id, ...publiclyVisible() })
     .populate('category', 'name')
     .populate('brand', 'name logo')
     .lean();
@@ -1251,8 +1332,7 @@ async function listRelatedProducts(req, res) {
   // viewed must never appear in its own "similar products" rail (audit §56).
   const base = {
     _id: { $ne: product._id },
-    isActive: true,
-    approvalStatus: PUBLIC_APPROVAL_FILTER,
+    ...publiclyVisible(),
     stock: { $gt: 0 },
   };
 

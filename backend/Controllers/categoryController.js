@@ -2,7 +2,7 @@ const Category = require('../Models/Category');
 const Product = require('../Models/Product');
 const CatalogSettings = require('../Models/CatalogSettings');
 const { getImageUrl } = require('../utils/imageHelper');
-const { PUBLIC_APPROVAL_FILTER } = require('../utils/publicVisibility');
+const { PUBLIC_APPROVAL_FILTER, SELLER_TRADING_FILTER } = require('../utils/publicVisibility');
 const { isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = require('../utils/ownStock');
 const { getFssaiStatus, fssaiBlockMessage } = require('../utils/fssai');
 const {
@@ -64,6 +64,7 @@ async function listPublicCategories(req, res) {
       $match: {
         isActive: true,
         approvalStatus: PUBLIC_APPROVAL_FILTER,
+        vendorSuspended: SELLER_TRADING_FILTER,
         ...(hideOwnStock ? EXCLUDE_OWN_STOCK : {}),
       },
     },

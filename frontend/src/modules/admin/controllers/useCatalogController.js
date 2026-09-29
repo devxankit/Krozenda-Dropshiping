@@ -1,7 +1,7 @@
 // Layer rule: controllers/ hold orchestration (react-query, derived state)
 // and are the ONLY thing pages/ are allowed to call into.
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import * as service from '../services/catalogService'
 import { useAdminMutation } from './useAdminMutation'
 import {
@@ -29,6 +29,24 @@ function useCatalogResource(key, queryFn) {
 }
 
 export const useProductListController = () => useCatalogResource('products', fetchProducts)
+
+// Server-paged admin product list. Keyed under ['admin', 'catalog'] so every
+// product write refreshes it; the previous page stays on screen while the
+// next one loads, so paging and typing in search don't flash a skeleton.
+export function useProductPageController(params) {
+  const query = useQuery({
+    queryKey: ['admin', 'catalog', 'products', 'page', params],
+    queryFn: ({ signal }) => service.fetchProductPage(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
 // Keyed under ['admin', 'catalog'] so every product write (which invalidates
 // that whole subtree) refreshes the detail screen along with the list.
 export function useProductDetailController(productId) {

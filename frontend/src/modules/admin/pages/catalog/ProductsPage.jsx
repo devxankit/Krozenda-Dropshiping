@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Badge, Icon, Input, Pagination, Switch, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
@@ -15,7 +15,7 @@ import {
   useApprovalSettingsController,
   useBrandsController,
   useCategoryTreeController,
-  useProductListController,
+  useProductPageController,
   useProductWriteController,
 } from '../../controllers/useCatalogController'
 
@@ -68,7 +68,6 @@ function ApproveButton({ onClick, disabled }) {
 }
 
 export function ProductsPage() {
-  const products = useProductListController()
   const categories = useCategoryTreeController()
   const brands = useBrandsController()
   const { data: approvalSettings } = useApprovalSettingsController()
@@ -101,11 +100,36 @@ export function ProductsPage() {
   }
   const [page, setPage] = useState(1)
 
+  // Typing waits for a pause before it becomes a request.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Resets to page 1 whenever the filters change, following the React pattern
+  // for adjusting state during render instead of a setState-in-effect.
+  const filterKey = `${statusFilter}|${debouncedSearch}|${sortBy}`
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setPage(1)
+  }
+
+  // Tab, search, sort and paging all happen on the server: loading the whole
+  // catalogue here was 2.6 MB at 3,000 products and timed out under load.
+  const products = useProductPageController({
+    page,
+    limit: PAGE_SIZE,
+    status: statusFilter,
+    search: debouncedSearch,
+    sort: sortBy,
+  })
+
   const writer = useProductWriteController({
     onSaved: () => setEditingProduct(null),
   })
 
-  const productItems = useMemo(() => products.data?.items || [], [products.data])
   const categoryItems = useMemo(
     () => (categories.data?.items || []).filter((c) => c.isActive),
     [categories.data],
@@ -115,63 +139,21 @@ export function ProductsPage() {
     [brands.data],
   )
 
-  const totalCount = productItems.length
-  const activeCount = useMemo(() => productItems.filter((p) => p.isActive).length, [productItems])
-  const inactiveCount = totalCount - activeCount
-  const outOfStockCount = useMemo(() => productItems.filter((p) => p.stock <= 0).length, [productItems])
-  const flashSaleCount = useMemo(() => productItems.filter((p) => p.isFlashsale).length, [productItems])
-  const trendingCount = useMemo(() => productItems.filter((p) => p.isTrending).length, [productItems])
-  const previewCount = useMemo(() => productItems.filter((p) => p.importPreview).length, [productItems])
+  const stats = products.data?.stats || {}
+  const totalCount = stats.total || 0
+  const activeCount = stats.active || 0
+  const inactiveCount = stats.inactive || 0
+  const outOfStockCount = stats.outOfStock || 0
+  const flashSaleCount = stats.flashSale || 0
+  const trendingCount = stats.trending || 0
+  const previewCount = stats.preview || 0
   const activeRatio = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0
 
-  const filteredProducts = useMemo(() => {
-    const list = productItems.filter((item) => {
-      if (statusFilter === 'active' && !item.isActive) return false
-      if (statusFilter === 'inactive' && item.isActive) return false
-      if (statusFilter === 'out_of_stock' && item.stock > 0) return false
-      if (statusFilter === 'flash_sale' && !item.isFlashsale) return false
-      if (statusFilter === 'trending' && !item.isTrending) return false
-      if (statusFilter === 'preview' && !item.importPreview) return false
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim()
-        return Boolean(
-          item.name?.toLowerCase().includes(q) ||
-            item.sku?.toLowerCase().includes(q) ||
-            item.category?.name?.toLowerCase().includes(q) ||
-            item.brand?.name?.toLowerCase().includes(q),
-        )
-      }
-      return true
-    })
-
-    return [...list].sort((a, b) => {
-      if (sortBy === 'price-asc') return (a.salePrice ?? a.price ?? 0) - (b.salePrice ?? b.price ?? 0)
-      if (sortBy === 'price-desc') return (b.salePrice ?? b.price ?? 0) - (a.salePrice ?? a.price ?? 0)
-      if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '')
-      if (sortBy === 'stock-low') return (a.stock || 0) - (b.stock || 0)
-      const dateA = new Date(a.createdAt || 0).getTime()
-      const dateB = new Date(b.createdAt || 0).getTime()
-      return dateB - dateA
-    })
-  }, [productItems, statusFilter, searchQuery, sortBy])
-
-  // Resets to page 1 whenever the filters change, following the React pattern
-  // for adjusting state during render instead of a setState-in-effect.
-  const filterKey = `${statusFilter}|${searchQuery}|${sortBy}`
-  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
-  if (filterKey !== prevFilterKey) {
-    setPrevFilterKey(filterKey)
-    setPage(1)
-  }
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+  // This page of the filtered list, and the size of the whole filtered list.
+  const pagedProducts = useMemo(() => products.data?.items || [], [products.data])
+  const filteredTotal = products.data?.pagination?.total ?? 0
+  const totalPages = products.data?.pagination?.totalPages ?? 1
   const currentPage = Math.min(page, totalPages)
-
-  const pagedProducts = useMemo(
-    () => filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredProducts, currentPage],
-  )
 
   if (products.isLoading) {
     return (
@@ -755,7 +737,7 @@ export function ProductsPage() {
         </div>
 
         {/* Content Display */}
-        {filteredProducts.length === 0 ? (
+        {pagedProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 px-4 text-center shadow-xs">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3.5 ring-1 ring-slate-200">
               <Icon name="products" className="h-7 w-7" />
@@ -1063,11 +1045,11 @@ export function ProductsPage() {
           </div>
         )}
 
-        {filteredProducts.length > 0 && (
+        {filteredTotal > 0 && (
           <Pagination
             page={currentPage}
             totalPages={totalPages}
-            totalItems={filteredProducts.length}
+            totalItems={filteredTotal}
             rowsPerPage={PAGE_SIZE}
             onPageChange={setPage}
             itemLabel="products"

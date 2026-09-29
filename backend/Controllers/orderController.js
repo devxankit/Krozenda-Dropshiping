@@ -8,7 +8,7 @@ const Product = require('../Models/Product');
 const Customer = require('../Models/Customer');
 const Coupon = require('../Models/Coupon');
 const WalletTransaction = require('../Models/WalletTransaction');
-const { evaluateCoupon, filterEligibleItems, redeemCoupon } = require('./couponController');
+const { evaluateCoupon, filterEligibleItems, redeemCoupon, releaseCoupon } = require('./couponController');
 const { createNotification } = require('./notificationController');
 const vendorAlerts = require('../services/vendorAlertService');
 const { alertAdmins, highValueThreshold } = require('../services/adminAlertService');
@@ -168,8 +168,13 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   // Admin's own-stock products also count as unavailable while the admin
   // has the "Own stock" switch off.
   const hideOwnStock = !(await isOwnStockVisibleToCustomers());
+  // A suspended or unapproved seller's product is unavailable too.
   const unavailable = allEntries.filter(
-    (entry) => !entry.product || !entry.product.isActive || (hideOwnStock && isOwnStockProduct(entry.product))
+    (entry) =>
+      !entry.product ||
+      !entry.product.isActive ||
+      entry.product.vendorSuspended === true ||
+      (hideOwnStock && isOwnStockProduct(entry.product))
   );
   if (unavailable.length > 0) {
     const names = unavailable.map((entry) => entry.product?.name).filter(Boolean);
@@ -716,19 +721,67 @@ async function createOrder(req, res) {
     paymentStatus = 'PAID';
   }
 
+  // Real money was already captured by Razorpay before this endpoint ran;
+  // when the order cannot be placed after all, it goes straight back.
+  const refundCapturedPayment = async (why) => {
+    if (!(paymentMethod === 'RAZORPAY' && capturedPayment)) return false;
+    try {
+      await razorpay.payments.refund(razorpayPaymentId, { amount: capturedPayment.amount, speed: 'optimum' });
+    } catch (refundErr) {
+      console.error(`Auto-refund after ${why} failed, needs manual reconciliation:`, {
+        razorpayPaymentId,
+        error: refundErr.message,
+      });
+    }
+    return true;
+  };
+
+  // The primary order's id, fixed now so the coupon can be redeemed against
+  // it BEFORE anything is placed. Redeeming after placement meant losing the
+  // usage-limit race changed nothing — the order kept its discount, so a
+  // one-use coupon raced by eight buyers discounted all eight.
+  const primaryOrderId = new mongoose.Types.ObjectId();
+  const releaseCouponHold = async () => {
+    if (!normalizedCouponCode) return;
+    try {
+      await releaseCoupon({ orderId: primaryOrderId });
+    } catch (err) {
+      console.error('[createOrder] could not release coupon hold', { orderId: String(primaryOrderId), error: err.message });
+    }
+  };
+
+  if (normalizedCouponCode) {
+    try {
+      await redeemCoupon({
+        code: normalizedCouponCode,
+        userId: req.user._id,
+        orderId: primaryOrderId,
+        cartItems: couponCartItems,
+        cartTotal: subtotal,
+        shippingFee: shipping,
+        isNewCustomer,
+      });
+    } catch (err) {
+      // A double-tap whose twin already placed the order: hand that back.
+      if (idempotencyKey) {
+        const winners = await Order.find({ user: req.user._id, idempotencyKey }).sort({ checkoutGroupIndex: 1 });
+        if (winners.length > 0) return res.status(200).json(placedResponse(winners, 'Order already placed'));
+      }
+      const refunded = await refundCapturedPayment('coupon limit');
+      return res.status(409).json({
+        success: false,
+        code: 'COUPON_UNAVAILABLE',
+        message: `${err.message || 'This coupon can no longer be applied'}.${
+          refunded ? ' Your payment is being refunded automatically.' : ' Remove it to continue.'
+        }`,
+      });
+    }
+  }
+
   const reservation = await reserveStock(items);
   if (!reservation.ok) {
-    if (paymentMethod === 'RAZORPAY' && capturedPayment) {
-      // Real money was already captured by Razorpay before this endpoint
-      // ran — refund it automatically since we can't fulfil the order.
-      try {
-        await razorpay.payments.refund(razorpayPaymentId, { amount: capturedPayment.amount, speed: 'optimum' });
-      } catch (refundErr) {
-        console.error('Auto-refund after stock-out failed, needs manual reconciliation:', {
-          razorpayPaymentId,
-          error: refundErr.message,
-        });
-      }
+    await releaseCouponHold();
+    if (await refundCapturedPayment('stock-out')) {
       return res.status(409).json({
         success: false,
         message: `"${reservation.productName}" just went out of stock. Your payment is being refunded automatically.`,
@@ -745,6 +798,7 @@ async function createOrder(req, res) {
     );
     if (!updatedCustomer) {
       await releaseStock(items);
+      await releaseCouponHold();
       return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
     }
     paymentStatus = 'PAID';
@@ -781,6 +835,8 @@ async function createOrder(req, res) {
     // checkout, so a rule edited later cannot change what it is charged.
     orders = await Order.insertMany(
       await accounting.attachCommissionSnapshots(orderGroups.map((group, index) => ({
+        // The primary carries the id the coupon was redeemed against.
+        ...(index === 0 ? { _id: primaryOrderId } : {}),
         user: req.user._id,
         items: group.items,
         shippingAddress,
@@ -807,6 +863,7 @@ async function createOrder(req, res) {
   } catch (err) {
     await Order.deleteMany({ checkoutGroupId });
     await releaseStock(items);
+    await releaseCouponHold();
     if (paymentMethod === 'WALLET') {
       await Customer.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
     }
@@ -849,25 +906,6 @@ async function createOrder(req, res) {
     });
   }
 
-  if (normalizedCouponCode) {
-    try {
-      await redeemCoupon({
-        code: normalizedCouponCode,
-        userId: req.user._id,
-        orderId: order._id,
-        cartItems: couponCartItems,
-        cartTotal: subtotal,
-        shippingFee: shipping,
-        isNewCustomer,
-      });
-    } catch (err) {
-      // The coupon passed evaluateCoupon a moment ago but lost a race on
-      // usageLimit/perUserLimit before redeemCoupon's transaction committed.
-      // The payment already succeeded, so the order still goes through —
-      // it just keeps its already-computed discount without a recorded
-      // redemption, rather than failing an otherwise-paid order.
-    }
-  }
 
   await Cart.updateOne({ user: req.user._id }, { $set: { items: [] } });
 
@@ -1358,7 +1396,7 @@ async function reorder(req, res) {
   const hideOwnStock = !(await isOwnStockVisibleToCustomers());
 
   for (const item of order.items) {
-    const product = await Product.findOne({ _id: item.product, isActive: true });
+    const product = await Product.findOne({ _id: item.product, isActive: true, vendorSuspended: { $ne: true } });
     if (!product || (hideOwnStock && isOwnStockProduct(product))) {
       skippedItems.push({ name: item.name, reason: 'Product is no longer available' });
       continue;

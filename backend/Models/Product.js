@@ -74,6 +74,12 @@ const productSchema = new mongoose.Schema(
     // marketplace seller, so order items and support tickets can be routed
     // to the right vendor instead of always falling back to Admin.
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null, index: true },
+    // True while the seller cannot trade: suspended by admin, or not (yet)
+    // APPROVED. Kept apart from isActive/approvalStatus — which are about the
+    // PRODUCT — so re-activating the seller restores exactly what was live.
+    // Maintained by the Vendor save hook and set at creation below; every
+    // storefront, cart and checkout query filters on it (utils/publicVisibility).
+    vendorSuspended: { type: Boolean, default: false },
     // Denormalized off ProductFulfillmentMapping (the real source of truth —
     // see that model's own comment) purely so the public catalog can filter
     // "dropship only / normal only / all" with a plain indexed match instead
@@ -181,6 +187,15 @@ productSchema.index({ barcode: 1 }, { unique: true, sparse: true });
 // shipping products with no barcode.
 // Tiers are stored sorted so resolveUnitPrice can scan them in one pass and
 // so an admin reading the document sees them in the order they apply.
+// A new seller product starts out in its seller's state. pre('validate')
+// rather than pre('save') so it also runs for insertMany (CSV imports).
+productSchema.pre('validate', async function inheritSellerState() {
+  if (!this.isNew || !this.vendor) return;
+  const Vendor = mongoose.model('Vendor');
+  const vendor = await Vendor.findById(this.vendor).select('verificationStatus isActive').lean();
+  this.vendorSuspended = !vendor || !(vendor.verificationStatus === 'APPROVED' && vendor.isActive);
+});
+
 productSchema.pre('save', function sortPriceTiers() {
   if (this.isModified('priceTiers') && Array.isArray(this.priceTiers)) {
     this.priceTiers.sort((a, b) => a.minQty - b.minQty);

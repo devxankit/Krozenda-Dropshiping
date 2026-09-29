@@ -20,7 +20,15 @@
 // { isActive, approvalStatus, ... } rather than forcing an $or.
 const PUBLIC_APPROVAL_FILTER = { $nin: ['PENDING', 'REJECTED'] };
 
-// The standard "a shopper may see this" predicate. Spread into a query.
-const publiclyVisible = () => ({ isActive: true, approvalStatus: PUBLIC_APPROVAL_FILTER });
+// Products whose SELLER cannot trade (suspended / not approved). `$ne: true`
+// so products predating the field — and admin's own stock — stay visible.
+const SELLER_TRADING_FILTER = { $ne: true };
 
-module.exports = { PUBLIC_APPROVAL_FILTER, publiclyVisible };
+// The standard "a shopper may see this" predicate for a PRODUCT. Spread into a query.
+const publiclyVisible = () => ({
+  isActive: true,
+  approvalStatus: PUBLIC_APPROVAL_FILTER,
+  vendorSuspended: SELLER_TRADING_FILTER,
+});
+
+module.exports = { PUBLIC_APPROVAL_FILTER, SELLER_TRADING_FILTER, publiclyVisible };

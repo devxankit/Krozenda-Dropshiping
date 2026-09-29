@@ -18,9 +18,21 @@ import {
   queueDecisionSchema,
 } from '../schemas/catalogSchema'
 
+// The whole catalogue in one response — only for the order form's product
+// picker. The list screen uses fetchProductPage.
 export async function fetchProducts() {
   const { data } = await api.get('/admin/catalog/products')
   return data.data
+}
+
+// One server-side page of the admin product list: tab, search and sort are
+// applied by the API, and `stats` carries every tab's count.
+export async function fetchProductPage({ page = 1, limit = 12, status = 'all', search = '', sort = 'newest' } = {}, { signal } = {}) {
+  const { data } = await api.get('/admin/catalog/products', {
+    params: { page, limit, status: status === 'all' ? undefined : status, search: search || undefined, sort },
+    signal,
+  })
+  return { items: data.data.items, stats: data.data.stats, pagination: data.pagination }
 }
 
 export async function fetchProduct(id) {

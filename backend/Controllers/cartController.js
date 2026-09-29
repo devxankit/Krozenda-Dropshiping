@@ -30,7 +30,8 @@ function round2(n) {
 // the final word on stock — createOrder re-reserves it atomically at
 // checkout — but it stops the cart from lying to the user well before then.
 async function loadPurchasableProduct(productId) {
-  const product = await Product.findOne({ _id: productId, isActive: true });
+  // A suspended/unapproved seller's product can't be added either.
+  const product = await Product.findOne({ _id: productId, isActive: true, vendorSuspended: { $ne: true } });
   // Admin's "Own stock" switch is off: admin's own products can't be bought.
   if (product && isOwnStockProduct(product) && !(await isOwnStockVisibleToCustomers())) return null;
   return product;

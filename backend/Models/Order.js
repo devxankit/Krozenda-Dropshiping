@@ -374,6 +374,10 @@ orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 // lookups, which are exactly that shape.
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ 'items.vendor': 1, createdAt: -1 });
+// Date-range reads (admin dashboard, analytics, reports): without an index
+// that LEADS with createdAt every one of them scanned the whole collection —
+// ~1.2s per query at 9k orders in the load test.
+orderSchema.index({ createdAt: -1 });
 // A captured Razorpay payment can back at most one order OF EACH TYPE —
 // without this, a single valid (orderId, paymentId, signature) triple could
 // be replayed across multiple POST /user/orders calls to mint unlimited

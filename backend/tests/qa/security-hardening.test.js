@@ -3,7 +3,6 @@
 // handling. Safe payloads only.
 
 const request = require('supertest');
-const bcrypt = require('bcryptjs');
 const User = require('../../Models/User');
 const {
   connectTestDb,
@@ -117,7 +116,8 @@ describe('production mode: CORS and error disclosure', () => {
   });
 
   test('an unhandled 500 in production says nothing about the internals', async () => {
-    const res = await request(prodApp).post('/admin/auth/login').send({ email: { $ne: null }, password: 'x' });
+    // The CORS refusal is raised as an error and reaches the global handler.
+    const res = await request(prodApp).get('/health').set('Origin', 'https://evil.example');
     expect(res.status).toBe(500);
     expect(res.body.message).toBe('Something went wrong');
     expect(JSON.stringify(res.body)).not.toMatch(/stack|TypeError|at .*\.js|Mongo/);
@@ -129,7 +129,8 @@ describe('brute force and OTP handling', () => {
     const LoginThrottle = require('../../Models/LoginThrottle');
     async function adminWithPassword(password = 'Correct#123') {
       const email = `bf${Date.now()}${Math.floor(Math.random() * 1e6)}@test.local`;
-      await User.create({ name: 'BF', email, role: 'admin', isActive: true, password: await bcrypt.hash(password, 10) });
+      // plain: the User model hashes on save
+      await User.create({ name: 'BF', email, role: 'admin', isActive: true, password });
       return email;
     }
     const login = (email, password) => request(app).post('/admin/auth/login').send({ email, password });

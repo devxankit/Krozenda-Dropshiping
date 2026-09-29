@@ -233,6 +233,20 @@ vendorSchema.pre('save', async function hashPassword() {
   this.password = await bcrypt.hash(this.password, 10);
 });
 
+// A seller who is suspended, rejected or not yet approved must not be
+// selling: their products leave the storefront, the cart and checkout the
+// moment their state changes, and come back when they are approved and
+// active again (Product.vendorSuspended; see utils/publicVisibility).
+vendorSchema.pre('save', function noteCatalogState() {
+  this.$locals.catalogStateChanged = !this.isNew && (this.isModified('verificationStatus') || this.isModified('isActive'));
+});
+
+vendorSchema.post('save', async function syncCatalogState() {
+  if (!this.$locals.catalogStateChanged) return;
+  const suspended = !(this.verificationStatus === 'APPROVED' && this.isActive);
+  await mongoose.model('Product').updateMany({ vendor: this._id }, { $set: { vendorSuspended: suspended } });
+});
+
 vendorSchema.methods.comparePassword = function comparePassword(candidate) {
   return bcrypt.compare(candidate, this.password);
 };
