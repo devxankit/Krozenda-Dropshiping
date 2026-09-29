@@ -137,12 +137,41 @@ describe('double-submitted checkout', () => {
     expect((await Product.findById(product._id)).stock).toBe(9);
   });
 
-  knownBug('QA-012', 'without an Idempotency-Key, a double-tap must still not place the same cart twice', async () => {
+  test('QA-012 (regression): without an Idempotency-Key, a 4× double-tap places the cart once and stock moves once', async () => {
     const product = await createProduct({ stock: 10, price: 200 });
     const b = await buyerWithAddress();
     await addToCart(b.token, product._id, 1);
-    await Promise.all([placeCod(b.token, b.address._id), placeCod(b.token, b.address._id)]);
+    const results = await Promise.all(Array.from({ length: 4 }, () => placeCod(b.token, b.address._id)));
+    expect(results.every((r) => [200, 201].includes(r.status))).toBe(true);
+    expect(new Set(results.map((r) => r.body.data.id)).size).toBe(1);
     expect(await Order.countDocuments({ user: b.user._id })).toBe(1);
+    expect((await Product.findById(product._id)).stock).toBe(9);
+  });
+
+  test('QA-012: the same cart bought again after the double-tap window is a new order', async () => {
+    const product = await createProduct({ stock: 10, price: 200 });
+    const b = await buyerWithAddress();
+    await addToCart(b.token, product._id, 1);
+    expect((await placeCod(b.token, b.address._id)).status).toBe(201);
+    await addToCart(b.token, product._id, 1);
+    const realNow = Date.now;
+    const spy = jest.spyOn(Date, 'now').mockImplementation(() => realNow() + 31 * 1000);
+    try {
+      expect((await placeCod(b.token, b.address._id)).status).toBe(201);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await Order.countDocuments({ user: b.user._id })).toBe(2);
+  });
+
+  test('QA-012: a different cart from the same buyer is never mistaken for a double tap', async () => {
+    const [p1, p2] = [await createProduct({ stock: 10 }), await createProduct({ stock: 10 })];
+    const b = await buyerWithAddress();
+    await addToCart(b.token, p1._id, 1);
+    expect((await placeCod(b.token, b.address._id)).status).toBe(201);
+    await addToCart(b.token, p2._id, 1);
+    expect((await placeCod(b.token, b.address._id)).status).toBe(201);
+    expect(await Order.countDocuments({ user: b.user._id })).toBe(2);
   });
 });
 

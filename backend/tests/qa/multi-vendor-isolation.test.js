@@ -150,9 +150,8 @@ describe('seller A never sees or touches seller B', () => {
 });
 
 describe('seller-declared delivery', () => {
-  knownBug(
-    'QA-003',
-    'a seller marking their own prepaid line SHIPPED→DELIVERED with a made-up AWB must not make it settleable',
+  test(
+    'QA-003 (regression): a seller marking their own prepaid line SHIPPED→DELIVERED with a made-up AWB does not make it settleable',
     async () => {
       const seller = await createVendor({ verificationStatus: 'APPROVED' });
       const product = await createProduct({ vendor: seller.vendor._id, price: 5000, stock: 5, gstRate: 0 });
@@ -175,6 +174,144 @@ describe('seller-declared delivery', () => {
       expect(lines).toHaveLength(0);
     }
   );
+});
+
+describe('delivery confirmation releases the payout', () => {
+  async function sellerDeliveredLine() {
+    const seller = await createVendor();
+    const product = await createProduct({ vendor: seller.vendor._id, price: 5000, stock: 5, gstRate: 0 });
+    const buyer = await buyerWithAddress({ walletBalance: 100000 });
+    await addToCart(buyer.token, product._id, 1);
+    const placed = await as(buyer.token).post('/user/orders', { addressId: String(buyer.address._id), paymentMethod: 'WALLET' });
+    const orderId = placed.body.data.id;
+    const path = `/vendor/orders/${orderId}/items/${product._id}/status`;
+    await as(seller.token).patch(path, { status: 'PROCESSING' });
+    await as(seller.token).patch(path, { status: 'SHIPPED', trackingNumber: 'AWB-1' });
+    await as(seller.token).patch(path, { status: 'DELIVERED' });
+    await Order.updateOne({ _id: orderId }, { $set: { deliveredAt: new Date(Date.now() - 30 * 86400000) } });
+    return { seller, product, orderId };
+  }
+  const eligibleFor = async (seller) =>
+    (await collectEligibleLines({ vendorId: seller.vendor._id })).get(String(seller.vendor._id)) || [];
+  const adminClient = async () => as((await require('./qaHelpers').createAdmin()).token);
+
+  test('the buyer and seller still see it delivered', async () => {
+    const { seller, orderId } = await sellerDeliveredLine();
+    expect((await Order.findById(orderId)).status).toBe('DELIVERED');
+    expect((await as(seller.token).get(`/vendor/orders/${orderId}`)).body.data.status).toBe('DELIVERED');
+  });
+
+  test('an admin confirming it from the sub-orders screen makes it settleable (once)', async () => {
+    const { seller, product, orderId } = await sellerDeliveredLine();
+    const admin = await adminClient();
+    const unconfirmed = await admin.get('/admin/sub-orders?tab=unconfirmed&rowsPerPage=100');
+    expect(unconfirmed.body.data.items.map((r) => r.orderId)).toContain(orderId);
+    const id = `${orderId}:${product._id}:`;
+    const ok = await admin.post(`/admin/fulfilment/sub-orders/${id}/confirm-delivery`);
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.deliveryConfirmedBy).toBe('ADMIN');
+    expect((await admin.post(`/admin/fulfilment/sub-orders/${id}/confirm-delivery`)).status).toBe(409);
+    expect(await eligibleFor(seller)).toHaveLength(1);
+  });
+
+  test('the carrier confirming it makes it settleable', async () => {
+    const { seller, product, orderId } = await sellerDeliveredLine();
+    const { syncOrderFromShipment } = require('../../services/shipping/shipmentService');
+    await syncOrderFromShipment({
+      order: orderId,
+      shipmentType: 'FORWARD',
+      internalStatus: 'DELIVERED',
+      items: [{ product: product._id }],
+    });
+    expect((await Order.findById(orderId)).items[0].deliveryConfirmedBy).toBe('CARRIER');
+    expect(await eligibleFor(seller)).toHaveLength(1);
+  });
+
+  test('an admin marking the whole order delivered confirms its lines', async () => {
+    const { seller, orderId } = await sellerDeliveredLine();
+    await Order.updateOne({ _id: orderId }, { $set: { status: 'SHIPPED' } });
+    const admin = await adminClient();
+    const res = await admin.patch(`/admin/orders/${orderId}/status`, { status: 'DELIVERED' });
+    expect(res.status).toBe(200);
+    await Order.updateOne({ _id: orderId }, { $set: { deliveredAt: new Date(Date.now() - 30 * 86400000) } });
+    expect((await Order.findById(orderId)).items[0].deliveryConfirmedBy).toBe('ADMIN');
+    expect(await eligibleFor(seller)).toHaveLength(1);
+  });
+
+  test('lines delivered before this existed (no confirmation recorded) stay settleable', async () => {
+    const { seller, orderId } = await sellerDeliveredLine();
+    await Order.updateOne({ _id: orderId }, { $set: { 'items.0.deliveryConfirmedBy': null } });
+    expect(await eligibleFor(seller)).toHaveLength(1);
+  });
+});
+
+describe('QA-015: material edits to an approved product go back for review', () => {
+  async function approvedProduct() {
+    const seller = await createVendor();
+    const product = await createProduct({
+      vendor: seller.vendor._id,
+      images: ['/uploads/products/a.webp', '/uploads/products/b.webp'],
+      approvalStatus: 'APPROVED',
+    });
+    return { seller, product };
+  }
+  const visible = async (id) => (await as(null).get(`/catalog/products/${id}`)).status;
+
+  test.each([
+    ['name', () => ({ name: 'Something else entirely' })],
+    ['category', (cat) => ({ category: String(cat._id) })],
+    ['photos', () => ({ removeImages: JSON.stringify(['/uploads/products/a.webp']) })],
+  ])('changing the %s hides it until approved', async (_label, patch) => {
+    const { seller, product } = await approvedProduct();
+    const other = await createCategory();
+    const res = await as(seller.token).put(`/vendor/products/${product._id}`, patch(other));
+    expect(res.status).toBe(200);
+    const fresh = await Product.findById(product._id);
+    expect(fresh.approvalStatus).toBe('PENDING');
+    expect(fresh.isActive).toBe(false);
+    expect(await visible(product._id)).toBe(404);
+    expect(res.body.message).toMatch(/sent for admin approval/);
+  });
+
+  test('price and stock edits stay live without review', async () => {
+    const { seller, product } = await approvedProduct();
+    await as(seller.token).put(`/vendor/products/${product._id}`, { price: 777, stock: 3 });
+    const fresh = await Product.findById(product._id);
+    expect(fresh.approvalStatus).toBe('APPROVED');
+    expect(fresh.price).toBe(777);
+    expect(await visible(product._id)).toBe(200);
+  });
+
+  test('re-saving the same name is not a change', async () => {
+    const { seller, product } = await approvedProduct();
+    await as(seller.token).put(`/vendor/products/${product._id}`, { name: product.name });
+    expect((await Product.findById(product._id)).approvalStatus).toBe('APPROVED');
+  });
+
+  test('with auto-approval on, edits stay approved', async () => {
+    const CatalogSettings = require('../../Models/CatalogSettings');
+    const settings = await CatalogSettings.getSettings();
+    const prev = settings.autoApprovalEnabled;
+    settings.autoApprovalEnabled = true;
+    await settings.save();
+    try {
+      const { seller, product } = await approvedProduct();
+      await as(seller.token).put(`/vendor/products/${product._id}`, { name: 'Renamed' });
+      expect((await Product.findById(product._id)).approvalStatus).toBe('APPROVED');
+    } finally {
+      settings.autoApprovalEnabled = prev;
+      await settings.save();
+    }
+  });
+
+  test('admin re-approval puts it back on sale', async () => {
+    const { seller, product } = await approvedProduct();
+    await as(seller.token).put(`/vendor/products/${product._id}`, { name: 'Renamed again' });
+    const admin = as((await require('./qaHelpers').createAdmin()).token);
+    const res = await admin.patch(`/admin/catalog/products/${product._id}/approval`, { decision: 'APPROVED' });
+    expect(res.status).toBe(200);
+    expect(await visible(product._id)).toBe(200);
+  });
 });
 
 describe('suspended / unapproved seller catalogue', () => {
@@ -266,7 +403,7 @@ describe('seller state round-trip', () => {
 });
 
 describe('seller self-promotion flags', () => {
-  knownBug('QA-005', 'a seller must not be able to put their own product into Trending / Flash Sale', async () => {
+  test('QA-005 (regression): a seller cannot put their own product into Trending / Flash Sale', async () => {
     const seller = await createVendor({ verificationStatus: 'APPROVED' });
     const product = await createProduct({ vendor: seller.vendor._id, approvalStatus: 'APPROVED', images: ['/uploads/products/p.webp'] });
     // (an image is required or the update is refused for an unrelated reason)

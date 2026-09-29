@@ -33,8 +33,6 @@ function formFromProduct(product) {
     lowStockThreshold: product.lowStockThreshold != null ? String(product.lowStockThreshold) : '',
     weight: product.weight != null ? String(product.weight) : '',
     status: product.status || (product.isActive === false ? 'Inactive' : 'Active'),
-    isFlashsale: product.isFlashsale === true,
-    isTrending: product.isTrending === true,
     isReturnable: product.isReturnable !== false,
   }
 }
@@ -135,8 +133,6 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
     if (formData.lowStockThreshold) body.append('lowStockThreshold', formData.lowStockThreshold)
     body.append('weight', formData.weight)
     body.append('status', formData.status || 'Active')
-    body.append('isFlashsale', formData.isFlashsale)
-    body.append('isTrending', formData.isTrending)
     body.append('isReturnable', formData.isReturnable)
 
     // Always sent, empty included: an empty list is the seller removing every
@@ -468,44 +464,8 @@ export function EditVendorProductModal({ isOpen, onClose, product, onEditProduct
         {/* SECTION 7: VARIANTS */}
         <ProductVariantsSection variants={variants} onChange={setVariants} gallery={gallery} />
 
-        {/* FEATURED / SPOTLIGHT TOGGLES */}
+        {/* Flash Sale / Trending placement is set by admin, not the seller. */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 to-orange-50/30 p-3.5 transition-all">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                id="vendor-edit-flashsale"
-                checked={formData.isFlashsale}
-                onChange={(e) => setFormData({ ...formData, isFlashsale: e.target.checked })}
-                className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-              />
-              <div className="flex-1">
-                <span className="text-xs font-bold text-slate-900">🔥 Flash Sale Deal</span>
-                <p className="mt-0.5 text-2xs text-slate-600">
-                  Highlight in countdown deals and urgent flash promotions.
-                </p>
-              </div>
-            </label>
-          </div>
-
-          <div className="rounded-xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 to-purple-50/30 p-3.5 transition-all">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                id="vendor-edit-trending"
-                checked={formData.isTrending}
-                onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
-                className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <div className="flex-1">
-                <span className="text-xs font-bold text-slate-900">📈 Trending Product</span>
-                <p className="mt-0.5 text-2xs text-slate-600">
-                  Showcase on trending carousels and top recommendation feeds.
-                </p>
-              </div>
-            </label>
-          </div>
-
           <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/80 to-teal-50/30 p-3.5 transition-all">
             <label className="flex items-start gap-3 cursor-pointer">
               <input

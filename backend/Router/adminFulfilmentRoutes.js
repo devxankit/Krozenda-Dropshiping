@@ -3,6 +3,7 @@ const {
   listSubOrders,
   advanceSubOrder,
   cancelSubOrder,
+  confirmSubOrderDelivery,
   listShipments,
   updateShipment,
   listRtos,
@@ -23,6 +24,7 @@ router.get('/cancellations', requirePermission('admin.returns.manage'), listCanc
 
 router.post('/fulfilment/sub-orders/:id/advance', requirePermission('admin.orders.sub_orders'), advanceSubOrder);
 router.post('/fulfilment/sub-orders/:id/cancel', requirePermission('admin.orders.sub_orders'), cancelSubOrder);
+router.post('/fulfilment/sub-orders/:id/confirm-delivery', requirePermission('admin.orders.sub_orders'), confirmSubOrderDelivery);
 router.put('/fulfilment/shipments/:id', requirePermission('admin.orders.shipments'), updateShipment);
 router.post('/fulfilment/rto/:id/restock', requirePermission('admin.returns.manage'), restockRto);
 router.post('/fulfilment/cancellations/:id/refund', requirePermission('admin.returns.manage'), resolveCancellationRefund);

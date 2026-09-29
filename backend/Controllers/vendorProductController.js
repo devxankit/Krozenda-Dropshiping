@@ -337,10 +337,8 @@ async function createMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, hsnCode, gstRate, gstInclusive, moq,
-    isFlashsale, isFlashSale, isTrending, isReturnable,
+    isReturnable,
   } = req.body;
-
-  const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
 
   const priceTiers = parseJsonField(req.body.priceTiers, []);
   const variants = normaliseVariants(parseJsonField(req.body.variants, [])) || [];
@@ -466,8 +464,11 @@ async function createMyProduct(req, res) {
     description: String(description || '').trim(),
     status: productStatus,
     isActive,
-    isFlashsale: toBool(flashSaleVal, false),
-    isTrending: toBool(isTrending, false),
+    // Flash Sale and Trending are storefront placement, which is the
+    // admin's to give (product admin toggles) — a seller cannot feature
+    // their own product.
+    isFlashsale: false,
+    isTrending: false,
     isReturnable: toBool(isReturnable, true),
     approvalStatus,
   });
@@ -486,10 +487,8 @@ async function updateMyProduct(req, res) {
   const {
     name, sku, category, brand, price, mrp, costPrice, salePrice, discountPercent, stock,
     lowStockThreshold, weight, shortDescription, description, status, isActive, removeImages, hsnCode, gstRate, gstInclusive, moq,
-    isFlashsale, isFlashSale, isTrending, isReturnable,
+    isReturnable,
   } = req.body;
-
-  const flashSaleVal = isFlashsale !== undefined ? isFlashsale : isFlashSale;
 
   // Undefined means "not sent, leave alone"; an empty array means "the seller
   // removed them all". parseJsonField preserves that distinction by defaulting
@@ -502,6 +501,15 @@ async function updateMyProduct(req, res) {
   if (!product) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
+
+  // What the buyer identifies the product by. Changing any of these on an
+  // approved product sends it back for review (see below) — otherwise an
+  // approved listing could be turned into a different product unseen.
+  const reviewedAs = {
+    name: product.name,
+    category: String(product.category || ''),
+    images: JSON.stringify((product.images || []).map(toRelativePath)),
+  };
 
   if (name && name.trim()) product.name = name.trim();
 
@@ -584,12 +592,7 @@ async function updateMyProduct(req, res) {
     product.isActive = false;
   }
 
-  if (flashSaleVal !== undefined) {
-    product.isFlashsale = toBool(flashSaleVal, product.isFlashsale);
-  }
-  if (isTrending !== undefined) {
-    product.isTrending = toBool(isTrending, product.isTrending);
-  }
+  // isFlashsale / isTrending are not the seller's to change (see createMyProduct).
   if (isReturnable !== undefined) {
     product.isReturnable = toBool(isReturnable, product.isReturnable !== false);
   }
@@ -616,10 +619,34 @@ async function updateMyProduct(req, res) {
   // also clear it from any option that pointed at it.
   resolveVariantImages(product.variants, newImages, removeSet);
 
+  // Name, category or photos changed on an approved product: back to the
+  // approval queue, off the storefront until an admin approves it again.
+  // Price and stock edits are not reviewed. With auto-approval on there is
+  // no review step to go back to.
+  const materiallyChanged =
+    product.name !== reviewedAs.name ||
+    String(product.category || '') !== reviewedAs.category ||
+    JSON.stringify((product.images || []).map(toRelativePath)) !== reviewedAs.images;
+  let resubmitted = false;
+  if (materiallyChanged && product.approvalStatus === 'APPROVED' && !product.importPreview) {
+    const { autoApprovalEnabled } = await CatalogSettings.getSettings();
+    if (!autoApprovalEnabled) {
+      product.approvalStatus = 'PENDING';
+      product.isActive = false;
+      resubmitted = true;
+    }
+  }
+
   await product.save();
   await product.populate([{ path: 'category', select: 'name' }, { path: 'brand', select: 'name' }]);
 
-  res.json({ success: true, message: 'Product updated successfully', data: serializeProduct(product) });
+  res.json({
+    success: true,
+    message: resubmitted
+      ? 'Changes saved and sent for admin approval — the product is hidden from buyers until approved.'
+      : 'Product updated successfully',
+    data: serializeProduct(product),
+  });
 }
 
 async function deleteMyProduct(req, res) {

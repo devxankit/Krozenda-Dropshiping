@@ -279,13 +279,19 @@ async function updateOrderStatus(req, res) {
   // lines, which the seller panel showed as open and settlement never paid.
   const behind = LINE_STAGES.includes(status) ? LINE_STAGES.slice(0, LINE_STAGES.indexOf(status)) : [];
   if (behind.length > 0) setFields['items.$[behind].status'] = status;
+  // An admin marking the order delivered confirms every live line's delivery
+  // — including lines a seller had already marked delivered themselves.
+  if (status === 'DELIVERED') setFields['items.$[delivered].deliveryConfirmedBy'] = 'ADMIN';
   update.$set = setFields;
 
   const arrayFilters =
     status === 'CANCELLED'
       ? [{ 'live.status': { $nin: ['CANCELLED', 'DELIVERED'] } }]
-      : behind.length > 0
-        ? [{ 'behind.status': { $in: behind } }]
+      : behind.length > 0 || status === 'DELIVERED'
+        ? [
+            ...(behind.length > 0 ? [{ 'behind.status': { $in: behind } }] : []),
+            ...(status === 'DELIVERED' ? [{ 'delivered.status': { $ne: 'CANCELLED' } }] : []),
+          ]
         : null;
   const order = await Order.findOneAndUpdate(
     { _id: id, status: { $in: fromStatuses } },

@@ -63,6 +63,12 @@ export const useSubOrderWriteController = ({ onDone } = {}) => ({
     success: (row) => `${row.id} is now ${row.status.replace(/_/g, ' ')}`,
     describe: (row) => (row.awb ? `AWB ${row.awb}` : undefined),
   }),
+  confirmDelivery: useAdminMutation({
+    mutationFn: service.confirmSubOrderDelivery,
+    invalidate: FULFILMENT,
+    success: (row) => `${row.id} delivery confirmed`,
+    describe: () => 'It can now be included in the seller’s next settlement.',
+  }),
   cancel: useAdminMutation({
     mutationFn: service.cancelSubOrder,
     invalidate: FULFILMENT,

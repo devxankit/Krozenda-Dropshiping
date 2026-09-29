@@ -1,5 +1,7 @@
 # Krozenda — QA, Security & Load Assessment
 
+> **Fix status (2026-09-29):** all 4 P0s and all 7 P1s are fixed, plus QA-005, QA-015, QA-020–022 and the main performance items, all with regression tests (§11). Still open: remaining P2/P3 items, seller earnings summary speed, and running `backfill-vendor-suspended.js` on live data. Suite: 60 suites / 830 tests, 0 failing.
+
 **Date:** 2026-09-28 · **Scope:** backend API (Express 5 / Mongoose 9), realtime (socket.io), frontend build (Vite/React) · **Commit under test:** `2d3bafe`
 
 ---
@@ -247,3 +249,36 @@ node tests/performance/loadRunner.js quick|full|scenarios|hot
 - [ ] Staging load test with k6 meets p95 < 800 ms at expected peak
 - [ ] Browser E2E golden path added for checkout
 - [x] Payment verification, stock atomicity, idempotency, seller isolation, webhook signing
+
+---
+
+## 11. Fix log (2026-09-29)
+
+| ID | Fix | Regression tests |
+|---|---|---|
+| QA-007 | `/topup/order` records a PENDING top-up; `verifyTopup` claims it and credits the wallet in one transaction. Replays credit nothing | `payments-razorpay.test.js`: sequential + 6× parallel replay |
+| QA-008 | A payment is creditable only against a top-up the same buyer opened, so order payments and other buyers' top-ups are refused | same file: order payment → wallet, buyer B → buyer A's top-up |
+| QA-001 | `requirePermission` on coupons (`marketing.coupons`), settings (`settings.view` / `settings.manage`), accounts (`accounting.view` / `payout.manage` / `accounting.post`), CMS and FAQ (`banners` or `manage` / `marketing.manage`). Accounts menu now permission-gated in the admin nav | `rbac-auth.test.js` + positive controls |
+| QA-020 | A deactivated role grants nothing (middleware and login payload) | `rbac-auth.test.js` (off → 403, back on → 200) |
+| QA-002 / 021 | Guest list keeps the id filter under `$and` and excludes seller tickets; seller tickets are never "guest" in `canAccessTicket`; guest counts scoped; all three ticket searches escaped | `support-tickets-isolation.test.js` |
+| QA-013 | In production the OTP is never logged (masked number only) | `security-hardening.test.js` (production-mode controller) |
+| QA-011 | 30 s resend cooldown and 5 codes per number per hour (atomic, `Retry-After`); attempt counter reserved atomically, so parallel guesses lock at 5; code consumed atomically. Reviewer/QA bypass numbers exempt. OTP hashing moved from bcryptjs to HMAC-SHA256 (old bcrypt hashes still verify) | cooldown, parallel resend, hourly cap, 20 parallel guesses, single-use |
+| QA-010 / 022 | Per-account sign-in limit for admin and seller (5 attempts / 15 min, then a 15 min lock; reserved before the password check; unknown emails treated the same; cleared on success or password reset). Non-string credentials → 400 | 6 tests incl. 30-guess parallel burst |
+| QA-006 | Coupon redeemed against a pre-generated order id **before** stock, wallet or order are touched; released on every failure path; Razorpay payment auto-refunded if the coupon is gone | 8-buyer race → 1 discounted; release on stock-out and wallet shortfall |
+| QA-009 | `refund.processed` marks REFUNDED only when refunds cover the order total | partial, full, accumulated |
+| QA-004 | `Product.vendorSuspended`, maintained by a Vendor save hook and set at creation; filtered in listing, detail, related, category counts, cart, checkout, reorder and wishlist. **Run `node backfill-vendor-suspended.js` (dry run) then `--apply` on live** | suspend / restore / approve round-trip, cart → checkout 409 |
+| QA-003 | Business decision: **payout hold**. Order lines record `deliveryConfirmedBy` (CARRIER / ADMIN / SELLER). A seller's own DELIVERED shows as delivered but is excluded from settlement until the carrier sync or an admin confirms it. Admin: "Delivery unconfirmed" tab + "Confirm delivery" row action on Sub-orders. Older lines (no value) stay settleable | `multi-vendor-isolation.test.js`: hold, admin confirm (once), carrier confirm, admin order-level delivery, legacy lines |
+| QA-005 | Business decision: **admin only**. Seller create/update ignore `isFlashsale` / `isTrending`; toggles removed from the seller product modals | same file |
+| QA-015 | Business decision: **re-approval on name / photos / category**. Such edits to an APPROVED product set it PENDING and hide it (unless auto-approval is on); price/stock edits stay live. Approval now keeps a seller-set Inactive product off | same file: each field, price/stock, no-op save, auto-approval, re-approve |
+| Perf | Admin product list paged on the server (frontend updated); admin order list and seller order list paged in Mongo (seller status derived in the pipeline, pinned to the serializer); `$match` before `$unwind` in 5 seller pipelines; `orders.createdAt` index; 30 s coalescing cache on dashboard and analytics; config read no longer an upsert | `admin-product-paging`, `order-list-paging`, `analytics-cache` |
+
+**Load test after the fixes (same isolated setup):**
+
+| Scenario | Req/s before → after | p95 before → after | Errors before → after |
+|---|---|---|---|
+| OTP login (50) | 11.7 → **397** | 5.9 s → **180 ms** | 0 → 0 |
+| Admin dashboard (10) | 1.1 → **139.6** | 10 s → **118 ms** | 65% → **0%** |
+| Seller dashboard (20) | 8.7 → **59.6–68.5** | 9.4 s → **0.4–1.8 s** | 4.2% → 0–0.4% |
+| Checkout (50, warm) | 46.9 → **104** | 1.4 s → **0.89 s** | 2.5% → **0%** |
+
+**Still open:** seller earnings summary re-prices commission per unsettled order (p99 ~4.5 s at 20 sellers); frontend image weight; P2/P3 list in §6; live index check (§8).

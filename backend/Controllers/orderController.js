@@ -67,6 +67,29 @@ function normaliseIdempotencyKey(raw) {
   return IDEMPOTENCY_KEY_RE.test(trimmed) ? trimmed : null;
 }
 
+// For a client that sends no Idempotency-Key (an older app build, a direct
+// API caller), the server makes one: the same buyer submitting the same cart
+// to the same address the same way inside one short window IS a double tap.
+// It rides the same unique index as a client key, so two parallel submits
+// place one order. The window keeps it from ever matching a genuine repeat
+// purchase later — by then the cart was emptied and refilled anyway.
+const AUTO_IDEMPOTENCY_WINDOW_MS = 30 * 1000;
+
+async function autoIdempotencyKey(userId, { addressId, paymentMethod, couponCode }) {
+  const cart = await Cart.findOne({ user: userId }).select('items.product items.variantId items.quantity').lean();
+  const lines = (cart?.items || [])
+    .map((i) => `${i.product}:${i.variantId || ''}:${i.quantity}`)
+    .sort()
+    .join('|');
+  if (!lines) return null;
+  const bucket = Math.floor(Date.now() / AUTO_IDEMPOTENCY_WINDOW_MS);
+  const digest = crypto
+    .createHash('sha256')
+    .update([String(userId), lines, addressId, paymentMethod, couponCode || '', bucket].join('#'))
+    .digest('hex');
+  return `auto-${digest.slice(0, 40)}`;
+}
+
 // The only shipping prices DeliveryOptionsScreen ever offers — anything else
 // arriving in the request body is client tampering, not a legitimate choice.
 // The old fixed ladder [0, 99, 199] is gone: shipping is quoted from the
@@ -526,7 +549,20 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
 // The filter is part of the update, not a check before it - that is what makes
 // it atomic. A findOneAndUpdate matching nothing means someone else got there
 // first.
-async function reserveStock(items) {
+// Thrown inside checkout's transaction to abort it for a reason the buyer
+// should hear about (the transaction's rollback does the undoing).
+class CheckoutAbort extends Error {
+  constructor(reason, detail = null) {
+    super(reason);
+    this.reason = reason;
+    this.detail = detail;
+  }
+}
+
+// With a `session` (checkout's transaction) a shortfall just reports back:
+// aborting the transaction undoes what was already reserved, so nothing is
+// released by hand. Without one (admin-created orders) it releases itself.
+async function reserveStock(items, { session = null } = {}) {
   const reserved = [];
   for (const item of items) {
     const updated = item.variantId
@@ -535,15 +571,17 @@ async function reserveStock(items) {
             _id: item.product,
             variants: { $elemMatch: { _id: item.variantId, stock: { $gte: item.quantity } } },
           },
-          { $inc: { 'variants.$.stock': -item.quantity } }
+          { $inc: { 'variants.$.stock': -item.quantity } },
+          { session }
         )
       : await Product.findOneAndUpdate(
           { _id: item.product, stock: { $gte: item.quantity } },
-          { $inc: { stock: -item.quantity } }
+          { $inc: { stock: -item.quantity } },
+          { session }
         );
 
     if (!updated) {
-      await releaseStock(reserved);
+      if (!session) await releaseStock(reserved);
       return { ok: false, productName: item.variant ? `${item.name} (${item.variant})` : item.name };
     }
     reserved.push(item);
@@ -651,9 +689,19 @@ async function createOrder(req, res) {
 
   // Accepted from either the standard header or the body so a WebView client
   // that can't easily set headers still gets the protection.
-  const idempotencyKey = normaliseIdempotencyKey(
-    req.get('Idempotency-Key') || req.body.idempotencyKey
-  );
+  // COD and wallet get a server-made key when the client sends none. A
+  // Razorpay order does not need one — its payment id is already unique per
+  // order — and must not get one: a replayed payment has to stay a hard 409,
+  // not be answered as a retry of the order it already paid for.
+  const idempotencyKey =
+    normaliseIdempotencyKey(req.get('Idempotency-Key') || req.body.idempotencyKey) ||
+    (paymentMethod === 'RAZORPAY'
+      ? null
+      : await autoIdempotencyKey(req.user._id, {
+          addressId: String(addressId || ''),
+          paymentMethod,
+          couponCode: couponCode ? String(couponCode).trim().toUpperCase() : '',
+        }));
 
   // Fast path: the retry arrives after the first call already committed. The
   // unique index below is still the real guarantee (this read can lose a race
@@ -778,32 +826,6 @@ async function createOrder(req, res) {
     }
   }
 
-  const reservation = await reserveStock(items);
-  if (!reservation.ok) {
-    await releaseCouponHold();
-    if (await refundCapturedPayment('stock-out')) {
-      return res.status(409).json({
-        success: false,
-        message: `"${reservation.productName}" just went out of stock. Your payment is being refunded automatically.`,
-      });
-    }
-    return res.status(409).json({ success: false, message: `"${reservation.productName}" just went out of stock.` });
-  }
-
-  if (paymentMethod === 'WALLET') {
-    const updatedCustomer = await Customer.findOneAndUpdate(
-      { _id: req.user._id, walletBalance: { $gte: total } },
-      { $inc: { walletBalance: -total } },
-      { new: true }
-    );
-    if (!updatedCustomer) {
-      await releaseStock(items);
-      await releaseCouponHold();
-      return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
-    }
-    paymentStatus = 'PAID';
-  }
-
   // One order per fulfilment type — see computeCheckoutTotals. They share the
   // payment, the idempotency key and a checkout group id; index 0 is the
   // primary.
@@ -827,51 +849,109 @@ async function createOrder(req, res) {
         }
       : { isB2B: false, companyName: '', gstin: '' };
 
+  // Wallet money is taken inside the transaction below; the order is written
+  // as paid, and if the debit fails the whole checkout rolls back.
+  if (paymentMethod === 'WALLET') paymentStatus = 'PAID';
+
+  // Each seller line's commission terms are frozen onto it here, at
+  // checkout, so a rule edited later cannot change what it is charged.
+  // Built before the transaction: it only reads.
+  const orderDocs = await accounting.attachCommissionSnapshots(
+    orderGroups.map((group, index) => ({
+      // The primary carries the id the coupon was redeemed against.
+      ...(index === 0 ? { _id: primaryOrderId } : {}),
+      user: req.user._id,
+      items: group.items,
+      shippingAddress,
+      subtotal: group.subtotal,
+      discountAmount: group.discountAmount,
+      couponCode: normalizedCouponCode,
+      shippingFee: group.shippingFee,
+      platformFee: group.platformFee,
+      total: group.total,
+      paymentMethod,
+      paymentStatus,
+      razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
+      razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
+      idempotencyKey,
+      fulfillmentType: group.fulfillmentType,
+      checkoutGroupId,
+      checkoutGroupIndex: index,
+      cjLogisticName: group.fulfillmentType === 'DROPSHIP' ? quote?.cjLogisticName || null : null,
+      b2b: b2bSnapshot,
+      status: 'PENDING',
+    }))
+  );
+
+  // Stock, wallet, the orders, the wallet ledger row and the emptied cart
+  // commit together or not at all. They used to be separate writes undone
+  // by hand on error — which a crash or restart between two of them skipped,
+  // leaving stock held or wallet money taken with no order to show for it.
+  // Two checkouts racing for the last unit conflict inside the transaction;
+  // the driver retries the loser, whose conditional $inc then finds no stock.
   let orders;
+  const session = await mongoose.startSession();
   try {
-    // ordered: the first failure stops the batch, and anything already
-    // written is removed below, so a checkout never ends up half-placed.
-    // Each seller line's commission terms are frozen onto it here, at
-    // checkout, so a rule edited later cannot change what it is charged.
-    orders = await Order.insertMany(
-      await accounting.attachCommissionSnapshots(orderGroups.map((group, index) => ({
-        // The primary carries the id the coupon was redeemed against.
-        ...(index === 0 ? { _id: primaryOrderId } : {}),
-        user: req.user._id,
-        items: group.items,
-        shippingAddress,
-        subtotal: group.subtotal,
-        discountAmount: group.discountAmount,
-        couponCode: normalizedCouponCode,
-        shippingFee: group.shippingFee,
-        platformFee: group.platformFee,
-        total: group.total,
-        paymentMethod,
-        paymentStatus,
-        razorpayOrderId: paymentMethod === 'RAZORPAY' ? razorpayOrderId : null,
-        razorpayPaymentId: paymentMethod === 'RAZORPAY' ? razorpayPaymentId : null,
-        idempotencyKey,
-        fulfillmentType: group.fulfillmentType,
-        checkoutGroupId,
-        checkoutGroupIndex: index,
-        cjLogisticName: group.fulfillmentType === 'DROPSHIP' ? quote?.cjLogisticName || null : null,
-        b2b: b2bSnapshot,
-        status: 'PENDING',
-      }))),
-      { ordered: true }
-    );
+    await session.withTransaction(async () => {
+      const reservation = await reserveStock(items, { session });
+      if (!reservation.ok) throw new CheckoutAbort('OUT_OF_STOCK', reservation.productName);
+
+      let walletAfter = null;
+      if (paymentMethod === 'WALLET') {
+        const updatedCustomer = await Customer.findOneAndUpdate(
+          { _id: req.user._id, walletBalance: { $gte: total } },
+          { $inc: { walletBalance: -total } },
+          { new: true, session }
+        );
+        if (!updatedCustomer) throw new CheckoutAbort('INSUFFICIENT_WALLET');
+        walletAfter = updatedCustomer.walletBalance;
+      }
+
+      // ordered: the first failure stops the batch (and aborts everything).
+      // Fresh copies each attempt — a retried transaction must not reuse
+      // documents an aborted attempt already handed to Mongoose.
+      orders = await Order.insertMany(orderDocs.map((doc) => ({ ...doc })), { ordered: true, session });
+
+      if (paymentMethod === 'WALLET') {
+        await WalletTransaction.create(
+          [
+            {
+              user: req.user._id,
+              type: 'DEBIT',
+              amount: total,
+              balanceAfter: walletAfter,
+              source: 'ORDER_PAYMENT',
+              orderId: orders[0]._id,
+              status: 'SUCCESS',
+            },
+          ],
+          { session }
+        );
+      }
+
+      await Cart.updateOne({ user: req.user._id }, { $set: { items: [] } }, { session });
+    });
   } catch (err) {
-    await Order.deleteMany({ checkoutGroupId });
-    await releaseStock(items);
+    // Nothing above was committed. Only what lives outside the transaction
+    // needs undoing: the coupon slot, and a card payment already captured.
     await releaseCouponHold();
-    if (paymentMethod === 'WALLET') {
-      await Customer.updateOne({ _id: req.user._id }, { $inc: { walletBalance: total } });
+
+    if (err instanceof CheckoutAbort && err.reason === 'OUT_OF_STOCK') {
+      if (await refundCapturedPayment('stock-out')) {
+        return res.status(409).json({
+          success: false,
+          message: `"${err.detail}" just went out of stock. Your payment is being refunded automatically.`,
+        });
+      }
+      return res.status(409).json({ success: false, message: `"${err.detail}" just went out of stock.` });
+    }
+    if (err instanceof CheckoutAbort && err.reason === 'INSUFFICIENT_WALLET') {
+      return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
     }
     if (err.code === 11000) {
       // Lost the race against a concurrent identical submission (a double
-      // tap, or the same request retried after a timeout). Everything this
-      // call reserved has just been released above, and the winner's orders
-      // are already committed — hand those back so the buyer sees them, not
+      // tap, or the same request retried after a timeout). The winner's
+      // orders are committed — hand those back so the buyer sees them, not
       // an error.
       if (idempotencyKey) {
         const winners = await Order.find({ user: req.user._id, idempotencyKey }).sort({ checkoutGroupIndex: 1 });
@@ -890,24 +970,13 @@ async function createOrder(req, res) {
       });
     }
     throw err;
+  } finally {
+    await session.endSession();
   }
   const order = orders[0];
-
-  if (paymentMethod === 'WALLET') {
-    const freshCustomer = await Customer.findById(req.user._id);
-    await WalletTransaction.create({
-      user: req.user._id,
-      type: 'DEBIT',
-      amount: total,
-      balanceAfter: freshCustomer.walletBalance,
-      source: 'ORDER_PAYMENT',
-      orderId: order._id,
-      status: 'SUCCESS',
-    });
-  }
-
-
-  await Cart.updateOne({ user: req.user._id }, { $set: { items: [] } });
+  // Committed: now the buyer can be told (the insert hook stays quiet inside
+  // a transaction).
+  Order.announcePlaced(orders);
 
   await createNotification({
     userId: req.user._id,

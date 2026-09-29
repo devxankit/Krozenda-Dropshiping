@@ -41,6 +41,10 @@ function serializeSubOrder(order, item) {
     seller: vendorLabel(item.vendorDoc),
     buyer: order.user?.name || '',
     status: item.status,
+    // Marked delivered by the seller alone: shows delivered, but is not paid
+    // out until confirmed (confirmSubOrderDelivery / the carrier).
+    deliveryConfirmedBy: item.deliveryConfirmedBy || null,
+    awaitingDeliveryConfirmation: item.status === 'DELIVERED' && item.deliveryConfirmedBy === 'SELLER',
     awb: item.trackingNumber || null,
     ageHours: ageHours(order.createdAt),
     total: toPaise(item.price * item.quantity),
@@ -74,6 +78,7 @@ async function listSubOrders(req, res) {
   else if (effectiveTab === 'in_flight') items = items.filter((s) => s.status === 'PROCESSING' || s.status === 'SHIPPED');
   else if (effectiveTab === 'exceptions') items = items.filter((s) => s.status === 'CANCELLED');
   else if (effectiveTab === 'delivered') items = items.filter((s) => s.status === 'DELIVERED');
+  else if (effectiveTab === 'unconfirmed') items = items.filter((s) => s.awaitingDeliveryConfirmation);
 
   const tabCounts = {
     all: allSerialized.length,
@@ -81,6 +86,7 @@ async function listSubOrders(req, res) {
     in_flight: allSerialized.filter((s) => s.status === 'PROCESSING' || s.status === 'SHIPPED').length,
     exceptions: allSerialized.filter((s) => s.status === 'CANCELLED').length,
     delivered: allSerialized.filter((s) => s.status === 'DELIVERED').length,
+    unconfirmed: allSerialized.filter((s) => s.awaitingDeliveryConfirmation).length,
   };
 
   res.json({ success: true, data: paged(items, { page, rowsPerPage }, tabCounts) });
@@ -120,11 +126,44 @@ async function advanceSubOrder(req, res) {
   if (!next) return res.status(400).json({ success: false, message: `Cannot advance a sub-order that is ${item.status}` });
 
   item.status = next;
+  if (next === 'DELIVERED') item.deliveryConfirmedBy = 'ADMIN';
   if (awb) item.trackingNumber = awb;
   item.statusHistory.push({ status: next, at: new Date() });
   await order.save();
 
   res.json({ success: true, message: `Advanced to ${next}`, data: serializeSubOrder(order, { ...item.toObject(), vendorDoc: item.vendor }) });
+}
+
+// POST /admin/fulfilment/sub-orders/:id/confirm-delivery — an admin vouches
+// for a line the SELLER marked delivered, which releases it to settlement.
+// Atomic on the line still being seller-declared, so a double click or a
+// carrier update landing first changes nothing.
+async function confirmSubOrderDelivery(req, res) {
+  const parsed = parseSubOrderId(req.params.id);
+  if (!parsed) return res.status(400).json({ success: false, message: 'Invalid sub-order id' });
+
+  const existing = await Order.findById(parsed.orderId).select('items.product items.variantId');
+  if (!existing) return res.status(404).json({ success: false, message: 'Order not found' });
+  const lineIndex = findSubOrderIndex(existing, parsed);
+  if (lineIndex < 0) return res.status(404).json({ success: false, message: 'Sub-order not found' });
+
+  const updated = await Order.findOneAndUpdate(
+    {
+      _id: existing._id,
+      [`items.${lineIndex}.status`]: 'DELIVERED',
+      [`items.${lineIndex}.deliveryConfirmedBy`]: 'SELLER',
+    },
+    { $set: { [`items.${lineIndex}.deliveryConfirmedBy`]: 'ADMIN' } },
+    { new: true }
+  )
+    .populate('user', 'name')
+    .populate('items.vendor', 'name business.businessName');
+  if (!updated) {
+    return res.status(409).json({ success: false, message: 'This line is not waiting for a delivery confirmation' });
+  }
+
+  const item = updated.items[lineIndex];
+  res.json({ success: true, message: 'Delivery confirmed', data: serializeSubOrder(updated, { ...item.toObject(), vendorDoc: item.vendor }) });
 }
 
 async function cancelSubOrder(req, res) {
@@ -386,6 +425,7 @@ async function resolveCancellationRefund(req, res) {
 }
 
 module.exports = {
+  confirmSubOrderDelivery,
   listSubOrders,
   advanceSubOrder,
   cancelSubOrder,

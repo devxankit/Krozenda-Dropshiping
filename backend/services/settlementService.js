@@ -15,7 +15,8 @@ const { fromPaise } = require('../utils/money');
 //
 // What makes a delivered line settleable:
 //
-//   1. the line is DELIVERED, and
+//   1. the line is DELIVERED — confirmed by the carrier or an admin, not
+//      only by the seller who marked it — and
 //   2. its sale has actually been posted to the ledger — which for a COD
 //      order means the courier has remitted the cash (task §12), and
 //   3. the hold window since delivery has elapsed, so a return raised inside
@@ -77,7 +78,7 @@ async function collectEligibleLines({ now = new Date(), vendorId = null } = {}) 
 
   const orderIds = [...new Set(ledger.map((entry) => String(entry._id.order)))];
   const orders = await Order.find({ _id: { $in: orderIds } })
-    .select('items.product items.status items.vendor items.name items.quantity deliveredAt paymentMethod razorpayPaymentId codRemittedAt status')
+    .select('items.product items.status items.deliveryConfirmedBy items.vendor items.name items.quantity deliveredAt paymentMethod razorpayPaymentId codRemittedAt status')
     .lean();
   const orderById = new Map(orders.map((order) => [String(order._id), order]));
 
@@ -96,6 +97,9 @@ async function collectEligibleLines({ now = new Date(), vendorId = null } = {}) 
         String(candidate.vendor) === String(entry._id.vendor)
     );
     if (!item || item.status !== 'DELIVERED') continue;
+    // Delivered on the seller's word alone is not delivered for payout:
+    // it waits for the carrier or an admin to confirm it.
+    if (item.deliveryConfirmedBy === 'SELLER') continue;
 
     // Hold window. `deliveredAt` is order-level on this platform, so a line
     // with no delivery timestamp is not yet measurable and stays held.

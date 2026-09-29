@@ -280,6 +280,9 @@ async function updateMyOrderItemStatus(req, res) {
   // PENDING -> PROCESSING is the acceptance. Stamped once, and never
   // overwritten by a later move down the chain.
   if (status === 'PROCESSING' && !item.acceptedAt) item.acceptedAt = new Date();
+  // The seller's own word: the line shows delivered, but its payout waits for
+  // the carrier or an admin to confirm it (settlementService).
+  if (status === 'DELIVERED') item.deliveryConfirmedBy = 'SELLER';
   if (status === 'CANCELLED') item.rejectionReason = trimmedReason.slice(0, 500);
   if (courierName !== undefined) item.courierName = courierName.trim();
   if (trackingNumber !== undefined) item.trackingNumber = trackingNumber.trim();

@@ -98,6 +98,11 @@ const orderItemSchema = new mongoose.Schema(
     // independently in a multi-vendor cart, without touching other sellers'
     // items or the parent order's status.
     status: { type: String, enum: STATUSES, default: 'PENDING' },
+    // Who said this line was delivered. A seller's own word (SELLER) is not
+    // enough to pay them for it: settlement holds such a line until the
+    // carrier confirms it (CARRIER) or an admin does (ADMIN). Null on lines
+    // delivered before this existed — those stay settleable as before.
+    deliveryConfirmedBy: { type: String, enum: ['CARRIER', 'ADMIN', 'SELLER', null], default: null },
     // When the seller accepted this line (PENDING -> PROCESSING). Null while
     // it is still waiting on them, which is what makes an acceptance SLA
     // measurable at all.
@@ -347,6 +352,11 @@ orderSchema.post('save', function whatsappOnSave() {
 
 orderSchema.post('insertMany', function whatsappOnInsert(docs) {
   if (!whatsapp().isEnabled()) return;
+  // Inserted inside a transaction: nothing is committed yet (the gateway call
+  // reads the order back and would find nothing), and a retried transaction
+  // would announce it twice. The caller announces after commit instead —
+  // see Order.announcePlaced, used by checkout.
+  if (docs?.[0]?.$session?.()) return;
   for (const doc of docs || []) sendWhatsapp(doc._id, 'PLACED');
 });
 
@@ -415,6 +425,11 @@ Order.LEGACY_INDEX_NAMES = LEGACY_INDEX_NAMES;
 Order.PAYMENT_METHODS = PAYMENT_METHODS;
 Order.PAYMENT_STATUSES = PAYMENT_STATUSES;
 Order.isFullyDelivered = isFullyDelivered;
+// "Order placed" for orders written inside a transaction, once it committed.
+Order.announcePlaced = (orders) => {
+  if (!whatsapp().isEnabled()) return;
+  for (const order of orders || []) sendWhatsapp(order._id, 'PLACED');
+};
 Order.STATUSES = STATUSES;
 
 module.exports = Order;

@@ -11,10 +11,15 @@ const RETURNS = ADMIN_PERMISSIONS.RETURNS_MANAGE
 
 const pretty = (status) => String(status).replace(/_/g, ' ')
 
-export const subOrderRowActions = ({ open, advance, onCancel }) => (row) => {
+export const subOrderRowActions = ({ open, advance, confirmDelivery, onCancel }) => (row) => {
   const next = nextSubOrderStatus(row.status)
   return [
     { label: 'Open', icon: 'externalLink', onSelect: () => open(row) },
+    // Only on a line the SELLER marked delivered: until someone vouches for
+    // it (or the carrier confirms), it is held out of settlement.
+    ...(row.awaitingDeliveryConfirmation && confirmDelivery
+      ? [{ label: 'Confirm delivery', icon: 'check', permission: MANAGE, onSelect: () => confirmDelivery(row) }]
+      : []),
     {
       label: next ? `Mark ${pretty(next)}` : 'No further step',
       icon: 'check',

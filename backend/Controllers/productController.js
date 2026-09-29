@@ -864,7 +864,8 @@ async function decideProductApproval(req, res) {
 
   product.approvalStatus = decision;
   product.rejectionReason = decision === 'REJECTED' ? (rejectionReason || '').trim() : '';
-  product.isActive = decision === 'APPROVED';
+  // A seller who set the product Inactive keeps it off after approval.
+  product.isActive = decision === 'APPROVED' && product.status !== 'Inactive';
   await product.save();
 
   res.json({

@@ -116,6 +116,12 @@ async function syncOrderFromShipment(shipment) {
     // A cancelled line is not dragged back into the flow by a stray carrier
     // event on a shipment that also contained it.
     if (item.status === 'CANCELLED') continue;
+    // The carrier confirming delivery is what makes a line payable — also
+    // when the seller had already marked it delivered themselves.
+    if (buyerStatus === 'DELIVERED' && item.deliveryConfirmedBy !== 'CARRIER') {
+      item.deliveryConfirmedBy = 'CARRIER';
+      changed = true;
+    }
     if (item.status === buyerStatus) continue;
 
     item.status = buyerStatus;

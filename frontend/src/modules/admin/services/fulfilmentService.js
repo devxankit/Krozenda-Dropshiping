@@ -110,6 +110,10 @@ export const fetchInvoiceDetail = (invoiceId) =>
 
 // --- writes ---------------------------------------------------------------
 
+// Vouch for a line the seller marked delivered, releasing it to settlement.
+export const confirmSubOrderDelivery = ({ id }) =>
+  mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/confirm-delivery`, body: {}, schema: subOrderSchema, live: true })
+
 export const advanceSubOrder = ({ id, awb }) =>
   mutateResource({ path: `/admin/fulfilment/sub-orders/${id}/advance`, body: { awb }, fixture: (p) => fixtures.advanceSubOrderFixture(id, p), schema: subOrderSchema, live: true })
 

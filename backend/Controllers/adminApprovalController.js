@@ -226,7 +226,9 @@ async function decide(req, res, decision) {
 
   doc.approvalStatus = decision;
   if (decision === 'REJECTED') doc.rejectionReason = (req.body.reason || '').trim();
-  if (decision === 'APPROVED' && parsed.kind === 'product') doc.isActive = true;
+  // Approved products go live — unless the seller has set theirs Inactive
+  // (e.g. while an edit was being re-reviewed); that choice is kept.
+  if (decision === 'APPROVED' && parsed.kind === 'product') doc.isActive = doc.status !== 'Inactive';
   await doc.save();
 
   if (commission) {
