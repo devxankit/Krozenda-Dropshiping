@@ -21,39 +21,6 @@ function search(rows, term, fields) {
   return rows.filter((row) => fields.some((f) => String(row[f] ?? '').toLowerCase().includes(needle)))
 }
 
-// The billing specification's platform_configurations document, rendered as a
-// form rather than as JSON. The `changed` list drives the unsaved indicator.
-export function businessRulesFixture() {
-  return {
-    sellerModel: {
-      commissionType: 'percentage',
-      commissionRate: 15,
-      gstOnCommissionRate: 18,
-      tcsSec52Rate: 1,
-      tdsSec194oRate: 1,
-      settlementHoldDays: 30,
-      shippingBearer: 'buyer',
-    },
-    dropshipModel: {
-      defaultMarginPercentage: 25,
-      settlementHoldDays: 30,
-      merchantOfRecord: 'Krozenda entity',
-      b2bGstCreditEnabled: true,
-    },
-    logistics: { defaultFlatShippingRate: 5000, freeShippingThreshold: 49900 },
-    payouts: {
-      autoPayoutEnabled: true,
-      approvalMode: 'maker_checker',
-      minimumPayoutAmount: 25000,
-      schedule: 'Weekly — every Monday',
-      transferMode: 'IMPS',
-      lastRunAt: '2 Sep 2026, 02:00',
-    },
-    returns: { windowDays: 7, minimumEvidencePhotos: 2, rtoCostBearer: 'vendor' },
-    changed: ['commissionRate', 'minimumPayoutAmount', 'rtoCostBearer'],
-  }
-}
-
 export function generalSettingsFixture() {
   return {
     platform: {
@@ -178,28 +145,4 @@ export function supportTicketFixture(query = {}) {
   rows = search(rows, filters.search, ['id', 'subject', 'raisedBy', 'category'])
   if (filters.party) rows = rows.filter((t) => t.party === filters.party)
   return page(rows, TICKETS, TICKET_TABS, query)
-}
-
-export function adminProfileFixture() {
-  return {
-    name: 'Priya Sharma',
-    email: 'priya.sharma@krozenda.in',
-    phone: '+91 98204 11276',
-    role: 'Super Admin',
-    joinedAt: '1 Jan 2026',
-    twoFactorEnabled: true,
-    sessions: [
-      { id: 'ses-1', device: 'Chrome on macOS', location: 'Mumbai, IN', lastActiveAt: 'Active now', current: true },
-      { id: 'ses-2', device: 'Safari on iPhone', location: 'Mumbai, IN', lastActiveAt: '2 Sep 2026, 08:12', current: false },
-      { id: 'ses-3', device: 'Chrome on Windows', location: 'Pune, IN', lastActiveAt: '28 Aug 2026, 17:40', current: false },
-    ],
-    notifications: [
-      { key: 'payout_failed', label: 'A payout fails', email: true, push: true },
-      { key: 'kyc_submitted', label: 'A seller submits KYC', email: true, push: false },
-      { key: 'batch_awaiting', label: 'A settlement batch needs approval', email: true, push: true },
-      { key: 'return_raised', label: 'A return request is raised', email: false, push: true },
-      { key: 'integration_down', label: 'An integration goes down', email: true, push: true },
-      { key: 'weekly_digest', label: 'Weekly performance digest', email: true, push: false },
-    ],
-  }
 }

@@ -43,9 +43,16 @@ export function CustomersPage() {
         selectable
         bulkLabel="customers selected"
         bulkActions={[
-          { label: 'Send campaign', icon: 'campaigns', onClick: () => {} },
-          { label: 'Export selected', icon: 'download', onClick: () => {} },
-          { label: 'Block', icon: 'lock', tone: 'danger', onClick: () => {} },
+          {
+            label: 'Export selected',
+            icon: 'download',
+            onClick: () =>
+              downloadTableCsv(
+                'customers-selected.csv',
+                CUSTOMER_COLUMNS,
+                list.items.filter((row) => list.selectedKeys.includes(row.id)),
+              ),
+          },
         ]}
         itemLabel="customers"
         emptyIcon="customers"

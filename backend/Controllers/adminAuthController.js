@@ -269,11 +269,21 @@ async function changePassword(req, res) {
       return res.status(404).json({ success: false, message: 'Admin not found' });
     }
 
-    if (user.password && currentPassword) {
+    // The current password is required whenever the account has one: a
+    // stolen session token alone must not be enough to take the account over.
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(400).json({ success: false, message: 'Enter your current password' });
+      }
+      // Guesses share the sign-in budget for this account, so a session
+      // token cannot be used to brute-force the password either.
+      const attempt = await reserveAttempt('admin', user.email || String(user._id));
+      if (!attempt.allowed) return tooManyAttempts(res, attempt.retryAfterSeconds);
       const match = await user.comparePassword(currentPassword);
       if (!match) {
         return res.status(400).json({ success: false, message: 'Current password is incorrect' });
       }
+      await clearAttempts('admin', user.email || String(user._id));
     }
 
     user.password = newPassword;

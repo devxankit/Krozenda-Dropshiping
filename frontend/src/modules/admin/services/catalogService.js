@@ -169,6 +169,12 @@ export async function createCategory(payload) {
   return data.data
 }
 
+// Bulk create from CSV rows. `dryRun` checks every row and writes nothing.
+export async function importCategories({ rows, dryRun = false }) {
+  const { data } = await api.post('/admin/catalog/categories/import', { rows, dryRun })
+  return data.data
+}
+
 export async function updateCategory({ id, ...payload }) {
   const body = payload instanceof FormData ? payload : toFormData(payload)
   const { data } = await api.put(`/admin/catalog/categories/${id}`, body)

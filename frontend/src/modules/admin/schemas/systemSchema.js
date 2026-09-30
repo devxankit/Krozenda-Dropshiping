@@ -13,42 +13,23 @@ const paged = (item) =>
     tabCounts: z.record(z.string(), z.number()),
   })
 
-// The billing specification's `platform_configurations` document, as a form.
-// Everything here is DATA — no financial logic is hardcoded (billing spec §7).
+// The marketplace's money policy — the backend's AccountingConfig singleton.
+// Every field is enforced: by the ledger (commission base, gateway fee, who
+// keeps shipping), by settlement (hold days, COD remittance) and by the payout
+// jobs (mode, window). returnWindowDays is read-only (set in code).
 export const businessRulesSchema = z.object({
-  sellerModel: z.object({
-    commissionType: z.enum(['percentage', 'fixed']),
-    commissionRate: z.number(),
-    gstOnCommissionRate: z.number(),
-    tcsSec52Rate: z.number(),
-    tdsSec194oRate: z.number(),
-    settlementHoldDays: z.number().int(),
-    shippingBearer: z.enum(['buyer', 'seller', 'platform']),
-  }),
-  dropshipModel: z.object({
-    defaultMarginPercentage: z.number(),
-    settlementHoldDays: z.number().int(),
-    merchantOfRecord: z.string(),
-    b2bGstCreditEnabled: z.boolean(),
-  }),
-  logistics: z.object({
-    defaultFlatShippingRate: z.number().int(),
-    freeShippingThreshold: z.number().int(),
-  }),
-  payouts: z.object({
-    autoPayoutEnabled: z.boolean(),
-    approvalMode: z.enum(['automatic', 'maker_checker']),
-    minimumPayoutAmount: z.number().int(),
-    schedule: z.string(),
-    transferMode: z.string(),
-    lastRunAt: z.string().nullable(),
-  }),
-  returns: z.object({
-    windowDays: z.number().int(),
-    minimumEvidencePhotos: z.number().int(),
-    rtoCostBearer: z.enum(['buyer', 'vendor', 'platform']),
-  }),
-  changed: z.array(z.string()),
+  defaultCommissionPercent: z.number(),
+  maxCommissionPercent: z.number(),
+  commissionBase: z.enum(['LINE_NET_OF_SELLER_FUNDED_DISCOUNT', 'LINE_GROSS', 'LINE_NET']),
+  gatewayFeePercent: z.number(),
+  gatewayFeeFixed: z.number(),
+  gatewayFeeBearer: z.enum(['PLATFORM', 'SELLER']),
+  shippingRevenueBearer: z.enum(['PLATFORM', 'SELLER']),
+  settlementHoldDays: z.number(),
+  requireCodRemittanceBeforeSettlement: z.boolean(),
+  sellerSettlementMode: z.enum(['AUTO', 'MANUAL']),
+  sellerSettlementWindowDays: z.number(),
+  returnWindowDays: z.number(),
 })
 
 export const generalSettingsSchema = z.object({
@@ -228,23 +209,14 @@ export const supportTicketDetailSchema = z.object({
   updatedAt: z.union([z.string(), z.date()]),
 })
 
+// The signed-in admin's own account, from GET /admin/auth/me.
 export const adminProfileSchema = z.object({
   name: z.string(),
   email: z.string(),
-  phone: z.string(),
+  mobileNumber: z.string(),
+  image: z.string().nullable(),
   role: z.string(),
-  joinedAt: z.string(),
-  twoFactorEnabled: z.boolean(),
-  sessions: z.array(
-    z.object({
-      id: z.string(),
-      device: z.string(),
-      location: z.string(),
-      lastActiveAt: z.string(),
-      current: z.boolean(),
-    }),
-  ),
-  notifications: z.array(
-    z.object({ key: z.string(), label: z.string(), email: z.boolean(), push: z.boolean() }),
-  ),
+  roleName: z.string(),
+  joinedAt: z.string().nullable(),
+  permissionCount: z.number().int(),
 })

@@ -2,6 +2,7 @@ const express = require('express');
 const {
   listCategories,
   createCategory,
+  importCategories,
   updateCategory,
   updateCategoryStatus,
   updateCategoryTopStatus,
@@ -23,6 +24,7 @@ const uploadCategoryImage = [
 
 router.get('/', listCategories);
 router.post('/', ...uploadCategoryImage, createCategory);
+router.post('/import', importCategories);
 router.put('/:id', ...uploadCategoryImage, updateCategory);
 router.patch('/:id/status', updateCategoryStatus);
 router.patch('/:id/top', updateCategoryTopStatus);

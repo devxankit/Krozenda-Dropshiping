@@ -1,4 +1,4 @@
-import { Badge, Button, Icon } from '../../../../components/ui'
+import { Badge, Icon } from '../../../../components/ui'
 import { INTEGRATION_HEALTH_LABELS, INTEGRATION_HEALTH_TONE } from '../../constants'
 import { KeyValueList, SectionCard } from '../display'
 
@@ -14,14 +14,9 @@ export function IntegrationCard({ integration }) {
       title={integration.name}
       description={integration.purpose}
       actions={
-        <>
-          <Badge tone={INTEGRATION_HEALTH_TONE[integration.status]} dot>
-            {INTEGRATION_HEALTH_LABELS[integration.status]}
-          </Badge>
-          <Button variant="secondary" size="sm" icon="settings">
-            Configure
-          </Button>
-        </>
+        <Badge tone={INTEGRATION_HEALTH_TONE[integration.status]} dot>
+          {INTEGRATION_HEALTH_LABELS[integration.status]}
+        </Badge>
       }
     >
       <div className="px-4 py-2">

@@ -62,7 +62,13 @@ export function IntegrationHealthPage() {
       description="Live status for the five integrations in scope. Nothing else is connected."
       controller={controller}
       actions={
-        <Button variant="secondary" size="control" icon="refresh">
+        <Button
+          variant="secondary"
+          size="control"
+          icon="refresh"
+          onClick={() => controller.refetch()}
+          isLoading={controller.isFetching}
+        >
           Re-check now
         </Button>
       }
