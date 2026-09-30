@@ -49,8 +49,13 @@ const jsonParser = express.json({
     req.rawBody = buf;
   },
 });
-const translateJsonParser = express.json({ limit: '128kb' });
-app.use((req, res, next) => (req.path.startsWith('/translate') ? translateJsonParser : jsonParser)(req, res, next));
+// The admin category import is the other: up to 500 spreadsheet rows in one
+// body (its handler caps the row count, and the route is admin-only).
+const largeJsonParser = express.json({ limit: '128kb' });
+const LARGE_BODY_PATHS = ['/translate', '/admin/catalog/categories/import'];
+app.use((req, res, next) =>
+  (LARGE_BODY_PATHS.some((p) => req.path.startsWith(p)) ? largeJsonParser : jsonParser)(req, res, next)
+);
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Express 5 makes req.query a read-only getter, so keys are stripped in

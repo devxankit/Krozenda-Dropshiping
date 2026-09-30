@@ -4,6 +4,7 @@ import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton, PermissionGate } from '../../components/feedback'
 import { ADMIN_PERMISSIONS } from '../../constants'
 import { CategoryFormDrawer } from '../../components/catalog/CatalogForms'
+import { CategoryImportModal } from '../../components/catalog/CategoryImportModal'
 import { ConfirmDialog } from '../../components/overlay/ConfirmDialog'
 import {
   useApprovalSettingsController,
@@ -37,6 +38,7 @@ export function CategoriesPage() {
 
   const [editingCategory, setEditingCategory] = useState(null)
   const [removingCategory, setRemovingCategory] = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [page, setPage] = useState(1)
 
   const writer = useCategoryWriteController({
@@ -257,6 +259,16 @@ export function CategoriesPage() {
                 <span>Refresh</span>
               </button>
               <PermissionGate permission={MANAGE}>
+                <button
+                  type="button"
+                  onClick={() => setImportOpen(true)}
+                  disabled={isSellerOnlyOn}
+                  title={isSellerOnlyOn ? 'Own stock is off — turn it on from the sidebar to add categories' : 'Import categories from a CSV file'}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="upload" className="h-3.5 w-3.5" />
+                  <span>Import</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setEditingCategory('new')}
@@ -663,6 +675,8 @@ export function CategoriesPage() {
           writer={writer}
         />
       )}
+
+      {importOpen && <CategoryImportModal isOpen onClose={() => setImportOpen(false)} writer={writer} />}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

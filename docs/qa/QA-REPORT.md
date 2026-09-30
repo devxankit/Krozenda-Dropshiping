@@ -442,3 +442,91 @@ Seller payouts are unaffected: they run from `Jobs/settlementAutomationJob.js`, 
 Neither is in the sidebar today. The owner should choose between adding each to the Settings sub-menu and deleting it.
 
 Verified: `vite build` OK; no new lint errors (one latent `no-undef` disappeared with dead code); reachability re-run shows only the two kept screens; admin E2E 9 passed / 3 skipped by design (smoke: 43 sidebar modules, 0 problems); backend invoice, RBAC, security, shell and money suites 99/99.
+
+## 18. Category import (owner request, 2026-09-30)
+
+Catalog → Categories now has an **Import** button next to *Add Category*. The button is disabled in seller-only mode, like *Add Category*.
+
+**How it works:**
+- The admin uploads a CSV. A template can be downloaded from the dialog.
+- The server checks every row in a dry run, and the dialog previews each row as *Will be created*, *Skipped* or *Error* with the reason.
+- Nothing is written until the admin confirms.
+
+**CSV columns:**
+- `name` (required)
+- `active`, `top_category`, `food`: yes/no, y/n, true/false or 1/0. A blank cell takes the create form's default: active yes, the other two no.
+- `commission_type` (PERCENTAGE or FIXED) with `commission_value`: optional.
+
+**Rules** (the same as the create form, plus import-specific ones):
+- Seller-only mode is refused.
+- Commission uses the same limits and permission as the create form. A staff member without the commission permission gets an error on those rows only.
+- Names already in the catalogue, or repeated in the file, are skipped. The match ignores case and extra spaces, so running the same file twice creates nothing twice.
+- A file can have at most 500 rows, and a name at most 100 characters.
+- Images are not imported. Add them from each category afterwards.
+
+**Backend:** `POST /admin/catalog/categories/import` (`{ rows, dryRun }`), behind `admin.catalog.categories`. That path alone gets a 128kb JSON limit, the same exception `/translate` already has. Every other route stays at 10kb.
+
+**Tests:**
+- `tests/qa/category-import.test.js`, 7 tests: dry run writes nothing, flags and commission, re-run skips, bad rows, 300/501 rows, seller-only mode, permissions.
+- E2E on desktop and mobile: upload, preview, import, the category appears in the list, and a second upload of the same file skips both rows.
+- Admin smoke: 0 problems.
+
+## 19. Sidebar audit — admin and seller (2026-09-30)
+
+A new crawl E2E (`e2e/tests/panel-crawl.spec.js`, helper `crawl.js`) signs in and opens every screen reachable by clicking: the sidebar, settings sub-menus, tabs and detail pages, one per route pattern. Each screen must show no error state, throw no page error and get no unexpected 4xx/5xx. A code scan looked for handler-less buttons, inert inputs and fixture data.
+
+- **Seller:** all 20 sidebar modules clean. Every seller service is live (no fixtures), and there are no inert controls and no hard-coded figures.
+- **Admin:** 41 sidebar modules, 47 screens in all. One problem remains: Settings → *Commission & business rules* (no backend; see below).
+
+Fixed now (owner-approved):
+- **Mocks default off** (`src/config/env.js`). Fixtures load only when `VITE_USE_MOCKS=true` is set explicitly. Before this, an unset variable meant mocks on, so a screen with no backend showed invented data instead of its error state.
+- **Customers:**
+  - The bulk *Export selected* action now downloads the selected rows. It was a no-op.
+  - *Send campaign* and *Block* were removed from the bulk bar; they had no backend. The per-row Block/Unblock is real and stays.
+- **Integration health:**
+  - *Re-check now* re-reads the server's integration configuration.
+  - The per-card *Configure* buttons were removed; they did nothing.
+- **Backups:** *Test a restore* was removed; it did nothing.
+
+E2E: an export-selected and re-check test was added to `admin-panel.spec.js` (5/5 pass). The seller crawl passes.
+
+Open, awaiting the owner:
+- **Settings → Commission & business rules.** It has no backend: the page 404s, or shows fixtures with mocks on. Its inputs are inert. The real commission and GST settings already live under Settings → General → Commission & GST. Remove the page, or build it?
+- **My profile** (topbar). There is no `GET /admin/profile`, and Change password, End session and the notification switches are inert. A "General & Profile" tab exists under Settings → General. Build the backend, or point the topbar there and remove the page?
+- The admin crawl fails until the business-rules decision is made.
+
+## 20. Business rules and My profile built (owner decision "build both", 2026-09-30)
+
+**Settings → Commission & business rules** is now a real form over the accounting policy the system already enforces: `GET/PATCH /admin/accounting/config` (AccountingConfig).
+
+- Sections:
+  - **Commission:** limit and base.
+  - **Payment gateway fee:** % plus fixed amount, and who pays it.
+  - **Delivery charge:** who keeps it.
+  - **Settlement:** hold after delivery, and whether to wait for COD cash.
+  - **Seller payouts:** automatic or manual, and the extra wait before paying.
+- Every field is read by the ledger, settlement or the payout jobs. No invented figures remain: the old 15% commission, weekly schedule, IMPS, maker-checker and "changed from" notes are gone.
+- Only changed fields are sent. The save writes the existing audit entry `ACCOUNTING_CONFIG_UPDATED`.
+- The default commission rate stays under General → Commission & GST, which writes the same record.
+- The return window (7 days, set in code) is shown read-only. The page warns when the settlement hold is shorter than the return window.
+- Staff without `admin.accounting.commission.manage` see the rules read-only. Reading needs `admin.accounting.view`.
+
+**My profile** (topbar) reads `GET /admin/auth/me`:
+- Name, email and mobile can be edited, and the photo changed, via `PUT /admin/auth/profile`. The topbar updates at once.
+- The password can be changed via `PUT /admin/auth/change-password`.
+- The fixture sections were removed rather than faked: sessions, notification preferences and the two-factor badge. Nothing stores sessions (JWT) or preferences.
+
+**Security fixes found on the way** (`adminAuthController.changePassword`):
+- The current password was only checked *if it was sent*, so a stolen session token alone could set a new password. It is now required whenever the account has a password.
+- Wrong current-password guesses now share the account's sign-in throttle (5 per 15 min, then a lock), so a token cannot be used to brute-force the password.
+
+**Tests:**
+- Backend `tests/qa/admin-profile-rules.test.js`, 6 tests:
+  - config payload and return window
+  - save and bounds
+  - view/manage permissions
+  - `me` has no password
+  - the current password is required
+  - guesses are throttled
+- The audit-log suite still passes.
+- E2E: *business rules survive a reload* (plus the hold-vs-return warning) passes.

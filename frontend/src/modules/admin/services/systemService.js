@@ -52,11 +52,16 @@ export async function assignSupportTicket({ id, owner }) {
 
 const one = (path, fixture, schema, live = false) => () => fetchResource({ path, fixture, schema, live })
 
-export const fetchBusinessRules = one(
-  '/admin/settings/business-rules',
-  fixtures.businessRulesFixture,
-  businessRulesSchema,
-)
+// Business rules are the accounting policy the ledger and payout jobs run on.
+export async function fetchBusinessRules() {
+  const { data } = await api.get('/admin/accounting/config')
+  return businessRulesSchema.parse(data.data)
+}
+
+export async function saveBusinessRules(changes) {
+  const { data } = await api.patch('/admin/accounting/config', changes)
+  return businessRulesSchema.parse(data.data)
+}
 export const fetchGeneralSettings = one(
   '/admin/settings/general',
   fixtures.generalSettingsFixture,
@@ -125,4 +130,19 @@ export async function downloadBackup(runId) {
   window.URL.revokeObjectURL(url)
 }
 
-export const fetchAdminProfile = one('/admin/profile', fixtures.adminProfileFixture, adminProfileSchema)
+// The signed-in admin's own account. Sensitive fields never leave the server
+// (the password is excluded by the model).
+export async function fetchAdminProfile() {
+  const { data } = await api.get('/admin/auth/me')
+  const admin = data.data.admin || {}
+  return adminProfileSchema.parse({
+    name: admin.name || '',
+    email: admin.email || '',
+    mobileNumber: admin.mobileNumber || '',
+    image: admin.image || null,
+    role: admin.role || 'staff',
+    roleName: admin.role === 'admin' ? 'Super admin' : admin.roleId?.name || 'Staff',
+    joinedAt: admin.createdAt || null,
+    permissionCount: (data.data.permissions || []).length,
+  })
+}

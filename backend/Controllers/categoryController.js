@@ -313,10 +313,158 @@ async function deleteCategory(req, res) {
   });
 }
 
+// POST /admin/catalog/categories/import  { rows: [...], dryRun }
+//
+// Bulk create from a spreadsheet. The client parses the CSV and sends rows of
+//   { name, isActive, isTopCategory, isFood, commissionType, commissionValue }
+// (only `name` is required). Every row is checked the same way the one-by-one
+// create checks it, and each gets its own outcome:
+//
+//   create   — will be (or was) created
+//   skip     — a category with that name already exists, or it repeats an
+//              earlier row of the file; names compare case-insensitively, so
+//              re-running the same file creates nothing twice
+//   error    — the row cannot be imported, with the reason
+//
+// `dryRun: true` answers with the outcomes and writes nothing, so the screen
+// can show a preview; the real run creates the `create` rows. Images are not
+// imported — add them from the category form afterwards.
+const IMPORT_MAX_ROWS = 500;
+const IMPORT_MAX_NAME = 100;
+
+// Spreadsheet-friendly booleans: yes/no, true/false, y/n, 1/0. Blank = default.
+function parseFlag(value, fallback) {
+  if (value === undefined || value === null || String(value).trim() === '') return { value: fallback };
+  const v = String(value).trim().toLowerCase();
+  if (['yes', 'y', 'true', '1'].includes(v)) return { value: true };
+  if (['no', 'n', 'false', '0'].includes(v)) return { value: false };
+  return { error: `"${value}" is not yes or no` };
+}
+
+const nameKey = (name) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+async function importCategories(req, res) {
+  const settings = await CatalogSettings.getSettings();
+  if (settings.sellerOnlyMode) {
+    return res.status(403).json({ success: false, message: SELLER_ONLY_MESSAGE });
+  }
+
+  const { rows, dryRun } = req.body || {};
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ success: false, message: 'The file has no category rows' });
+  }
+  if (rows.length > IMPORT_MAX_ROWS) {
+    return res.status(400).json({ success: false, message: `Import at most ${IMPORT_MAX_ROWS} categories at a time` });
+  }
+
+  const existing = await Category.find().select('name').lean();
+  const taken = new Set(existing.map((c) => nameKey(c.name)));
+  const seenInFile = new Set();
+
+  const results = [];
+  for (const [index, raw] of rows.entries()) {
+    const row = raw && typeof raw === 'object' ? raw : {};
+    const name = String(row.name ?? '').trim().replace(/\s+/g, ' ');
+    const result = { row: index + 1, name, outcome: 'create', reason: '' };
+    results.push(result);
+
+    if (!name) {
+      Object.assign(result, { outcome: 'error', reason: 'Name is required' });
+      continue;
+    }
+    if (name.length > IMPORT_MAX_NAME) {
+      Object.assign(result, { outcome: 'error', reason: `Name is longer than ${IMPORT_MAX_NAME} characters` });
+      continue;
+    }
+    const key = nameKey(name);
+    if (taken.has(key)) {
+      Object.assign(result, { outcome: 'skip', reason: 'Already exists' });
+      continue;
+    }
+    if (seenInFile.has(key)) {
+      Object.assign(result, { outcome: 'skip', reason: 'Repeats an earlier row' });
+      continue;
+    }
+
+    const flags = {};
+    let flagError = '';
+    for (const [field, fallback, label] of [
+      ['isActive', true, 'Active'],
+      ['isTopCategory', false, 'Top category'],
+      ['isFood', false, 'Food'],
+    ]) {
+      const parsed = parseFlag(row[field], fallback);
+      if (parsed.error) {
+        flagError = `${label}: ${parsed.error}`;
+        break;
+      }
+      flags[field] = parsed.value;
+    }
+    if (flagError) {
+      Object.assign(result, { outcome: 'error', reason: flagError });
+      continue;
+    }
+
+    // Same limits and permission as setting commission in the create form.
+    let commission = null;
+    try {
+      const rowReq = Object.create(req, {
+        body: { value: { commissionType: row.commissionType, commissionValue: row.commissionValue } },
+      });
+      commission = await prepareCommission(rowReq, 'CATEGORY', null);
+    } catch (err) {
+      if (!(err instanceof CommissionInputError)) throw err;
+      Object.assign(result, { outcome: 'error', reason: err.message });
+      continue;
+    }
+
+    seenInFile.add(key);
+    result.data = { name, ...flags, commission };
+  }
+
+  const summary = {
+    create: results.filter((r) => r.outcome === 'create').length,
+    skip: results.filter((r) => r.outcome === 'skip').length,
+    error: results.filter((r) => r.outcome === 'error').length,
+  };
+
+  if (!dryRun) {
+    for (const result of results) {
+      if (result.outcome !== 'create') continue;
+      const { commission, ...fields } = result.data;
+      const category = await Category.create(fields);
+      if (commission) {
+        await setBaseCommission({
+          scope: 'CATEGORY',
+          targetId: category._id,
+          input: commission,
+          name: `${category.name} — commission`,
+          req,
+          reason: 'Set by category import',
+        });
+      }
+      result.id = category._id.toString();
+    }
+  }
+
+  res.status(dryRun ? 200 : 201).json({
+    success: true,
+    message: dryRun
+      ? `${summary.create} to create, ${summary.skip} to skip, ${summary.error} with errors`
+      : `${summary.create} categories imported`,
+    data: {
+      dryRun: Boolean(dryRun),
+      summary,
+      rows: results.map(({ data, ...r }) => ({ ...r, ...(data ? { commission: data.commission } : {}) })),
+    },
+  });
+}
+
 module.exports = {
   listCategories,
   listPublicCategories,
   createCategory,
+  importCategories,
   updateCategory,
   updateCategoryStatus,
   updateCategoryTopStatus,

@@ -378,7 +378,7 @@ const SEED_PRODUCTS = [
     stock: 65,
     weight: 0.42,
     images: [
-      'https://images.unsplash.com/photo-1609592424360-154b679d67ba?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1625772452859-1c03d5bf1137?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Dual input Type-C & Micro-USB, 22.5W Two-Way fast charging, 12-layer smart IC circuit protection, and metallic aluminum matte finish.',
@@ -398,7 +398,7 @@ const SEED_PRODUCTS = [
     weight: 0.12,
     images: [
       'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1609592424360-154b679d67ba?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Super-speed charging with advanced GaN technology, multi-protection system for overheating and voltage surge, backward compatible.',
     isActive: true,
@@ -595,7 +595,7 @@ const SEED_PRODUCTS = [
     stock: 55,
     weight: 0.6,
     images: [
-      'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Modern slim fit with room to move. Crafted with premium stretch denim and Levi’s Flex technology for maximum mobility and comfort.',
@@ -786,7 +786,7 @@ const SEED_PRODUCTS = [
     weight: 0.55,
     images: [
       'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1542272604-780c96856592?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Vintage high-waist fit with slightly tapered ankle profile, 5-pocket styling, and comfortable breathable cotton denim blend.',
     isActive: true,
@@ -1021,7 +1021,7 @@ const SEED_PRODUCTS = [
     stock: 150,
     weight: 0.2,
     images: [
-      'https://images.unsplash.com/photo-1608248597359-52e04313f8c8?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Reduces hair fall, accelerates hair growth, and strengthens follicles. Powered by Sulfur, Potassium and Redensyl. Dermatologically tested.',
@@ -1041,7 +1041,7 @@ const SEED_PRODUCTS = [
     weight: 0.12,
     images: [
       'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1567928815116-2c9b6cb6cb77?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Brightens skin tone, cleanses deeply without drying, and promotes even skin complexion. Sulfate-free, paraben-free and cruelty-free.',
     isActive: true,
@@ -1059,8 +1059,8 @@ const SEED_PRODUCTS = [
     stock: 95,
     weight: 0.13,
     images: [
-      'https://images.unsplash.com/photo-1567928815116-2c9b6cb6cb77?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608248597359-52e04313f8c8?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Exfoliates dead cells, removes sun tan, and clears skin impurities. Walnut beads gently scrub while saffron imparts a warm golden glow.',
     isActive: true,
@@ -1136,7 +1136,7 @@ const SEED_PRODUCTS = [
     weight: 0.3,
     images: [
       'https://images.unsplash.com/photo-1621607512214-68297480165e?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1559591937-e10c7104b281?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Self-sharpening stainless steel blades that never need oiling. 60 minutes cordless use, nose and ear hair trimmer attachment included.',
     isActive: true,
@@ -1173,8 +1173,8 @@ const SEED_PRODUCTS = [
     stock: 35,
     weight: 0.25,
     images: [
-      'https://images.unsplash.com/photo-1559591937-e10c7104b281?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1621607512214-68297480165e?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Removes up to 3x more plaque than manual toothbrushes. QuadPacer and SmarTimer encourage 2-minute brushing, 14-day battery life per charge.',
     isActive: true,
@@ -1371,7 +1371,7 @@ const SEED_PRODUCTS = [
     stock: 70,
     weight: 1.6,
     images: [
-      'https://images.unsplash.com/photo-1584990347449-389f4170668b?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Deep lid design controls froth spillage onto the cooker body. Induction and gas stove compatible base with durable stay-cool ergonomic handle.',
@@ -1391,7 +1391,7 @@ const SEED_PRODUCTS = [
     weight: 4.5,
     images: [
       'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1584990347449-389f4170668b?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Heavy-duty 750W motor with overload protector, multi-utility stainless steel blades, and transparent juicer jar with sieve attachment.',
     isActive: true,
@@ -1410,7 +1410,7 @@ const SEED_PRODUCTS = [
     weight: 2.8,
     images: [
       'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1584990347449-389f4170668b?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Includes fry pan, omni tawa, and kadai with glass lid. 5-layer German granite non-stick coating, metal spoon friendly, dishwasher safe.',
     isActive: true,
@@ -1428,7 +1428,7 @@ const SEED_PRODUCTS = [
     stock: 160,
     weight: 0.85,
     images: [
-      'https://images.unsplash.com/photo-1594213114663-ddf4f240f08d?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1585515320310-259814833e62?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Rapid 1500W boil element with automatic cut-off and dry-boil protection. 360-degree cordless pirouette base for right or left-hand use.',
@@ -1448,7 +1448,7 @@ const SEED_PRODUCTS = [
     weight: 1.9,
     images: [
       'https://images.unsplash.com/photo-1585515320310-259814833e62?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1594213114663-ddf4f240f08d?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
     ],
     description: '7-segment LED display for power and temperature, 93% energy saving technology, preset Indian cooking menus, and high-grade crystal glass plate.',
     isActive: true,
@@ -1467,7 +1467,7 @@ const SEED_PRODUCTS = [
     weight: 0.25,
     images: [
       'https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1584990347449-389f4170668b?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Easy string pull mechanism chops onions, ginger, and vegetables in seconds. Unbreakable BPA-free plastic container with food-grade steel blades.',
     isActive: true,
@@ -1485,7 +1485,7 @@ const SEED_PRODUCTS = [
     stock: 25,
     weight: 4.8,
     images: [
-      'https://images.unsplash.com/photo-1584990347449-389f4170668b?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1585515320310-259814833e62?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Fry with up to 90% less fat. Starfish bottom design circulates hot air evenly. 7 preset touch screen cooking modes and NutriU recipe app integration.',
@@ -1504,7 +1504,7 @@ const SEED_PRODUCTS = [
     stock: 50,
     weight: 1.05,
     images: [
-      'https://images.unsplash.com/photo-1594213114663-ddf4f240f08d?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1585515320310-259814833e62?w=800&auto=format&fit=crop&q=80',
     ],
     description: 'Cool touch outer plastic body with seamless 304 food-grade stainless steel interior. Auto shut-off on boiling and wide mouth for effortless cleaning.',

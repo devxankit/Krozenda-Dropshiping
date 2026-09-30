@@ -17,6 +17,7 @@ const { commissionBaseFor } = require('../services/accountingPosting');
 const { toPaise } = require('../utils/money');
 const { recordAudit } = require('../services/accountingAudit');
 const { paged, vendorLabel } = require('./adminAccountingController');
+const { RETURN_WINDOW_DAYS } = require('../utils/returnWindow');
 
 // Admin > Accounting > Commissions. Rules for what the marketplace charges.
 //
@@ -569,6 +570,9 @@ function serializeConfig(config) {
     sellerSettlementWindowDays: config.sellerSettlementWindowDays,
     currency: config.currency,
     updatedAt: config.updatedAt,
+    // Not editable here (utils/returnWindow is code), but the hold above only
+    // protects against returns if it is at least this long.
+    returnWindowDays: RETURN_WINDOW_DAYS,
   };
 }
 

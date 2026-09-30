@@ -167,6 +167,18 @@ export const useCategoryWriteController = ({ onSaved } = {}) => ({
     success: 'Category removed',
     onDone: onSaved,
   }),
+  previewImport: useAdminMutation({
+    mutationFn: (vars) => service.importCategories({ ...vars, dryRun: true }),
+  }),
+  runImport: useAdminMutation({
+    mutationFn: (vars) => service.importCategories({ ...vars, dryRun: false }),
+    invalidate: CATALOG,
+    success: (result) => `${result.summary.create} ${result.summary.create === 1 ? 'category' : 'categories'} imported`,
+    describe: (result) =>
+      result.summary.skip || result.summary.error
+        ? `${result.summary.skip} skipped, ${result.summary.error} with errors`
+        : undefined,
+  }),
 })
 
 export const useBrandWriteController = ({ onSaved } = {}) => ({

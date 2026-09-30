@@ -9,10 +9,10 @@ export const env = Object.freeze({
   appEnv: RAW.VITE_APP_ENV || 'development',
   apiBaseUrl: RAW.VITE_API_BASE_URL || '/api/v1',
   apiTimeoutMs: Number(RAW.VITE_API_TIMEOUT_MS) || 15000,
-  // Admin panel screens run against a zod-validated fixtures layer until the
-  // matching endpoints exist (5 of ~19 collections are modelled today). Set
-  // VITE_USE_MOCKS=false to point every admin service at the real API.
-  useMocks: RAW.VITE_USE_MOCKS !== 'false',
+  // Fixture data for the few admin reads not marked `live` in their service.
+  // Off unless VITE_USE_MOCKS=true is set explicitly: a screen whose endpoint
+  // is missing must show its error state, never invented figures.
+  useMocks: RAW.VITE_USE_MOCKS === 'true',
   mockLatencyMs: Number(RAW.VITE_MOCK_LATENCY_MS) || 320,
   razorpayKeyId: RAW.VITE_RAZORPAY_KEY_ID || '',
   firebase: Object.freeze({

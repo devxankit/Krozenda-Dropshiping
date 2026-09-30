@@ -349,7 +349,7 @@ const SEED_REVIEWS = [
     productSku: 'MAM-ONN-OIL',
     rating: 4,
     reviewText: 'Noticeable reduction in hair fall after 3 weeks of consistent use twice a week. Pleasant fragrance, not like raw onion at all!',
-    photos: ['https://images.unsplash.com/photo-1608248597359-52e04313f8c8?w=600&auto=format&fit=crop&q=80'],
+    photos: ['https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?w=600&auto=format&fit=crop&q=80'],
   },
   {
     orderKey: 'ORD-2026-0002',
@@ -397,7 +397,7 @@ const SEED_REVIEWS = [
     productSku: 'LEV-511-DNM',
     rating: 5,
     reviewText: 'Authentic Levi’s quality. The 511 slim cut is neither too tight nor baggy, just the right stretch for all-day comfort.',
-    photos: ['https://images.unsplash.com/photo-1542272604-780c96856592?w=600&auto=format&fit=crop&q=80'],
+    photos: ['https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=80'],
   },
   {
     orderKey: 'ORD-2026-0004',
@@ -417,7 +417,7 @@ const SEED_REVIEWS = [
     productSku: 'PRS-CKR-3L',
     rating: 5,
     reviewText: 'The spillage control deep lid really works! No more messy dal froth all over the gas stove. Perfect 3L size for small families.',
-    photos: ['https://images.unsplash.com/photo-1584990347449-389f4170668b?w=600&auto=format&fit=crop&q=80'],
+    photos: ['https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600&auto=format&fit=crop&q=80'],
   },
   {
     orderKey: 'ORD-2026-0005',
@@ -826,7 +826,7 @@ const SEED_REVIEWS = [
     productSku: 'PHI-AFR-9252',
     rating: 5,
     reviewText: 'Air fryer has made healthy snacking so easy. French fries, samosas and paneer tikka come out crispy with 90% less oil.',
-    photos: ['https://images.unsplash.com/photo-1584990347449-389f4170668b?w=600&auto=format&fit=crop&q=80'],
+    photos: ['https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&auto=format&fit=crop&q=80'],
   },
   {
     orderKey: 'ORD-2026-0002',
