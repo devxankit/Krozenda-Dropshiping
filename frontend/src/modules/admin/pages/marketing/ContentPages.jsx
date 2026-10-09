@@ -18,6 +18,7 @@ import {
   HiGlobeAlt,
   HiClock,
   HiQuestionMarkCircle,
+  HiPlayCircle,
 } from 'react-icons/hi2'
 import { Badge, Button, Modal, Table } from '../../../../components/ui'
 import { PageBody, PageHeader } from '../../components/shell'
@@ -29,9 +30,12 @@ import {
   useCmsPageWriteController,
   useFaqsController,
   useFaqWriteController,
+  useTutorialsController,
+  useTutorialWriteController,
 } from '../../controllers/useMarketingController'
 import { CmsFormDrawer } from '../../components/marketing/CmsFormDrawer'
 import { FaqFormDrawer } from '../../components/marketing/FaqFormDrawer'
+import { TutorialFormDrawer } from '../../components/marketing/TutorialFormDrawer'
 
 function Guard({ controller, children }) {
   if (controller.isLoading) return <PageSkeleton rows={3} />
@@ -48,6 +52,7 @@ const CMS_STATUS_TONE = Object.freeze({
 const CONTENT_SECTIONS = [
   { id: 'pages', label: 'CMS Pages', icon: HiDocumentText },
   { id: 'faqs', label: 'FAQs', icon: HiQuestionMarkCircle },
+  { id: 'tutorials', label: 'Tutorials', icon: HiPlayCircle },
 ]
 
 export function CmsPagesPage() {
@@ -75,7 +80,9 @@ export function CmsPagesPage() {
         })}
       </div>
 
-      {section === 'pages' ? <LegalPagesSection /> : <FaqsSection />}
+      {section === 'pages' && <LegalPagesSection />}
+      {section === 'faqs' && <FaqsSection />}
+      {section === 'tutorials' && <TutorialsSection />}
     </PageBody>
   )
 }
@@ -1232,6 +1239,267 @@ function FaqsSection() {
                 disabled={write.remove.isSubmitting}
               >
                 {write.remove.isSubmitting ? 'Deleting...' : 'Delete FAQ'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
+  )
+}
+
+const AUDIENCE_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'seller', label: 'Sellers' },
+  { id: 'customer', label: 'Customers' },
+]
+
+function TutorialsSection() {
+  const [audience, setAudience] = useState('all')
+  const [search, setSearch] = useState('')
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [toDelete, setToDelete] = useState(null)
+
+  const tutorials = useTutorialsController({ audience: audience === 'all' ? undefined : audience, search })
+  const write = useTutorialWriteController({ onSaved: () => setIsDrawerOpen(false) })
+
+  const items = tutorials.data?.items || []
+  const stats = tutorials.data?.stats || {}
+
+  const openDrawer = (row = null) => {
+    setEditing(row)
+    setIsDrawerOpen(true)
+  }
+
+  const handleSubmit = (values) => {
+    if (editing) write.update.run({ id: editing.id || editing._id, ...values })
+    else write.create.run(values)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (toDelete) {
+      write.remove.run({ id: toDelete.id || toDelete._id })
+      setToDelete(null)
+    }
+  }
+
+  const columns = [
+    {
+      key: 'title',
+      header: 'Tutorial',
+      render: (row) => (
+        <div className="flex flex-col min-w-0 py-0.5 max-w-xl">
+          <button
+            type="button"
+            onClick={() => openDrawer(row)}
+            className="text-left text-xs font-bold text-slate-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
+          >
+            {row.title}
+          </button>
+          {row.description && (
+            <p className="mt-1 text-2xs text-slate-500 line-clamp-2 leading-relaxed">{row.description}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'format',
+      header: 'Format',
+      width: '8rem',
+      render: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.videoUrl && <Badge tone="brand" size="sm">Video</Badge>}
+          {row.description && <Badge tone="neutral" size="sm">Text</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: 'audience',
+      header: 'For',
+      width: '8rem',
+      render: (row) => (
+        <Badge tone={row.audience === 'seller' ? 'warning' : 'success'} size="sm">
+          {row.audience === 'seller' ? 'Sellers' : 'Customers'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      width: '8rem',
+      render: (row) => (
+        <span className="font-mono text-2xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/60">
+          {row.category || 'General'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '9.5rem',
+      render: (row) => (
+        <select
+          value={row.status}
+          onChange={(e) => write.setStatus.run({ id: row.id || row._id, status: e.target.value })}
+          className={`text-2xs font-bold rounded-xl px-2.5 py-1.5 border shadow-2xs focus:outline-none cursor-pointer transition-all ${
+            row.status === 'published'
+              ? 'bg-success-50 text-success-800 border-success-300/80 hover:bg-success-100/70'
+              : 'bg-warning-50 text-warning-800 border-warning-300/80 hover:bg-warning-100/70'
+          }`}
+        >
+          <option value="published">● Published</option>
+          <option value="draft">● Draft</option>
+        </select>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: '6.5rem',
+      align: 'right',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => openDrawer(row)}
+            title="Edit tutorial"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-warning-600 hover:bg-warning-50 transition-colors"
+          >
+            <HiPencilSquare className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setToDelete(row)}
+            title="Delete tutorial"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+          >
+            <HiTrash className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title={
+          <div className="flex items-center gap-2.5">
+            <span>Tutorials</span>
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/80">
+              {stats.total ?? items.length}
+            </span>
+          </div>
+        }
+        description="Video and text guides that teach sellers and customers how to use the platform. Published tutorials appear in the seller panel and customer app instantly."
+        actions={
+          <PermissionGate permission={ADMIN_PERMISSIONS.MARKETING_MANAGE}>
+            <button
+              type="button"
+              onClick={() => openDrawer()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 transition-all ring-1 ring-brand-500/20 cursor-pointer"
+            >
+              <HiPlus className="h-4 w-4" />
+              <span>New tutorial</span>
+            </button>
+          </PermissionGate>
+        }
+      />
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {AUDIENCE_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setAudience(t.id)}
+              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                audience === t.id ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-60">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+            <HiMagnifyingGlass className="h-4 w-4" />
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title, text, category…"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600"
+              title="Clear search"
+            >
+              <HiXMark className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <Guard controller={tutorials}>
+        {() =>
+          items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-xs">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 mb-3 shadow-inner">
+                <HiPlayCircle className="h-7 w-7" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">No tutorials yet</h3>
+              <p className="mt-1 text-xs text-slate-500 max-w-sm">
+                {search
+                  ? `No tutorials matching "${search}".`
+                  : 'Add a video or step-by-step guide to help sellers and customers get started.'}
+              </p>
+            </div>
+          ) : (
+            <SectionCard
+              title={`Tutorials (${items.length})`}
+              description="Shown to each audience ordered by display order. Drafts stay hidden."
+            >
+              <Table
+                className="rounded-none border-0 border-t"
+                columns={columns}
+                data={items}
+                getRowKey={(row) => row.id || row._id}
+                density="normal"
+              />
+            </SectionCard>
+          )
+        }
+      </Guard>
+
+      <TutorialFormDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        tutorial={editing}
+        onSubmit={handleSubmit}
+        isSubmitting={write.create.isSubmitting || write.update.isSubmitting}
+        error={write.create.error?.message || write.update.error?.message}
+      />
+
+      {toDelete && (
+        <Modal isOpen onClose={() => setToDelete(null)} title="Delete this tutorial?" size="sm">
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Delete <strong className="text-slate-900">&ldquo;{toDelete.title}&rdquo;</strong>? It disappears from the
+              {toDelete.audience === 'seller' ? ' seller panel' : ' customer app'} immediately.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="outline" size="sm" onClick={() => setToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={write.remove.isSubmitting}>
+                {write.remove.isSubmitting ? 'Deleting...' : 'Delete tutorial'}
               </Button>
             </div>
           </div>

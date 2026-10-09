@@ -6,6 +6,9 @@ const { signToken, signRefreshToken, verifyRefreshToken } = require('../utils/jw
 const { getImageUrl } = require('../utils/imageHelper');
 const { sendOtpSms } = require('../utils/smsService');
 const { updateLanguageFor } = require('./languageController');
+const { getRequiredAcceptancePages } = require('./cmsController');
+
+const BUYER_POLICY_SLUGS = ['privacy-policy', 'terms'];
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -251,6 +254,25 @@ async function requestOtp(req, res) {
 }
 
 // POST /auth/verify-otp
+// Signing in means the buyer ticked "I agree to the Terms & Privacy Policy",
+// so file the CURRENT version of each against the account. Never blocks a
+// sign-in: a failed CMS lookup just leaves the record for the next login.
+async function recordPolicyAcceptance(user, ip) {
+  try {
+    const pages = (await getRequiredAcceptancePages()).filter((p) => BUYER_POLICY_SLUGS.includes(p.slug));
+    const have = new Map((user.policyAcceptances || []).map((a) => [a.slug, a.version]));
+    const stale = pages.filter((p) => have.get(p.slug) !== (p.version || 'v1.0'));
+    if (!stale.length) return;
+
+    const keep = (user.policyAcceptances || []).filter((a) => !stale.some((p) => p.slug === a.slug));
+    const now = new Date();
+    const fresh = stale.map((p) => ({ slug: p.slug, title: p.title, version: p.version || 'v1.0', acceptedAt: now, ip: ip || '' }));
+    await Customer.updateOne({ _id: user._id }, { $set: { policyAcceptances: [...keep.map((a) => a.toObject?.() ?? a), ...fresh] } });
+  } catch (err) {
+    console.error('Could not record policy acceptance:', err.message);
+  }
+}
+
 async function verifyOtp(req, res) {
   const { mobileNumber, phone, otp, name } = req.body;
   const cleanNumber = normalizePhone(mobileNumber || phone);
@@ -351,6 +373,8 @@ async function verifyOtp(req, res) {
       await user.save();
     }
   }
+
+  await recordPolicyAcceptance(user, req.ip);
 
   const { accessToken, refreshToken } = issueTokens(user);
 

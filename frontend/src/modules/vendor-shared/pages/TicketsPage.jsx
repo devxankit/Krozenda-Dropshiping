@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Badge, Button, Input, Modal, Select, Textarea } from '../../../components/ui'
 import { PageBody, PageHeader } from '../../admin/components/shell'
 import { toast } from '../../admin/stores/toastStore'
+import { TutorialsPanel } from '../../../components/common/TutorialsPanel'
 import { useVendorTicketController, useVendorTicketsController } from '../controllers/useVendorController'
 
 const EMPTY_FORM = { subject: '', category: 'Other', priority: 'normal', message: '' }
@@ -51,6 +52,7 @@ function TicketThread({ ticketId, onClose }) {
 
 export function TicketsPage() {
   const { items, isLoading, createTicket } = useVendorTicketsController()
+  const [view, setView] = useState('tickets')
   const [createOpen, setCreateOpen] = useState(false)
   const [activeTicketId, setActiveTicketId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -82,10 +84,30 @@ export function TicketsPage() {
         }
       />
 
-      {isLoading && <p className="text-xs text-ink-subtle">Loading tickets…</p>}
-      {!isLoading && items.length === 0 && <p className="text-xs text-ink-subtle">No support tickets yet.</p>}
+      <div className="flex w-fit items-center gap-1 rounded-lg border border-border bg-surface p-1">
+        {[
+          { id: 'tickets', label: 'My tickets' },
+          { id: 'tutorials', label: 'Tutorials' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setView(t.id)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              view === t.id ? 'bg-brand-600 text-white' : 'text-ink-muted hover:bg-surface-muted'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <div className="flex flex-col gap-2">
+      {view === 'tutorials' && <TutorialsPanel audience="seller" />}
+
+      {view === 'tickets' && isLoading && <p className="text-xs text-ink-subtle">Loading tickets…</p>}
+      {view === 'tickets' && !isLoading && items.length === 0 && <p className="text-xs text-ink-subtle">No support tickets yet.</p>}
+
+      <div className={view === 'tickets' ? 'flex flex-col gap-2' : 'hidden'}>
         {items.map((t) => (
           <button key={t._id} onClick={() => setActiveTicketId(t._id)} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5 text-left hover:border-brand-300">
             <div>

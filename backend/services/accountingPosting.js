@@ -860,6 +860,35 @@ async function postOrderCancellationRefund({ order: orderInput, createdBy = null
 }
 
 /**
+ * Book the cancellation fee a buyer forfeits on a prepaid order: platform
+ * revenue, no seller's payable moves (the seller's sale is reversed in full by
+ * postOrderCancellationRefund). Idempotent on the order.
+ */
+async function postCancellationFee({ order: orderInput, feePaise, createdBy = null }) {
+  const order = orderInput && orderInput.items ? orderInput : await Order.findById(orderInput).lean();
+  if (!order) return { posted: 0, reason: 'order-not-found' };
+  if (!(feePaise > 0)) return { posted: 0, reason: 'no-fee' };
+  const orderLabel = String(order._id).slice(-8).toUpperCase();
+  const result = await insertRows([
+    row({
+      type: 'CANCELLATION_FEE',
+      direction: 'CREDIT',
+      amountPaise: feePaise,
+      order: order._id,
+      vendor: null,
+      customer: order.user,
+      referenceType: 'ORDER',
+      referenceId: order._id,
+      description: `Cancellation fee kept — buyer cancelled order ${orderLabel}`,
+      metadata: { orderNumber: orderLabel },
+      eventKey: `CANCELLATION_FEE:${order._id}`,
+      createdBy,
+    }),
+  ]);
+  return { posted: result.inserted.length, skipped: result.skipped };
+}
+
+/**
  * Reverse the sale for ONE order line that was cancelled on its own (a seller
  * rejecting it, or an admin cancelling a sub-order) after the order's sale was
  * posted. Idempotent on (order, line).
@@ -1026,6 +1055,7 @@ module.exports = {
   recordCodRemittance,
   postReturnRefund,
   postOrderCancellationRefund,
+  postCancellationFee,
   postLineCancellationRefund,
   postAdjustment,
   reconcileLedger,

@@ -167,11 +167,14 @@ async function getKycApplication(req, res) {
         rejectionReason: doc.rejectionReason || null,
         url: getImageUrl(doc.documentUrl),
       })),
-      // No policy-acceptance ledger exists on the Vendor model yet — the
-      // agreement checkbox at sign-up isn't stored per-version anywhere. An
-      // empty list renders the section honestly empty rather than inventing
-      // acceptances that never happened.
-      policyAcceptances: [],
+      // What the seller accepted at sign-up (Vendor.policyAcceptances).
+      policyAcceptances: (vendor.policyAcceptances || []).map((a) => ({
+        policy: a.title || a.slug,
+        version: a.version || '',
+        acceptedAt: formatDate(a.acceptedAt),
+        ip: a.ip || null,
+        superseded: false,
+      })),
     },
   });
 }

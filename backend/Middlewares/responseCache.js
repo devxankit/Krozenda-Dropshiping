@@ -18,15 +18,17 @@
 const entries = new Map(); // key -> { expiresAt, status, body } | { pending: Promise }
 const MAX_ENTRIES = 500;
 
-function ttlMs() {
+// `defaultMs` is the TTL a route asks for (the public catalog lists use a longer one than the
+// reports); ANALYTICS_CACHE_MS, when set, overrides every route, and tests get no cache by default.
+function ttlMs(defaultMs = 30000) {
   const configured = process.env.ANALYTICS_CACHE_MS;
   if (configured !== undefined && configured !== '') return Math.max(0, Number(configured) || 0);
-  return process.env.ENV === 'test' ? 0 : 30000;
+  return process.env.ENV === 'test' ? 0 : defaultMs;
 }
 
-function responseCache() {
+function responseCache({ ttlMs: defaultMs } = {}) {
   return async (req, res, next) => {
-    const ttl = ttlMs();
+    const ttl = ttlMs(defaultMs);
     if (req.method !== 'GET' || ttl <= 0) return next();
 
     const key = req.originalUrl;

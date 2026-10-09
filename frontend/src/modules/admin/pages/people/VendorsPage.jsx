@@ -10,6 +10,7 @@ import {
 import { useVendorListController, useVendorWriteController } from '../../controllers/usePeopleController'
 import { MoneyCell, StatusPill } from '../../components/display'
 import { PageBody } from '../../components/shell'
+import { PolicyAcceptanceCell } from '../../tableColumns/peopleColumns'
 import { VendorFormDrawer } from '../../components/people/VendorFormDrawer'
 import { PartnerDetailDrawer } from '../../components/dropshipping/PartnerDetailDrawer'
 
@@ -179,6 +180,12 @@ export function VendorsPage() {
           )}
         </div>
       ),
+    },
+    {
+      key: 'policies',
+      header: 'Policies',
+      width: '12rem',
+      render: (row) => <PolicyAcceptanceCell policies={row.policies} />,
     },
     {
       key: 'bankLinked',

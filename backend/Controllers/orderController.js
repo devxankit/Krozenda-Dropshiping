@@ -32,6 +32,7 @@ const {
   resolveUnitPrice,
 } = require('../utils/pricing');
 const accounting = require('../services/accountingPosting');
+const AccountingConfig = require('../Models/AccountingConfig');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const dropshipOrderService = require('../services/dropshipOrderService');
@@ -1160,7 +1161,14 @@ async function getOrder(req, res) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
 
-  res.json({ success: true, data: serializeOrder(order) });
+  // Drives the buyer's Cancel button: only before it ships, never a dropship
+  // order. The fee percent is shown in the confirmation (prepaid orders only —
+  // there is nothing to keep on a COD order).
+  const canCancel = USER_CANCELLABLE_STATUSES.includes(order.status) && order.fulfillmentType !== 'DROPSHIP';
+  const prepaidPaid = order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD';
+  const cancellationFeePercent = canCancel && prepaidPaid ? (await AccountingConfig.resolve()).buyerCancellationFeePercent : 0;
+
+  res.json({ success: true, data: { ...serializeOrder(order), canCancel, cancellationFeePercent } });
 }
 
 // PATCH /user/orders/:id/cancel — a user may only cancel their own order,
@@ -1212,15 +1220,23 @@ async function cancelOrder(req, res) {
   // Only lines still live: a line cancelled on its own already gave its stock back.
   await releaseStock(order.items.filter((item) => item.status !== 'CANCELLED'));
 
+  let cancellation = { refund: 0, fee: 0 };
   if (order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD') {
-    // What is still owed: lines cancelled on their own were refunded already.
-    await refundCancelledOrderToWallet(order);
+    // A buyer who cancels a prepaid order forfeits a share of it to the
+    // platform (Business Rules > buyer cancellation fee); the rest is
+    // refunded. What is still owed excludes lines cancelled on their own,
+    // which were refunded already.
+    const config = await AccountingConfig.resolve();
+    cancellation = await refundCancelledOrderToWallet(order, { feePercent: config.buyerCancellationFeePercent });
 
     // Reverse whatever was posted for this order. The original SALE rows stay
     // exactly as they were — this writes REFUND debits against them and hands
     // the commission back (task §15 Rules 1 and 3).
     await postAccounting('cancellation refund', () =>
       accounting.postOrderCancellationRefund({ order: { ...order.toObject(), paymentStatus: 'REFUNDED' } })
+    );
+    await postAccounting('cancellation fee', () =>
+      accounting.postCancellationFee({ order: order.toObject(), feePaise: toPaise(cancellation.fee) })
     );
   }
 
@@ -1238,12 +1254,19 @@ async function cancelOrder(req, res) {
     userId: req.user._id,
     type: 'ORDER',
     title: 'Order Cancelled',
-    message: `Your order worth ₹${order.total.toLocaleString('en-IN')} has been cancelled.`,
+    message:
+      cancellation.fee > 0
+        ? `Your order worth ₹${order.total.toLocaleString('en-IN')} has been cancelled. A cancellation fee of ₹${cancellation.fee.toLocaleString('en-IN')} was kept and ₹${cancellation.refund.toLocaleString('en-IN')} was refunded to your wallet.`
+        : `Your order worth ₹${order.total.toLocaleString('en-IN')} has been cancelled.`,
     actionType: 'ORDER',
     actionRefId: order._id,
   });
 
-  res.json({ success: true, message: 'Order cancelled successfully' });
+  res.json({
+    success: true,
+    message: 'Order cancelled successfully',
+    data: { cancellationFee: cancellation.fee, refunded: cancellation.refund },
+  });
 }
 
 // GET /user/orders/:id/tracking

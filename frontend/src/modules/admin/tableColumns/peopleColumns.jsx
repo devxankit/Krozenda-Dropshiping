@@ -20,6 +20,29 @@ const MODEL_LABELS = Object.freeze({
   own_stock: 'Own stock',
 })
 
+// "Privacy Policy: Accepted / Terms: Accepted" — shared by the customer and seller lists.
+export function PolicyAcceptanceCell({ policies }) {
+  const entries = [
+    ['Privacy Policy', policies?.privacy],
+    ['Terms & Conditions', policies?.terms],
+  ]
+  return (
+    <div className="flex flex-col gap-1">
+      {entries.map(([label, p]) => (
+        <span
+          key={label}
+          title={p?.acceptedAt ? `${label} ${p.version || ''} accepted on ${p.acceptedAt}` : `${label} accepted`}
+          className="inline-flex items-center gap-1 text-2xs text-ink-muted"
+        >
+          <Icon name="check" className="h-3 w-3 text-success-700" />
+          <span>{label}:</span>
+          <span className="font-semibold text-success-700">Accepted</span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export const CUSTOMER_COLUMNS = Object.freeze([
   {
     key: 'name',
@@ -58,6 +81,12 @@ export const CUSTOMER_COLUMNS = Object.freeze([
       ) : (
         <span className="text-2xs text-ink-faint">never</span>
       ),
+  },
+  {
+    key: 'policies',
+    header: 'Policies',
+    width: '12rem',
+    render: (row) => <PolicyAcceptanceCell policies={row.policies} />,
   },
   {
     key: 'status',

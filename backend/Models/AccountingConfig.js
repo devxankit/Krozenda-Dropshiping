@@ -44,6 +44,9 @@ const accountingConfigSchema = new mongoose.Schema(
     // never attract a gateway fee.
     gatewayFeePercent: { type: Number, default: 2, min: 0, max: 100 },
     gatewayFeeFixed: { type: Number, default: 0, min: 0 }, // rupees
+    // Share of a PREPAID order the platform keeps when the buyer cancels it.
+    // The rest goes back to the buyer; the seller's sale is reversed in full.
+    buyerCancellationFeePercent: { type: Number, default: 5, min: 0, max: 50 },
     // Who the fee is charged to. PLATFORM (the default) means it is a cost of
     // running the marketplace and never touches the seller's payable.
     gatewayFeeBearer: { type: String, enum: FEE_BEARERS, default: 'PLATFORM' },

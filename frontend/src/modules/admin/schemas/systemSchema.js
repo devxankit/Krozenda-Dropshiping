@@ -23,6 +23,7 @@ export const businessRulesSchema = z.object({
   commissionBase: z.enum(['LINE_NET_OF_SELLER_FUNDED_DISCOUNT', 'LINE_GROSS', 'LINE_NET']),
   gatewayFeePercent: z.number(),
   gatewayFeeFixed: z.number(),
+  buyerCancellationFeePercent: z.number(),
   gatewayFeeBearer: z.enum(['PLATFORM', 'SELLER']),
   shippingRevenueBearer: z.enum(['PLATFORM', 'SELLER']),
   settlementHoldDays: z.number(),

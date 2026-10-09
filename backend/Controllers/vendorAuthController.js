@@ -11,7 +11,7 @@ const emailService = require('../services/emailService');
 const { alertAdmins } = require('../services/adminAlertService');
 const { markBankChanged } = require('../services/vendorRouteOnboarding');
 const { alertBankChanged } = require('../services/vendorPayoutAccount');
-const { FSSAI_DOC_TYPE } = require('../utils/fssai');
+const { FSSAI_DOC_TYPE, FOOD_TEST_DOC_TYPE } = require('../utils/fssai');
 const { reserveAttempt, clearAttempts, tooManyAttempts } = require('../utils/loginThrottle');
 
 const RESET_OTP_TTL_MS = 5 * 60 * 1000;
@@ -216,6 +216,14 @@ async function register(req, res) {
     }
     if (!String(fssaiDoc.documentNumber || '').trim()) {
       return res.status(400).json({ success: false, code: 'FSSAI_REQUIRED', message: 'FSSAI licence number is required' });
+    }
+    const testDoc = documents.find((d) => d?.documentType === FOOD_TEST_DOC_TYPE && d.documentUrl);
+    if (!testDoc) {
+      return res.status(400).json({
+        success: false,
+        code: 'FOOD_TEST_CERTIFICATE_REQUIRED',
+        message: 'Please upload your food test certificate since you will be selling food products',
+      });
     }
   }
 

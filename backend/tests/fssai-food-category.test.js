@@ -51,6 +51,22 @@ describe('registration', () => {
     expect(res.body.code).toBe('FSSAI_REQUIRED');
   });
 
+  it('requires a food test certificate next to the licence', async () => {
+    const res = await request(app)
+      .post('/vendor/auth/register')
+      .send(
+        registration({
+          sellsFood: true,
+          policyAcceptances: await acceptAllPolicies(),
+          documents: [
+            { documentType: 'FSSAI_LICENSE', documentNumber: '12345678901234', documentUrl: '/uploads/kyc/fssai.pdf' },
+          ],
+        })
+      );
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('FOOD_TEST_CERTIFICATE_REQUIRED');
+  });
+
   it('stores the licence as a pending document when provided', async () => {
     const res = await request(app)
       .post('/vendor/auth/register')
@@ -60,6 +76,7 @@ describe('registration', () => {
           policyAcceptances: await acceptAllPolicies(),
           documents: [
             { documentType: 'FSSAI_LICENSE', documentNumber: '12345678901234', documentUrl: '/uploads/kyc/fssai.pdf' },
+            { documentType: 'FOOD_TEST_CERTIFICATE', documentUrl: '/uploads/kyc/lab-report.pdf' },
           ],
         })
       );

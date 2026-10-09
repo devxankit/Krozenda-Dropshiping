@@ -6,6 +6,8 @@ const accounting = require('./accountingPosting');
 const { linePaidPaise } = require('../utils/orderLines');
 const { toPaise } = require('../utils/money');
 const { isDropshipOrder } = require('../utils/dropship');
+const razorpay = require('../Config/razorpay');
+const { alertAdmins } = require('./adminAlertService');
 
 // Cancelling money-bearing things on a STANDARD order, and paying the buyer
 // back exactly once.
@@ -41,6 +43,40 @@ async function creditWallet({ userId, amount, orderId }) {
   });
 }
 
+/**
+ * Pay the buyer back. Wallet by default (every standard-order refund in this
+ * codebase). With `refundTo: 'original'` a Razorpay-paid order is refunded to
+ * that payment instead; if Razorpay refuses, the buyer is not left waiting —
+ * the amount goes to their wallet and admin is told, so nothing is lost
+ * either way.
+ */
+async function payBack({ order, amount, refundTo = 'wallet' }) {
+  if (!(amount > 0)) return null;
+  const orderId = order._id;
+  if (refundTo === 'original' && order.paymentMethod === 'RAZORPAY' && order.razorpayPaymentId) {
+    try {
+      await razorpay.payments.refund(order.razorpayPaymentId, {
+        amount: toPaise(amount),
+        speed: 'optimum',
+        notes: { orderId: String(orderId), reason: 'auto-cancel: not accepted by seller' },
+      });
+      return { destination: 'RAZORPAY' };
+    } catch (err) {
+      const why = err?.error?.description || err.message;
+      console.error(`Razorpay refund failed for order ${orderId}, credited to wallet instead: ${why}`);
+      await alertAdmins({
+        event: 'AUTO_CANCEL_REFUND_FALLBACK',
+        title: 'Refund went to wallet',
+        message: `Razorpay refused the refund of ₹${amount} for auto-cancelled order ${orderId} (${why}). The buyer was credited to their wallet instead.`,
+        link: `/admin/orders/detail/${orderId}`,
+        key: `AUTO_CANCEL_REFUND_FALLBACK:${orderId}:${toPaise(amount)}`,
+      }).catch(() => {});
+    }
+  }
+  await creditWallet({ userId: order.user, amount, orderId });
+  return { destination: 'WALLET' };
+}
+
 function releaseLineStock(item) {
   return item.variantId
     ? Product.updateOne(
@@ -64,12 +100,13 @@ function remainingRefund(order) {
  * @param {object}  args
  * @param {*}       args.orderId
  * @param {number}  args.lineIndex
- * @param {string}  args.cancelledBy     'seller' | 'admin'
+ * @param {string}  args.cancelledBy     'seller' | 'admin' | 'system'
+ * @param {string}  [args.refundTo]      'wallet' (default) | 'original' (the Razorpay payment, wallet if refused)
  * @param {string}  [args.reason]
  * @param {*}       [args.vendorId]      when set, the line must belong to this seller
  * @returns {Promise<{ok:boolean,status?:number,message?:string,order?:object,item?:object,refunded?:number}>}
  */
-async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendorId = null }) {
+async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendorId = null, refundTo = 'wallet' }) {
   const current = await Order.findById(orderId);
   if (!current) return { ok: false, status: 404, message: 'Order not found' };
   const item = current.items[lineIndex];
@@ -110,7 +147,7 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
 
   let refunded = 0;
   if (lineRefund > 0) {
-    await creditWallet({ userId: claimed.user, amount: lineRefund, orderId: claimed._id });
+    await payBack({ order: claimed, amount: lineRefund, refundTo });
     refunded += lineRefund;
     try {
       await accounting.postLineCancellationRefund({ order: claimed.toObject(), lineIndex });
@@ -130,7 +167,7 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
         {
           $set: {
             status: 'CANCELLED',
-            cancelledBy: cancelledBy === 'admin' ? 'admin' : 'seller',
+            cancelledBy: ['admin', 'system'].includes(cancelledBy) ? cancelledBy : 'seller',
             statusHistory: { $concatArrays: ['$statusHistory', [{ status: 'CANCELLED', at }]] },
             refundedAmount: refundable ? '$total' : '$refundedAmount',
             paymentStatus: refundable ? 'REFUNDED' : '$paymentStatus',
@@ -142,7 +179,7 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
     if (before) {
       const rest = refundable ? remainingRefund(before) : 0;
       if (rest > 0) {
-        await creditWallet({ userId: before.user, amount: rest, orderId: before._id });
+        await payBack({ order: before, amount: rest, refundTo });
         refunded += rest;
         // The remainder is the platform fee and shipping: reverse them too.
         try {
@@ -162,7 +199,7 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
   await require('./shipping/shipmentService').cancelShipmentsForOrder({
     orderId,
     reason: reason || 'Item cancelled',
-    actor: cancelledBy === 'admin' ? 'ADMIN' : 'SELLER',
+    actor: cancelledBy === 'admin' || cancelledBy === 'system' ? 'ADMIN' : 'SELLER',
   });
 
   return { ok: true, order, item: order.items[lineIndex], refunded };
@@ -173,12 +210,19 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
  * AFTER the caller has atomically moved the order to CANCELLED, so it runs
  * once per order.
  */
-async function refundCancelledOrderToWallet(order) {
-  if (!isRefundable(order)) return 0;
-  const amount = remainingRefund(order);
-  await Order.updateOne({ _id: order._id }, { $set: { paymentStatus: 'REFUNDED', refundedAmount: order.total } });
-  if (amount > 0) await creditWallet({ userId: order.user, amount, orderId: order._id });
-  return amount;
+async function refundCancelledOrderToWallet(order, { feePercent = 0 } = {}) {
+  if (!isRefundable(order)) return { refund: 0, fee: 0 };
+  const owed = remainingRefund(order);
+  // The platform keeps feePercent of what is still owed (a buyer-initiated
+  // cancellation); everything else goes back. Whole paise, fee rounded down.
+  const fee = feePercent > 0 ? Math.floor((toPaise(owed) * feePercent) / 100) / 100 : 0;
+  const refund = Math.round((toPaise(owed) - toPaise(fee))) / 100;
+  await Order.updateOne(
+    { _id: order._id },
+    { $set: { paymentStatus: 'REFUNDED', refundedAmount: Math.round(toPaise(order.total) - toPaise(fee)) / 100, cancellationFee: fee } }
+  );
+  if (refund > 0) await creditWallet({ userId: order.user, amount: refund, orderId: order._id });
+  return { refund, fee };
 }
 
 /**

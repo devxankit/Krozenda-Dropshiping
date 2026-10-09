@@ -8,6 +8,7 @@ const DOCUMENT_TYPES = [
   { value: 'PAN_CARD', label: 'Company / Proprietor PAN Card' },
   { value: 'CANCELLED_CHEQUE', label: 'Cancelled Cheque / Bank Proof' },
   { value: 'FSSAI_LICENSE', label: 'FSSAI Food Safety License' },
+  { value: 'FOOD_TEST_CERTIFICATE', label: 'Food Test Certificate (Lab Report)' },
   { value: 'ADDRESS_PROOF', label: 'Aadhaar / Passport / Electricity Bill' },
 ]
 

@@ -128,4 +128,25 @@ async function notifyVendorAccountDecision(vendor, decision, reason = '') {
   }
 }
 
-module.exports = { notifyVendorsOfNewOrder, notifyVendorSettlementPaid, notifyVendorAccountDecision };
+/**
+ * Lines the seller did not accept in time were cancelled automatically. In-app
+ * + push only (no WhatsApp: that needs its own approved template). Keyed on
+ * (order, seller) by the caller running once per cancelled line set.
+ */
+async function notifyVendorOrderAutoCancelled({ orderId, vendorId, count, hours }) {
+  try {
+    await createNotification({
+      vendorId,
+      type: 'ORDER',
+      title: 'Order Auto-Cancelled',
+      message: `Order ${whatsapp.orderNumber(orderId)} (${count} item${count === 1 ? '' : 's'}) was cancelled because it was not accepted within ${hours} hours. Accept new orders promptly to avoid this.`,
+      actionType: 'ORDER',
+      actionRefId: orderId,
+      link: links.vendor.orders(),
+    });
+  } catch (err) {
+    console.error(`[vendorAlert] auto-cancel ${orderId} for ${vendorId} failed:`, err.message);
+  }
+}
+
+module.exports = { notifyVendorsOfNewOrder, notifyVendorSettlementPaid, notifyVendorAccountDecision, notifyVendorOrderAutoCancelled };

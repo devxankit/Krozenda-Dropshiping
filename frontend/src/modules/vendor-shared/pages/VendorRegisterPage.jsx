@@ -93,6 +93,7 @@ function validateStep(step, form, docs, policyAcceptances) {
     if (form.sellsFood === 'true') {
       if (!/^\d{14}$/.test(form.fssaiNumber.trim())) errors.fssaiNumber = 'Enter your 14-digit FSSAI licence number'
       if (!docs.fssaiDoc?.url) errors.fssaiDoc = 'Please upload your FSSAI licence'
+      if (!docs.foodTestDoc?.url) errors.foodTestDoc = 'Please upload your food test certificate'
     }
   }
 
@@ -139,6 +140,7 @@ export function VendorRegisterPage() {
     panDoc: null, // { url, filename, originalname, uploading }
     gstDoc: null,
     fssaiDoc: null,
+    foodTestDoc: null,
   })
 
   const isB2B = form.vendorType === 'B2B'
@@ -230,6 +232,13 @@ export function VendorRegisterPage() {
         documentLabel: 'FSSAI Food Safety Licence',
         documentNumber: form.fssaiNumber.trim(),
         documentUrl: docs.fssaiDoc.url,
+      })
+    }
+    if (form.sellsFood === 'true' && docs.foodTestDoc?.url) {
+      documents.push({
+        documentType: 'FOOD_TEST_CERTIFICATE',
+        documentLabel: 'Food Test Certificate',
+        documentUrl: docs.foodTestDoc.url,
       })
     }
 
@@ -818,6 +827,47 @@ export function VendorRegisterPage() {
                     </label>
                   )}
                   {errors.fssaiDoc && <p className="mt-1 text-[11px] text-danger-500 font-medium">{errors.fssaiDoc}</p>}
+                </div>
+              )}
+
+              {/* Upload 4: Food Test Certificate — only for food sellers */}
+              {form.sellsFood === 'true' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    4. Food Test Certificate <span className="text-danger-500">*</span>
+                  </label>
+                  {docs.foodTestDoc?.url ? (
+                    <div className="flex items-center justify-between p-2.5 bg-success-50 border border-success-200 rounded-xl text-xs">
+                      <div className="flex items-center space-x-2 text-success-800">
+                        <HiOutlineCheck className="w-4 h-4 text-success-600 shrink-0" />
+                        <span className="font-semibold truncate max-w-xs">{docs.foodTestDoc.originalname}</span>
+                        <span className="text-[10px] text-success-600 font-bold uppercase">(Uploaded ✓)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDocs((p) => ({ ...p, foodTestDoc: null }))}
+                        className="text-slate-400 hover:text-danger-600 p-1"
+                        title="Remove file"
+                      >
+                        <HiOutlineTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center space-x-2 border-2 border-dashed border-slate-300 hover:border-brand-500 bg-white p-3 rounded-xl cursor-pointer transition-colors group">
+                      <HiOutlineDocumentArrowUp className="w-5 h-5 text-slate-400 group-hover:text-brand-600" />
+                      <span className="text-xs font-semibold text-slate-600 group-hover:text-brand-600">
+                        {docs.foodTestDoc?.uploading ? 'Uploading certificate…' : 'Choose Food Test Certificate (Image or PDF)'}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        onChange={(e) => handleFileUpload('foodTestDoc', e.target.files?.[0])}
+                        className="hidden"
+                        disabled={docs.foodTestDoc?.uploading}
+                      />
+                    </label>
+                  )}
+                  {errors.foodTestDoc && <p className="mt-1 text-[11px] text-danger-500 font-medium">{errors.foodTestDoc}</p>}
                 </div>
               )}
             </div>

@@ -6,6 +6,11 @@ const VendorDocument = require('../Models/VendorDocument');
 // or later from Store Profile.
 const FSSAI_DOC_TYPE = 'FSSAI_LICENSE';
 
+// A lab / food-safety test report. Required next to the licence when a seller
+// answers "Yes, I sell food" at sign-up; admin reviews it as an ordinary KYC
+// document (it does not gate food categories — the licence does).
+const FOOD_TEST_DOC_TYPE = 'FOOD_TEST_CERTIFICATE';
+
 // Seller-proposed categories carry an explicit isFood flag (the checkbox in
 // the Add Category drawer), but a seller who answered "No" at sign-up has
 // every reason to leave it unticked. The name check catches those, so
@@ -68,4 +73,4 @@ function fssaiBlockMessage(status) {
   return 'Seller has not uploaded an FSSAI licence. A food category can only be approved once their licence is uploaded and approved.';
 }
 
-module.exports = { FSSAI_DOC_TYPE, looksLikeFood, getFssaiStatus, getFssaiStatusMap, fssaiBlockMessage };
+module.exports = { FSSAI_DOC_TYPE, FOOD_TEST_DOC_TYPE, looksLikeFood, getFssaiStatus, getFssaiStatusMap, fssaiBlockMessage };

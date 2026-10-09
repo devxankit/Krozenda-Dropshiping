@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "778748845767",
+    "project_id": "krozenda-a62bb",
+    "storage_bucket": "krozenda-a62bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:778748845767:android:7e2f6d04de8db73d4928e2",
+        "android_client_info": {
+          "package_name": "com.krozenda.seller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlGWnbcSkxapz3TD17w_Dl4_wuSijIWAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:778748845767:android:334a7a936d430abf4928e2",
+        "android_client_info": {
+          "package_name": "com.krozenda.user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlGWnbcSkxapz3TD17w_Dl4_wuSijIWAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

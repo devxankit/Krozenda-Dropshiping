@@ -12,6 +12,7 @@ import {
   HiUser,
   HiChevronDown,
   HiTicket,
+  HiPlayCircle,
   HiPlus,
   HiCheckCircle,
   HiClock,
@@ -24,6 +25,7 @@ import { WebHeader } from '../../../../components/layout/WebHeader'
 import { Footer } from '../../../../components/layout/Footer'
 import { fetchPublicFaqs } from '../../services/faqService'
 import { fetchUserTickets } from '../../services/ticketService'
+import { TutorialsPanel } from '../../../../components/common/TutorialsPanel'
 import { RaiseTicketModal } from './RaiseTicketModal'
 import { TicketDetailsModal } from './TicketDetailsModal'
 
@@ -111,7 +113,7 @@ export function HelpSupportScreen({ onBack }) {
   const goBackFallback = useNavigate()
   const handleBack = onBack || (() => goBackFallback(-1))
 
-  // Navigation tabs: 'faqs' | 'tickets'
+  // Navigation tabs: 'faqs' | 'tutorials' | 'tickets'
   const [activeTab, setActiveTab] = useState('faqs')
 
   // FAQ state
@@ -274,7 +276,8 @@ export function HelpSupportScreen({ onBack }) {
             </p>
 
             {/* Quick Hero Search */}
-            <div className="max-w-xl mx-auto relative flex items-center">
+            {/* The guides tab has no search box of its own, so the hero one is hidden there (it would filter tickets). */}
+            <div className={`max-w-xl mx-auto relative flex items-center ${activeTab === 'tutorials' ? 'hidden' : ''}`}>
               <HiMagnifyingGlass className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
@@ -330,6 +333,19 @@ export function HelpSupportScreen({ onBack }) {
             >
               <HiQuestionMarkCircle className="w-4 h-4" />
               <span>Frequently Asked Questions</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('tutorials')}
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center space-x-2 ${
+                activeTab === 'tutorials'
+                  ? 'bg-white text-blue-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <HiPlayCircle className="w-4 h-4" />
+              <span>How-to Guides</span>
             </button>
 
             <button
@@ -547,6 +563,9 @@ export function HelpSupportScreen({ onBack }) {
             </div>
           </div>
         )}
+
+        {/* TAB: How-to guides (video + text, managed by admin) */}
+        {activeTab === 'tutorials' && <TutorialsPanel audience="customer" />}
 
         {/* TAB 2: My Support Tickets */}
         {activeTab === 'tickets' && (

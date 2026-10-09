@@ -5,6 +5,15 @@ import { REVIEW_STATUS } from '../constants'
 
 const reviewStatus = z.enum(Object.values(REVIEW_STATUS))
 
+const policyEntry = z.object({
+  accepted: z.boolean(),
+  version: z.string().nullable(),
+  acceptedAt: z.string().nullable(),
+})
+
+// Privacy Policy + Terms acceptance, as built by backend/utils/policyStatus.js.
+const policies = z.object({ privacy: policyEntry, terms: policyEntry }).optional()
+
 const paged = (item) =>
   z.object({
     items: z.array(item),
@@ -27,6 +36,7 @@ export const customerSchema = z.object({
   lifetimeValue: z.number().int(),
   lastOrderAt: z.string().nullable(),
   status: z.enum(['active', 'dormant', 'blocked']),
+  policies,
 })
 
 export const customerListSchema = paged(customerSchema)
@@ -87,6 +97,7 @@ export const vendorSchema = z.object({
   products: z.number().int(),
   orders: z.number().int(),
   revenue: z.number().int(),
+  policies,
 })
 
 export const vendorListSchema = z.object({

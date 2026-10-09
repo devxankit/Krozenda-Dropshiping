@@ -16,6 +16,7 @@ const LABELS = {
   commissionBase: 'commission base',
   gatewayFeePercent: 'gateway fee %',
   gatewayFeeFixed: 'gateway fee (fixed)',
+  buyerCancellationFeePercent: 'buyer cancellation fee',
   gatewayFeeBearer: 'gateway fee bearer',
   shippingRevenueBearer: 'shipping fee',
   settlementHoldDays: 'settlement hold',
@@ -126,6 +127,22 @@ export function BusinessRulesPage() {
                 value={rules.commissionBase}
                 disabled={!canEdit}
                 onChange={(e) => update('commissionBase', e.target.value)}
+              />
+            </FormSection>
+
+            <FormSection
+              title="Buyer cancellation fee"
+              description="Kept by the platform when a buyer cancels a prepaid order (online or wallet); the rest is refunded. The seller's sale is reversed in full. COD orders and cancellations by the seller, admin or auto-cancel have no fee."
+              columns={3}
+            >
+              <NumberField
+                id="buyerCancellationFeePercent"
+                label="Fee"
+                suffix="%"
+                max={50}
+                value={rules.buyerCancellationFeePercent}
+                onChange={(v) => update('buyerCancellationFeePercent', v)}
+                disabled={!canEdit}
               />
             </FormSection>
 

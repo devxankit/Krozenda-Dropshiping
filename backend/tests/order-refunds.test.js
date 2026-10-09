@@ -142,11 +142,30 @@ describe('cancelling a single line', () => {
     const cancel = await request(app).patch(`/user/orders/${order.id}/cancel`).set('Authorization', `Bearer ${token}`);
     expect(cancel.status).toBe(200);
 
-    // 500 for the rejected line, then only the remaining 200 — not 700 again.
-    expect(await walletOf(user._id)).toBe(700);
+    // 500 for the rejected line, then only the remaining 200 less the buyer's
+    // 5% cancellation fee (10) — not 700 again.
+    expect(await walletOf(user._id)).toBe(690);
     // A's stock went back once (on rejection), not twice.
     expect((await Product.findById(productA._id)).stock).toBe(5);
     expect((await Product.findById(productB._id)).stock).toBe(5);
+  });
+
+  it('a buyer cancelling a prepaid order forfeits 5% to the platform and is refunded the rest', async () => {
+    const { vendor } = await createVendor();
+    const product = await createProduct({ price: 1000, stock: 5, vendor: vendor._id });
+    const { user, token, address } = await buyer();
+    await addToCart(token, product._id);
+    const order = await placePaidOrder({ token, address, total: 1000 });
+
+    const cancel = await request(app).patch(`/user/orders/${order.id}/cancel`).set('Authorization', `Bearer ${token}`);
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.data).toEqual({ cancellationFee: 50, refunded: 950 });
+
+    expect(await walletOf(user._id)).toBe(950);
+    const fresh = await Order.findById(order.id);
+    expect(fresh.cancellationFee).toBe(50);
+    expect(fresh.refundedAmount).toBe(950);
+    expect(fresh.paymentStatus).toBe('REFUNDED');
   });
 
   it('cancelling every line cancels the order', async () => {

@@ -1,6 +1,7 @@
 const Customer = require('../Models/Customer');
 const Order = require('../Models/Order');
 const { getImageUrl } = require('../utils/imageHelper');
+const { policyStatus } = require('../utils/policyStatus');
 
 function serializeCustomer(user, stats) {
   return {
@@ -15,6 +16,7 @@ function serializeCustomer(user, stats) {
     lifetimeValue: Math.round(stats?.lifetimeValue || 0),
     lastOrderAt: stats?.lastOrderAt || null,
     status: user.isActive ? 'active' : 'blocked',
+    policies: policyStatus(user.policyAcceptances),
   };
 }
 

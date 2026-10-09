@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+*.jks
+*.keystore
+.env.local
+/android
+/ios
+gradle-build.log

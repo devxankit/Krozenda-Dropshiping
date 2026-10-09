@@ -42,6 +42,23 @@ const customerSchema = new mongoose.Schema(
     // devices at once, so each entry carries the platform it registered from.
     // Deduped on `token` by pushTokenController.
     fcmTokens: { type: [fcmTokenSchema], default: [] },
+    // Privacy Policy / Terms the buyer agreed to at sign-in (the checkbox on
+    // the login screen), one entry per policy at the version they accepted.
+    policyAcceptances: {
+      type: [
+        new mongoose.Schema(
+          {
+            slug: { type: String, required: true, trim: true },
+            title: { type: String, trim: true, default: '' },
+            version: { type: String, trim: true, default: '' },
+            acceptedAt: { type: Date, default: Date.now },
+            ip: { type: String, default: '' },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     // --- B2B Commercial Details ---------------------------------------------
     business: {
       companyName: { type: String, trim: true, default: '' },

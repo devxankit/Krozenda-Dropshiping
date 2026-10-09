@@ -4,6 +4,7 @@ import { PageBody, PageHeader } from '../../components/shell'
 import { ErrorState, PageSkeleton } from '../../components/feedback'
 import { MoneyCell, DateCell } from '../../components/display'
 import { useCreateTransactionController, useTransactionsController } from '../../controllers/useAccountsController'
+import { CodPendingSection } from './CodPendingSection'
 
 // Accounts — gateway transactions: a simple log of settlements into, and
 // refunds out of, the gateway account against an order.
@@ -93,7 +94,7 @@ function AddTransactionForm({ onClose }) {
   )
 }
 
-export function TransactionsPage() {
+function GatewayTransactions({ switcher }) {
   const [typeFilter, setTypeFilter] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -156,6 +157,8 @@ export function TransactionsPage() {
           }
         />
 
+        {switcher}
+
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:gap-4">
           <Select
             id="txn-type-filter"
@@ -202,4 +205,34 @@ export function TransactionsPage() {
       {isAdding && <AddTransactionForm onClose={() => setIsAdding(false)} />}
     </>
   )
+}
+
+// One screen, two views: the gateway log, and the delivered COD orders still waiting for the courier's cash.
+function ViewSwitch({ view, onChange }) {
+  const items = [
+    { id: 'gateway', label: 'Gateway transactions' },
+    { id: 'cod', label: 'COD cash to collect' },
+  ]
+  return (
+    <div className="flex w-fit items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-xs">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
+            view === item.id ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function TransactionsPage() {
+  const [view, setView] = useState('gateway')
+  const switcher = <ViewSwitch view={view} onChange={setView} />
+  return view === 'cod' ? <CodPendingSection switcher={switcher} /> : <GatewayTransactions switcher={switcher} />
 }

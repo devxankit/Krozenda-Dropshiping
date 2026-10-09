@@ -51,6 +51,10 @@ export const orderSchema = z.object({
   isDropship: z.boolean().optional().default(false),
   // Delivered, inside the return window, and at least one returnable line.
   canReturn: z.boolean().optional().default(false),
+  // Before it ships and not a dropship order; the fee is what a prepaid
+  // order forfeits on cancelling (0 for COD / unpaid).
+  canCancel: z.boolean().optional().default(false),
+  cancellationFeePercent: z.number().optional().default(0),
   checkoutGroupId: z.string().nullable().optional().default(null),
   deliveredAt: z.string().nullable(),
   statusHistory: z.array(orderStatusHistoryEntrySchema),

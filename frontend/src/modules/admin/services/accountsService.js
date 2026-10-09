@@ -38,6 +38,18 @@ export const createTransaction = async (payload) => {
   return data.data
 }
 
+// Delivered COD orders whose cash the courier has not handed over yet, and the action that records it
+// (backend/Controllers/adminAccountingController: listPendingCod / recordCodRemittance).
+export const listPendingCod = async (params = {}) => {
+  const { data } = await api.get('/admin/accounting/transactions/cod-pending', { params })
+  return data.data
+}
+
+export const recordCodRemittance = async ({ orderId, reference }) => {
+  const { data } = await api.post('/admin/accounting/transactions/cod-remittance', { orderId, reference })
+  return data.data
+}
+
 export const getLedger = async (params = {}) => {
   const { data } = await api.get('/admin/accounts/ledger', { params })
   return data.data

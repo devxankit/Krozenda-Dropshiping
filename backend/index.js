@@ -15,6 +15,7 @@ const { scheduleCjTrackingPoller } = require('./Jobs/cjTrackingPoller');
 const { scheduleSettlementRelease } = require('./Jobs/settlementReleaseJob');
 const { scheduleSettlementAutomation } = require('./Jobs/settlementAutomationJob');
 const { scheduleEngagementJobs } = require('./Jobs/engagementJob');
+const { scheduleOrderAutoCancel } = require('./Jobs/orderAutoCancelJob');
 const migrateFcmTokens = require('./utils/migrateFcmTokens');
 
 const PORT = process.env.PORT || 5000;
@@ -55,6 +56,9 @@ async function start() {
   // Payment/cart/review reminders, wishlist and low-stock alerts, and the
   // "payment captured but no order" admin alert — see Jobs/engagementJob.
   scheduleEngagementJobs();
+  // Cancels + refunds orders no seller accepted within 24h — see
+  // Jobs/orderAutoCancelJob.
+  scheduleOrderAutoCancel();
 
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT} (${process.env.ENV || 'development'})`);

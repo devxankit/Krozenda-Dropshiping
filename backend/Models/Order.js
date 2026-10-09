@@ -158,6 +158,9 @@ const orderSchema = new mongoose.Schema(
     // later whole-order cancellation refunds only what is left, so a line is
     // never paid back twice.
     refundedAmount: { type: Number, default: 0, min: 0 },
+    // Kept by the platform when the BUYER cancelled this prepaid order
+    // (AccountingConfig.buyerCancellationFeePercent); not refunded.
+    cancellationFee: { type: Number, default: 0, min: 0 },
 
     paymentMethod: { type: String, enum: PAYMENT_METHODS, required: true },
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'PENDING' },

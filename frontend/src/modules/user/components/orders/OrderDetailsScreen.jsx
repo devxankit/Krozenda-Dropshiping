@@ -16,7 +16,7 @@ import { SmartImage } from '../../../../components/ui/SmartImage'
 import { ErrorState } from '../../../../components/ui/AsyncBoundary'
 import { USER_ROUTES, userPath } from '../../../../config/routes'
 import { usePageMeta } from '../../../../lib/usePageMeta'
-import { useOrderController } from '../../controllers/useOrdersController'
+import { useCancelOrderController, useOrderController } from '../../controllers/useOrdersController'
 import { reorderOrder } from '../../services/orderService'
 import { useCartStore } from '../../../../lib/cartStore'
 import { toast } from '../../../../lib/toast'
@@ -35,6 +35,7 @@ export function OrderDetailsScreen() {
   const navigate = useNavigate()
   const { orderId } = useParams()
   const { order, isLoading, isError, error, refetch } = useOrderController(orderId)
+  const { cancelOrder, isCancelling } = useCancelOrderController(orderId)
   const [reordering, setReordering] = useState(false)
   const [reorderMessage, setReorderMessage] = useState(null)
 
@@ -66,6 +67,26 @@ export function OrderDetailsScreen() {
       toast.error('Reorder Failed', err)
     } finally {
       setReordering(false)
+    }
+  }
+
+  async function handleCancel() {
+    const fee = order.cancellationFeePercent
+    const ok = window.confirm(
+      fee > 0
+        ? `Cancel this order? A ${fee}% cancellation fee will be kept and the rest refunded to your wallet.`
+        : 'Cancel this order?'
+    )
+    if (!ok) return
+    try {
+      const res = await cancelOrder()
+      const kept = res?.data?.cancellationFee
+      toast.success(
+        'Order cancelled',
+        kept > 0 ? `₹${res.data.refunded} refunded, ₹${kept} cancellation fee kept.` : 'Your order has been cancelled.'
+      )
+    } catch (err) {
+      toast.error('Could not cancel', err)
     }
   }
 
@@ -144,6 +165,16 @@ export function OrderDetailsScreen() {
               <HiShoppingCart className="w-4 h-4" />
               <span>{reordering ? 'Adding to Cart…' : 'Reorder Items'}</span>
             </button>
+
+            {order.canCancel && (
+              <button
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-red-200 transition-colors"
+              >
+                {isCancelling ? 'Cancelling…' : 'Cancel Order'}
+              </button>
+            )}
 
             {order.status !== 'CANCELLED' && (
               <button

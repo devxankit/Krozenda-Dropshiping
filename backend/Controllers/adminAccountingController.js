@@ -212,7 +212,8 @@ async function getOverview(req, res) {
   const netPlatformRevenuePaise =
     commissionPaise +
     sumOf(platform, 'SHIPPING_CHARGE', 'credit') +
-    sumOf(platform, 'PLATFORM_FEE', 'credit') -
+    sumOf(platform, 'PLATFORM_FEE', 'credit') +
+    sumOf(platform, 'CANCELLATION_FEE', 'credit') -
     platformRefundPaise -
     sumOf(platform, 'PAYMENT_GATEWAY_FEE', 'debit') -
     platformFundedDiscountPaise;
@@ -360,7 +361,7 @@ async function listTransactions(req, res) {
     commission: ['COMMISSION'],
     refunds: ['REFUND', 'REFUND_REVERSAL'],
     payouts: ['PAYOUT'],
-    fees: ['PAYMENT_GATEWAY_FEE', 'SHIPPING_CHARGE', 'PLATFORM_FEE'],
+    fees: ['PAYMENT_GATEWAY_FEE', 'SHIPPING_CHARGE', 'PLATFORM_FEE', 'CANCELLATION_FEE'],
     adjustments: ['ADJUSTMENT'],
   };
   if (tab && TAB_TYPES[tab] && !filter.type) filter.type = { $in: TAB_TYPES[tab] };

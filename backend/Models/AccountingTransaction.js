@@ -30,6 +30,9 @@ const TYPES = [
   'SHIPPING_CHARGE',
   // Buyer-paid platform fee (Order.platformFee). Platform revenue only.
   'PLATFORM_FEE',
+  // Kept by the platform when a buyer cancels a prepaid order
+  // (AccountingConfig.buyerCancellationFeePercent). Platform revenue only.
+  'CANCELLATION_FEE',
   'REFUND',
   'REFUND_REVERSAL',
   'PAYOUT',

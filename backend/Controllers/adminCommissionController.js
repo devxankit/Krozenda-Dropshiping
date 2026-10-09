@@ -562,6 +562,7 @@ function serializeConfig(config) {
     commissionBase: config.commissionBase,
     gatewayFeePercent: config.gatewayFeePercent,
     gatewayFeeFixed: config.gatewayFeeFixed,
+    buyerCancellationFeePercent: config.buyerCancellationFeePercent,
     gatewayFeeBearer: config.gatewayFeeBearer,
     shippingRevenueBearer: config.shippingRevenueBearer,
     settlementHoldDays: config.settlementHoldDays,
@@ -586,6 +587,7 @@ const NUMERIC_BOUNDS = Object.freeze({
   maxCommissionPercent: [0, 100],
   gatewayFeePercent: [0, 100],
   gatewayFeeFixed: [0, 100000],
+  buyerCancellationFeePercent: [0, 50],
   settlementHoldDays: [0, 180],
 });
 

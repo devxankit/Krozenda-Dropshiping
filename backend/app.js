@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
+const { clearResponseCache } = require('./Middlewares/responseCache');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { UPLOADS_ROOT } = require('./Config/uploads');
@@ -111,6 +112,12 @@ app.use('/admin/auth', require('./Router/adminAuthRoutes'));
 app.use('/admin', require('./Router/adminAnalyticsRoutes'));
 app.use('/admin/staff', require('./Router/staffRoutes'));
 app.use('/admin/roles', require('./Router/roleRoutes'));
+// The public catalog lists (categories, brands, banners) are cached for a minute; any admin or
+// seller write to the catalog drops the cache so the storefront never lags behind an edit.
+app.use(['/admin/catalog', '/admin/marketing/banners', '/vendor/catalog'], (req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', clearResponseCache);
+  next();
+});
 app.use('/admin/catalog/approvals', require('./Router/adminApprovalRoutes'));
 app.use('/admin/catalog/import', require('./Router/adminProductImportRoutes'));
 app.use('/admin/catalog/products', require('./Router/productRoutes'));
@@ -122,6 +129,7 @@ app.use('/admin/marketing/banners', require('./Router/bannerRoutes'));
 app.use('/admin/marketing/coupons', require('./Router/couponRoutes'));
 app.use('/admin/marketing/cms', require('./Router/cmsRoutes'));
 app.use('/admin/marketing/faqs', require('./Router/faqRoutes'));
+app.use('/admin/marketing/tutorials', require('./Router/tutorialRoutes'));
 app.use('/admin/marketing/campaigns', require('./Router/adminCampaignRoutes'));
 app.use('/admin/marketing/reviews', require('./Router/adminReviewRoutes'));
 app.use('/admin/reports', require('./Router/adminReportsRoutes'));
@@ -189,6 +197,7 @@ app.get('/public/cms/:slug', require('./Controllers/cmsController').getPublicCms
 app.get('/public/cms-acceptance', require('./Controllers/cmsController').getPublicAcceptancePages);
 app.get('/public/settings', require('./Controllers/adminSettingsController').getPublicSettings);
 app.use('/faq', require('./Router/publicFaqRoutes'));
+app.use('/tutorials', require('./Router/publicTutorialRoutes'));
 // Runtime UI translation. Unauthenticated like /catalog/*, because the
 // language switcher has to work before anyone signs in.
 app.use('/translate', require('./Router/translateRoutes'));

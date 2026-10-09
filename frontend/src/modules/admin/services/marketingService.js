@@ -151,6 +151,33 @@ export async function deleteFaq({ id }) {
   return data.data
 }
 
+// --- Tutorials (real backend — video + text guides for sellers/customers) --
+
+export async function fetchTutorials(query = {}) {
+  const { data } = await api.get('/admin/marketing/tutorials', { params: query })
+  return data.data
+}
+
+export async function createTutorial(payload) {
+  const { data } = await api.post('/admin/marketing/tutorials', payload)
+  return data.data
+}
+
+export async function updateTutorial({ id, ...payload }) {
+  const { data } = await api.put(`/admin/marketing/tutorials/${id}`, payload)
+  return data.data
+}
+
+export async function updateTutorialStatus({ id, status }) {
+  const { data } = await api.patch(`/admin/marketing/tutorials/${id}/status`, { status })
+  return data.data
+}
+
+export async function deleteTutorial({ id }) {
+  const { data } = await api.delete(`/admin/marketing/tutorials/${id}`)
+  return data.data
+}
+
 // --- Campaigns (real backend — push only, see marketing/CampaignFormModal) -
 
 export async function fetchCampaigns(query = {}) {

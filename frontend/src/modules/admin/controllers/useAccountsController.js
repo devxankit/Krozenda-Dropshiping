@@ -66,6 +66,23 @@ export function useCreateTransactionController({ onSaved } = {}) {
   })
 }
 
+export function usePendingCodController() {
+  return useListController({
+    queryKey: ['admin', 'accounts', 'cod-pending'],
+    queryFn: ({ page, rowsPerPage }) => service.listPendingCod({ page, rowsPerPage }),
+    defaultRowsPerPage: 10,
+  })
+}
+
+export function useRecordCodRemittanceController({ onSaved } = {}) {
+  return useAdminMutation({
+    mutationFn: service.recordCodRemittance,
+    invalidate: ACCOUNTS,
+    success: 'COD cash recorded — the order is now paid and the seller line can settle',
+    onDone: onSaved,
+  })
+}
+
 export function useLedgerController(filters = {}) {
   return useListController({
     queryKey: ['admin', 'accounts', 'ledger', filters],

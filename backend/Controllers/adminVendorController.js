@@ -12,6 +12,7 @@ const emailService = require('../services/emailService');
 const { createNotification } = require('./notificationController');
 const { notifyVendorAccountDecision } = require('../services/vendorAlertService');
 const { FSSAI_DOC_TYPE } = require('../utils/fssai');
+const { policyStatus } = require('../utils/policyStatus');
 const { prepareCommission, setBaseCommission, CommissionInputError } = require('../services/quickCommission');
 const { sellerLabel } = require('../services/sellerCommissionRate');
 
@@ -67,6 +68,7 @@ async function listVendors(req, res) {
   const items = vendors.map((v) => ({
     ...serializeVendor(v),
     ...(tradeStats.get(v._id.toString()) || { products: 0, orders: 0, revenue: 0 }),
+    policies: policyStatus(v.policyAcceptances),
   }));
 
   const stats = {

@@ -199,3 +199,38 @@ export const useFaqWriteController = ({ onSaved } = {}) => ({
     success: 'FAQ removed',
   }),
 })
+
+export const useTutorialsController = (query = {}) => {
+  const q = useQuery({
+    queryKey: ['admin', 'marketing', 'tutorials', query],
+    queryFn: () => service.fetchTutorials(query),
+  })
+  return { data: q.data, isLoading: q.isLoading, error: q.error, refetch: q.refetch }
+}
+
+const TUTORIALS = [['admin', 'marketing', 'tutorials']]
+
+export const useTutorialWriteController = ({ onSaved } = {}) => ({
+  create: useAdminMutation({
+    mutationFn: service.createTutorial,
+    invalidate: TUTORIALS,
+    success: 'Tutorial added successfully',
+    onDone: onSaved,
+  }),
+  update: useAdminMutation({
+    mutationFn: service.updateTutorial,
+    invalidate: TUTORIALS,
+    success: 'Tutorial updated successfully',
+    onDone: onSaved,
+  }),
+  setStatus: useAdminMutation({
+    mutationFn: service.updateTutorialStatus,
+    invalidate: TUTORIALS,
+    success: (t) => `Tutorial is now ${t.status}`,
+  }),
+  remove: useAdminMutation({
+    mutationFn: service.deleteTutorial,
+    invalidate: TUTORIALS,
+    success: 'Tutorial removed',
+  }),
+})

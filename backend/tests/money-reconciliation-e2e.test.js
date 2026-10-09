@@ -287,10 +287,14 @@ describe('money audit — multi-seller prepaid order', () => {
     expect(c.status).toBe(200);
     const after = (await Customer.findById(cust._id)).walletBalance;
     const o = await Order.findById(oid).lean();
-    check('cancel refunds full total incl. platform fee', r2(after - before), o.total);
+    // The buyer forfeits the cancellation fee (5% of what was paid); the rest, including the platform fee, goes back.
+    const fee = Math.floor(o.total * 5) / 100;
+    check('cancel refunds total less the cancellation fee', r2(after - before), r2(o.total - fee));
     const rows = await ledger(oid);
     const platformNet = sum(rows, (r) => !r.vendor && r.type === 'PLATFORM_FEE', 'credit') - sum(rows, (r) => !r.vendor && r.type === 'REFUND', 'debit');
-    check('platform fee revenue after full cancellation = 0', platformNet, 0);
+    const kept = sum(rows, (r) => !r.vendor && r.type === 'CANCELLATION_FEE', 'credit');
+    check('platform fee + shipping reversed on full cancellation', platformNet, 0);
+    check('platform keeps exactly the cancellation fee', r2(kept / 100), r2(fee));
   });
 
   test('no findings', () => {
