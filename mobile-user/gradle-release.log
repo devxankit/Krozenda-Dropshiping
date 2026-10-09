@@ -1140,3 +1140,516 @@ C/C++:   correctly.
 Copying 43 asset files
 Done writing bundle output
 Done writing sourcemap output
+
+> Task :app:preBuild
+> Task :app:preReleaseBuild
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated]
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
+C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a] FAILED
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated]
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+
+> Task :app:configureCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated] FAILED
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/android/.cxx/RelWithDebInfo/3wq4q64f/arm64-v8a/CMakeFiles/reanimated.dir/./
+C/C++:   has 177 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     C_/Users/admin/Documents/GitHub/Krozenda-Dropshiping/mobile-user/node_modules/react-native-reanimated/Common/NativeView/react/renderer/components/rnreanimated/REASharedTransitionBoundaryShadowNode.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
