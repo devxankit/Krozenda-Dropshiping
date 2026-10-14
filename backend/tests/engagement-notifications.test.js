@@ -9,9 +9,6 @@ const whatsapp = require('../services/whatsappService');
 const { alertAdmins } = require('../services/adminAlertService');
 const vendorAlerts = require('../services/vendorAlertService');
 const { allowsPush } = require('../Controllers/notificationController');
-const { notifyCjShipmentMilestone } = require('../services/buyerAlertService');
-const { mapTrackingStatus } = require('../services/cj/cjLogisticsService');
-const CjShipment = require('../Models/CjShipment');
 const job = require('../Jobs/engagementJob');
 const {
   connectTestDb,
@@ -156,47 +153,31 @@ describe('one-off WhatsApp sends', () => {
   });
 });
 
-describe('long admin alerts and CJ delivery milestones', () => {
+describe('long admin alerts', () => {
   test('an urgent admin alert reaches WhatsApp in full, not cut at 60 characters', async () => {
     const message =
-      'Dropship order ORD-1234ABCD (Rs.4599) was not accepted by CJ: product variant is out of stock at the CN warehouse. It was cancelled and refunded automatically.';
-    await alertAdmins({ event: 'LONG', title: 'CJ order failed — buyer refunded', message, key: 'LONG:1', urgent: true });
+      'Order ORD-1234ABCD (Rs.4599) was not accepted by the fulfilment provider: the variant is out of stock at the warehouse. It was cancelled and refunded automatically.';
+    await alertAdmins({
+      event: 'LONG',
+      title: 'Provider order failed — buyer refunded',
+      message,
+      key: 'LONG:1',
+      urgent: true,
+    });
 
     const messages = await sendsOf('admin_alert', 2);
     const [, details] = messages[0].get('Params').split(/,(.*)/s);
     expect(details).toBe(message.replace(',', ''));
   });
 
-  test('CJ spells statuses loosely; the mapper still recognises them', () => {
-    expect(mapTrackingStatus('Out for delivery')).toBe('OUT_FOR_DELIVERY');
-    expect(mapTrackingStatus('delivery-failed')).toBe('DELIVERY_FAILED');
-    expect(mapTrackingStatus('something new')).toBe('PROCESSING');
-  });
-
-  test('CJ out for delivery tells the buyer; a failed attempt also alerts admins', async () => {
-    const order = await makeOrder({ fields: { fulfillmentType: 'DROPSHIP', status: 'SHIPPED' } });
-    const shipment = await CjShipment.create({
-      cjOrder: order._id, // any id: the milestone reads the Krozenda order from cjOrder below
-      cjOrderId: `CJ${Date.now()}`,
-      trackingNumber: 'YT123456789CN',
-      carrier: 'YunExpress',
-      status: 'OUT_FOR_DELIVERY',
-    });
-    const cjOrder = { krozendaOrderId: order._id };
-
-    await notifyCjShipmentMilestone(shipment, cjOrder);
-    await notifyCjShipmentMilestone(shipment, cjOrder); // same day: no second WhatsApp
-    const out = await sendsOf('out_for_delivery', 1);
-    expect(out).toHaveLength(1);
-    expect(out[0].get('Params').split(',')).toEqual(['Rehan', whatsapp.orderNumber(order._id), 'YunExpress', 'YT123456789CN']);
-
-    shipment.status = 'DELIVERY_FAILED';
-    await notifyCjShipmentMilestone(shipment, cjOrder);
-    expect(await sendsOf('delivery_failed', 1)).toHaveLength(1);
-    expect(await NotificationDispatch.exists({ key: new RegExp(`^ADMIN:CJ_DELIVERY_FAILED:${shipment._id}`) })).toBeTruthy();
-    const titles = (await Notification.find({ user: order.user }).lean()).map((n) => n.title);
-    expect(titles).toEqual(expect.arrayContaining(['Out for delivery today', 'Delivery attempt failed']));
-  });
+  // REMOVED WITH THE PROVIDER: its loose tracking-status mapper, and its
+  // out-for-delivery / failed-attempt buyer alert. Both the mapper and the
+  // notifier were provider-specific code and went with it.
+  //
+  // Worth restoring for the next provider, because both caught real bugs: the
+  // same-day dedupe (so a 15-minute poller cannot spam a buyer) and the admin
+  // alert on a failed attempt (an externally fulfilled order has no seller to
+  // chase it, so it has to reach an admin).
 });
 
 describe('push preferences', () => {

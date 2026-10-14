@@ -3,12 +3,24 @@ const mongoose = require('mongoose');
 const PAYMENT_METHODS = ['COD', 'WALLET', 'RAZORPAY'];
 const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
 const STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
-// STANDARD: sold and shipped by a seller / the platform — the normal flow.
-// DROPSHIP: fulfilled by CJ Dropshipping. Online payment only, and the buyer
-// can neither cancel nor return it (business rule, 2026-09). A cart holding
-// both is split at checkout into one order of each type, paid by one
-// Razorpay payment, so each keeps its own tracking, cancel and return flow.
-const FULFILLMENT_TYPES = ['STANDARD', 'DROPSHIP'];
+// Who fulfils an order, and therefore how it is tracked, cancelled and
+// returned. A cart mixing types is split at checkout into one order per
+// type, paid by a single Razorpay payment, so each keeps its own flow.
+//
+// STANDARD: sold and shipped by a seller or the platform — the normal flow.
+//
+// ORDER MATTERS. The checkout groups in this order, and the FIRST present
+// type carries the platform fee, the coupon redemption and primaryOrderId.
+// 'STANDARD' must stay element 0, and a new provider must be APPENDED, or
+// the buyer's platform fee silently moves onto a different order.
+// SHOPIFY: fulfilled by a dropshipping app on the connected Shopify store.
+// Paid online on Krozenda, then raised with Shopify as an already-paid order.
+//
+// APPENDED, never inserted. The checkout groups in this order and the FIRST
+// present type carries the platform fee, the coupon redemption and
+// primaryOrderId — so putting anything before 'STANDARD' silently moves the
+// buyer's platform fee onto a different order.
+const FULFILLMENT_TYPES = ['STANDARD', 'SHOPIFY'];
 
 // Line items and the shipping address are snapshotted at order time (name,
 // price, image, full address text) rather than left as live refs, so
@@ -180,9 +192,10 @@ const orderSchema = new mongoose.Schema(
     // redemption and the gateway's fixed per-payment fee.
     checkoutGroupId: { type: String, default: null, index: true },
     checkoutGroupIndex: { type: Number, default: 0 },
-    // The CJ logistics line the buyer was quoted at checkout, so the CJ order
-    // is created on the same line the buyer paid for.
-    cjLogisticName: { type: String, default: null },
+    // The provider's shipping line the buyer was quoted at checkout, so the
+    // order raised with the provider is created on the line the buyer paid
+    // for rather than whatever that provider happens to default to.
+    providerShippingLineTitle: { type: String, default: null },
 
     status: { type: String, enum: STATUSES, default: 'PENDING' },
     deliveredAt: { type: Date, default: null },

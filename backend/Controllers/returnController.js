@@ -131,7 +131,7 @@ async function createReturnRequest(req, res) {
     return res.status(403).json({
       success: false,
       code: 'DROPSHIP_NOT_RETURNABLE',
-      message: 'Dropshipping items cannot be returned or replaced.',
+      message: 'Items shipped by our supplier cannot be returned or replaced yet.',
     });
   }
 

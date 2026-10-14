@@ -10,7 +10,7 @@ const { stateCodeFromGstin, stateCodeFromName, stateName, isValidGstin } = requi
 // Under GST the invoice is issued by whoever SUPPLIES the goods, so one order
 // can carry several invoices — one per supplier:
 //
-//   Krozenda (platform GSTIN)  own-stock lines, CJ Dropshipping lines, and the
+//   Krozenda (platform GSTIN)  own-stock lines, Dropshipping lines, and the
 //                              order's shipping charge
 //   each seller (their GSTIN)  that seller's lines
 //
@@ -28,8 +28,10 @@ const { stateCodeFromGstin, stateCodeFromName, stateName, isValidGstin } = requi
 
 const PLATFORM_KEY = 'PLATFORM';
 
+// An externally fulfilled line is invoiced by the platform, not a seller:
+// there is no seller behind it to be the supplier of record.
 function supplierKeyFor(order, item) {
-  if (order.fulfillmentType === 'DROPSHIP' || !item.vendor) return PLATFORM_KEY;
+  if (order.fulfillmentType !== 'STANDARD' || !item.vendor) return PLATFORM_KEY;
   return `VENDOR:${item.vendor}`;
 }
 

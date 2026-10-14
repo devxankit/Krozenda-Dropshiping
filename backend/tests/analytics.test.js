@@ -161,7 +161,7 @@ describe('GET /admin/dashboard', () => {
     expect(cancelled.count).toBe(1);
   });
 
-  it('splits revenue into own stock, CJ Dropshipping and sellers', async () => {
+  it('splits revenue into own stock, externally fulfilled and sellers', async () => {
     const { token } = await createAdmin();
     const { user } = await createCustomer();
 
@@ -170,10 +170,10 @@ describe('GET /admin/dashboard', () => {
 
     // Attribution reads the line's own vendor snapshot first, and falls back
     // to the product's owner — both paths are exercised here. A B2B partner
-    // is a seller like any other; only CJ-fulfilled lines are CJ.
+    // is a seller like any other; only externally fulfilled lines are not.
     const ownStock = await createProduct({ price: 100 });
     const partnerProduct = await createProduct({ price: 50, vendor: partnerSeller._id });
-    const cjProduct = await createProduct({ price: 300, fulfillmentProvider: 'CJ' });
+    const cjProduct = await createProduct({ price: 300, fulfillmentProvider: 'SHOPIFY' });
 
     await placeOrder({
       user: user._id,

@@ -23,7 +23,7 @@ function paged(items, { page = 1, rowsPerPage = 25 } = {}, tabCounts) {
 // ---------------------------------------------------------------------------
 // Sub-orders — one row per (order, line item). "model" is the line's channel,
 // the same three the dashboard and Revenue screen use: a CJ (DROPSHIP) order
-// is CJ Dropshipping, a seller's line is Sellers, anything else is Own stock.
+// is Dropshipping, a seller's line is Sellers, anything else is Own stock.
 // ---------------------------------------------------------------------------
 
 function ageHours(date) {
@@ -37,7 +37,8 @@ function serializeSubOrder(order, item) {
     id: `${order._id}:${item.product}:${item.variantId || ''}`,
     orderId: order._id.toString(),
     placedAt: order.createdAt,
-    model: order.fulfillmentType === 'DROPSHIP' ? 'dropshipping' : item.vendorDoc ? 'marketplace' : 'own_stock',
+    model:
+      order.fulfillmentType !== 'STANDARD' ? 'dropshipping' : item.vendorDoc ? 'marketplace' : 'own_stock',
     seller: vendorLabel(item.vendorDoc),
     buyer: order.user?.name || '',
     status: item.status,
@@ -398,12 +399,13 @@ async function resolveCancellationRefund(req, res) {
     return res.json({ success: true, message: 'Nothing to refund', data: serializeCancellation(order) });
   }
 
-  // A dropship order goes back to the original payment, not the wallet — the
-  // wallet cannot buy dropship items. Its automatic refund may have failed;
-  // this retries it.
-  const { isDropshipOrder } = require('../utils/dropship');
-  if (await isDropshipOrder(order)) {
-    const result = await require('../services/dropshipOrderService').retryRefund({ orderId: order._id });
+  // An externally fulfilled order goes back to the original payment, not the
+  // wallet — the wallet cannot buy these items, so wallet credit would be
+  // money the buyer cannot spend on the same thing again. Its automatic
+  // refund may have failed; this retries it.
+  const { isExternallyFulfilled } = require('../services/fulfillment/fulfillmentRouter');
+  if (await isExternallyFulfilled(order)) {
+    const result = await require('../services/externalOrderRefundService').retryRefund({ orderId: order._id });
     if (!result.ok) return res.status(result.status).json({ success: false, message: result.message });
     const refreshed = await Order.findById(order._id).populate('user', 'name');
     return res.json({ success: true, message: 'Refund sent to the original payment method', data: serializeCancellation(refreshed) });

@@ -158,7 +158,7 @@ export function HomeCenterFeed({
   // whatever happens to be flagged flashSale/trending.
   //
   // The toggle itself only renders when dropshippingEnabled is true
-  // (Admin > CJ Dropshipping > Settings). When it's off, CJ products are
+  // (Admin > Settings > Catalog). When it's off, externally fulfilled products are
   // already excluded server-side, so the toggle would just be a dead control
   // that leaks the existence of a "dropship" feature to every customer.
   const { dropshippingEnabled } = useCatalogSettingsController()

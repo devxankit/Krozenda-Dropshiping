@@ -4,6 +4,7 @@ import { RoleGuard } from '../../routes/RoleGuard'
 import { useAuthStore } from '../../lib/authStore'
 import { LogisticsSettingsPage } from './pages/system/LogisticsSettingsPage'
 import { CarrierShipmentsPage } from './pages/fulfilment/CarrierShipmentsPage'
+import { DropshippingPage } from './pages/dropshipping/DropshippingPage'
 import { ADMIN_ROUTES } from '../../config/routes'
 import { ADMIN_PERMISSIONS } from './constants'
 import { AdminLayout } from './components/shell'
@@ -16,16 +17,6 @@ import { ApprovalsPage } from './pages/catalog/ApprovalsPage'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { BrandsPage } from './pages/catalog/BrandsPage'
 import { InventoryPage } from './pages/catalog/InventoryPage'
-import { CjSettingsPage } from './pages/cj/CjSettingsPage'
-import { CjDashboardPage } from './pages/cj/CjDashboardPage'
-import { CjCataloguePage } from './pages/cj/CjCataloguePage'
-import { CjCategoryPage } from './pages/cj/CjCategoryPage'
-import { CjProductsPage } from './pages/cj/CjProductsPage'
-import { CjProductDetailPage } from './pages/cj/CjProductDetailPage'
-import { CjOrdersPage } from './pages/cj/CjOrdersPage'
-import { CjShipmentsPage } from './pages/cj/CjShipmentsPage'
-import { CjDisputesPage } from './pages/cj/CjDisputesPage'
-import { CjSyncLogsPage } from './pages/cj/CjSyncLogsPage'
 import { OrdersPage } from './pages/orders/OrdersPage'
 import { OrderDetailPage } from './pages/orders/OrderDetailPage'
 import { ReturnsPage } from './pages/fulfilment/ReturnsPage'
@@ -192,6 +183,10 @@ export default function AdminRoutes() {
 
               {/* Orders — the reference list + detail pair every other list
                 and detail screen is assembled the same way. */}
+              {/* Dropshipping: the connected Shopify catalogue, and the review
+                  queue of what has been imported from it. */}
+              <Route path={rel(ADMIN_ROUTES.DROPSHIPPING)} element={<DropshippingPage />} />
+
               <Route path={rel(ADMIN_ROUTES.ORDERS)} element={<OrdersPage />} />
               <Route path={rel(ADMIN_ROUTES.ORDER_DETAIL)} element={<OrderDetailPage />} />
               {/* Sales is four screens: Orders, Shipments, Returns, Invoices. */}
@@ -201,17 +196,6 @@ export default function AdminRoutes() {
               <Route path={rel(ADMIN_ROUTES.INVOICES)} element={<InvoicesPage />} />
               <Route path={rel(ADMIN_ROUTES.INVOICE_DETAIL)} element={<InvoiceDetailPage />} />
 
-              {/* CJ Dropshipping Module — provider-specific, admin-only. */}
-              <Route path={rel(ADMIN_ROUTES.CJ_DASHBOARD)} element={<CjDashboardPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_CATALOGUE)} element={<CjCataloguePage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_CATEGORY)} element={<CjCategoryPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_PRODUCTS)} element={<CjProductsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_PRODUCT_DETAIL)} element={<CjProductDetailPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_ORDERS)} element={<CjOrdersPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_SHIPMENTS)} element={<CjShipmentsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_DISPUTES)} element={<CjDisputesPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_SYNC_LOGS)} element={<CjSyncLogsPage />} />
-              <Route path={rel(ADMIN_ROUTES.CJ_SETTINGS)} element={<CjSettingsPage />} />
 
               {/* People */}
               <Route path={rel(ADMIN_ROUTES.CUSTOMERS)} element={<CustomersPage />} />

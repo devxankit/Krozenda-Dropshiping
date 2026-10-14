@@ -39,7 +39,7 @@ export const productCardSchema = z.object({
   isTrending: z.boolean(),
   rating: z.number(),
   reviewsCount: z.number(),
-  // CJ-fulfilled product, shown as a small badge. Defaulted so a response
+  // externally fulfilled product, shown as a small badge. Defaulted so a response
   // served before this field existed still parses.
   isDropship: z.boolean().default(false),
 })
@@ -161,7 +161,7 @@ export const deliveryCheckSchema = z.object({
 })
 
 // Storefront-wide catalog flags. Currently just the dropshipping visibility
-// kill-switch (Admin > CJ Dropshipping > Settings), so the UI can hide any
+// kill-switch (Admin > Settings > Catalog), so the UI can hide any
 // mention of it — filter option, badges — instead of showing a dead control.
 export const catalogSettingsSchema = z.object({
   dropshippingEnabled: z.boolean().default(true),

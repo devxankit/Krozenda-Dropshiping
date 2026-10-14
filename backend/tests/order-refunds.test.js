@@ -7,7 +7,7 @@
 //     the stock of an already-cancelled line back a second time
 //   * the manual "refund this cancellation" button pays once however often
 //     it is pressed
-//   * the new-customer check, the free-delivery threshold, and CJ freight
+//   * the new-customer check, the free-delivery threshold, and provider freight
 jest.mock('../Config/razorpay', () => ({
   orders: { create: jest.fn() },
   payments: { fetch: jest.fn(), refund: jest.fn() },
@@ -23,7 +23,6 @@ const Product = require('../Models/Product');
 const Customer = require('../Models/Customer');
 const ShippingSettings = require('../Models/ShippingSettings');
 const serviceabilityService = require('../services/shipping/serviceabilityService');
-const cjLogisticsService = require('../services/cj/cjLogisticsService');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const { shortVariantLabels } = require('../utils/variantLabels');
 const {
@@ -252,9 +251,6 @@ describe('delivery charges', () => {
       serviceable: true,
       couriers: [{ courierId: 1, courierName: 'Test', estimatedCost: 80, estimatedDeliveryDays: 3 }],
     });
-    jest.spyOn(cjLogisticsService, 'calculateFreight').mockResolvedValue([
-      { logisticName: 'CJPacket', logisticPrice: 2, logisticAging: '7-12' },
-    ]);
   }
   afterEach(() =>
     ShippingSettings.updateOne({ key: 'GLOBAL' }, { $set: { shippingEnabled: false, freeShippingThreshold: 0 } })
@@ -289,14 +285,22 @@ describe('delivery charges', () => {
     expect(withCoupon.body.data.shippingFee).toBe(80);
   });
 
-  it('never makes CJ freight free', async () => {
+  // The rule this replaces was "never make the provider's freight free". With
+  // no provider connected there is no freight to quote, and the stronger
+  // property is the one worth guarding: an externally fulfilled line whose
+  // rate nobody can quote must BLOCK the checkout, not ship at zero.
+  //
+  // This is the regression test for the money-losing default. The old code
+  // fell back to `shippingBy[type] || 0`, so a provider that failed to return
+  // a rate shipped free and logged nothing.
+  it('blocks checkout for an externally fulfilled line with no configured rate', async () => {
     await withCarrier({ freeShippingThreshold: 100 });
-    const product = await createProduct({ price: 5000, stock: 5, vendor: null, fulfillmentProvider: 'CJ' });
+    const product = await createProduct({ price: 5000, stock: 5, vendor: null, fulfillmentProvider: 'SHOPIFY' });
     await ProductFulfillmentMapping.create({
       product: product._id,
-      provider: 'CJ',
-      cjProductId: `CJP${unique()}`,
-      variants: [{ cjVariantId: `CJV${unique()}`, providerCost: 20 }],
+      provider: 'SHOPIFY',
+      externalProductId: `gid://shopify/Product/${unique()}`,
+      variants: [{ externalVariantId: `gid://shopify/ProductVariant/${unique()}`, providerCost: 20 }],
     });
     const { token, address } = await buyer();
     await addToCart(token, product._id);
@@ -305,13 +309,13 @@ describe('delivery charges', () => {
       .post('/user/orders/shipping-quote')
       .set('Authorization', `Bearer ${token}`)
       .send({ addressId: address._id.toString(), paymentMethod: 'RAZORPAY' });
-    expect(res.status).toBe(200);
-    const { USD_TO_INR_RATE } = require('../services/cj/cjPricing');
-    expect(res.body.data.shippingFee).toBeCloseTo(2 * USD_TO_INR_RATE, 2);
+
+    expect(res.status).toBe(409);
+    expect(res.body.data?.shippingFee).toBeUndefined();
   });
 });
 
-describe('CJ variant names', () => {
+describe('variant name shortening', () => {
   it('keeps only the words that tell variants apart', () => {
     expect(
       shortVariantLabels([

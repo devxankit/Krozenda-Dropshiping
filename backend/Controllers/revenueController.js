@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Vendor = require('../Models/Vendor');
 const { computeRevenue } = require('../services/revenueService');
-const { USD_TO_INR_RATE } = require('../services/cj/cjPricing');
 const { resolveRange } = require('../utils/analyticsRange');
 const { delta } = require('./adminAnalyticsController');
 
@@ -44,11 +43,13 @@ function channelKpis(current, previous) {
         kpi('sellerEarnings', 'Seller earnings', c.sellerEarnings, p.sellerEarnings, "Sellers' share after commission"),
         orders,
       ];
-    } else if (channel.key === 'cj') {
+    } else if (channel.key === 'external') {
       out[channel.key] = [
         net,
-        kpi('cost', 'CJ cost', c.cost, p.cost, `Charged by CJ, at ₹${USD_TO_INR_RATE}/USD`, { lowerIsBetter: true }),
-        kpi('earnings', 'Krozenda margin', c.earnings, p.earnings, 'Net sales − CJ cost'),
+        kpi('cost', 'Supplier cost', c.cost, p.cost, 'Charged by the fulfilment provider', {
+          lowerIsBetter: true,
+        }),
+        kpi('earnings', 'Krozenda margin', c.earnings, p.earnings, 'Net sales − supplier cost'),
         orders,
       ];
     } else {
@@ -83,7 +84,7 @@ async function getAdminRevenue(req, res) {
           'Krozenda earnings',
           t.earnings,
           p.earnings,
-          'Own-stock profit + CJ margin + seller commission'
+          'Own-stock profit + supplier margin + seller commission'
         ),
         kpi('sellerEarnings', 'Seller earnings', t.sellerEarnings, p.sellerEarnings, "Sellers' share after commission"),
         kpi('refunds', 'Refunds', t.refunds, p.refunds, 'Approved return refunds', { lowerIsBetter: true }),
@@ -94,7 +95,6 @@ async function getAdminRevenue(req, res) {
       trend: current.trend,
       sellers: current.sellers,
       notes: {
-        cjUsdToInrRate: USD_TO_INR_RATE,
         ownStockLinesWithoutCost: current.channels.find((c) => c.key === 'own_stock')?.linesWithoutCost || 0,
       },
     },

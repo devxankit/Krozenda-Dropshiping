@@ -138,10 +138,15 @@ function serializeItem(entry, { hideOwnStock = false } = {}) {
     quantity: entry.quantity,
     stock,
     availability,
-    // A dropshipping item: online payment only, no cancellation, no return.
-    // Flag-based here for speed; checkout re-derives it authoritatively
-    // (utils/dropship), so a stale flag can never let COD through.
-    isDropship: p.fulfillmentProvider === 'CJ',
+    // An externally fulfilled item: online payment only.
+    //
+    // This is the one buyer-facing surface that still reports the flag,
+    // because the cart is where it is still true: the clients use it for the
+    // online-payment-only notice and the "this becomes two orders" notice.
+    // The order and product serializers deliberately do NOT report it — see
+    // utils/buyerFulfillment.js. Flag-based here for speed; checkout
+    // re-derives it authoritatively, so a stale flag cannot let COD through.
+    isDropship: Boolean(p.fulfillmentProvider),
     // B2B context the cart UI needs to explain its own numbers.
     moq: p.moq ?? 1,
     priceSource: source,

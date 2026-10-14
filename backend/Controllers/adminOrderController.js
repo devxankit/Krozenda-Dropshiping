@@ -6,9 +6,9 @@ const { serializeOrder, releaseStock, reserveStock, notifyVendorsOfNewOrder } = 
 const { createNotification } = require('./notificationController');
 const { toPaise } = require('../utils/money');
 const accounting = require('../services/accountingPosting');
-const dropshipOrderService = require('../services/dropshipOrderService');
+const externalOrderRefundService = require('../services/externalOrderRefundService');
 const { refundCancelledOrderToWallet } = require('../services/orderCancellationService');
-const { isDropshipOrder } = require('../utils/dropship');
+const { isExternallyFulfilled } = require('../services/fulfillment/fulfillmentRouter');
 
 const STATUS_NOTIFICATION = {
   PROCESSING: { title: 'Order Processing', message: (o) => `Your order #${o._id.toString().slice(-8).toUpperCase()} is now being processed.` },
@@ -271,13 +271,27 @@ async function updateOrderStatus(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid target status' });
   }
 
-  // A dropshipping order is cancelled at CJ first and refunded to the buyer's
-  // original payment — never to the wallet, which cannot pay for dropship
-  // items. That flow lives in dropshipOrderService.
+  // An externally fulfilled order is refunded to the buyer's original
+  // payment — never to the wallet, which cannot pay for these items.
+  //
+  // NOTE for whoever wires up the next provider: the provider must be asked
+  // to cancel BEFORE this refund, and a refusal must abort without
+  // refunding. Refunding a buyer for goods already on their way loses both
+  // the money and the stock.
   if (status === 'CANCELLED') {
     const target = await Order.findById(id).select('fulfillmentType checkoutGroupId items.product').lean();
-    if (target && (await isDropshipOrder(target))) {
-      const result = await dropshipOrderService.adminCancel({ orderId: id });
+    if (target && (await isExternallyFulfilled(target))) {
+      // A Shopify order is cancelled AT SHOPIFY first, and a refusal aborts
+      // without refunding — refunding a buyer for goods already on their way
+      // loses the money and the stock.
+      const result =
+        target.fulfillmentType === 'SHOPIFY'
+          ? await require('../services/shopify/orderPushService').adminCancel({ orderId: id })
+          : await externalOrderRefundService.refundAndCancel({
+              orderId: id,
+              cancelledBy: 'admin',
+              reason: 'cancelled by Krozenda',
+            });
       if (!result.ok) {
         return res.status(result.status || 400).json({ success: false, message: result.message });
       }
@@ -360,7 +374,10 @@ async function updateOrderStatus(req, res) {
         console.error('Accounting posting failed (admin cancellation), will be reconciled on next read:', err.message);
       }
     }
-    await dropshipOrderService.releaseCouponIfWholeCheckoutCancelled({ ...order.toObject(), status: 'CANCELLED' });
+    await externalOrderRefundService.releaseCouponIfWholeCheckoutCancelled({
+      ...order.toObject(),
+      status: 'CANCELLED',
+    });
   }
 
   const notif = STATUS_NOTIFICATION[status];

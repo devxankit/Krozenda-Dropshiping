@@ -10,8 +10,8 @@ const registerSocketHandlers = require('./Router/socketHandler');
 const { attachSocketServer } = require('./utils/realtime');
 const scheduleNightlyBackup = require('./Jobs/backupScheduler');
 const { scheduleTrackingPoller } = require('./Jobs/trackingPoller');
-const { scheduleCjSync } = require('./Jobs/cjSyncJob');
-const { scheduleCjTrackingPoller } = require('./Jobs/cjTrackingPoller');
+const { scheduleShopifyOrderPush } = require('./Jobs/shopifyOrderPushJob');
+const { scheduleShopifySync } = require('./Jobs/shopifySyncJob');
 const { scheduleSettlementRelease } = require('./Jobs/settlementReleaseJob');
 const { scheduleSettlementAutomation } = require('./Jobs/settlementAutomationJob');
 const { scheduleEngagementJobs } = require('./Jobs/engagementJob');
@@ -44,9 +44,11 @@ async function start() {
   scheduleNightlyBackup();
   // Fallback for lost carrier webhooks; no-op when shipping is disabled.
   await scheduleTrackingPoller();
-  // Fallback for lost/absent CJ webhooks — see Jobs/cjSyncJob.
-  scheduleCjSync();
-  scheduleCjTrackingPoller();
+  // Sends paid orders to Shopify once their cancel window has passed.
+  scheduleShopifyOrderPush();
+  // Re-reads stock and status for imported products — the safety net for
+  // webhooks that never arrived.
+  scheduleShopifySync();
   // Releases held Razorpay Route transfers once their settlement's hold
   // window has passed — see Jobs/settlementReleaseJob.
   scheduleSettlementRelease();

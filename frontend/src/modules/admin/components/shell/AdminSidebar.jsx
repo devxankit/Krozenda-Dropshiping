@@ -46,7 +46,7 @@ function NavItem({ item, collapsed, count, muted = false }) {
 }
 
 // A group with `submenu` renders its items under one collapsible parent row
-// (Dropshipping → CJ Dropshipping → Dashboard, Products…). It opens itself
+// (Dropshipping → Dropshipping → Dashboard, Products…). It opens itself
 // whenever one of its screens is active. In the 64px rail there is no room
 // for nesting, so the items render flat there as before.
 function NavSubmenu({ submenu, items, collapsed, counts }) {

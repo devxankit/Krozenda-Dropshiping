@@ -11,7 +11,7 @@ import { DASHBOARD_REFRESH_MS } from './useDashboardController'
 export const REVENUE_CHANNELS = Object.freeze([
   { id: 'all', label: 'All channels' },
   { id: 'own_stock', label: 'Own stock' },
-  { id: 'cj', label: 'CJ Dropshipping' },
+  { id: 'external', label: 'Dropshipping' },
   { id: 'sellers', label: 'Sellers' },
 ])
 

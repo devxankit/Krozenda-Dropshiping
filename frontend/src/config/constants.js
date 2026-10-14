@@ -6,13 +6,13 @@
 export const BUSINESS_MODEL = Object.freeze({
   // The three revenue channels. Keys are what the API sends; the meanings
   // follow backend adminAnalyticsController / revenueService.
-  DROPSHIPPING: 'dropshipping', // CJ Dropshipping (CJ-fulfilled orders)
+  DROPSHIPPING: 'dropshipping', // externally fulfilled orders
   MARKETPLACE: 'marketplace', // Sellers (every seller, B2C and B2B)
   OWN_STOCK: 'own_stock', // Own Stock (admin's own catalogue)
 })
 
 export const BUSINESS_MODEL_LABELS = Object.freeze({
-  [BUSINESS_MODEL.DROPSHIPPING]: 'CJ Dropshipping',
+  [BUSINESS_MODEL.DROPSHIPPING]: 'Dropshipping',
   [BUSINESS_MODEL.MARKETPLACE]: 'Sellers',
   [BUSINESS_MODEL.OWN_STOCK]: 'Own Stock',
 })

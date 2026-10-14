@@ -260,7 +260,7 @@ export function ProductDetailPage() {
             <Badge tone={APPROVAL_TONE[product.approvalStatus] || 'neutral'}>
               {APPROVAL_LABEL[product.approvalStatus] || product.approvalStatus}
             </Badge>
-            {product.fulfillmentProvider === 'CJ' && <Badge tone="accent">CJ Dropshipping</Badge>}
+            {product.fulfillmentProvider && <Badge tone="accent">{product.fulfillmentProvider}</Badge>}
             <span className="text-border-strong">·</span>
             <span>
               Added <DateCell value={product.createdAt} withTime={false} />

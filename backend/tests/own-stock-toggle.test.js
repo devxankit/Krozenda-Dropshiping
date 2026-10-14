@@ -1,6 +1,6 @@
 // Admin sidebar "Own stock" switch (CatalogSettings.sellerOnlyMode, inverted).
 // Off: admin's own products leave the storefront and can't be bought; seller
-// and dropship (CJ) products are untouched. On: everything is back.
+// and externally fulfilled products are untouched. On: everything is back.
 const request = require('supertest');
 const app = require('../app');
 const Cart = require('../Models/Cart');
@@ -31,7 +31,7 @@ describe('own stock switch', () => {
     const { vendor } = await createVendor();
     adminProduct = await createProduct({ name: 'OwnStock Admin Item' });
     sellerProduct = await createProduct({ name: 'OwnStock Seller Item', vendor: vendor._id });
-    dropshipProduct = await createProduct({ name: 'OwnStock CJ Item', fulfillmentProvider: 'CJ' });
+    dropshipProduct = await createProduct({ name: 'OwnStock External Item', fulfillmentProvider: 'SHOPIFY' });
   });
 
   afterEach(() => setOwnStock(true));

@@ -3,7 +3,6 @@ const Product = require('../Models/Product');
 const Cart = require('../Models/Cart');
 const Wishlist = require('../Models/Wishlist');
 const CatalogSettings = require('../Models/CatalogSettings');
-const CjSettings = require('../Models/CjSettings');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const { getImageUrl, getImageVariants } = require('../utils/imageHelper');
 const { normaliseVariants, validateVariants, resolveVariantImages } = require('../utils/productVariants');
@@ -13,15 +12,15 @@ const { isOwnStockProduct, isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK } = r
 const { isValidEan13, renderBarcodePng, renderProductQrPng } = require('../utils/barcode');
 const { syncPreviewBatch } = require('../services/productImport/importService');
 
-// Admin > CJ Dropshipping > Settings > "Show Dropshipping Products to
-// Customers" (CjSettings.dropshippingEnabled). A CJ-fulfilled product
-// (Product.fulfillmentProvider === 'CJ') is otherwise a perfectly normal,
+// Admin > Settings > Catalog > "Show Dropshipping Products to
+// Customers" (CatalogSettings.externalFulfillmentVisible). An externally
+// fulfilled product is otherwise a perfectly normal,
 // approved, in-stock product — this is the one platform-wide switch that
 // pulls all of them out of the buyer-facing catalog at once, independent of
 // approvalStatus/isActive. It never touches the admin or vendor catalog.
 async function isDropshippingVisibleToCustomers() {
-  const settings = await CjSettings.getSettings();
-  return settings.dropshippingEnabled !== false;
+  const settings = await CatalogSettings.getSettings();
+  return settings.externalFulfillmentVisible !== false;
 }
 
 function toBool(value, fallback) {
@@ -945,7 +944,7 @@ function serializeProductCard(p) {
     reviewsCount: p.reviewsCount || 0,
     // Purely informational — a "Dropship" badge on the card. Checkout/COD
     // rules still key off ProductFulfillmentMapping, never off this flag.
-    isDropship: p.fulfillmentProvider === 'CJ',
+    isDropship: Boolean(p.fulfillmentProvider),
   };
 }
 
@@ -1054,18 +1053,18 @@ async function listPublicProducts(req, res) {
   const dropshippingEnabled = await isDropshippingVisibleToCustomers();
 
   // The admin's global "Show Dropshipping Products to Customers" switch. When
-  // it's off, CJ-fulfilled products are withheld from the storefront entirely
+  // it's off, externally fulfilled products are withheld from the storefront entirely
   // — including an explicit `?source=dropship` request, which can only ever
   // ask for products that are, by definition, hidden right now.
   if (!dropshippingEnabled && source === 'dropship') return emptyPage();
 
   // "only dropship / only normal / all" — dropship products are the ones
-  // onboarded from CJ (Product.fulfillmentProvider === 'CJ'); everything else
-  // (seller stock and admin's own stock) is "normal". `$ne: 'CJ'` rather than
+  // imported from a provider (Product.fulfillmentProvider set); everything
+  // else (seller stock and admin's own stock) is "normal". `null` rather than
   // an equality-to-null check so it also matches every product created
   // before this field existed, which has no fulfillmentProvider at all.
-  if (source === 'dropship') query.fulfillmentProvider = 'CJ';
-  else if (source === 'normal' || !dropshippingEnabled) query.fulfillmentProvider = { $ne: 'CJ' };
+  if (source === 'dropship') query.fulfillmentProvider = { $ne: null };
+  else if (source === 'normal' || !dropshippingEnabled) query.fulfillmentProvider = null;
 
   // Admin's "Own stock" switch is off: admin's own products leave the
   // storefront, seller and dropship products stay.
@@ -1248,11 +1247,11 @@ function serializePublicProduct(p) {
     isFlashsale: p.isFlashsale === true,
     isTrending: p.isTrending === true,
     // Dropship lines are never returnable (business rule), whatever the flag says.
-    isReturnable: p.isReturnable !== false && p.fulfillmentProvider !== 'CJ',
+    isReturnable: p.isReturnable !== false && !p.fulfillmentProvider,
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
     createdAt: p.createdAt,
-    isDropship: p.fulfillmentProvider === 'CJ',
+    isDropship: Boolean(p.fulfillmentProvider),
   };
 }
 
@@ -1272,12 +1271,12 @@ async function getPublicProduct(req, res) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
 
-  // Same global switch as listPublicProducts: a CJ-fulfilled product is
+  // Same global switch as listPublicProducts: a externally fulfilled product is
   // otherwise a normal, approved, active product, so a shopper who already
   // has this id (bookmark, direct link, cart) is told the same "not found" a
   // deactivated or unapproved product would give — not a different error
   // that would leak that dropshipping exists but is switched off.
-  if (product.fulfillmentProvider === 'CJ' && !(await isDropshippingVisibleToCustomers())) {
+  if (product.fulfillmentProvider && !(await isDropshippingVisibleToCustomers())) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }
   // Same for admin's own stock while the "Own stock" switch is off.
@@ -1287,15 +1286,11 @@ async function getPublicProduct(req, res) {
 
   const data = serializePublicProduct(product);
 
-  // What a buyer needs to know before ordering a dropshipped item: where it
-  // ships from. Only the warehouse country leaves the mapping — CJ ids, costs
-  // and provider stock stay admin-only.
-  if (data.isDropship) {
-    const mapping = await ProductFulfillmentMapping.findOne({ product: product._id, provider: 'CJ' })
-      .select('warehouseCountryCode')
-      .lean();
-    data.dropship = { shipsFrom: mapping?.warehouseCountryCode || null };
-  }
+  // Where an externally fulfilled item ships from is no longer reported: the
+  // mapping no longer carries a warehouse country, because an Indian
+  // provider ships domestically and "ships from IN" tells a buyer nothing.
+  // Buyer-facing provider detail belongs behind one accessor, not inlined
+  // here — see utils/buyerFulfillment.js.
 
   res.json({ success: true, message: 'Product fetched successfully', data });
 }
@@ -1326,10 +1321,10 @@ async function listRelatedProducts(req, res) {
   };
 
   // Same global switch as listPublicProducts/getPublicProduct: never surface
-  // a CJ-fulfilled product in a "similar products" rail while the admin has
+  // a externally fulfilled product in a "similar products" rail while the admin has
   // dropshipping visibility switched off.
   if (!(await isDropshippingVisibleToCustomers())) {
-    base.fulfillmentProvider = { $ne: 'CJ' };
+    base.fulfillmentProvider = null;
   }
   if (!(await isOwnStockVisibleToCustomers())) Object.assign(base, EXCLUDE_OWN_STOCK);
 

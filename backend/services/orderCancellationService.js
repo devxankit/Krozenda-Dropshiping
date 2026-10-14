@@ -20,7 +20,7 @@ const { alertAdmins } = require('./adminAlertService');
 //
 // Refunds go to the wallet, as every other standard-order refund in this
 // codebase does. Dropship orders are refunded to the original payment
-// instead, by dropshipOrderService, and are refused here.
+// instead, by externalOrderRefundService, and are refused here.
 
 const CANCELLABLE_LINE_STATUSES = ['PENDING', 'PROCESSING'];
 
@@ -188,7 +188,7 @@ async function cancelLine({ orderId, lineIndex, cancelledBy, reason = '', vendor
           console.error('Accounting posting failed (order cancellation), will be reconciled on next read:', err.message);
         }
       }
-      const { releaseCouponIfWholeCheckoutCancelled } = require('./dropshipOrderService');
+      const { releaseCouponIfWholeCheckoutCancelled } = require('./externalOrderRefundService');
       await releaseCouponIfWholeCheckoutCancelled({ ...before.toObject(), status: 'CANCELLED' });
       order = await Order.findById(orderId);
     }

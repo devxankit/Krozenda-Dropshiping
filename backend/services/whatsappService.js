@@ -113,9 +113,10 @@ function describe(order, event) {
     courier: shipped?.courierName || 'our courier partner',
     tracking: shipped?.trackingNumber || 'shared soon',
     refundNote: refundable
-      ? // Dropship orders go back to the original payment (dropshipOrderService);
-        // every other cancellation refunds to the wallet (orderCancellationService).
-        order.fulfillmentType === 'DROPSHIP'
+      ? // Externally fulfilled orders go back to the original payment
+        // (externalOrderRefundService); every other cancellation refunds to
+        // the wallet (orderCancellationService).
+        order.fulfillmentType !== 'STANDARD'
         ? 'to your original payment method in 5-7 working days'
         : 'credited to your Krozenda wallet'
       : 'not applicable as no payment was taken',

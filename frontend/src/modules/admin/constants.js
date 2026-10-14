@@ -51,17 +51,6 @@ export const ADMIN_PERMISSIONS = Object.freeze({
   DROPSHIP_SUPPLIER_SYNC: 'admin.dropship.supplier_sync',
   DROPSHIP_MARGINS: 'admin.dropship.margins',
 
-  // CJ Dropshipping (provider-specific — distinct from the generic
-  // admin.dropship.* partner module above)
-  CJ_VIEW: 'admin.cj.view',
-  CJ_SETTINGS: 'admin.cj.settings',
-  CJ_CATALOGUE: 'admin.cj.catalogue',
-  CJ_PRODUCTS: 'admin.cj.products',
-  CJ_ORDERS: 'admin.cj.orders',
-  CJ_SHIPMENTS: 'admin.cj.shipments',
-  CJ_RETURNS: 'admin.cj.returns',
-  CJ_REFUNDS: 'admin.cj.refunds',
-  CJ_SYNC: 'admin.cj.sync',
 
   // Network
   PEOPLE_VIEW: 'admin.people.view',
@@ -112,6 +101,16 @@ export const ADMIN_PERMISSIONS = Object.freeze({
   REPORTS_VIEW: 'admin.reports.view',
 
   // System
+  // Shopify-backed dropshipping (Admin > Dropshipping). Distinct from the
+  // admin.dropship.* partner module: these govern the connected store, its
+  // catalogue and what reaches customers from it.
+  SHOPIFY_VIEW: 'admin.shopify.view',
+  SHOPIFY_SETTINGS: 'admin.shopify.settings',
+  SHOPIFY_CATALOGUE: 'admin.shopify.catalogue',
+  SHOPIFY_PRODUCTS: 'admin.shopify.products',
+  SHOPIFY_ORDERS: 'admin.shopify.orders',
+  SHOPIFY_SYNC: 'admin.shopify.sync',
+
   SETTINGS_VIEW: 'admin.settings.view',
   SETTINGS_MANAGE: 'admin.settings.manage',
   AUDIT_VIEW: 'admin.audit.view',
@@ -255,6 +254,24 @@ export const NAV_TREE = Object.freeze([
     ],
   },
   {
+    // Its own group rather than an item under Own Stock: these products are
+    // not own stock. Nobody at Krozenda holds them, and the screens that
+    // manage them (import, review, publish) have nothing in common with the
+    // ones that manage stock on a shelf.
+    id: 'dropshipping',
+    label: 'Dropshipping',
+    items: [
+      {
+        label: 'Shopify Products',
+        to: ADMIN_ROUTES.DROPSHIPPING,
+        icon: 'products',
+        permission: ADMIN_PERMISSIONS.SHOPIFY_CATALOGUE,
+        legacyPermission: ADMIN_PERMISSIONS.SHOPIFY_VIEW,
+        exact: true,
+      },
+    ],
+  },
+  {
     id: 'sales',
     label: 'Sales',
     items: [
@@ -294,78 +311,6 @@ export const NAV_TREE = Object.freeze([
         icon: 'invoices',
         permission: ADMIN_PERMISSIONS.ORDERS_INVOICES,
         legacyPermission: ADMIN_PERMISSIONS.ORDERS_VIEW,
-      },
-    ],
-  },
-  {
-    // Section heading "Dropshipping"; `submenu` renders the items nested under
-    // one collapsible "CJ Dropshipping" parent. Items stay a flat list so the
-    // permission picker, breadcrumb and command palette read them unchanged.
-    id: 'cj-dropshipping',
-    label: 'Dropshipping',
-    submenu: { label: 'CJ Dropshipping', icon: 'dropshipping' },
-    items: [
-      {
-        label: 'Dashboard',
-        to: ADMIN_ROUTES.CJ_DASHBOARD,
-        icon: 'dashboard',
-        permission: ADMIN_PERMISSIONS.CJ_VIEW,
-        exact: true,
-      },
-      {
-        label: 'Category',
-        to: ADMIN_ROUTES.CJ_CATEGORY,
-        icon: 'catalog',
-        permission: ADMIN_PERMISSIONS.CJ_PRODUCTS,
-      },
-      {
-        label: 'Products',
-        to: ADMIN_ROUTES.CJ_PRODUCTS,
-        icon: 'products',
-        permission: ADMIN_PERMISSIONS.CJ_PRODUCTS,
-      },
-      {
-        label: 'Orders',
-        to: ADMIN_ROUTES.CJ_ORDERS,
-        icon: 'orders',
-        permission: ADMIN_PERMISSIONS.CJ_ORDERS,
-      },
-      {
-        label: 'Shipments',
-        to: ADMIN_ROUTES.CJ_SHIPMENTS,
-        icon: 'shipments',
-        permission: ADMIN_PERMISSIONS.CJ_SHIPMENTS,
-        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
-      },
-      {
-        label: 'Disputes',
-        to: ADMIN_ROUTES.CJ_DISPUTES,
-        icon: 'flag',
-        permission: ADMIN_PERMISSIONS.CJ_RETURNS,
-        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
-      },
-      {
-        label: 'Sync Logs',
-        to: ADMIN_ROUTES.CJ_SYNC_LOGS,
-        icon: 'activity',
-        permission: ADMIN_PERMISSIONS.CJ_SYNC,
-        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
-      },
-      {
-        // Live CJ search + select-to-onboard flow. Same screen and route as
-        // before (CjCataloguePage) — only the label changed, to say what an
-        // admin actually uses it for.
-        label: 'Onboard Products',
-        to: ADMIN_ROUTES.CJ_CATALOGUE,
-        icon: 'add',
-        permission: ADMIN_PERMISSIONS.CJ_CATALOGUE,
-      },
-      {
-        label: 'Settings',
-        to: ADMIN_ROUTES.CJ_SETTINGS,
-        icon: 'key',
-        permission: ADMIN_PERMISSIONS.CJ_SETTINGS,
-        legacyPermission: ADMIN_PERMISSIONS.CJ_VIEW,
       },
     ],
   },
@@ -563,42 +508,6 @@ export const SETTINGS_NAV = Object.freeze([
 
 // Every value in config/constants.js ORDER_STATUS and ORDER_STATUS_EXCEPTION
 // has an entry. A status with no tone here is a bug, not a default.
-// CJ Dropshipping's own internal statuses (backend/services/cj/cjStatusMapper.js
-// and CjOrder/CjShipment/CjDispute models) — never the raw CJ string.
-export const CJ_ORDER_STATUS_TONE = Object.freeze({
-  PENDING_PAYMENT: 'neutral',
-  CONFIRMED: 'brand',
-  PROCESSING: 'brand',
-  SHIPPED: 'brand',
-  IN_TRANSIT: 'brand',
-  DELIVERED: 'success',
-  CANCELLED: 'danger',
-  FULFILLMENT_FAILED: 'danger',
-})
-
-export const CJ_SHIPMENT_STATUS_TONE = Object.freeze({
-  PROCESSING: 'neutral',
-  SHIPPED: 'brand',
-  IN_TRANSIT: 'brand',
-  OUT_FOR_DELIVERY: 'brand',
-  DELIVERED: 'success',
-  DELIVERY_FAILED: 'danger',
-  RTO: 'warning',
-})
-
-export const CJ_DISPUTE_STATUS_TONE = Object.freeze({
-  CREATED: 'neutral',
-  UNDER_REVIEW: 'warning',
-  APPROVED: 'success',
-  REJECTED: 'danger',
-  CANCELLED: 'neutral',
-})
-
-export const CJ_SYNC_STATUS_TONE = Object.freeze({
-  SUCCESS: 'success',
-  FAILED: 'danger',
-})
-
 export const BUYER_TYPE_LABELS = Object.freeze({
   retail: 'Retail',
   b2b_dealer: 'B2B dealer',

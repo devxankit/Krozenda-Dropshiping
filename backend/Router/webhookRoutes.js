@@ -1,9 +1,9 @@
 const express = require('express');
 const { handleShiprocketWebhook } = require('../Controllers/shipmentWebhookController');
 const { handleRazorpayWebhook } = require('../Controllers/paymentWebhookController');
-const { handleCjWebhook } = require('../Controllers/cjWebhookController');
 const { handleRouteWebhook } = require('../Controllers/routeWebhookController');
 const { handleRazorpayxWebhook } = require('../Controllers/razorpayxWebhookController');
+const { handleShopifyWebhook } = require('../Controllers/shopifyWebhookController');
 
 const router = express.Router();
 
@@ -38,8 +38,14 @@ router.post('/route-transfers', handleRouteWebhook);
 // dashboard, see razorpayxWebhookController.
 router.post('/razorpayx-payouts', handleRazorpayxWebhook);
 
-// CJ Dropshipping's own sub-path — genuinely signs its payloads (HMAC-SHA256
-// over the raw body), so no path-name restriction like Shiprocket's applies.
-router.post('/cj', handleCjWebhook);
+// Shopify's own sub-path. It signs every push (base64 HMAC-SHA256 over the
+// raw body with the app's client secret), so the same rule as the others
+// applies: its own endpoint, and the signature — not the payload — is what
+// proves who sent it.
+//
+// One path for every topic: Shopify names the topic in the X-Shopify-Topic
+// header, which is inside the signed request, so it is as trustworthy as the
+// body and does not need its own URL.
+router.post('/shopify', handleShopifyWebhook);
 
 module.exports = router;

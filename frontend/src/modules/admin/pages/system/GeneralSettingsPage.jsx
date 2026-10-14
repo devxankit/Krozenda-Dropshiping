@@ -547,7 +547,7 @@ export function GeneralSettingsPage({ defaultTab }) {
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}
                   placeholder="27AAECK4821M1Z9"
-                  description="15-digit Goods & Services Tax Identification Number. Printed on invoices for own-stock and CJ Dropshipping items; seller items carry the seller's own GSTIN."
+                  description="15-digit Goods & Services Tax Identification Number. Printed on invoices for own-stock and Dropshipping items; seller items carry the seller's own GSTIN."
                 />
 
                 <Input

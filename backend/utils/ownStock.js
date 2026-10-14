@@ -7,14 +7,14 @@ const CatalogSettings = require('../Models/CatalogSettings');
 //   own stock OFF (sellerOnlyMode true)  — admin creation is blocked (see
 //                 createCategory/createBrand/createProduct) AND admin's own
 //                 products are withheld from buyers; only seller and
-//                 dropshipping (CJ) products remain.
+//                 externally fulfilled products remain.
 //
-// "Own stock" is not stored on the product, it is derived: no vendor and not
-// CJ-fulfilled. Same rule as inventoryController's bucket and
-// adminReviewController's product type.
+// "Own stock" is not stored on the product, it is derived: no vendor and no
+// external fulfilment provider. Same rule as inventoryController's bucket
+// and adminReviewController's product type.
 
 function isOwnStockProduct(product) {
-  return Boolean(product) && !product.vendor && product.fulfillmentProvider !== 'CJ';
+  return Boolean(product) && !product.vendor && !product.fulfillmentProvider;
 }
 
 async function isOwnStockVisibleToCustomers() {
@@ -24,10 +24,11 @@ async function isOwnStockVisibleToCustomers() {
 
 // Spread into a Product query (or an aggregate $match) to drop own-stock
 // products. $nor rather than $or so it never collides with a query's own
-// $or (search uses one). `vendor: null` also matches a missing field, and
-// `$ne: 'CJ'` matches products that predate fulfillmentProvider.
+// $or (search uses one). `vendor: null` and `fulfillmentProvider: null` both
+// also match a missing field, so a product written before either existed is
+// still counted as own stock.
 const EXCLUDE_OWN_STOCK = Object.freeze({
-  $nor: [{ vendor: null, fulfillmentProvider: { $ne: 'CJ' } }],
+  $nor: [{ vendor: null, fulfillmentProvider: null }],
 });
 
 module.exports = { isOwnStockProduct, isOwnStockVisibleToCustomers, EXCLUDE_OWN_STOCK };

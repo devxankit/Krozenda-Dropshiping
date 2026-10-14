@@ -17,6 +17,15 @@ const catalogSettingsSchema = new mongoose.Schema(
     autoApprovalEnabled: { type: Boolean, default: false },
     sellerOnlyMode: { type: Boolean, default: false },
 
+    // Storefront kill-switch for externally fulfilled products. Off hides
+    // every one of them from buyers at once without touching the products
+    // themselves or the provider's listings.
+    //
+    // It lives here rather than with the provider's credentials, where it
+    // used to: what buyers can see is a catalog decision and must survive
+    // disconnecting, reconnecting or replacing the provider.
+    externalFulfillmentVisible: { type: Boolean, default: true },
+
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }

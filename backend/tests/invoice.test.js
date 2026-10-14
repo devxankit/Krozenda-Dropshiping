@@ -120,9 +120,14 @@ describe('customer invoice — whose GSTIN', () => {
     expect(res.body.data.grandTotal).toBe(123000 + 118000 + 50000);
   });
 
-  test('a CJ Dropshipping order is invoiced by Krozenda, under the platform GSTIN', async () => {
-    const cjProduct = await createProduct({ category: category._id, fulfillmentProvider: 'CJ' });
-    const order = await placeOrder(buyer.user, [line(cjProduct)], { fulfillmentType: 'DROPSHIP', state: 'Karnataka' });
+  // No external provider is connected, so there is no non-STANDARD
+  // fulfillmentType to place an order under. What is still assertable — and
+  // what actually decides the GSTIN — is that a product with no seller behind
+  // it is invoiced by the platform. supplierKeyFor's fulfillmentType branch
+  // gets its own case back when a provider is wired in.
+  test('a product with no seller is invoiced by Krozenda, under the platform GSTIN', async () => {
+    const cjProduct = await createProduct({ category: category._id, fulfillmentProvider: 'SHOPIFY' });
+    const order = await placeOrder(buyer.user, [line(cjProduct)], { state: 'Karnataka' });
 
     const res = await request(app).get(`/user/orders/${order._id}/invoice`).set(auth(buyer.token));
     expect(res.body.data.invoices).toHaveLength(1);

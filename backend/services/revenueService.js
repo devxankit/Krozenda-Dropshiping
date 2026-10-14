@@ -2,11 +2,10 @@ const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const Vendor = require('../Models/Vendor');
 const Coupon = require('../Models/Coupon');
-const CjOrder = require('../Models/CjOrder');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const ReturnRequest = require('../Models/ReturnRequest');
 const AccountingConfig = require('../Models/AccountingConfig');
 const { loadRules, resolveForLine } = require('./commissionResolver');
-const { usdToInr } = require('./cj/cjPricing');
 const { lineGrossPaise, lineDiscountsPaise } = require('../utils/orderLines');
 const { toPaise } = require('../utils/money');
 const { buildBuckets, dayKey } = require('../utils/analyticsRange');
@@ -16,8 +15,8 @@ const { buildBuckets, dayKey } = require('../utils/analyticsRange');
 // seller's figures.
 //
 // Every order line lands in exactly one CHANNEL:
-//   cj        — fulfilled by CJ Dropshipping (a DROPSHIP order, or a product
-//               with fulfillmentProvider CJ)
+//   external  — fulfilled by an outside provider (a non-STANDARD order, or a
+//               product carrying a fulfillmentProvider)
 //   sellers   — a seller's product (items.vendor, else the product's vendor)
 //   own_stock — everything else: the platform's own catalogue
 //
@@ -29,9 +28,9 @@ const { buildBuckets, dayKey } = require('../utils/analyticsRange');
 //   commission  (sellers) resolved through the SAME rule → seller rate →
 //               platform default hierarchy the ledger posts with, and given
 //               back in proportion to any refund, as the ledger does
-//   cost        (CJ) what CJ charged, USD → INR at CJ_USD_TO_INR_RATE;
+//   cost        (external) the provider's cost, from the fulfilment mapping;
 //               (own stock) product cost price × qty, where one is set
-//   earnings    Krozenda's share: own-stock net − cost, CJ net − CJ cost,
+//   earnings    Krozenda's share: own-stock net − cost, external net − cost,
 //               seller commission
 //
 // Which lines count: placed in the window (order createdAt, IST), order not
@@ -41,17 +40,17 @@ const { buildBuckets, dayKey } = require('../utils/analyticsRange');
 
 const CHANNELS = Object.freeze({
   OWN_STOCK: 'own_stock',
-  CJ: 'cj',
+  EXTERNAL: 'external',
   SELLERS: 'sellers',
 });
 
 const CHANNEL_LABELS = Object.freeze({
   [CHANNELS.OWN_STOCK]: 'Own stock',
-  [CHANNELS.CJ]: 'CJ Dropshipping',
+  [CHANNELS.EXTERNAL]: 'Shopify',
   [CHANNELS.SELLERS]: 'Sellers',
 });
 
-const CHANNEL_ORDER = [CHANNELS.OWN_STOCK, CHANNELS.CJ, CHANNELS.SELLERS];
+const CHANNEL_ORDER = [CHANNELS.OWN_STOCK, CHANNELS.EXTERNAL, CHANNELS.SELLERS];
 
 function emptyFigures() {
   return {
@@ -76,7 +75,7 @@ function add(target, source) {
 }
 
 function channelOf(order, item, product) {
-  if (order.fulfillmentType === 'DROPSHIP' || product?.fulfillmentProvider === 'CJ') return CHANNELS.CJ;
+  if (order.fulfillmentType !== 'STANDARD' || product?.fulfillmentProvider) return CHANNELS.EXTERNAL;
   if (item.vendor || product?.vendor) return CHANNELS.SELLERS;
   return CHANNELS.OWN_STOCK;
 }
@@ -106,23 +105,55 @@ function refundFor(map, order, item) {
   return item.variantId ? map.get(`${order._id}:${item.product}:`) || 0 : 0;
 }
 
-// CJ's charge for each dropship order, in paise. CJ fills totalCost /
-// shippingCost once the order is confirmed; before that, the unit costs
-// snapshotted at order time are the best figure there is.
-async function cjCostByOrder(orderIds) {
-  if (!orderIds.length) return new Map();
-  const cjOrders = await CjOrder.find({ krozendaOrderId: { $in: orderIds } })
-    .select('krozendaOrderId items totalCost shippingCost currency status')
+// What the provider charged Krozenda for each externally fulfilled order, in
+// paise, read from the fulfilment mapping's per-variant providerCost.
+//
+// Per line rather than per order, which is what the mapping can actually
+// answer: the previous provider reported one total per order and it had to be
+// spread back over the lines by value, so a two-line order with very
+// different margins reported both of them wrong.
+//
+// Mapping cost is in the mapping's own currency; providerCost is stored in
+// that currency, and the import writes INR for an INR store. A non-INR store
+// needs an FX step added HERE, not at the call site.
+async function providerCostByOrder(orders) {
+  if (!orders.length) return new Map();
+
+  // Keyed off the EXISTENCE of a mapping, not off order.fulfillmentType.
+  // channelOf() calls a line external when its product carries a provider,
+  // regardless of the order's type, so filtering by type here would report a
+  // cost of zero against sales it had already counted as external.
+  const productIds = new Set();
+  for (const order of orders) {
+    for (const item of order.items || []) productIds.add(String(item.product));
+  }
+  if (productIds.size === 0) return new Map();
+
+  const mappings = await ProductFulfillmentMapping.find({ product: { $in: [...productIds] } })
+    .select('product variants')
     .lean();
+  const byProduct = new Map(mappings.map((m) => [String(m.product), m]));
+
   const map = new Map();
-  for (const cj of cjOrders) {
-    if (['CANCELLED', 'FULFILLMENT_FAILED'].includes(cj.status)) continue;
-    const productCost =
-      cj.totalCost > 0 ? cj.totalCost : (cj.items || []).reduce((sum, i) => sum + (i.unitCost || 0) * (i.quantity || 0), 0);
-    const raw = productCost + (cj.shippingCost || 0);
-    const inr = String(cj.currency || 'USD').toUpperCase() === 'INR' ? raw : usdToInr(raw);
-    const key = String(cj.krozendaOrderId);
-    map.set(key, (map.get(key) || 0) + toPaise(inr));
+  for (const order of orders) {
+    let paise = 0;
+    for (const item of order.items || []) {
+      if (item.status === 'CANCELLED') continue;
+      const mapping = byProduct.get(String(item.product));
+      if (!mapping) continue;
+      const variants = mapping.variants || [];
+      // Matched by variant id, with a single-variant product the only case
+      // allowed to fall back — guessing variants[0] for a multi-variant
+      // product reports one variant's cost against another's sale.
+      const variant = item.variantId
+        ? variants.find((v) => v.krozendaVariantId && String(v.krozendaVariantId) === String(item.variantId))
+        : variants.length === 1
+          ? variants[0]
+          : null;
+      if (!variant?.providerCost) continue;
+      paise += toPaise(variant.providerCost) * (item.quantity || 0);
+    }
+    if (paise > 0) map.set(String(order._id), paise);
   }
   return map;
 }
@@ -145,13 +176,12 @@ async function computeRevenue({ start, end, range = null, vendorId = null }) {
   const productIds = [...new Set(orders.flatMap((o) => o.items.map((i) => String(i.product))))];
   const couponCodes = [...new Set(orders.map((o) => o.couponCode).filter(Boolean))];
   const orderIds = orders.map((o) => o._id);
-  const dropshipIds = orders.filter((o) => o.fulfillmentType === 'DROPSHIP').map((o) => o._id);
 
   const [products, coupons, refunds, cjCosts, config] = await Promise.all([
     Product.find({ _id: { $in: productIds } }).select('vendor category costPrice fulfillmentProvider').lean(),
     Coupon.find({ code: { $in: couponCodes } }).select('code vendorId').lean(),
     refundsByLine(orderIds),
-    vendorId ? new Map() : cjCostByOrder(dropshipIds),
+    vendorId ? new Map() : providerCostByOrder(orders),
     AccountingConfig.findOne().lean(),
   ]);
   const productById = new Map(products.map((p) => [String(p._id), p]));
@@ -194,9 +224,12 @@ async function computeRevenue({ start, end, range = null, vendorId = null }) {
     const sellersInOrder = new Set();
     let orderHasLine = false;
 
-    // CJ's charge is per order; spread it over the order's CJ lines by value.
+    // The provider's charge is attributed per order; spread it over the
+    // order's externally fulfilled lines by value.
     const cjLines = order.items.filter(
-      (item) => item.status !== 'CANCELLED' && channelOf(order, item, productById.get(String(item.product))) === CHANNELS.CJ
+      (item) =>
+        item.status !== 'CANCELLED' &&
+        channelOf(order, item, productById.get(String(item.product))) === CHANNELS.EXTERNAL
     );
     const cjGross = cjLines.reduce((sum, item) => sum + lineGrossPaise(item), 0);
     const cjCost = cjCosts.get(String(order._id)) || 0;
@@ -242,7 +275,7 @@ async function computeRevenue({ start, end, range = null, vendorId = null }) {
         line.commission = sales > 0 ? Math.round((full * net) / sales) : 0;
         line.earnings = line.commission;
         line.sellerEarnings = net - line.commission;
-      } else if (channel === CHANNELS.CJ) {
+      } else if (channel === CHANNELS.EXTERNAL) {
         line.cost = cjGross > 0 ? Math.round((cjCost * gross) / cjGross) : 0;
         line.earnings = net - line.cost;
       } else {

@@ -18,7 +18,7 @@ async function connectTestDb() {
   // Carrier quoting off by default. Shipping became ON by default with the
   // single-admin Shiprocket policy, and with no carrier account or origin in
   // a test database every checkout would then fail its delivery quote. The
-  // suites that test shipping itself (shipping-foundation, dropship-checkout)
+  // suites that test shipping itself (shipping-foundation)
   // reset and configure these settings on their own.
   const ShippingSettings = require('../Models/ShippingSettings');
   await ShippingSettings.updateOne(

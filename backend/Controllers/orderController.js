@@ -35,9 +35,12 @@ const accounting = require('../services/accountingPosting');
 const AccountingConfig = require('../Models/AccountingConfig');
 const { readPagination, buildPagination } = require('../utils/pagination');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
-const dropshipOrderService = require('../services/dropshipOrderService');
 const { refundCancelledOrderToWallet } = require('../services/orderCancellationService');
-const { findDropshipProductIds, isDropshipOrder } = require('../utils/dropship');
+const { isDropshipOrder } = require('../utils/dropship');
+const orderPushService = require('../services/shopify/orderPushService');
+const ShopifySettings = require('../Models/ShopifySettings');
+const { buyerFulfillmentType, buyerIsDropship } = require('../utils/buyerFulfillment');
+const { resolveFulfillmentByProductId } = require('../services/fulfillment/fulfillmentRouter');
 const { isOwnStockProduct, isOwnStockVisibleToCustomers } = require('../utils/ownStock');
 const { toPaise, allocateProportional } = require('../utils/money');
 const { canRequestReturn } = require('../utils/returnWindow');
@@ -127,9 +130,10 @@ function serializeOrder(o) {
     paymentMethod: o.paymentMethod,
     paymentStatus: o.paymentStatus,
     status: o.status,
-    // A dropship order can be neither cancelled nor returned by the buyer.
-    fulfillmentType: o.fulfillmentType || 'STANDARD',
-    isDropship: o.fulfillmentType === 'DROPSHIP',
+    // Translated for the buyer's apps, which enumerate this value and would
+    // fail to parse an unknown one — see utils/buyerFulfillment.js.
+    fulfillmentType: buyerFulfillmentType(o),
+    isDropship: buyerIsDropship(o),
     // Drives the buyer's Return / Replace button.
     canReturn: canRequestReturn(o),
     checkoutGroupId: o.checkoutGroupId || null,
@@ -351,12 +355,48 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   const linePaise = items.map((item) => toPaise(item.price) * item.quantity);
   const subtotal = linePaise.reduce((sum, p) => sum + p, 0) / 100;
 
-  // CJ Dropshipping lines. Business rule: they are paid for online and only
+  // Which provider fulfils each line, and so which order it lands in.
+  // Business rule: an externally fulfilled line is paid for online and only
   // online — no COD, no wallet — and a cart holding even one of them follows
   // that rule as a whole.
-  const dropshipIds = await findDropshipProductIds(cartEntries.map((entry) => entry.product));
-  const fulfillmentOf = (item) => (dropshipIds.has(String(item.product)) ? 'DROPSHIP' : 'STANDARD');
-  const hasDropship = items.some((item) => fulfillmentOf(item) === 'DROPSHIP');
+  const fulfillmentByProduct = await resolveFulfillmentByProductId(cartEntries.map((entry) => entry.product));
+  const fulfillmentOf = (item) => fulfillmentByProduct.get(String(item.product)) || 'STANDARD';
+
+  // A line whose fulfilment type is not one the platform groups by would be
+  // dropped from every order group below and handed over without being
+  // charged for. That is the single most expensive way this function can
+  // fail, so it is refused here rather than being allowed to disappear.
+  const unpurchasable = items.filter((item) => !Order.FULFILLMENT_TYPES.includes(fulfillmentOf(item)));
+  if (unpurchasable.length > 0) {
+    return {
+      error: {
+        status: 409,
+        code: 'ITEM_NOT_PURCHASABLE',
+        message: `${unpurchasable[0].name} cannot be ordered right now. Please remove it from your cart.`,
+      },
+    };
+  }
+
+  const hasDropship = items.some((item) => fulfillmentOf(item) !== 'STANDARD');
+  // The deadlock worth naming: these items can ONLY be paid for online, so
+  // if online payment is switched off there is no way to buy them at all.
+  // Reported as its own code, because "choose another method" is useless
+  // advice when no other method is permitted.
+  if (hasDropship) {
+    const paymentSettings = await PaymentSettings.getSettings();
+    if (!paymentSettings.razorpayEnabled) {
+      return {
+        error: {
+          status: 409,
+          code: 'ONLINE_PAYMENT_DISABLED',
+          message:
+            'These items can only be paid for online, and online payment is switched off right now. ' +
+            'Please try again later.',
+        },
+      };
+    }
+  }
+
   if (hasDropship && String(paymentMethod || '').toUpperCase() !== 'RAZORPAY') {
     return {
       error: {
@@ -419,7 +459,9 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
     // pays for the goods — after the coupon. Measuring it before let a coupon
     // push a cart below the threshold and still ship free.
     subtotal: (toPaise(subtotal) - toPaise(discountAmount)) / 100,
-    dropshipProductIds: dropshipIds,
+    // The same answer the order split will use, so the quote and the split
+    // can never disagree about which provider owns a line.
+    fulfillmentByProduct,
   });
 
   if (!quote.ok) {
@@ -451,9 +493,30 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
   });
 
   // One order per fulfilment type. A cart of only seller products is one
-  // STANDARD order exactly as before; a mixed cart becomes a STANDARD and a
-  // DROPSHIP order, each with its own lines, discount and delivery charge.
-  const shippingBy = quote.shippingByFulfillment || { STANDARD: shipping, DROPSHIP: 0 };
+  // STANDARD order exactly as before; a mixed cart becomes one order per
+  // provider, each with its own lines, discount and delivery charge.
+  //
+  // Ordered by Order.FULFILLMENT_TYPES rather than by cart order, because the
+  // platform fee, the coupon redemption and primaryOrderId all attach to the
+  // FIRST group. 'STANDARD' is element 0 of that enum, so a provider appended
+  // to it can never move the fee onto a dropship order.
+  const presentTypes = Order.FULFILLMENT_TYPES.filter((type) => items.some((item) => fulfillmentOf(item) === type));
+
+  // Every present type must have a rate. The old fallback here defaulted a
+  // missing type to 0, so a provider whose quote failed to come back shipped
+  // free and silently — the one failure mode in this file that loses money
+  // without erroring. A rate we do not have is a stop, not a zero.
+  const shippingBy = quote.shippingByFulfillment || {};
+  const unpriced = presentTypes.filter((type) => !Number.isFinite(Number(shippingBy[type])));
+  if (unpriced.length > 0) {
+    return {
+      error: {
+        status: 409,
+        code: 'SHIPPING_QUOTE_UNAVAILABLE',
+        message: 'We could not work out delivery charges just now. Please try again in a moment.',
+      },
+    };
+  }
 
   // The buyer's platform fee: a percentage of the goods after the coupon, or
   // a flat amount per checkout. Charged once, on the checkout's first order.
@@ -466,14 +529,14 @@ async function computeCheckoutTotals(user, { addressId, couponCode, paymentMetho
         ? toPaise(feeValue)
         : Math.round((goodsPaise * feeValue) / 100);
 
-  const orderGroups = ['STANDARD', 'DROPSHIP']
+  const orderGroups = presentTypes
     .map((fulfillmentType) => {
       const indexes = items.map((item, idx) => idx).filter((idx) => fulfillmentOf(items[idx]) === fulfillmentType);
       if (indexes.length === 0) return null;
 
       const subtotalPaise = indexes.reduce((sum, idx) => sum + linePaise[idx], 0);
       const discountPaise = indexes.reduce((sum, idx) => sum + discountPaiseByLine[idx], 0);
-      const shippingPaise = toPaise(shippingBy[fulfillmentType] || 0);
+      const shippingPaise = toPaise(shippingBy[fulfillmentType]);
       return {
         fulfillmentType,
         items: indexes.map((idx) => items[idx]),
@@ -687,7 +750,16 @@ async function createOrder(req, res) {
 
   const paymentSettings = await PaymentSettings.getSettings();
   if (!paymentSettings[PaymentSettings.FIELD_BY_METHOD[paymentMethod]]) {
-    return res.status(400).json({ success: false, message: 'This payment method is currently unavailable' });
+    // Name the method and say it is a SETTING, not a fault. The bare version
+    // of this message cost an afternoon: online payment had been switched off
+    // in admin, every externally fulfilled cart is online-only, and the
+    // checkout simply said "unavailable" — which reads like an outage.
+    const label = { COD: 'Cash on delivery', WALLET: 'Wallet', RAZORPAY: 'Online payment' }[paymentMethod] || paymentMethod;
+    return res.status(400).json({
+      success: false,
+      code: 'PAYMENT_METHOD_DISABLED',
+      message: `${label} is switched off right now. Please choose another payment method.`,
+    });
   }
 
   // Accepted from either the standard header or the body so a WebView client
@@ -880,7 +952,10 @@ async function createOrder(req, res) {
       fulfillmentType: group.fulfillmentType,
       checkoutGroupId,
       checkoutGroupIndex: index,
-      cjLogisticName: group.fulfillmentType === 'DROPSHIP' ? quote?.cjLogisticName || null : null,
+      providerShippingLineTitle:
+        group.fulfillmentType !== 'STANDARD'
+          ? quote?.shippingLineTitleByFulfillment?.[group.fulfillmentType] || null
+          : null,
       b2b: b2bSnapshot,
       status: 'PENDING',
     }))
@@ -892,6 +967,13 @@ async function createOrder(req, res) {
   // leaving stock held or wallet money taken with no order to show for it.
   // Two checkouts racing for the last unit conflict inside the transaction;
   // the driver retries the loser, whose conditional $inc then finds no stock.
+  // Read before the transaction and snapshotted onto the push row: an admin
+  // shortening the window later must not retroactively close a window this
+  // buyer was already promised.
+  const shopifyGraceMinutes = orderGroups.some((g) => g.fulfillmentType === 'SHOPIFY')
+    ? (await ShopifySettings.getSettings()).orderPushGraceMinutes
+    : 0;
+
   let orders;
   const session = await mongoose.startSession();
   try {
@@ -933,6 +1015,21 @@ async function createOrder(req, res) {
       }
 
       await Cart.updateOne({ user: req.user._id }, { $set: { items: [] } }, { session });
+
+      // Inside the transaction on purpose. A push row written after the
+      // commit can be lost while the order survives — a paid order the
+      // supplier is never told about — and one written before it can survive
+      // a rollback, sending a supplier an order nobody placed. Either way the
+      // money and the goods disagree.
+      //
+      // The network call is NOT made here: only the cron sends, which keeps
+      // the provider out of the buyer's checkout request entirely.
+      await orderPushService.schedule({
+        orders,
+        checkoutGroupId,
+        session,
+        graceWindowMinutes: shopifyGraceMinutes,
+      });
     });
   } catch (err) {
     // Nothing above was committed. Only what lives outside the transaction
@@ -996,24 +1093,26 @@ async function createOrder(req, res) {
   // A prepaid order's money is in hand right now, so its sale, commission and
   // gateway fee post immediately. A COD order posts nothing yet — the cash is
   // still with the courier until an admin records the remittance (task §12).
-  // Posted BEFORE CJ is asked: if CJ refuses and the order is refunded, the
-  // refund needs a posted sale to reverse.
+  // Posted BEFORE the provider is asked: if the provider refuses and the
+  // order is refunded, the refund needs a posted sale to reverse.
   for (const placed of orders) {
     await postAccounting('order sale', () => accounting.postOrderSale(placed.toObject()));
   }
 
   for (const placed of orders) {
-    if (placed.fulfillmentType === 'DROPSHIP') {
-      // Sent to CJ; if CJ definitely refuses, the buyer is refunded to their
-      // original payment automatically. Never throws.
-      await dropshipOrderService.fulfil(placed);
-    } else {
-      await notifyVendorsOfNewOrder(placed.items, placed._id);
-      // Shiprocket auto-dispatch for domestic multi-vendor items:
-      // Partitions items seller-wise and creates separate Shiprocket shipments
-      // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
-      await autoCreateShipmentsForOrder(placed, placed.items);
+    if (placed.fulfillmentType !== 'STANDARD') {
+      // An externally fulfilled order is not dispatched from here. There is
+      // no seller to notify and no parcel to book: the provider ships it.
+      // Raising the order with the provider is deliberately NOT done inside
+      // this request — a provider call in the checkout path makes the buyer
+      // wait on it and makes a timeout indistinguishable from a refusal.
+      continue;
     }
+    await notifyVendorsOfNewOrder(placed.items, placed._id);
+    // Shiprocket auto-dispatch for domestic multi-vendor items:
+    // Partitions items seller-wise and creates separate Shiprocket shipments
+    // using each seller's warehouse as the pickup location under Admin's Shiprocket account.
+    await autoCreateShipmentsForOrder(placed, placed.items);
   }
 
   if (total >= highValueThreshold()) {
@@ -1056,8 +1155,10 @@ async function autoCreateShipmentsForOrder(order, items) {
       const vendorId = key || null;
       const groupItems = items.filter((i) => (i.vendor ? i.vendor.toString() : '') === key);
       const firstItemProductId = groupItems[0]?.product || groupItems[0]?.productId;
-      const isCj = await ProductFulfillmentMapping.exists({ product: firstItemProductId, provider: 'CJ' });
-      if (isCj) continue; // Handled by CJ dropshipping pipeline
+      // An externally fulfilled line has no Shiprocket parcel: the provider
+      // ships it, so booking one here would create a label nobody uses.
+      const isExternal = await ProductFulfillmentMapping.exists({ product: firstItemProductId });
+      if (isExternal) continue;
 
       const label = vendorId ? `vendor ${vendorId}` : 'Krozenda stock';
       let res;
@@ -1121,7 +1222,7 @@ function serializeOrderSummary(o) {
     paymentMethod: o.paymentMethod,
     paymentStatus: o.paymentStatus,
     status: o.status,
-    isDropship: o.fulfillmentType === 'DROPSHIP',
+    isDropship: buyerIsDropship(o),
     // Drives the buyer's Return / Replace button.
     canReturn: canRequestReturn(o),
     deliveredAt: o.deliveredAt,
@@ -1164,7 +1265,13 @@ async function getOrder(req, res) {
   // Drives the buyer's Cancel button: only before it ships, never a dropship
   // order. The fee percent is shown in the confirmation (prepaid orders only —
   // there is nothing to keep on a COD order).
-  const canCancel = USER_CANCELLABLE_STATUSES.includes(order.status) && order.fulfillmentType !== 'DROPSHIP';
+  // For a Shopify order the question is not "has it shipped" but "has it
+  // been sent to the supplier yet" — which only the push row knows.
+  const stillCancellable =
+    order.fulfillmentType === 'SHOPIFY'
+      ? await orderPushService.isCancellable(order._id)
+      : order.fulfillmentType !== 'DROPSHIP';
+  const canCancel = USER_CANCELLABLE_STATUSES.includes(order.status) && stillCancellable;
   const prepaidPaid = order.paymentStatus === 'PAID' && order.paymentMethod !== 'COD';
   const cancellationFeePercent = canCancel && prepaidPaid ? (await AccountingConfig.resolve()).buyerCancellationFeePercent : 0;
 
@@ -1184,13 +1291,29 @@ async function cancelOrder(req, res) {
     return res.status(400).json({ success: false, message: 'Invalid order id' });
   }
 
-  // Business rule: a dropshipping order is sent to the supplier the moment it
-  // is paid for, and the buyer cannot cancel it. Checked before the update so
-  // nothing is touched when it is refused.
   const target = await Order.findOne({ _id: id, user: req.user._id })
     .select('fulfillmentType checkoutGroupId items.product')
     .lean();
-  if (target && (await isDropshipOrder(target))) {
+
+  // An externally fulfilled order can be cancelled only while it is still
+  // waiting to be sent. Claiming the push row IS the mutual exclusion: the
+  // cron cannot send a row the buyer just cancelled, and the buyer cannot
+  // cancel one that is already on its way to the supplier.
+  if (target?.fulfillmentType === 'SHOPIFY') {
+    const claimed = await orderPushService.claimForCancel({
+      orderId: id,
+      cancelledBy: 'buyer',
+      reason: 'cancelled by the buyer',
+    });
+    if (!claimed) {
+      return res.status(403).json({
+        success: false,
+        code: 'ALREADY_SENT_TO_SUPPLIER',
+        message:
+          'This order has already been sent to our supplier and can no longer be cancelled here. Please contact support.',
+      });
+    }
+  } else if (target && (await isDropshipOrder(target))) {
     return res.status(403).json({
       success: false,
       code: 'DROPSHIP_NOT_CANCELLABLE',
@@ -1241,7 +1364,10 @@ async function cancelOrder(req, res) {
   }
 
   // The coupon slot comes back once nothing bought with it is still live.
-  await dropshipOrderService.releaseCouponIfWholeCheckoutCancelled({ ...order.toObject(), status: 'CANCELLED' });
+  await require('../services/externalOrderRefundService').releaseCouponIfWholeCheckoutCancelled({
+    ...order.toObject(),
+    status: 'CANCELLED',
+  });
 
   // Stop the courier: the Shiprocket parcel for this order is cancelled too.
   await require('../services/shipping/shipmentService').cancelShipmentsForOrder({

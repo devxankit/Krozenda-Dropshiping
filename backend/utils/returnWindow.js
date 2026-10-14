@@ -14,11 +14,18 @@ function isWithinReturnWindow(deliveredAt, fallbackDate) {
   return Boolean(deadline) && Date.now() <= deadline.getTime();
 }
 
-// Whether the buyer can start a return on this order at all: delivered, not
-// dropship, inside the window, and at least one line that was returnable
-// when it was bought (Order.items[].returnable is snapshotted at checkout).
+// Whether the buyer can start a return on this order at all: delivered,
+// fulfilled by us rather than by an outside provider, inside the window, and
+// with at least one line that was returnable when it was bought
+// (Order.items[].returnable is snapshotted at checkout).
+//
+// The provider test is `!== 'STANDARD'`, not `=== 'DROPSHIP'`. The narrower
+// version let a Shopify order show a Return button that returnController then
+// refused with a 403 — the two disagreed, and the buyer met the disagreement.
+// Whatever the policy becomes, both sides must read the same rule.
 function canRequestReturn(order) {
-  if (order.status !== 'DELIVERED' || order.fulfillmentType === 'DROPSHIP') return false;
+  if (order.status !== 'DELIVERED') return false;
+  if ((order.fulfillmentType || 'STANDARD') !== 'STANDARD') return false;
   if (!isWithinReturnWindow(order.deliveredAt, order.updatedAt || order.createdAt)) return false;
   return (order.items || []).some((item) => item.returnable !== false && item.status !== 'CANCELLED');
 }

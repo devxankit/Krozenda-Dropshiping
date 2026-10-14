@@ -158,17 +158,6 @@ export const ADMIN_ROUTES = Object.freeze({
   ACCOUNTS_TRANSACTIONS: '/admin/accounts/transactions',
   ACCOUNTS_LEDGER: '/admin/accounts/ledger',
 
-  // ---- CJ Dropshipping (provider-specific, admin-only) --------------------
-  CJ_DASHBOARD: '/admin/cj',
-  CJ_SETTINGS: '/admin/cj/settings',
-  CJ_CATALOGUE: '/admin/cj/catalogue',
-  CJ_CATEGORY: '/admin/cj/category',
-  CJ_PRODUCTS: '/admin/cj/products',
-  CJ_PRODUCT_DETAIL: '/admin/cj/products/:productId',
-  CJ_ORDERS: '/admin/cj/orders',
-  CJ_SHIPMENTS: '/admin/cj/shipments',
-  CJ_DISPUTES: '/admin/cj/disputes',
-  CJ_SYNC_LOGS: '/admin/cj/sync-logs',
 
   // ---- marketing & content ------------------------------------------------
   COUPONS: '/admin/marketing/coupons',
@@ -181,6 +170,9 @@ export const ADMIN_ROUTES = Object.freeze({
   REPORTS: '/admin/reports',
 
   // ---- settings & system --------------------------------------------------
+  // ---- Dropshipping (Shopify-backed) --------------------------------------
+  DROPSHIPPING: '/admin/dropshipping',
+
   SETTINGS_GENERAL: '/admin/settings/general',
   SETTINGS_BUSINESS_RULES: '/admin/settings/business-rules',
   SETTINGS_PAYMENTS: '/admin/settings/payments',
@@ -209,7 +201,6 @@ export const adminPath = Object.freeze({
   supportTicketDetail: (ticketId) => `/admin/support/tickets/${ticketId}`,
   customerDetail: (customerId) => `/admin/people/customers/${customerId}`,
   sellerDetail: (sellerId) => `/admin/people/sellers/${sellerId}`,
-  cjProductDetail: (productId) => `/admin/cj/products/${productId}`,
   kycReview: (applicationId) => `/admin/people/kyc/${applicationId}`,
 })
 

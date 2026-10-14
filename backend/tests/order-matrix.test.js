@@ -1,11 +1,11 @@
 // Every kind of order the marketplace takes, placed through the real API with
 // the three outside services replaced by recorders — Shiprocket (seller and
-// Krozenda stock), CJ Dropshipping (imported stock) and Razorpay (online pay).
+// Krozenda stock) and Razorpay (online pay).
 //
-//   who ships:  Krozenda stock · one seller · several sellers · CJ · mixed
+//   who ships:  Krozenda stock · one seller · several sellers
 //   how paid:   COD · Razorpay · wallet · with a coupon
 //   what next:  delivered by webhook · buyer cancels · seller rejects a line ·
-//               admin cancels a paid order · CJ tracking moves the order
+//               admin cancels a paid order
 //
 // For each: the right carrier gets the right parcel with the right money on
 // it, the order follows the parcel, and refunds land where they should.
@@ -48,33 +48,6 @@ jest.mock('../services/shipping/shiprocketService', () => {
   };
 });
 
-// CJ: the HTTP client and its auth are replaced; the order, tracking and
-// dropship services above them run for real.
-const cj = { calls: [], orderStatus: 'UNPAID', track: null };
-jest.mock('../services/cj/cjAuthService', () => ({
-  withAuth: (fn) => fn('cj-test-token'),
-  getAccessToken: async () => 'cj-test-token',
-}));
-jest.mock('../services/cj/cjClient', () => ({
-  call: jest.fn(async (request) => {
-    cj.calls.push(request);
-    if (/freightCalculate/i.test(request.path)) {
-      return { body: { data: [{ logisticName: 'CJPacket Ordinary', logisticPrice: 2 }] } };
-    }
-    if (/createOrder/i.test(request.path)) {
-      return { body: { data: { orderId: `CJORD-${cj.calls.length}` } } };
-    }
-    if (/getOrderDetail/i.test(request.path)) {
-      return { body: { data: { orderStatus: cj.orderStatus, trackNumber: cj.track?.trackingNumber || null, logisticName: cj.track?.logisticName } } };
-    }
-    if (/track/i.test(request.path)) {
-      // CJ's trackInfo: looked up by trackNumber, answers with an array.
-      return { body: { data: cj.track && request.query?.trackNumber === cj.track.trackingNumber ? [cj.track] : [] } };
-    }
-    return { body: { data: null } };
-  }),
-}));
-
 const crypto = require('crypto');
 const request = require('supertest');
 const app = require('../app');
@@ -83,14 +56,11 @@ const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const Coupon = require('../Models/Coupon');
 const Customer = require('../Models/Customer');
-const CjOrder = require('../Models/CjOrder');
-const CjShipment = require('../Models/CjShipment');
 const Shipment = require('../Models/Shipment');
 const ShippingSettings = require('../Models/ShippingSettings');
 const ShippingIntegration = require('../Models/ShippingIntegration');
 const PickupLocation = require('../Models/PickupLocation');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
-const cjLogisticsService = require('../services/cj/cjLogisticsService');
 const {
   connectTestDb,
   disconnectTestDb,
@@ -158,21 +128,6 @@ beforeAll(async () => {
   S.own = await createProduct({ name: 'Krozenda Lamp', price: 500, stock: 50, weight: 0.5 });
   S.a = await createProduct({ name: 'Seller A Mug', price: 300, stock: 50, weight: 0.4, vendor: S.sellerA._id });
   S.b = await createProduct({ name: 'Seller B Bag', price: 700, stock: 50, weight: 0.6, vendor: S.sellerB._id });
-
-  S.cjProduct = await createProduct({
-    name: 'CJ Import Watch',
-    price: 900,
-    stock: 20,
-    vendor: null,
-    fulfillmentProvider: 'CJ',
-    variants: [{ name: 'Black', price: 900, stock: 20, isActive: true }],
-  });
-  await ProductFulfillmentMapping.create({
-    product: S.cjProduct._id,
-    provider: 'CJ',
-    cjProductId: `CJP${unique()}`,
-    variants: S.cjProduct.variants.map((v) => ({ krozendaVariantId: v._id, cjVariantId: `CJV-${unique()}`, providerCost: 4 })),
-  });
 
   S.admin = (await createAdmin()).token;
 });
@@ -393,66 +348,14 @@ describe('order matrix', () => {
     expect((await Shipment.findById(parcel._id)).internalStatus).toBe('CANCELLED');
   });
 
-  test('CJ dropship: online only, ordered at CJ, and CJ tracking moves the buyer’s order to delivered', async () => {
-    const buyer = await newBuyer();
-    await addToCart(buyer, S.cjProduct, { variantId: S.cjProduct.variants[0]._id });
-
-    // COD and wallet are not offered.
-    const cod = await place(buyer, 'COD');
-    expect(cod.res.status).toBe(409);
-
-    const before = carrier.calls.length;
-    const { res } = await place(buyer, 'RAZORPAY');
-    expect(res.status).toBe(201);
-    const order = await Order.findById(res.body.data.id);
-    expect(order.fulfillmentType).toBe('DROPSHIP');
-    // Not sent to Shiprocket — CJ ships it.
-    expect(carrier.calls.slice(before).some((c) => c.name === 'createOrder')).toBe(false);
-
-    const cjOrder = await CjOrder.findOne({ krozendaOrderId: order._id });
-    expect(cjOrder.cjOrderId).toMatch(/^CJORD-/);
-    const createCall = cj.calls.find((c) => /createOrder/i.test(c.path));
-    expect(createCall.body).toMatchObject({ shippingZip: '452001', shippingCountryCode: 'IN' });
-    // A tracking row exists from the start, so the poller follows it.
-    const tracking = await CjShipment.findOne({ cjOrder: cjOrder._id });
-    expect(tracking).toBeTruthy();
-
-    // The buyer can neither cancel nor return it.
-    const cancel = await request(app).patch(`/user/orders/${order._id}/cancel`).set(buyer.auth).send({});
-    expect(cancel.status).toBe(403);
-
-    // CJ tracking, as the poller or webhook fetches it.
-    cj.track = { trackingNumber: 'CJTRK123', logisticName: 'CJPacket Ordinary', trackingStatus: 'In transit' };
-    await cjLogisticsService.syncShipment(await CjShipment.findById(tracking._id));
-    let now = await Order.findById(order._id);
-    expect(now.items[0]).toMatchObject({ status: 'SHIPPED', trackingNumber: 'CJTRK123' });
-    expect(now.status).toBe('SHIPPED');
-
-    cj.track = { ...cj.track, trackingStatus: 'Delivered' };
-    await cjLogisticsService.syncShipment(await CjShipment.findById(tracking._id));
-    now = await Order.findById(order._id);
-    expect(now.status).toBe('DELIVERED');
-
-    const detail = await request(app).get(`/user/orders/${order._id}`).set(buyer.auth);
-    expect(detail.body.data.canReturn).toBe(false);
-  });
-
-  test('mixed cart (seller + CJ): two orders on one payment — the seller part to Shiprocket, the CJ part to CJ', async () => {
-    const buyer = await newBuyer();
-    await addToCart(buyer, S.a);
-    await addToCart(buyer, S.cjProduct, { variantId: S.cjProduct.variants[0]._id });
-    const { res, quote: q } = await place(buyer, 'RAZORPAY');
-    expect(res.status).toBe(201);
-
-    const orders = await Order.find({ user: buyer.user._id }).sort({ checkoutGroupIndex: 1 });
-    expect(orders.map((o) => o.fulfillmentType).sort()).toEqual(['DROPSHIP', 'STANDARD']);
-    const sum = orders.reduce((acc, o) => acc + Math.round(o.total * 100), 0) / 100;
-    expect(sum).toBeCloseTo(q.total, 2);
-
-    const standard = orders.find((o) => o.fulfillmentType === 'STANDARD');
-    const dropship = orders.find((o) => o.fulfillmentType === 'DROPSHIP');
-    expect(await parcels(standard._id)).toHaveLength(1);
-    expect(await parcels(dropship._id)).toHaveLength(0);
-    expect(await CjOrder.exists({ krozendaOrderId: dropship._id })).toBeTruthy();
-  });
+  // REMOVED WITH THE PROVIDER: the two end-to-end external-fulfilment cases
+  // ("ordered at the provider, provider tracking moves the buyer's order" and
+  // "mixed cart becomes two orders on one payment"). They asserted a pipeline
+  // that no longer exists.
+  //
+  // The split-checkout machinery they covered is still live and still matters:
+  // Order's (razorpayPaymentId, fulfillmentType) unique index, the per-group
+  // platform fee, and the per-group coupon split. Those need a provider
+  // registered to exercise, so they come back with one — not as a rewrite of
+  // this file, but as its own suite alongside it.
 });

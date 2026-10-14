@@ -20,18 +20,15 @@ const ADMIN_PERMISSIONS = Object.freeze([
   'admin.dropship.orders',
   'admin.dropship.supplier_sync',
   'admin.dropship.margins',
-  // CJ Dropshipping module (Admin > CJ Dropshipping) — a distinct, provider-
-  // specific surface from the generic admin.dropship.* partner module above.
-  // Seller accounts must never hold any of these.
-  'admin.cj.view',
-  'admin.cj.settings',
-  'admin.cj.catalogue',
-  'admin.cj.products',
-  'admin.cj.orders',
-  'admin.cj.shipments',
-  'admin.cj.returns',
-  'admin.cj.refunds',
-  'admin.cj.sync',
+  // Shopify (Admin > Shopify) — the external fulfilment provider. Distinct
+  // from the generic admin.dropship.* partner module above. Seller accounts
+  // must never hold any of these.
+  'admin.shopify.view',
+  'admin.shopify.settings',
+  'admin.shopify.catalogue',
+  'admin.shopify.products',
+  'admin.shopify.orders',
+  'admin.shopify.sync',
   'admin.orders.view',
   'admin.orders.manage',
   'admin.orders.cancel',

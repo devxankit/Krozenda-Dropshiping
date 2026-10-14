@@ -1,10 +1,9 @@
 const request = require('supertest');
 const app = require('../app');
 const Order = require('../Models/Order');
-const CjOrder = require('../Models/CjOrder');
+const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const ReturnRequest = require('../Models/ReturnRequest');
 const CommissionRule = require('../Models/CommissionRule');
-const { USD_TO_INR_RATE } = require('../services/cj/cjPricing');
 const {
   connectTestDb,
   disconnectTestDb,
@@ -23,7 +22,7 @@ afterAll(disconnectTestDb);
 beforeEach(async () => {
   await Promise.all([
     Order.deleteMany({}),
-    CjOrder.deleteMany({}),
+    ProductFulfillmentMapping.deleteMany({}),
     ReturnRequest.deleteMany({}),
     CommissionRule.deleteMany({}),
   ]);
@@ -76,26 +75,26 @@ async function setup() {
   await CommissionRule.create({ name: 'Negotiated', type: 'PERCENTAGE', value: 20, scope: 'SELLER', vendor: otherSeller._id });
 
   const ownProduct = await createProduct({ category: category._id, price: 1000, costPrice: 600 });
-  const cjProduct = await createProduct({ category: category._id, price: 2000, fulfillmentProvider: 'CJ' });
+  const cjProduct = await createProduct({ category: category._id, price: 2000, fulfillmentProvider: 'SHOPIFY' });
   const sellerProduct = await createProduct({ category: category._id, price: 500, vendor: seller._id });
   const otherProduct = await createProduct({ category: category._id, price: 300, vendor: otherSeller._id });
 
   // Own stock: 2 × ₹1000, cost ₹600 each.
   await placeOrder({ user: user._id, lines: [{ product: ownProduct, price: 1000, quantity: 2 }] });
 
-  // CJ: 1 × ₹2000; CJ charged $10 + $2 shipping.
-  const cjOrder = await placeOrder({
+  // Externally fulfilled: 1 × ₹2000, the provider's cost ₹1044 for the one
+  // variant. The cost comes from the fulfilment mapping, not from the order —
+  // so it is attributed off the product carrying a provider, and the order
+  // itself needs no special fulfillmentType.
+  await placeOrder({
     user: user._id,
-    fulfillmentType: 'DROPSHIP',
     lines: [{ product: cjProduct, price: 2000, quantity: 1 }],
   });
-  await CjOrder.create({
-    krozendaOrderId: cjOrder._id,
-    krozendaSubOrderId: `CJ-${cjOrder._id}`,
-    items: [{ product: cjProduct._id, cjProductId: 'p', cjVariantId: 'v', quantity: 1, unitCost: 10 }],
-    totalCost: 10,
-    shippingCost: 2,
-    status: 'SHIPPED',
+  await ProductFulfillmentMapping.create({
+    product: cjProduct._id,
+    provider: 'SHOPIFY',
+    externalProductId: 'gid://shopify/Product/rev-1',
+    variants: [{ externalVariantId: 'gid://shopify/ProductVariant/rev-1', providerCost: 1044 }],
   });
 
   // Sellers, in one mixed order: Asha 2 × ₹500 (one refunded ₹500), the
@@ -149,8 +148,13 @@ describe('revenue', () => {
       earnings: paise(800),
     });
 
-    const cjCost = paise(12 * USD_TO_INR_RATE);
-    expect(byKey.cj).toMatchObject({ orders: 1, netSales: paise(2000), cost: cjCost, earnings: paise(2000) - cjCost });
+    const cjCost = paise(1044);
+    expect(byKey.external).toMatchObject({
+      orders: 1,
+      netSales: paise(2000),
+      cost: cjCost,
+      earnings: paise(2000) - cjCost,
+    });
 
     // Asha: ₹1000 sold, ₹500 refunded → ₹500 net; 10% commission on what stayed sold.
     // Other seller: ₹300, 20% commission, still in progress.
@@ -172,7 +176,7 @@ describe('revenue', () => {
     const { channelKpis } = res.body.data;
     const value = (key, kpiKey) => channelKpis[key].find((k) => k.key === kpiKey).value;
     expect(value('own_stock', 'earnings')).toBe(paise(800));
-    expect(value('cj', 'cost')).toBe(cjCost);
+    expect(value('external', 'cost')).toBe(cjCost);
     expect(value('sellers', 'commission')).toBe(paise(110));
     expect(value('sellers', 'netSales')).toBe(paise(800));
 

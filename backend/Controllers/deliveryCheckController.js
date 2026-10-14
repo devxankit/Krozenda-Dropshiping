@@ -5,8 +5,6 @@ const PickupLocation = require('../Models/PickupLocation');
 const ShippingSettings = require('../Models/ShippingSettings');
 const ProductFulfillmentMapping = require('../Models/ProductFulfillmentMapping');
 const serviceabilityService = require('../services/shipping/serviceabilityService');
-const cjLogisticsService = require('../services/cj/cjLogisticsService');
-const { usdToInr } = require('../services/cj/cjPricing');
 const { suggestPackage } = require('../utils/packaging');
 const { publiclyVisible } = require('../utils/publicVisibility');
 
@@ -111,58 +109,11 @@ async function checkProductDelivery(req, res) {
     });
   }
 
-  // If this product is fulfilled by CJ Dropshipping, quote via CJ Logistics
-  // (origin: China warehouse) rather than domestic Shiprocket.
-  const cjMapping = await ProductFulfillmentMapping.findOne({ product: product._id, provider: 'CJ' }).lean();
-  if (cjMapping) {
-    const vMapping = cjMapping.variants?.[0];
-    const cjVariantId = vMapping?.cjVariantId || cjMapping.cjProductId;
-    const fallbackShippingUsd = vMapping?.providerShippingCost || 4.49;
-
-    let charge = Math.round(usdToInr(fallbackShippingUsd) * 100) / 100;
-    let days = 14;
-
-    try {
-      const options = await cjLogisticsService.calculateFreight({
-        startCountryCode: 'CN',
-        endCountryCode: 'IN',
-        zip: pincode,
-        items: [{ cjVariantId, quantity: 1 }],
-      });
-
-      if (Array.isArray(options) && options.length > 0) {
-        const cheapest = options[0];
-        const usdPrice = cheapest.logisticPrice ?? cheapest.totalPostageFee ?? fallbackShippingUsd;
-        charge = Math.round(usdToInr(usdPrice) * 100) / 100;
-
-        if (typeof cheapest.logisticAging === 'string') {
-          const parts = cheapest.logisticAging.split('-');
-          const maxDays = Number(parts[parts.length - 1]);
-          if (Number.isFinite(maxDays) && maxDays > 0) days = maxDays;
-        }
-      }
-    } catch (err) {
-      log({ event: 'CJ_DELIVERY_CHECK_FALLBACK', error: err.message, productId: id, pincode });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Delivery available via CJ Dropshipping (International)',
-      data: {
-        available: true,
-        pincode,
-        serviceable: true,
-        prepaid: { available: true, charge },
-        // Dropshipping items are paid for online only (business rule, 2026-09).
-        cod: { available: false, charge: null },
-        onlineOnly: true,
-        estimatedDays: days,
-        estimatedDeliveryDate: estimateDate(days),
-        isInternational: true,
-        courier: 'CJPacket International',
-      },
-    });
-  }
+  // NOTE: externally fulfilled products have no branch here. The provider's
+  // rate must come from the same source checkout will charge from, or the
+  // buyer is quoted one number on the product page and charged another. The
+  // provider's rate rules are wired into checkout first; this precheck reads
+  // them afterwards, never its own guess.
 
   const origin = await resolveOrigin(product, settings);
   if (!origin) {

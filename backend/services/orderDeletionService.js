@@ -17,8 +17,6 @@ const ReturnRequest = require('../Models/ReturnRequest');
 const Notification = require('../Models/Notification');
 const WalletTransaction = require('../Models/WalletTransaction');
 const AccountingTransaction = require('../Models/AccountingTransaction');
-const CjOrder = require('../Models/CjOrder');
-const CjShipment = require('../Models/CjShipment');
 
 // Parcels that are finished at the carrier, or never reached it.
 const DELETABLE_SHIPMENT_STATUSES = ['CANCELLED', 'CANCEL_REQUESTED', 'FAILED', 'PENDING', 'READY_TO_SHIP', 'SERVICEABILITY_CHECKED'];
@@ -44,10 +42,6 @@ async function blockerFor(order) {
   }
   if (await AccountingTransaction.exists({ order: order._id })) {
     return fail(409, 'This order is on the accounting ledger, so it is kept.', 'ON_LEDGER');
-  }
-  const cjOrder = await CjOrder.findOne({ krozendaOrderId: order._id }).select('cjOrderId status').lean();
-  if (cjOrder?.cjOrderId && cjOrder.status !== 'CANCELLED') {
-    return fail(409, 'This order is still live at CJ Dropshipping. Cancel it there first.', 'CJ_LIVE');
   }
   return null;
 }
@@ -80,14 +74,11 @@ async function deleteOrder({ orderId }) {
   }
 
   const shipmentIds = shipments.map((s) => s._id);
-  const cjOrders = await CjOrder.find({ krozendaOrderId: order._id }).select('_id').lean();
   await Promise.all([
     TrackingEvent.deleteMany({ shipment: { $in: shipmentIds } }),
     Shipment.deleteMany({ _id: { $in: shipmentIds } }),
     ReturnRequest.deleteMany({ order: order._id }),
     Notification.deleteMany({ actionRefId: order._id }),
-    CjShipment.deleteMany({ cjOrder: { $in: cjOrders.map((c) => c._id) } }),
-    CjOrder.deleteMany({ krozendaOrderId: order._id }),
   ]);
   await Order.deleteOne({ _id: order._id });
 

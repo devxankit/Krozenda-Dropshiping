@@ -4,7 +4,7 @@ const Product = require('../Models/Product');
 // Product type is derived, not stored — see Product.vendor / Product.fulfillmentProvider.
 function productType(product) {
   if (!product) return 'admin';
-  if (product.fulfillmentProvider === 'CJ') return 'dropship';
+  if (product.fulfillmentProvider) return 'dropship';
   if (product.vendor) return 'vendor';
   return 'admin';
 }

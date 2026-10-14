@@ -1,5 +1,5 @@
 // One supplier's tax invoice for an order. An order with items from several
-// suppliers has several of these — Krozenda's (own stock, CJ Dropshipping and
+// suppliers has several of these — Krozenda's (own stock, Dropshipping and
 // shipping) and one per seller — each printed with that supplier's own GSTIN.
 // Everything shown comes from GET /user/orders/:id/invoice; nothing here
 // decides GST treatment.

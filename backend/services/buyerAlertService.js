@@ -136,40 +136,9 @@ async function notifyShipmentMilestone(shipment) {
   }
 }
 
-// CJ's tracking statuses (CjShipment.status) → the shared milestones.
-const CJ_MILESTONES = { OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY', DELIVERY_FAILED: 'NDR' };
+// NOTE: the provider-parcel milestone notifier that used to live here was
+// removed with its provider. The next one needs its own, because a
+// provider's parcel has no seller to notify: a failed delivery has to go to
+// the admins, who are the ones who can chase the provider about it.
 
-/**
- * CJ (dropship): called by cjLogisticsService.syncShipment when a CJ parcel
- * moves into out-for-delivery or a failed attempt. CJ orders are admin-owned
- * — there is no seller to tell — so a failed delivery goes to the admins,
- * who are the ones who have to chase CJ about it.
- */
-async function notifyCjShipmentMilestone(cjShipment, cjOrder) {
-  const milestoneKey = CJ_MILESTONES[cjShipment.status];
-  if (!milestoneKey || !cjOrder?.krozendaOrderId) return;
-  try {
-    const told = await tellBuyer({
-      orderId: cjOrder.krozendaOrderId,
-      milestoneKey,
-      shipmentKey: `CJ-${cjShipment._id}`,
-      courier: cjShipment.carrier,
-      awb: cjShipment.trackingNumber,
-    });
-    if (!told || milestoneKey !== 'NDR') return;
-
-    // Lazy: adminAlertService pulls in whatsappService, which requires Order.
-    const { alertAdmins } = require('./adminAlertService');
-    await alertAdmins({
-      event: 'CJ_DELIVERY_FAILED',
-      title: 'CJ delivery attempt failed',
-      message: `CJ could not deliver dropship order ${told.label} (${cjShipment.carrier || 'CJ'}, tracking ${cjShipment.trackingNumber || '-'}). Follow up with CJ before it is returned.`,
-      link: '/admin/cj/shipments',
-      key: `CJ_DELIVERY_FAILED:${cjShipment._id}:${new Date().toISOString().slice(0, 10)}`,
-    });
-  } catch (err) {
-    console.error('[buyerAlert] CJ shipment milestone failed:', err.message);
-  }
-}
-
-module.exports = { notifyRefundProcessed, notifyShipmentMilestone, notifyCjShipmentMilestone, MILESTONES, CJ_MILESTONES };
+module.exports = { notifyRefundProcessed, notifyShipmentMilestone, MILESTONES };

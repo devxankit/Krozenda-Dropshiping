@@ -86,7 +86,7 @@ const productSchema = new mongoose.Schema(
     // of a $lookup on every browse request. Set once at onboarding time and
     // never read by checkout/fulfilment logic, which still goes through
     // ProductFulfillmentMapping as before.
-    fulfillmentProvider: { type: String, enum: ['CJ', null], default: null, index: true },
+    fulfillmentProvider: { type: String, enum: ['SHOPIFY', null], default: null, index: true },
     // Vendor-created products enter the marketplace catalog PENDING until an
     // admin approves them — admin-created products (vendor: null) skip this
     // by defaulting straight to APPROVED, matching pre-marketplace behavior.

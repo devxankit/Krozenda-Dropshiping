@@ -15,7 +15,7 @@ import { downloadCsv, rupees } from '../../lib/exportCsv'
 
 const TREND_SERIES = [
   { key: 'own_stock', label: 'Own stock' },
-  { key: 'cj', label: 'CJ Dropshipping' },
+  { key: 'external', label: 'Dropshipping' },
   { key: 'sellers', label: 'Sellers' },
 ]
 
@@ -47,7 +47,7 @@ function channelRows(channel, notes) {
       { label: 'Sellers earned', value: money(channel.sellerEarnings) },
     ]
   }
-  if (channel.key === 'cj') {
+  if (channel.key === 'external') {
     return [
       ...common,
       { label: `CJ cost (₹${notes.cjUsdToInrRate}/USD)`, value: money(channel.cost) },
@@ -154,7 +154,7 @@ export function RevenuePage() {
   return (
     <AnalyticsShell
       title="Revenue"
-      description="What was sold, and what Krozenda and each seller earned — own stock, CJ Dropshipping and sellers."
+      description="What was sold, and what Krozenda and each seller earned — own stock, Dropshipping and sellers."
       controller={controller}
       onExport={exportRevenue}
       showTabs={false}

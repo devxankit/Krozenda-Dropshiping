@@ -211,8 +211,10 @@ function buildProduct(group, ctx) {
       ctx.ownerType === 'VENDOR'
         ? existing.vendor && String(existing.vendor) === String(ctx.vendorId)
         : !existing.vendor;
-    if (existing.fulfillmentProvider === 'CJ') {
-      errors.push(`SKU "${sku}" belongs to a CJ dropshipping product, which is managed from the CJ screens`);
+    if (existing.fulfillmentProvider) {
+      errors.push(
+        `SKU "${sku}" belongs to an externally fulfilled product, which is managed from its provider's screens`
+      );
     } else if (!ownedByScope) {
       errors.push(
         ctx.ownerType === 'VENDOR'

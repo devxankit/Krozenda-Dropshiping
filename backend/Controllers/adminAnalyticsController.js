@@ -25,7 +25,8 @@ const { IST_TZ, buildBuckets, resolveRange } = require('../utils/analyticsRange'
 // who fulfils it. That mapping lives here, once, so the dashboard's revenue
 // split and the analytics order mix can never disagree — and it matches the
 // three channels on the Revenue screen (services/revenueService):
-//   - CJ-fulfilled (a DROPSHIP order, or a CJ product) -> CJ Dropshipping
+//   - externally fulfilled (non-STANDARD order, or a product with a
+//     fulfilment provider)                             -> Dropshipping
 //   - any seller's product (B2C or B2B)                -> Sellers
 //   - everything else (admin's own catalogue)          -> Own stock
 // The keys stay `dropshipping` / `marketplace` / `own_stock`: the panel's
@@ -39,7 +40,7 @@ const BUSINESS_MODEL = Object.freeze({
 
 const BUSINESS_MODEL_LABELS = Object.freeze({
   [BUSINESS_MODEL.MARKETPLACE]: 'Sellers',
-  [BUSINESS_MODEL.DROPSHIPPING]: 'CJ Dropshipping',
+  [BUSINESS_MODEL.DROPSHIPPING]: 'Dropshipping',
   [BUSINESS_MODEL.OWN_STOCK]: 'Own stock',
 });
 
@@ -115,8 +116,8 @@ const ATTRIBUTE_LINES = [
             {
               case: {
                 $or: [
-                  { $eq: ['$fulfillmentType', 'DROPSHIP'] },
-                  { $eq: ['$productDoc.fulfillmentProvider', 'CJ'] },
+                  { $ne: ['$fulfillmentType', 'STANDARD'] },
+                  { $ne: [{ $ifNull: ['$productDoc.fulfillmentProvider', null] }, null] },
                 ],
               },
               then: BUSINESS_MODEL.DROPSHIPPING,

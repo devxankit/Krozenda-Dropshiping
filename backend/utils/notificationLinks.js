@@ -44,7 +44,6 @@ const admin = {
   returns: () => '/admin/orders/returns',
   seller: (id) => `/admin/people/sellers/${id}`,
   settlements: () => '/admin/finance/settlements',
-  cjOrders: () => '/admin/cj/orders',
   dashboard: () => '/admin/dashboard',
 };
 

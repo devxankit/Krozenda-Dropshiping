@@ -155,7 +155,7 @@ describe('prepaid order — sale, commission, gateway fee, shipping', () => {
     const quote = jest.spyOn(checkoutQuoteService, 'quoteCart').mockResolvedValue({
       ok: true,
       shippingFee: 99,
-      shippingByFulfillment: { STANDARD: 99, DROPSHIP: 0 },
+      shippingByFulfillment: { STANDARD: 99 },
       carrierCost: 99,
       freeReason: null,
       groups: [],

@@ -156,17 +156,9 @@ app.use('/admin', require('./Router/adminFulfilmentRoutes'));
 app.use('/admin/shipping/shipments', require('./Router/adminShipmentRoutes'));
 app.use('/admin/shipping', require('./Router/adminShippingRoutes'));
 app.use('/admin/payments', require('./Router/adminPaymentSettingsRoutes'));
+app.use('/admin/shopify', require('./Router/adminShopifyRoutes'));
 app.use('/admin/settings', require('./Router/adminSettingsRoutes'));
 app.use('/admin/dropshipping', require('./Router/adminDropshippingRoutes'));
-app.use('/admin/cj', require('./Router/adminCjRoutes'));
-app.use('/admin/cj/catalogue', require('./Router/adminCjCatalogueRoutes'));
-app.use('/admin/cj/products', require('./Router/adminCjProductRoutes'));
-app.use('/admin/cj/category-mappings', require('./Router/adminCjCategoryMappingRoutes'));
-app.use('/admin/cj/sync-logs', require('./Router/adminCjSyncRoutes'));
-app.use('/admin/cj/orders', require('./Router/adminCjOrderRoutes'));
-app.use('/admin/cj/shipments', require('./Router/adminCjShipmentRoutes'));
-app.use('/admin/cj/disputes', require('./Router/adminCjDisputeRoutes'));
-app.use('/admin/cj', require('./Router/adminCjDashboardRoutes'));
 
 app.use('/vendor/auth', require('./Router/vendorAuthRoutes'));
 app.use('/vendor', require('./Router/vendorDashboardRoutes'));

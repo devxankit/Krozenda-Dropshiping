@@ -9,7 +9,7 @@ const platformSettingsSchema = new mongoose.Schema(
     legalEntity: { type: String, default: 'Krozenda Commerce Private Limited', trim: true },
     gstin: { type: String, default: '27AAECK4821M1Z9', uppercase: true, trim: true },
     // Where the platform is registered for GST. Printed as the supplier's
-    // address on every invoice for own-stock and CJ Dropshipping items, and its
+    // address on every invoice for own-stock and Dropshipping items, and its
     // state is what decides CGST + SGST vs IGST on those invoices. The default
     // is the address the invoice used to have hardcoded.
     registeredAddress: {
