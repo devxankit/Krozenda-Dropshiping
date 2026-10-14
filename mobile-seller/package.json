@@ -46,7 +46,7 @@
     "zustand": "^5.0.15"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node init && expo start",
     "android": "expo run:android",
     "lint": "expo lint",
     "doctor": "expo-doctor",

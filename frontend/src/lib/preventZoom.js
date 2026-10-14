@@ -1,7 +1,40 @@
-// Disables user-side zooming (pinch-to-zoom, iOS Safari gestures, Ctrl+wheel, keyboard zoom shortcuts)
+// Disables user-side zooming (pinch-to-zoom, iOS Safari gestures, Ctrl+wheel,
+// keyboard zoom shortcuts) — but ONLY on touch / phone devices.
+//
+// Desktop browsers keep zoom fully enabled so users can zoom in/out normally.
+// "Mobile" here means a touch-primary device with no hover-capable pointer:
+// phones and tablets, including the site running inside the native Flutter app
+// WebView on a phone. Desktops and laptops — even touch-enabled ones, which
+// still expose a hover-capable mouse/trackpad — are treated as desktop and keep
+// zoom. We deliberately key off pointer/hover rather than screen width so that
+// a desktop user with a narrow browser window still keeps zoom.
+function isTouchDevice() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia?.('(hover: none) and (pointer: coarse)').matches ?? false
+}
+
+// index.html pins the page with `maximum-scale=1.0, user-scalable=no`, which
+// kills pinch-zoom on every device. On desktop we rewrite the viewport tag so
+// browser/trackpad zoom is allowed again. (Desktop keyboard and Ctrl+wheel zoom
+// are governed by the listeners below — which we skip on desktop — not by this
+// tag, but relaxing it also restores pinch-zoom on desktop touchscreens.)
+function allowViewportZoom() {
+  const meta = document.querySelector('meta[name="viewport"]')
+  if (!meta) return
+  meta.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
+}
 
 export function initPreventZoom() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return
+
+  // Desktop / non-touch: leave browser zoom fully enabled and bail out before
+  // attaching any of the zoom-blocking listeners below.
+  if (!isTouchDevice()) {
+    allowViewportZoom()
+    return
+  }
+
+  // ── Touch devices (phones, tablets, native app WebView): block zoom ──────────
 
   // 1. Prevent gesture events (iOS Safari / WebKit pinch-to-zoom)
   const preventDefault = (e) => e.preventDefault()
