@@ -2,6 +2,12 @@ node_modules/
 .env
 firebase-service-account.json
 !uploads/**/.gitkeep
+
+# Images copied in from Shopify at import time. These belong on the server
+# only: they are runtime data, not source. The directory is recreated on
+# demand by writeImageSet's recursive mkdir, and the server's copy survives
+# deploy.sh's `git reset --hard` precisely because it is untracked.
+uploads/shopify/
 backups/
 .env.bak-sms
 .env.*
